@@ -36,4 +36,8 @@ enum ToolDefinitionBuilder {
     static func boolParam(_ description: String) -> JSONSchemaProperty {
         JSONSchemaProperty(type: "boolean", description: description)
     }
+
+    static func numberParam(_ description: String) -> JSONSchemaProperty {
+        JSONSchemaProperty(type: "number", description: description)
+    }
 }

@@ -51,10 +51,11 @@ enum ToolDefinitions {
 
     static let executePythonTool = ToolDefinitionBuilder.build(
         name: "execute_python",
-        description: "Execute Python code in a sandbox. In 'repr' mode, evaluates an expression and returns its repr(). In 'script' mode, runs a script and captures stdout/stderr. Supports: math, json, re, datetime, random, base64, collections modules. Network: requests.get()/post() and urllib.request.urlopen(). String/list/dict methods work as in Python.",
+        description: "Execute Python code in a sandbox. In 'repr' mode, evaluates an expression and returns its repr(). In 'script' mode, runs a script and captures stdout/stderr. Supports: math, json, re, datetime, random, base64, collections modules. Network: requests.get()/post() and urllib.request.urlopen(). String/list/dict methods work as in Python. Default timeout is 60s (configurable via 'python_timeout' config key, max 300s).",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The Python code to execute"),
-            "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"])
+            "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
+            "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60 or agent config)")
         ],
         required: ["code"]
     )

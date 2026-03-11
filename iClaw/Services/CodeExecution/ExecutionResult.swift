@@ -6,12 +6,11 @@ final class CodeExecutorRegistry: @unchecked Sendable {
 
     private var executors: [String: CodeExecutor] = [:]
 
+    private let fallbackExecutor = JSCorePythonExecutor()
+
     private init() {
-        // JSCorePythonExecutor is the primary Python executor on iOS.
-        // PythonKit requires a native Python dylib which is unavailable on iOS,
-        // and its library loader uses try! which crashes before we can catch.
-        let jsCoreExecutor = JSCorePythonExecutor()
-        register(jsCoreExecutor)
+        let micropythonExecutor = MicroPythonExecutor()
+        register(micropythonExecutor)
     }
 
     func register(_ executor: CodeExecutor) {
@@ -27,6 +26,6 @@ final class CodeExecutorRegistry: @unchecked Sendable {
     }
 
     func defaultExecutor() -> CodeExecutor {
-        executors["python"] ?? JSCorePythonExecutor()
+        executors["python"] ?? fallbackExecutor
     }
 }
