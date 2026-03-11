@@ -40,6 +40,23 @@ struct iClawApp: App {
                 fatalError("Failed to create ModelContainer after reset: \(error)")
             }
         }
+
+        Self.resetStaleActiveSessions(in: modelContainer)
+    }
+
+    /// Sessions stuck in `isActive` from a previous crash or force-quit can never
+    /// have a live agent loop. Reset them so they don't block new interactions.
+    private static func resetStaleActiveSessions(in container: ModelContainer) {
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate<Session> { $0.isActive == true }
+        )
+        guard let stale = try? context.fetch(descriptor), !stale.isEmpty else { return }
+        for session in stale {
+            session.isActive = false
+        }
+        try? context.save()
+        print("[iClawApp] Reset \(stale.count) stale active session(s).")
     }
 
     var body: some Scene {
