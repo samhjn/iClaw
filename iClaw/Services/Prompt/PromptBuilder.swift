@@ -74,12 +74,14 @@ final class PromptBuilder {
         - `write_config`: Update your configuration files to persist knowledge and preferences
 
         ### Code Execution
-        - `execute_python`: Execute Python code in a sandbox with two modes:
+        - `execute_python`: Execute Python code via an embedded MicroPython interpreter with two modes:
           - `repr` mode: Evaluate an expression and return its repr() (like Python REPL)
           - `script` mode: Run a script and capture stdout/stderr
-          - Available modules: `json`, `math`, `re`, `datetime`, `random`, `base64`, `collections`, `string`, `time`, `os.path`
-          - Network: `requests.get(url)`, `requests.post(url, json=...)`, `urllib.request.urlopen(url)`
-          - All common string/list/dict methods work as expected (e.g. `.upper()`, `.strip()`, `.append()`, `.items()`)
+          - Full Python 3 syntax: classes, inheritance, generators/yield, decorators, async/await, comprehensions, f-strings, walrus operator `:=`, tuple unpacking, *args/**kwargs, and more
+          - Built-in modules: `json`, `math`, `cmath`, `re`, `random`, `hashlib`, `binascii`, `struct`, `collections` (deque, OrderedDict), `heapq`, `errno`, `gc`, `sys`, `io`, `array`
+          - Network: `import requests` then `requests.get(url)`, `requests.post(url, json=...)`, `requests.put(url)`, `requests.delete(url)` — responses have `.text`, `.json()`, `.status_code`, `.ok`
+          - Exception handling works correctly with full traceback and line numbers
+          - Timeout: default 60s, pass `timeout` parameter (1-300s) per call, or set persistent default via `write_config` with key `python_timeout`
         - `save_code`: Save a code snippet for later reuse
         - `load_code`: Load a previously saved code snippet
         - `list_code`: List all saved code snippets

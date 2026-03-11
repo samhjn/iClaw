@@ -20,10 +20,25 @@ struct ExecutionResult: Sendable {
     }
 }
 
+/// Conforming types must implement at least one of the two `execute` methods
+/// to break the mutual default-implementation cycle.
 protocol CodeExecutor: Sendable {
     var language: String { get }
     var isAvailable: Bool { get }
     func execute(code: String, mode: ExecutionMode) async throws -> ExecutionResult
+    func execute(code: String, mode: ExecutionMode, timeout: TimeInterval) async throws -> ExecutionResult
+}
+
+extension CodeExecutor {
+    static var defaultTimeout: TimeInterval { 60 }
+
+    func execute(code: String, mode: ExecutionMode) async throws -> ExecutionResult {
+        try await execute(code: code, mode: mode, timeout: Self.defaultTimeout)
+    }
+
+    func execute(code: String, mode: ExecutionMode, timeout: TimeInterval) async throws -> ExecutionResult {
+        try await execute(code: code, mode: mode)
+    }
 }
 
 enum CodeExecutorError: LocalizedError {

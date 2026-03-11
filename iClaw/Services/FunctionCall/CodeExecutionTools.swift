@@ -13,9 +13,10 @@ struct CodeExecutionTools {
 
         let modeStr = arguments["mode"] as? String ?? "script"
         let mode: ExecutionMode = modeStr == "repr" ? .repr : .script
+        let timeout = resolveTimeout(arguments: arguments)
 
         do {
-            let result = try await executor.execute(code: code, mode: mode)
+            let result = try await executor.execute(code: code, mode: mode, timeout: timeout)
             var output = ""
             if !result.stdout.isEmpty {
                 output += result.stdout
@@ -29,9 +30,27 @@ struct CodeExecutionTools {
                 output += repr
             }
             return output.isEmpty ? "(No output)" : output
+        } catch CodeExecutorError.timeout {
+            return "[Error] Execution timed out after \(Int(timeout))s"
         } catch {
             return "[Error] \(error.localizedDescription)"
         }
+    }
+
+    /// Resolve timeout in order: tool call argument > agent config > default (60s).
+    /// Clamped to [1, 300] seconds.
+    private func resolveTimeout(arguments: [String: Any]) -> TimeInterval {
+        if let t = arguments["timeout"] as? Double, t > 0 {
+            return min(max(t, 1), 300)
+        }
+        if let t = arguments["timeout"] as? Int, t > 0 {
+            return min(max(TimeInterval(t), 1), 300)
+        }
+        if let config = agent.customConfigs.first(where: { $0.key == "python_timeout" }),
+           let t = Double(config.content), t > 0 {
+            return min(max(t, 1), 300)
+        }
+        return 60
     }
 
     func saveCode(arguments: [String: Any]) -> String {
