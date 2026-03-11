@@ -16,12 +16,15 @@ final class ChatViewModel {
 
     let session: Session
     private var modelContext: ModelContext
+    private var generationTask: Task<Void, Never>?
+    private var monitoringTask: Task<Void, Never>?
 
     init(session: Session, modelContext: ModelContext) {
         self.session = session
         self.modelContext = modelContext
         loadMessages()
         checkActiveSessionLock()
+        startMonitoringIfNeeded()
     }
 
     func loadMessages() {
@@ -77,7 +80,7 @@ final class ChatViewModel {
         try? modelContext.save()
         loadMessages()
 
-        Task {
+        generationTask = Task {
             await generateResponse()
         }
     }
@@ -94,6 +97,7 @@ final class ChatViewModel {
             isLoading = false
             streamingContent = ""
             session.isActive = false
+            generationTask = nil
             try? modelContext.save()
         }
 
@@ -204,6 +208,52 @@ final class ChatViewModel {
             await compressor.compress(session: session, llmService: llmService, modelContext: modelContext)
             loadMessages()
         }
+    }
+
+    // MARK: - View Lifecycle
+
+    /// Called when the chat view re-appears (not the first appear, which is handled by init).
+    func onViewAppear() {
+        loadMessages()
+        checkActiveSessionLock()
+        if !session.isActive && generationTask == nil {
+            isLoading = false
+            streamingContent = ""
+        }
+        startMonitoringIfNeeded()
+    }
+
+    func onViewDisappear() {
+        stopMonitoring()
+    }
+
+    // MARK: - Orphaned Loop Monitoring
+
+    /// When the session is still active but this view model has no running generation
+    /// task (e.g. the user navigated away and back), poll for new messages saved by
+    /// the detached task until the session becomes inactive.
+    private func startMonitoringIfNeeded() {
+        guard session.isActive, generationTask == nil, monitoringTask == nil else { return }
+        isLoading = true
+        monitoringTask = Task { @MainActor [weak self] in
+            defer {
+                self?.isLoading = false
+                self?.loadMessages()
+                self?.checkActiveSessionLock()
+                self?.monitoringTask = nil
+            }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self, !Task.isCancelled else { return }
+                self.loadMessages()
+                guard self.session.isActive else { return }
+            }
+        }
+    }
+
+    private func stopMonitoring() {
+        monitoringTask?.cancel()
+        monitoringTask = nil
     }
 
     // MARK: - Manual Title

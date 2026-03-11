@@ -42,7 +42,12 @@ struct ChatView: View {
         .onAppear {
             if viewModel == nil {
                 viewModel = ChatViewModel(session: session, modelContext: modelContext)
+            } else {
+                viewModel?.onViewAppear()
             }
+        }
+        .onDisappear {
+            viewModel?.onViewDisappear()
         }
     }
 }

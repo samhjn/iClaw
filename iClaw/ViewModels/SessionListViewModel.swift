@@ -18,7 +18,8 @@ final class SessionListViewModel {
         let descriptor = FetchDescriptor<Session>(
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        sessions = (try? modelContext.fetch(descriptor)) ?? []
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        sessions = all.filter { !$0.isArchived && $0.agent?.parentAgent == nil }
     }
 
     func createSession(agent: Agent) -> Session {
