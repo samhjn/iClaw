@@ -13,7 +13,7 @@ final class FunctionCallRouter {
         self.modelContext = modelContext
         self.agentService = AgentService(modelContext: modelContext)
         self.subAgentManager = SubAgentManager(modelContext: modelContext)
-        self.executor = executor ?? MockExecutor()
+        self.executor = executor ?? CodeExecutorRegistry.shared.defaultExecutor()
     }
 
     func execute(toolCall: LLMToolCall) async -> String {
@@ -52,6 +52,22 @@ final class FunctionCallRouter {
         case "message_sub_agent":
             return await SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
                 .messageSubAgent(arguments: arguments)
+
+        case "collect_sub_agent_output":
+            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
+                .collectSubAgentOutput(arguments: arguments)
+
+        case "list_sub_agents":
+            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
+                .listSubAgents(arguments: arguments)
+
+        case "stop_sub_agent":
+            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
+                .stopSubAgent(arguments: arguments)
+
+        case "delete_sub_agent":
+            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
+                .deleteSubAgent(arguments: arguments)
 
         case "schedule_cron":
             return CronTools(agent: agent, modelContext: modelContext)

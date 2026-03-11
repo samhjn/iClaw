@@ -26,10 +26,19 @@ final class Agent {
 
     /// UUID of the primary LLM provider for this agent (nil = use global default)
     var primaryProviderIdRaw: String?
+    /// Specific model name override for the primary provider (nil = use provider default)
+    var primaryModelNameOverride: String?
     /// Comma-separated UUIDs of fallback providers in priority order
     var fallbackProviderIdsRaw: String?
+    /// Comma-separated model name overrides for fallbacks (matching fallbackProviderIds order, empty = use provider default)
+    var fallbackModelNamesRaw: String?
     /// UUID of the default provider for sub-agents (nil = inherit from self)
     var subAgentProviderIdRaw: String?
+    /// Model name override for sub-agent provider
+    var subAgentModelNameOverride: String?
+
+    /// SubAgent lifecycle: "temp" = auto-destroy after task, "persistent" = long-lived, nil = main agent
+    var subAgentType: String? = nil
 
     var createdAt: Date
     var updatedAt: Date
@@ -52,6 +61,16 @@ final class Agent {
         }
         set {
             fallbackProviderIdsRaw = newValue.isEmpty ? nil : newValue.map(\.uuidString).joined(separator: ",")
+        }
+    }
+
+    var fallbackModelNames: [String] {
+        get {
+            guard let raw = fallbackModelNamesRaw, !raw.isEmpty else { return [] }
+            return raw.components(separatedBy: "|||")
+        }
+        set {
+            fallbackModelNamesRaw = newValue.isEmpty ? nil : newValue.joined(separator: "|||")
         }
     }
 
@@ -80,9 +99,18 @@ final class Agent {
         self.cronJobs = []
         self.installedSkills = []
         self.primaryProviderIdRaw = nil
+        self.primaryModelNameOverride = nil
         self.fallbackProviderIdsRaw = nil
+        self.fallbackModelNamesRaw = nil
         self.subAgentProviderIdRaw = nil
+        self.subAgentModelNameOverride = nil
+        self.subAgentType = nil
         self.createdAt = Date()
         self.updatedAt = Date()
     }
+
+    var isTempSubAgent: Bool { subAgentType == "temp" }
+    var isPersistentSubAgent: Bool { subAgentType == "persistent" }
+    var isSubAgent: Bool { parentAgent != nil }
+    var isMainAgent: Bool { parentAgent == nil }
 }

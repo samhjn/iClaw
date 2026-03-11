@@ -15,6 +15,29 @@ struct LLMChatMessage: Codable {
         case toolCallId = "tool_call_id"
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(role, forKey: .role)
+
+        // For assistant messages with tool_calls, always encode content (even if null).
+        // Many APIs require "content": null explicitly.
+        if role == "assistant" && toolCalls != nil {
+            try container.encode(content, forKey: .content)
+        } else if let content = content {
+            try container.encode(content, forKey: .content)
+        }
+
+        if let toolCalls = toolCalls, !toolCalls.isEmpty {
+            try container.encode(toolCalls, forKey: .toolCalls)
+        }
+        if let toolCallId = toolCallId {
+            try container.encode(toolCallId, forKey: .toolCallId)
+        }
+        if let name = name {
+            try container.encode(name, forKey: .name)
+        }
+    }
+
     static func system(_ content: String) -> LLMChatMessage {
         LLMChatMessage(role: "system", content: content)
     }
@@ -78,7 +101,7 @@ enum LLMToolChoice: Codable {
         case .none: try container.encode("none")
         case .required: try container.encode("required")
         case .function(let name):
-            let value: [String: String] = ["type": "function", "name": name]
+            let value = ToolChoiceFunction(type: "function", function: ToolChoiceFunctionName(name: name))
             try container.encode(value)
         }
     }
@@ -96,6 +119,15 @@ enum LLMToolChoice: Codable {
             self = .auto
         }
     }
+}
+
+private struct ToolChoiceFunction: Codable {
+    let type: String
+    let function: ToolChoiceFunctionName
+}
+
+private struct ToolChoiceFunctionName: Codable {
+    let name: String
 }
 
 struct LLMToolDefinition: Codable {
@@ -125,6 +157,24 @@ struct JSONSchema: Codable {
     var properties: [String: JSONSchemaProperty]?
     var required: [String]?
     var additionalProperties: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case type, properties, required
+        case additionalProperties = "additionalProperties"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        // Always encode properties (as empty {} if nil) for maximum API compatibility
+        try container.encode(properties ?? [:], forKey: .properties)
+        if let required = required, !required.isEmpty {
+            try container.encode(required, forKey: .required)
+        }
+        if let ap = additionalProperties {
+            try container.encode(ap, forKey: .additionalProperties)
+        }
+    }
 
     init(
         type: String = "object",

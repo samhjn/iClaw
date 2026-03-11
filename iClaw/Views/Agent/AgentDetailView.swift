@@ -127,6 +127,7 @@ struct CustomConfigsView: View {
 
 struct SubAgentListView: View {
     let parentAgent: Agent
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         List {
@@ -138,16 +139,55 @@ struct SubAgentListView: View {
                 )
             } else {
                 ForEach(parentAgent.subAgents, id: \.id) { sub in
-                    VStack(alignment: .leading) {
-                        Text(sub.name).font(.headline)
-                        Text("\(sub.sessions.count) sessions")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(sub.name).font(.headline)
+                            Spacer()
+                            Text(sub.subAgentType ?? "unknown")
+                                .font(.caption2)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule().fill(sub.isTempSubAgent ? .orange : .blue)
+                                )
+                        }
+
+                        HStack(spacing: 12) {
+                            let hasActive = sub.sessions.contains { $0.isActive }
+                            if hasActive {
+                                HStack(spacing: 4) {
+                                    Circle().fill(.green).frame(width: 6, height: 6)
+                                    Text("Active")
+                                        .font(.caption2)
+                                        .foregroundStyle(.green)
+                                }
+                            }
+
+                            Text("\(sub.sessions.count) sessions")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            if let lastSession = sub.sessions.sorted(by: { $0.updatedAt > $1.updatedAt }).first {
+                                Text("\(lastSession.messages.count) msgs")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            modelContext.delete(sub)
+                            try? modelContext.save()
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
                 }
             }
         }
-        .navigationTitle("Sub-Agents")
+        .navigationTitle("Sub-Agents (\(parentAgent.subAgents.count))")
     }
 }
 

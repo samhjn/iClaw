@@ -163,7 +163,7 @@ final class CronExecutor {
         let settings = await center.notificationSettings()
 
         if settings.authorizationStatus == .notDetermined {
-            try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
         }
 
         let content = UNMutableNotificationContent()

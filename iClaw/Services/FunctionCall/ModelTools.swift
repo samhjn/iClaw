@@ -127,14 +127,17 @@ struct ModelTools {
             return "No LLM providers configured. Add one in Settings."
         }
 
-        var lines: [String] = ["## Available Models (\(providers.count))"]
+        let totalModels = providers.reduce(0) { $0 + $1.enabledModels.count }
+        var lines: [String] = ["## Available Models (\(totalModels) models across \(providers.count) providers)"]
         for p in providers {
             let defaultTag = p.isDefault ? " ⭐ default" : ""
-            lines.append("""
-            - **\(p.name)**\(defaultTag)
-              Model: `\(p.modelName)` | Endpoint: \(p.endpoint)
-              ID: `\(p.id.uuidString)`
-            """)
+            lines.append("### \(p.name)\(defaultTag)")
+            lines.append("  Endpoint: \(p.endpoint)")
+            lines.append("  Provider ID: `\(p.id.uuidString)`")
+            for model in p.enabledModels {
+                let isDefault = model == p.modelName ? " (default)" : ""
+                lines.append("  - `\(model)`\(isDefault)")
+            }
         }
         return lines.joined(separator: "\n")
     }

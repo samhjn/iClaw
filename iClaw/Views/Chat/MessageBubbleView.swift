@@ -20,13 +20,24 @@ struct MessageBubbleView: View {
         role == .tool
     }
 
+    private var isAssistant: Bool {
+        role == .assistant
+    }
+
+    private var toolCalls: [LLMToolCall]? {
+        guard let data = message?.toolCallsData else { return nil }
+        return try? JSONDecoder().decode([LLMToolCall].self, from: data)
+    }
+
     var body: some View {
         HStack(alignment: .top) {
             if isUser { Spacer(minLength: 48) }
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 if isTool {
-                    toolCallView
+                    ToolResultCardView(message: message!)
+                } else if let calls = toolCalls, !calls.isEmpty {
+                    assistantWithToolCalls(calls)
                 } else {
                     bubbleView
                 }
@@ -42,35 +53,43 @@ struct MessageBubbleView: View {
         }
     }
 
+    @ViewBuilder
     private var bubbleView: some View {
-        Text(content)
-            .font(.body)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(isUser ? Color.accentColor : Color(.systemGray6))
-            )
-            .foregroundStyle(isUser ? .white : .primary)
+        if isUser {
+            Text(content)
+                .font(.body)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.accentColor)
+                )
+                .foregroundStyle(.white)
+                .textSelection(.enabled)
+        } else {
+            MarkdownContentView(content, isUser: false)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemGray6))
+                )
+                .foregroundStyle(.primary)
+        }
     }
 
     @ViewBuilder
-    private var toolCallView: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if let name = message?.name {
-                Label(name, systemImage: "wrench")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+    private func assistantWithToolCalls(_ calls: [LLMToolCall]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !content.isEmpty {
+                MarkdownContentView(content, isUser: false)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemGray6))
+                    )
+                    .foregroundStyle(.primary)
             }
-            Text(content)
-                .font(.caption)
-                .fontDesign(.monospaced)
-                .lineLimit(8)
+
+            ToolCallCardView(toolCalls: calls)
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray5))
-        )
     }
 }

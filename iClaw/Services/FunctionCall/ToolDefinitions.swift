@@ -11,6 +11,10 @@ enum ToolDefinitions {
             listCodeTool,
             createSubAgentTool,
             messageSubAgentTool,
+            collectSubAgentOutputTool,
+            listSubAgentsTool,
+            stopSubAgentTool,
+            deleteSubAgentTool,
             scheduleCronTool,
             unscheduleCronTool,
             listCronTool,
@@ -47,7 +51,7 @@ enum ToolDefinitions {
 
     static let executePythonTool = ToolDefinitionBuilder.build(
         name: "execute_python",
-        description: "Execute Python code. In 'repr' mode, evaluates an expression and returns its repr(). In 'script' mode, runs a script and captures stdout/stderr.",
+        description: "Execute Python code in a sandbox. In 'repr' mode, evaluates an expression and returns its repr(). In 'script' mode, runs a script and captures stdout/stderr. Supports: math, json, re, datetime, random, base64, collections modules. Network: requests.get()/post() and urllib.request.urlopen(). String/list/dict methods work as in Python.",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The Python code to execute"),
             "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"])
@@ -84,23 +88,60 @@ enum ToolDefinitions {
 
     static let createSubAgentTool = ToolDefinitionBuilder.build(
         name: "create_sub_agent",
-        description: "Create a new sub-agent that inherits your configuration space. The sub-agent will have your SOUL but starts with empty MEMORY. Optionally specify a model_id to use a different LLM model for the sub-agent.",
+        description: "Create a new sub-agent. Type 'temp' (default): auto-destroyed after collecting output, ideal for one-off tasks. Type 'persistent': long-lived, reusable across sessions, must be explicitly deleted.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("A descriptive name for the sub-agent"),
             "initial_context": ToolDefinitionBuilder.stringParam("Context and instructions for the sub-agent's task"),
-            "model_id": ToolDefinitionBuilder.stringParam("Optional: UUID of the LLM provider to use for this sub-agent. Use list_models to see available providers.")
+            "model_id": ToolDefinitionBuilder.stringParam("Optional: UUID of the LLM provider to use. Use list_models to see available."),
+            "type": ToolDefinitionBuilder.enumParam("Agent lifecycle type", values: ["temp", "persistent"])
         ],
         required: ["name"]
     )
 
     static let messageSubAgentTool = ToolDefinitionBuilder.build(
         name: "message_sub_agent",
-        description: "Send a message to an active sub-agent and receive its response.",
+        description: "Send a message to a sub-agent and receive its full response (including tool call results). The sub-agent runs an autonomous loop until it produces a text reply.",
         properties: [
             "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent to message"),
             "message": ToolDefinitionBuilder.stringParam("The message to send to the sub-agent")
         ],
         required: ["agent_id", "message"]
+    )
+
+    static let collectSubAgentOutputTool = ToolDefinitionBuilder.build(
+        name: "collect_sub_agent_output",
+        description: "Collect output from a sub-agent session. Mode 'summary' returns only assistant replies; 'full' returns the complete transcript. For temp agents, auto_destroy=true (default) will destroy the agent after collecting.",
+        properties: [
+            "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent"),
+            "mode": ToolDefinitionBuilder.enumParam("Output mode", values: ["summary", "full"]),
+            "auto_destroy": ToolDefinitionBuilder.boolParam("Auto-destroy temp agent after collecting (default: true)")
+        ],
+        required: ["agent_id"]
+    )
+
+    static let listSubAgentsTool = ToolDefinitionBuilder.build(
+        name: "list_sub_agents",
+        description: "List all sub-agents of this agent with their type, status (active/idle), and message count.",
+        properties: [:],
+        required: []
+    )
+
+    static let stopSubAgentTool = ToolDefinitionBuilder.build(
+        name: "stop_sub_agent",
+        description: "Force-stop an in-flight sub-agent session. The sub-agent will stop processing and its session becomes idle.",
+        properties: [
+            "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent to stop")
+        ],
+        required: ["agent_id"]
+    )
+
+    static let deleteSubAgentTool = ToolDefinitionBuilder.build(
+        name: "delete_sub_agent",
+        description: "Permanently delete a sub-agent and all its sessions/data. Works for both temp and persistent agents.",
+        properties: [
+            "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent to delete")
+        ],
+        required: ["agent_id"]
     )
 
     // MARK: - Cron Job Tools

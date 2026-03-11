@@ -14,6 +14,20 @@ final class Session {
     var createdAt: Date
     var updatedAt: Date
 
+    /// Whether this session is currently active (agent is generating / processing).
+    var isActive: Bool = false
+
+    /// Whether the user has manually renamed this session's title.
+    var isTitleCustomized: Bool = false
+
+    /// UUID of the parent session that spawned this sub-agent session (for content relay).
+    var parentSessionIdRaw: String?
+
+    var parentSessionId: UUID? {
+        get { parentSessionIdRaw.flatMap { UUID(uuidString: $0) } }
+        set { parentSessionIdRaw = newValue?.uuidString }
+    }
+
     init(title: String, agent: Agent? = nil) {
         self.id = UUID()
         self.agent = agent
@@ -22,6 +36,9 @@ final class Session {
         self.compressedContext = nil
         self.compressedUpToIndex = 0
         self.isArchived = false
+        self.isActive = false
+        self.isTitleCustomized = false
+        self.parentSessionIdRaw = nil
         self.createdAt = Date()
         self.updatedAt = Date()
     }

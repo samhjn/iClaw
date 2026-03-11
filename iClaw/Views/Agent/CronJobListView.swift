@@ -5,6 +5,7 @@ struct CronJobListView: View {
     let agent: Agent
     @Environment(\.modelContext) private var modelContext
     @State private var showAddSheet = false
+    @State private var showShortcutsGuide = false
 
     var body: some View {
         List {
@@ -44,6 +45,25 @@ struct CronJobListView: View {
                         .tint(job.isEnabled ? .orange : .green)
                     }
                 }
+
+                Section {
+                    Button {
+                        showShortcutsGuide = true
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Shortcuts 辅助触发")
+                                    .font(.subheadline)
+                                Text("使用 Apple Shortcuts 确保任务可靠执行")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "shortcuts")
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Cron Jobs")
@@ -56,6 +76,9 @@ struct CronJobListView: View {
         }
         .sheet(isPresented: $showAddSheet) {
             CronJobEditView(agent: agent)
+        }
+        .sheet(isPresented: $showShortcutsGuide) {
+            ShortcutsGuideView(cronJob: nil)
         }
     }
 
@@ -125,6 +148,11 @@ private extension Label where Title == Text, Icon == Image {
 struct CronJobDetailView: View {
     @Bindable var job: CronJob
     @Environment(\.modelContext) private var modelContext
+    @State private var showShortcutsGuide = false
+
+    private var triggerURL: String {
+        "iclaw://cron/trigger/\(job.id.uuidString)"
+    }
 
     var body: some View {
         Form {
@@ -164,6 +192,39 @@ struct CronJobDetailView: View {
                 }
             }
 
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("触发 URL")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(triggerURL)
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.blue)
+                            .textSelection(.enabled)
+                    }
+                    Spacer()
+                    Button {
+                        UIPasteboard.general.string = triggerURL
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                Button {
+                    showShortcutsGuide = true
+                } label: {
+                    Label("查看 Shortcuts 设置指引", systemImage: "shortcuts")
+                }
+            } header: {
+                Text("Shortcuts 集成")
+            } footer: {
+                Text("通过 Apple Shortcuts 的「自动化」功能，使用此 URL 确保定时任务可靠触发。")
+            }
+
             if let sessionId = job.lastSessionId {
                 Section("Last Session") {
                     Text("Session ID: \(sessionId.uuidString)")
@@ -174,6 +235,9 @@ struct CronJobDetailView: View {
         }
         .navigationTitle(job.name)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showShortcutsGuide) {
+            ShortcutsGuideView(cronJob: job)
+        }
     }
 }
 
@@ -191,6 +255,8 @@ struct CronJobEditView: View {
     @State private var jobHint = ""
     @State private var isEnabled = true
     @State private var validationError: String?
+    @State private var showShortcutsGuide = false
+    @State private var savedJob: CronJob?
 
     private var isEditing: Bool { existingJob != nil }
 
@@ -267,7 +333,11 @@ struct CronJobEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         save()
-                        dismiss()
+                        if !isEditing {
+                            showShortcutsGuide = true
+                        } else {
+                            dismiss()
+                        }
                     }
                     .disabled(name.isEmpty || jobHint.isEmpty || validationError != nil)
                 }
@@ -280,6 +350,9 @@ struct CronJobEditView: View {
                     isEnabled = job.isEnabled
                 }
                 validate()
+            }
+            .sheet(isPresented: $showShortcutsGuide, onDismiss: { dismiss() }) {
+                ShortcutsGuideView(cronJob: savedJob)
             }
         }
     }
@@ -312,6 +385,7 @@ struct CronJobEditView: View {
             job.isEnabled = isEnabled
             job.nextRunAt = try? CronParser.nextFireDate(after: Date(), for: cronExpression)
             job.updatedAt = Date()
+            savedJob = job
         } else {
             let job = CronJob(
                 name: name,
@@ -322,6 +396,7 @@ struct CronJobEditView: View {
             )
             job.nextRunAt = try? CronParser.nextFireDate(after: Date(), for: cronExpression)
             modelContext.insert(job)
+            savedJob = job
         }
         try? modelContext.save()
     }

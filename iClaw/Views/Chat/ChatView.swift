@@ -5,6 +5,8 @@ struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
     let session: Session
     @State private var viewModel: ChatViewModel?
+    @State private var showTitleEditor = false
+    @State private var editingTitle = ""
 
     var body: some View {
         Group {
@@ -16,6 +18,27 @@ struct ChatView: View {
         }
         .navigationTitle(session.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    editingTitle = session.title
+                    showTitleEditor = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                }
+            }
+        }
+        .alert("Rename Session", isPresented: $showTitleEditor) {
+            TextField("Title", text: $editingTitle)
+            Button("Save") {
+                let trimmed = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    viewModel?.setCustomTitle(trimmed)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .onAppear {
             if viewModel == nil {
                 viewModel = ChatViewModel(session: session, modelContext: modelContext)
@@ -88,6 +111,28 @@ private struct ChatContentView: View {
                 .background(.ultraThinMaterial)
             }
 
+            // Blocked reason banner
+            if let reason = vm.sendBlockedReason {
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        vm.checkActiveSessionLock()
+                    } label: {
+                        Text("刷新")
+                            .font(.caption)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.08))
+            }
+
             if let modelName = vm.activeModelName {
                 Text(modelName)
                     .font(.caption2)
@@ -96,7 +141,11 @@ private struct ChatContentView: View {
                     .padding(.vertical, 2)
             }
 
-            InputBarView(text: $vm.inputText, isLoading: vm.isLoading) {
+            InputBarView(
+                text: $vm.inputText,
+                isLoading: vm.isLoading,
+                isBlocked: !vm.canSend
+            ) {
                 vm.sendMessage()
             }
         }

@@ -5,7 +5,7 @@ import BackgroundTasks
 @Observable
 @MainActor
 final class CronScheduler {
-    static let bgTaskIdentifier = "com.iclaw.cronjob.refresh"
+    nonisolated static let bgTaskIdentifier = "com.iclaw.cronjob.refresh"
     private static let checkInterval: TimeInterval = 30
 
     private(set) var isRunning = false
@@ -96,8 +96,8 @@ final class CronScheduler {
             let jobId = job.id
             Task {
                 await executor.executeJob(job, agent: agent, context: context)
-                await MainActor.run {
-                    runningJobIds.remove(jobId)
+                await MainActor.run { [self] in
+                    _ = runningJobIds.remove(jobId)
                 }
             }
         }

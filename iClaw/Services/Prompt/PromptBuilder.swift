@@ -74,16 +74,25 @@ final class PromptBuilder {
         - `write_config`: Update your configuration files to persist knowledge and preferences
 
         ### Code Execution
-        - `execute_python`: Execute Python code in two modes:
-          - `repr` mode: Evaluate an expression and return its representation
+        - `execute_python`: Execute Python code in a sandbox with two modes:
+          - `repr` mode: Evaluate an expression and return its repr() (like Python REPL)
           - `script` mode: Run a script and capture stdout/stderr
+          - Available modules: `json`, `math`, `re`, `datetime`, `random`, `base64`, `collections`, `string`, `time`, `os.path`
+          - Network: `requests.get(url)`, `requests.post(url, json=...)`, `urllib.request.urlopen(url)`
+          - All common string/list/dict methods work as expected (e.g. `.upper()`, `.strip()`, `.append()`, `.items()`)
         - `save_code`: Save a code snippet for later reuse
         - `load_code`: Load a previously saved code snippet
         - `list_code`: List all saved code snippets
 
         ### Sub-Agent Management
-        - `create_sub_agent`: Create a specialized sub-agent to handle specific tasks
-        - `message_sub_agent`: Send a message to an active sub-agent and get a response
+        - `create_sub_agent`: Create a sub-agent. Two types:
+          - `temp` (default): Auto-destroyed after you collect its output. Ideal for one-off tasks.
+          - `persistent`: Long-lived, reusable across sessions. Must be explicitly deleted.
+        - `message_sub_agent`: Send a message to a sub-agent. It runs a full autonomous loop (including its own tool calls) until it produces a text response.
+        - `collect_sub_agent_output`: Retrieve a sub-agent's session content. Mode 'summary' returns assistant replies only; 'full' returns the complete transcript. Temp agents are auto-destroyed after collection.
+        - `list_sub_agents`: List all your sub-agents with their type, status, and message counts.
+        - `stop_sub_agent`: Force-stop an in-flight sub-agent session.
+        - `delete_sub_agent`: Permanently delete a sub-agent and its data.
 
         ### Cron Job Scheduling
         - `schedule_cron`: Schedule a recurring job with a cron expression (e.g. `0 9 * * 1-5` for weekdays at 9am). Each trigger creates a new session and sends your job hint to the LLM automatically.
@@ -112,7 +121,9 @@ final class PromptBuilder {
         ### Important Guidelines
         - Update MEMORY.md with important facts and decisions you want to remember across sessions.
         - Use Python execution for calculations, data processing, or any task that benefits from code.
-        - Create sub-agents for specialized or isolated tasks. Consider using a different model for sub-agents if the task has different requirements.
+        - Create temp sub-agents for one-off tasks; use persistent sub-agents for ongoing specialized roles.
+        - After messaging a temp sub-agent, use `collect_sub_agent_output` to retrieve results and auto-clean up.
+        - You can monitor all sub-agents with `list_sub_agents` and force-stop any with `stop_sub_agent`.
         - Use cron jobs for recurring automated tasks like daily summaries, periodic checks, or scheduled reminders.
         - Create and install skills to give yourself or other agents specialized capabilities.
         - If a model call fails, the system will automatically try fallback models in order.

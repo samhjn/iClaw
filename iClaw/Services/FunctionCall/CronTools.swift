@@ -49,6 +49,14 @@ struct CronTools {
         - Enabled: \(enabled)
 
         The job will automatically create a new session and run your hint as a trigger message at each scheduled time.
+
+        💡 **Tip: 使用 Apple Shortcuts 确保定时任务可靠触发**
+        iOS 后台限制可能导致任务延迟。建议在 Shortcuts App 中创建自动化：
+        1. 打开「快捷指令」→「自动化」→ 新建「特定时间」自动化
+        2. 添加「打开URL」动作，填入: `iclaw://cron/trigger/\(job.id.uuidString)`
+        3. 关闭「运行前询问」
+
+        也可使用 `iclaw://cron/run-due` 统一触发所有到期任务。
         """
     }
 

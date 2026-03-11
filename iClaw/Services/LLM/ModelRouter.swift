@@ -54,6 +54,47 @@ final class ModelRouter {
         fetchProvider(id: id)
     }
 
+    /// Returns the resolved chain with model name overrides.
+    /// Same provider can appear multiple times with different models.
+    func resolveProviderChainWithModels(for agent: Agent) -> [(provider: LLMProvider, modelName: String?)] {
+        var chain: [(provider: LLMProvider, modelName: String?)] = []
+        var seen = Set<String>() // "providerId:modelName" dedup key
+
+        func effectiveModel(provider: LLMProvider, override: String?) -> String {
+            override ?? provider.modelName
+        }
+
+        func dedupKey(provider: LLMProvider, override: String?) -> String {
+            "\(provider.id.uuidString):\(effectiveModel(provider: provider, override: override))"
+        }
+
+        if let primaryId = agent.primaryProviderId, let p = fetchProvider(id: primaryId) {
+            let key = dedupKey(provider: p, override: agent.primaryModelNameOverride)
+            chain.append((p, agent.primaryModelNameOverride))
+            seen.insert(key)
+        }
+
+        let fbNames = agent.fallbackModelNames
+        for (i, fbId) in agent.fallbackProviderIds.enumerated() {
+            if let p = fetchProvider(id: fbId) {
+                let modelOverride = i < fbNames.count && !fbNames[i].isEmpty ? fbNames[i] : nil
+                let key = dedupKey(provider: p, override: modelOverride)
+                if !seen.contains(key) {
+                    chain.append((p, modelOverride))
+                    seen.insert(key)
+                }
+            }
+        }
+
+        if chain.isEmpty {
+            if let global = fetchGlobalDefault() {
+                chain.append((global, nil))
+            }
+        }
+
+        return chain
+    }
+
     // MARK: - Streaming with failover
 
     func chatCompletionStreamWithFailover(
@@ -61,22 +102,22 @@ final class ModelRouter {
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
     ) async throws -> (stream: AsyncStream<StreamChunk>, providerName: String) {
-        let chain = resolveProviderChain(for: agent)
+        let chain = resolveProviderChainWithModels(for: agent)
         guard !chain.isEmpty else { throw ChatError.noProviderConfigured }
 
         failoverOccurred = false
 
-        for (index, provider) in chain.enumerated() {
+        for (index, entry) in chain.enumerated() {
             do {
-                let service = LLMService(provider: provider)
+                let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
                 let stream = try await service.chatCompletionStream(messages: messages, tools: tools)
-                lastUsedProviderName = "\(provider.name) (\(provider.modelName))"
+                let effectiveModel = entry.modelName ?? entry.provider.modelName
+                lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
                 failoverOccurred = index > 0
                 return (stream, lastUsedProviderName!)
             } catch {
                 let isLast = index == chain.count - 1
                 if isLast { throw error }
-                // Otherwise continue to next provider
             }
         }
 
@@ -90,16 +131,17 @@ final class ModelRouter {
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
     ) async throws -> (response: LLMChatResponse, providerName: String) {
-        let chain = resolveProviderChain(for: agent)
+        let chain = resolveProviderChainWithModels(for: agent)
         guard !chain.isEmpty else { throw ChatError.noProviderConfigured }
 
         failoverOccurred = false
 
-        for (index, provider) in chain.enumerated() {
+        for (index, entry) in chain.enumerated() {
             do {
-                let service = LLMService(provider: provider)
+                let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
                 let response = try await service.chatCompletion(messages: messages, tools: tools)
-                lastUsedProviderName = "\(provider.name) (\(provider.modelName))"
+                let effectiveModel = entry.modelName ?? entry.provider.modelName
+                lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
                 failoverOccurred = index > 0
                 return (response, lastUsedProviderName!)
             } catch {
