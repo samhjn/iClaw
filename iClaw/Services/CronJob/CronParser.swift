@@ -86,7 +86,6 @@ struct CronParser {
                 return nil
             }
 
-            let cronWeekday = (weekday + 5) % 7 // Calendar: 1=Sun -> cron: 0=Sun
             let cronDow = weekday == 1 ? 0 : weekday - 1
 
             if !schedule.months.contains(month) {

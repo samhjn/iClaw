@@ -10,6 +10,7 @@
 		076B61C851641A6F8F6FA78E /* MarkdownEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F83422956DC29BF68C138F /* MarkdownEditorView.swift */; };
 		07DB6EDE202EDEFCA724940D /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */; };
 		0937EEE912F882F128417057 /* ExecutionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF142E825A15CFC6EC137150 /* ExecutionResult.swift */; };
+		0B76B6A987EB3B0682EB0AD7 /* ShortcutsGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */; };
 		1122B3E2F538F3C12BE77183 /* SubAgentTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F041EB3237F760F5B79BCD5 /* SubAgentTools.swift */; };
 		11600490FE4FA35DD634AAE2 /* CodeSnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 990101E729F85D3AF5936B8A /* CodeSnippet.swift */; };
 		12F52693136A5646AC1768E5 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC3F5719A1A4CAF3BB8FE5F /* Session.swift */; };
@@ -28,7 +29,6 @@
 		4996B0A463A1588C606A425A /* AgentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B26121A2FB261E908D450F5 /* AgentDetailView.swift */; };
 		4A5A293020E0E4D215FF3F32 /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E25850C697EF01F57455B5 /* SessionRowView.swift */; };
 		4F4123F3E9E723C649F2CB84 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0A84BDBA6BF872B7DBFDA /* ChatView.swift */; };
-		5E4D51406FD1F25E8BB86959 /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5BF41651DC42610702FFF24A /* PythonKit */; };
 		60895C4A0FF0A3ADED9FCEC7 /* SkillLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */; };
 		60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */; };
 		628BCBFC19D88157A8EFDD3C /* DefaultUSER.md in Resources */ = {isa = PBXBuildFile; fileRef = D07AF5898D7488DC64851298 /* DefaultUSER.md */; };
@@ -50,6 +50,8 @@
 		A03938ED720D44B40D0C0A02 /* DefaultMEMORY.md in Resources */ = {isa = PBXBuildFile; fileRef = F936E9D09A4316FA53587CAE /* DefaultMEMORY.md */; };
 		A378555AADE705CCD13132D8 /* CronScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8CBF480620107766CD59D04 /* CronScheduler.swift */; };
 		A3FB87453E5298CA25424BE9 /* ModelRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318E344ABF631CB93195C099 /* ModelRouter.swift */; };
+		A7DD04E2F0744B35E6BF550E /* MarkdownContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03610DC93526E131FBCC084A /* MarkdownContentView.swift */; };
+		AA0215677440BECF874F53BF /* JSCorePythonExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA7476BE4E08236F8C3B01C /* JSCorePythonExecutor.swift */; };
 		AA3DCBB0CB5A94D9CC210864 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1337C2E999915147B1255ADA /* AgentService.swift */; };
 		AD5A22D950319EEC2E97F7DC /* ConfigTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91869063A2B5015A3963744B /* ConfigTools.swift */; };
 		AE8EEFD3405DDCA48F4EAD37 /* PromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85FE8763DF3E5DE9B582CC65 /* PromptBuilder.swift */; };
@@ -68,6 +70,7 @@
 		E0C9AA11D18FE2CB04D3ECAC /* FunctionCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */; };
 		E2C10B1CA83F4B3DD0B8FCCE /* InstalledSkill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08103E26BB6C4174073E23F8 /* InstalledSkill.swift */; };
 		E5C85FBCE012B13DC8A68D3A /* ToolDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E711EB00274324F1C757A1F /* ToolDefinitions.swift */; };
+		E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */; };
 		EE8A5D3C8795060CE1E9A02C /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0936D9E098400AFDB6A01F16 /* LLMService.swift */; };
 		F16E98A9D4FD1121B92A9C65 /* SkillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000F0AF0F62F231F3435001 /* SkillService.swift */; };
 		FF140850C540F0F7738C5541 /* AgentModelConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */; };
@@ -76,6 +79,7 @@
 
 /* Begin PBXFileReference section */
 		0000F0AF0F62F231F3435001 /* SkillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillService.swift; sourceTree = "<group>"; };
+		03610DC93526E131FBCC084A /* MarkdownContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownContentView.swift; sourceTree = "<group>"; };
 		08103E26BB6C4174073E23F8 /* InstalledSkill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstalledSkill.swift; sourceTree = "<group>"; };
 		092DD5EE7670CFD435BCE570 /* CronJobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronJobListView.swift; sourceTree = "<group>"; };
 		0936D9E098400AFDB6A01F16 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
@@ -104,8 +108,10 @@
 		5F1929975852A2927B4D6333 /* iClawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClawApp.swift; sourceTree = "<group>"; };
 		6357B86866613D68EAD23432 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentViewModel.swift; sourceTree = "<group>"; };
 		65F951651FB3C7B10CA174E9 /* Skill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skill.swift; sourceTree = "<group>"; };
+		6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsGuideView.swift; sourceTree = "<group>"; };
 		6F041EB3237F760F5B79BCD5 /* SubAgentTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentTools.swift; sourceTree = "<group>"; };
 		6FA049A05520F6A61F7763D0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCallCardView.swift; sourceTree = "<group>"; };
 		6FE286E760B594C5694F1A16 /* CronJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronJob.swift; sourceTree = "<group>"; };
 		7A3EDB1A5F8D62CFCB38DB57 /* MockExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockExecutor.swift; sourceTree = "<group>"; };
 		7BC3F5719A1A4CAF3BB8FE5F /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
@@ -126,6 +132,7 @@
 		B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompressor.swift; sourceTree = "<group>"; };
 		B8CBF480620107766CD59D04 /* CronScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronScheduler.swift; sourceTree = "<group>"; };
 		BBC545410D5D1BAA582EB8A2 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		BEA7476BE4E08236F8C3B01C /* JSCorePythonExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSCorePythonExecutor.swift; sourceTree = "<group>"; };
 		C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		CF142E825A15CFC6EC137150 /* ExecutionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionResult.swift; sourceTree = "<group>"; };
 		D07AF5898D7488DC64851298 /* DefaultUSER.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultUSER.md; sourceTree = "<group>"; };
@@ -141,17 +148,6 @@
 		F936E9D09A4316FA53587CAE /* DefaultMEMORY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultMEMORY.md; sourceTree = "<group>"; };
 		FB3598A06716F40B5130BCB4 /* DefaultPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultPrompts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		24A87D298DB5A9B995A223B7 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5E4D51406FD1F25E8BB86959 /* PythonKit in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		06A5B32E7DA52BADA5C49974 = {
@@ -260,6 +256,7 @@
 				3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */,
 				092DD5EE7670CFD435BCE570 /* CronJobListView.swift */,
 				F3F83422956DC29BF68C138F /* MarkdownEditorView.swift */,
+				6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */,
 			);
 			path = Agent;
 			sourceTree = "<group>";
@@ -271,7 +268,9 @@
 				8354042E2D98C05EE37868DF /* CodeBlockView.swift */,
 				3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */,
 				949EA8CFA50E16335110B086 /* InputBarView.swift */,
+				03610DC93526E131FBCC084A /* MarkdownContentView.swift */,
 				C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */,
+				6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -368,6 +367,7 @@
 			children = (
 				B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */,
 				CF142E825A15CFC6EC137150 /* ExecutionResult.swift */,
+				BEA7476BE4E08236F8C3B01C /* JSCorePythonExecutor.swift */,
 				7A3EDB1A5F8D62CFCB38DB57 /* MockExecutor.swift */,
 				2B440A8B1AEBD649797F26B4 /* PythonExecutor.swift */,
 			);
@@ -410,7 +410,6 @@
 			buildPhases = (
 				F6625D4104480ADFAE209E12 /* Sources */,
 				2BCF353900D65598CD98ADD4 /* Resources */,
-				24A87D298DB5A9B995A223B7 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -418,7 +417,6 @@
 			);
 			name = iClaw;
 			packageProductDependencies = (
-				5BF41651DC42610702FFF24A /* PythonKit */,
 			);
 			productName = iClaw;
 			productReference = 3D8B499E2C3FA4B27CE66753 /* iClaw.app */;
@@ -448,9 +446,6 @@
 			);
 			mainGroup = 06A5B32E7DA52BADA5C49974;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				D3B16A012A782FB69D027B76 /* XCRemoteSwiftPackageReference "PythonKit" */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4341BB328898326B2028393F /* Products */;
 			projectDirPath = "";
@@ -511,9 +506,11 @@
 				C2F719E1F6CFF4237169C442 /* FunctionDefinition.swift in Sources */,
 				261E583DCD29AB3EAA06AD92 /* InputBarView.swift in Sources */,
 				E2C10B1CA83F4B3DD0B8FCCE /* InstalledSkill.swift in Sources */,
+				AA0215677440BECF874F53BF /* JSCorePythonExecutor.swift in Sources */,
 				BB2C9EEBD4C6477D6E70C0E2 /* LLMProvider.swift in Sources */,
 				AF5B2C7EA9437645FC81C988 /* LLMProviderEditView.swift in Sources */,
 				EE8A5D3C8795060CE1E9A02C /* LLMService.swift in Sources */,
+				A7DD04E2F0744B35E6BF550E /* MarkdownContentView.swift in Sources */,
 				076B61C851641A6F8F6FA78E /* MarkdownEditorView.swift in Sources */,
 				BC1D120C67080A38408C0180 /* Message.swift in Sources */,
 				07DB6EDE202EDEFCA724940D /* MessageBubbleView.swift in Sources */,
@@ -531,6 +528,7 @@
 				7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */,
 				8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */,
 				3D7FB68BE84A307A19972099 /* SettingsViewModel.swift in Sources */,
+				0B76B6A987EB3B0682EB0AD7 /* ShortcutsGuideView.swift in Sources */,
 				CD59601FF55900226A267275 /* Skill.swift in Sources */,
 				1F2E1BD4CEC62F1C85EF84D6 /* SkillDetailView.swift in Sources */,
 				60895C4A0FF0A3ADED9FCEC7 /* SkillLibraryView.swift in Sources */,
@@ -538,6 +536,7 @@
 				728A3FDAD5084D7C4D2749F6 /* SkillTools.swift in Sources */,
 				8030E44584B6E3B97613AFAC /* SubAgentManager.swift in Sources */,
 				1122B3E2F538F3C12BE77183 /* SubAgentTools.swift in Sources */,
+				E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */,
 				E5C85FBCE012B13DC8A68D3A /* ToolDefinitions.swift in Sources */,
 				D95A7F4E1090F577942F538C /* iClawApp.swift in Sources */,
 			);
@@ -731,25 +730,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		D3B16A012A782FB69D027B76 /* XCRemoteSwiftPackageReference "PythonKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pvieito/PythonKit.git";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		5BF41651DC42610702FFF24A /* PythonKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D3B16A012A782FB69D027B76 /* XCRemoteSwiftPackageReference "PythonKit" */;
-			productName = PythonKit;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C8CE9654D29065754B2B0076 /* Project object */;
 }

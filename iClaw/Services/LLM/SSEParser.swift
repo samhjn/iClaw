@@ -7,7 +7,31 @@ enum SSEEvent {
 
 struct SSEParser {
     private var buffer = ""
+    private var dataLines: [String] = []
 
+    /// Parse a raw line from `bytes.lines` (without trailing newline).
+    mutating func parseLine(_ line: String) -> [SSEEvent] {
+        // Empty line = end of event
+        if line.isEmpty {
+            return flushEvent()
+        }
+
+        if line.hasPrefix("data: ") {
+            let value = String(line.dropFirst(6))
+            if value == "[DONE]" {
+                let events = flushEvent()
+                return events + [.done]
+            }
+            dataLines.append(value)
+        } else if line == "data:" {
+            dataLines.append("")
+        }
+        // Ignore other SSE fields (event:, id:, retry:, comments)
+
+        return []
+    }
+
+    /// Legacy method for chunk-based parsing. Kept for compatibility.
     mutating func parse(chunk: String) -> [SSEEvent] {
         buffer += chunk
         var events: [SSEEvent] = []
@@ -39,7 +63,16 @@ struct SSEParser {
         return events
     }
 
+    private mutating func flushEvent() -> [SSEEvent] {
+        guard !dataLines.isEmpty else { return [] }
+        let data = dataLines.joined(separator: "\n")
+        dataLines.removeAll()
+        if data.isEmpty { return [] }
+        return [.message(data: data)]
+    }
+
     mutating func reset() {
         buffer = ""
+        dataLines = []
     }
 }

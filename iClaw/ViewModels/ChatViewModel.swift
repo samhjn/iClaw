@@ -11,6 +11,9 @@ final class ChatViewModel {
     var errorMessage: String?
     var activeModelName: String?
 
+    /// If another session of the same agent is active, this holds the blocking reason.
+    var sendBlockedReason: String?
+
     let session: Session
     private var modelContext: ModelContext
 
@@ -18,21 +21,59 @@ final class ChatViewModel {
         self.session = session
         self.modelContext = modelContext
         loadMessages()
+        checkActiveSessionLock()
     }
 
     func loadMessages() {
         messages = session.sortedMessages
     }
 
+    // MARK: - Active Session Lock
+
+    /// Check if another session of the same agent is currently active.
+    func checkActiveSessionLock() {
+        guard let agent = session.agent else {
+            sendBlockedReason = nil
+            return
+        }
+
+        let otherActive = agent.sessions.first { s in
+            s.id != session.id && s.isActive
+        }
+
+        if let blocking = otherActive {
+            sendBlockedReason = "「\(blocking.title)」正在处理中，同一 Agent 同时只允许一个活跃 Session。"
+        } else {
+            sendBlockedReason = nil
+        }
+    }
+
+    var canSend: Bool {
+        sendBlockedReason == nil
+    }
+
+    // MARK: - Send Message
+
     func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+
+        checkActiveSessionLock()
+        guard canSend else { return }
+
         inputText = ""
 
         let userMessage = Message(role: .user, content: text, session: session)
         modelContext.insert(userMessage)
         session.messages.append(userMessage)
         session.updatedAt = Date()
+
+        // Auto-title from first user message
+        if !session.isTitleCustomized && session.title == "New Chat" {
+            let titleText = text.prefix(40)
+            session.title = titleText.count < text.count ? "\(titleText)..." : String(titleText)
+        }
+
         try? modelContext.save()
         loadMessages()
 
@@ -46,10 +87,14 @@ final class ChatViewModel {
         isLoading = true
         streamingContent = ""
         errorMessage = nil
+        session.isActive = true
+        try? modelContext.save()
 
         defer {
             isLoading = false
             streamingContent = ""
+            session.isActive = false
+            try? modelContext.save()
         }
 
         guard let agent = session.agent else {
@@ -159,6 +204,15 @@ final class ChatViewModel {
             await compressor.compress(session: session, llmService: llmService, modelContext: modelContext)
             loadMessages()
         }
+    }
+
+    // MARK: - Manual Title
+
+    func setCustomTitle(_ title: String) {
+        session.title = title
+        session.isTitleCustomized = true
+        session.updatedAt = Date()
+        try? modelContext.save()
     }
 }
 

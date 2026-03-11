@@ -35,10 +35,17 @@ struct MarkdownEditorView: View {
                     .padding(8)
             } else {
                 ScrollView {
-                    Text(content.isEmpty ? "*Empty*" : content)
-                        .font(.body)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
+                    if content.isEmpty {
+                        Text("*Empty*")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                    } else {
+                        MarkdownContentView(content)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                    }
                 }
             }
         }

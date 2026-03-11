@@ -3,6 +3,7 @@ import SwiftUI
 struct InputBarView: View {
     @Binding var text: String
     let isLoading: Bool
+    var isBlocked: Bool = false
     let onSend: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -16,18 +17,23 @@ struct InputBarView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(.systemGray6))
+                        .fill(isBlocked ? Color.orange.opacity(0.08) : Color(.systemGray6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isBlocked ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
                 )
                 .focused($isFocused)
 
             Button {
                 onSend()
             } label: {
-                Image(systemName: "arrow.up.circle.fill")
+                Image(systemName: isBlocked ? "lock.fill" : "arrow.up.circle.fill")
                     .font(.title2)
                     .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(isBlocked ? .orange : .accentColor)
             }
-            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
+            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading || isBlocked)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

@@ -9,13 +9,49 @@ enum StreamChunk {
 
 final class LLMService: @unchecked Sendable {
     let provider: LLMProvider
+    private let modelNameOverride: String?
 
     private var baseURL: String { provider.endpoint }
     private var apiKey: String { provider.apiKey }
-    private var model: String { provider.modelName }
+    private var model: String { modelNameOverride ?? provider.modelName }
 
-    init(provider: LLMProvider) {
+    init(provider: LLMProvider, modelNameOverride: String? = nil) {
         self.provider = provider
+        self.modelNameOverride = modelNameOverride
+    }
+
+    // MARK: - Fetch available models
+
+    static func fetchModels(endpoint: String, apiKey: String) async throws -> [String] {
+        let modelsEndpoint = endpoint.hasSuffix("/")
+            ? endpoint + "models"
+            : endpoint + "/models"
+
+        guard let url = URL(string: modelsEndpoint) else {
+            throw LLMError.invalidURL(modelsEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if !apiKey.isEmpty {
+            request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        request.timeoutInterval = 15
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
+        }
+
+        let modelsResponse = try JSONDecoder().decode(ModelsListResponse.self, from: data)
+        return modelsResponse.data
+            .map(\.id)
+            .sorted()
     }
 
     // MARK: - Non-streaming
@@ -27,8 +63,8 @@ final class LLMService: @unchecked Sendable {
         let request = LLMChatRequest(
             model: model,
             messages: messages,
-            tools: tools,
-            toolChoice: tools != nil ? .auto : nil,
+            tools: tools?.isEmpty == true ? nil : tools,
+            toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: false,
             maxTokens: provider.maxTokens,
             temperature: provider.temperature
@@ -58,8 +94,8 @@ final class LLMService: @unchecked Sendable {
         let request = LLMChatRequest(
             model: model,
             messages: messages,
-            tools: tools,
-            toolChoice: tools != nil ? .auto : nil,
+            tools: tools?.isEmpty == true ? nil : tools,
+            toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: true,
             maxTokens: provider.maxTokens,
             temperature: provider.temperature
@@ -78,6 +114,7 @@ final class LLMService: @unchecked Sendable {
             for try await line in bytes.lines {
                 body += line
             }
+            print("[LLMService] Stream error \(httpResponse.statusCode): \(body.prefix(300))")
             throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
         }
 
@@ -88,6 +125,10 @@ final class LLMService: @unchecked Sendable {
 
                 do {
                     for try await line in bytes.lines {
+                        // Use chunk-based parsing: append "\n\n" to each line so the
+                        // SSE parser immediately recognizes it as a complete event block.
+                        // This is more reliable than line-based parsing because some
+                        // providers/URLSession may not yield empty separator lines.
                         let events = sseParser.parse(chunk: line + "\n\n")
 
                         for event in events {
@@ -124,34 +165,28 @@ final class LLMService: @unchecked Sendable {
                                     }
                                 }
 
-                                if chunk.choices.first?.finishReason == "tool_calls" {
-                                    for (_, acc) in toolCallAccumulators.sorted(by: { $0.key < $1.key }) {
-                                        let toolCall = LLMToolCall(
-                                            id: acc.id,
-                                            name: acc.name,
-                                            arguments: acc.arguments
-                                        )
-                                        continuation.yield(.toolCall(toolCall))
-                                    }
-                                    toolCallAccumulators.removeAll()
+                                // Emit tool calls on any finish reason that indicates tool usage
+                                if let reason = chunk.choices.first?.finishReason,
+                                   isToolCallFinishReason(reason),
+                                   !toolCallAccumulators.isEmpty {
+                                    emitToolCalls(&toolCallAccumulators, continuation: continuation)
                                 }
 
                             case .done:
+                                // Also emit any remaining tool calls on stream end
                                 if !toolCallAccumulators.isEmpty {
-                                    for (_, acc) in toolCallAccumulators.sorted(by: { $0.key < $1.key }) {
-                                        let toolCall = LLMToolCall(
-                                            id: acc.id,
-                                            name: acc.name,
-                                            arguments: acc.arguments
-                                        )
-                                        continuation.yield(.toolCall(toolCall))
-                                    }
+                                    emitToolCalls(&toolCallAccumulators, continuation: continuation)
                                 }
                                 continuation.yield(.done)
                                 continuation.finish()
                                 return
                             }
                         }
+                    }
+
+                    // Stream ended without [DONE] — still emit remaining data
+                    if !toolCallAccumulators.isEmpty {
+                        emitToolCalls(&toolCallAccumulators, continuation: continuation)
                     }
                     continuation.yield(.done)
                     continuation.finish()
@@ -163,7 +198,28 @@ final class LLMService: @unchecked Sendable {
         }
     }
 
-    // MARK: - Request building
+    // MARK: - Helpers
+
+    private func isToolCallFinishReason(_ reason: String) -> Bool {
+        reason == "tool_calls" || reason == "tool_call" || reason == "function_call"
+    }
+
+    private func emitToolCalls(
+        _ accumulators: inout [Int: (id: String, name: String, arguments: String)],
+        continuation: AsyncStream<StreamChunk>.Continuation
+    ) {
+        for (_, acc) in accumulators.sorted(by: { $0.key < $1.key }) {
+            // Generate a fallback ID if the provider didn't send one
+            let callId = acc.id.isEmpty ? "call_\(UUID().uuidString.prefix(8))" : acc.id
+            let toolCall = LLMToolCall(
+                id: callId,
+                name: acc.name,
+                arguments: acc.arguments
+            )
+            continuation.yield(.toolCall(toolCall))
+        }
+        accumulators.removeAll()
+    }
 
     private func buildRequest<T: Encodable>(body: T) throws -> URLRequest {
         let endpoint = baseURL.hasSuffix("/")
@@ -183,8 +239,34 @@ final class LLMService: @unchecked Sendable {
         }
 
         let encoder = JSONEncoder()
-        request.httpBody = try encoder.encode(body)
+        let bodyData = try encoder.encode(body)
+        request.httpBody = bodyData
+
+        #if DEBUG
+        if let bodyStr = String(data: bodyData, encoding: .utf8) {
+            let preview = bodyStr.prefix(500)
+            print("[LLMService] POST \(endpoint) body=\(preview)...")
+        }
+        #endif
+
         return request
+    }
+}
+
+// MARK: - Models API response types
+
+struct ModelsListResponse: Codable {
+    let data: [ModelInfo]
+
+    struct ModelInfo: Codable {
+        let id: String
+        let created: Int?
+        let ownedBy: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, created
+            case ownedBy = "owned_by"
+        }
     }
 }
 

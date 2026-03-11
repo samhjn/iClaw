@@ -60,8 +60,46 @@ final class SessionCompressor {
                 session.updatedAt = Date()
                 try? modelContext.save()
             }
+
+            // Auto-generate title when compressing if user hasn't customized it
+            if !session.isTitleCustomized {
+                await generateTitle(for: session, llmService: llmService, modelContext: modelContext)
+            }
         } catch {
             print("[SessionCompressor] Compression failed: \(error)")
+        }
+    }
+
+    @MainActor
+    private func generateTitle(
+        for session: Session,
+        llmService: LLMService,
+        modelContext: ModelContext
+    ) async {
+        let recentContent = session.sortedMessages
+            .filter { $0.role == .user || $0.role == .assistant }
+            .prefix(8)
+            .compactMap { $0.content }
+            .joined(separator: "\n")
+
+        guard !recentContent.isEmpty else { return }
+
+        let messages: [LLMChatMessage] = [
+            .system("Generate a concise title (max 6 words) summarizing this conversation. Reply with only the title, nothing else. No quotes."),
+            .user(recentContent)
+        ]
+
+        do {
+            let response = try await llmService.chatCompletion(messages: messages)
+            if let title = response.choices.first?.message?.content?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !title.isEmpty {
+                let cleanTitle = title.trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+                session.title = String(cleanTitle.prefix(50))
+                session.updatedAt = Date()
+                try? modelContext.save()
+            }
+        } catch {
+            // Title generation is best-effort
         }
     }
 

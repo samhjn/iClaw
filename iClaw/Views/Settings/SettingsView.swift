@@ -42,9 +42,20 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(provider.name)
                                     .font(.headline)
-                                Text(provider.modelName)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                HStack(spacing: 4) {
+                                    Text(provider.modelName)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    let extraCount = provider.enabledModels.count - 1
+                                    if extraCount > 0 {
+                                        Text("+\(extraCount)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 1)
+                                            .background(Capsule().fill(.blue.opacity(0.7)))
+                                    }
+                                }
                                 Text(provider.endpoint)
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)

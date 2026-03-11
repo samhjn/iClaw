@@ -6,7 +6,7 @@ import Observation
 final class SettingsViewModel {
     var providers: [LLMProvider] = []
 
-    private var modelContext: ModelContext
+    private(set) var modelContext: ModelContext
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -60,6 +60,54 @@ final class SettingsViewModel {
     }
 
     func updateProvider(_ provider: LLMProvider) {
+        try? modelContext.save()
+        fetchProviders()
+    }
+
+    func addProviderDirectly(_ provider: LLMProvider) {
+        modelContext.insert(provider)
+        try? modelContext.save()
+        fetchProviders()
+    }
+
+    // MARK: - Remote Model Fetching
+
+    @MainActor
+    func fetchRemoteModels(for provider: LLMProvider) async throws -> [String] {
+        let models = try await LLMService.fetchModels(
+            endpoint: provider.endpoint,
+            apiKey: provider.apiKey
+        )
+        provider.cachedModelList = models
+        provider.cachedModelListDate = Date()
+        try? modelContext.save()
+        return models
+    }
+
+    func toggleModel(_ modelName: String, enabled: Bool, for provider: LLMProvider) {
+        var current = provider.enabledModels
+        if enabled {
+            if !current.contains(modelName) {
+                current.append(modelName)
+            }
+        } else {
+            if modelName != provider.modelName {
+                current.removeAll { $0 == modelName }
+            }
+        }
+        provider.enabledModels = current
+        try? modelContext.save()
+        fetchProviders()
+    }
+
+    func setDefaultModel(_ modelName: String, for provider: LLMProvider) {
+        let oldDefault = provider.modelName
+        provider.modelName = modelName
+        var enabled = provider.enabledModels
+        if !enabled.contains(oldDefault) {
+            enabled.append(oldDefault)
+        }
+        provider.enabledModels = enabled
         try? modelContext.save()
         fetchProviders()
     }
