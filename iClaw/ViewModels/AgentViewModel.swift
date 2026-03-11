@@ -1,0 +1,52 @@
+import Foundation
+import SwiftData
+import Observation
+
+@Observable
+final class AgentViewModel {
+    var agents: [Agent] = []
+
+    private var modelContext: ModelContext
+
+    init(modelContext: ModelContext) {
+        self.modelContext = modelContext
+        fetchAgents()
+    }
+
+    func fetchAgents() {
+        let descriptor = FetchDescriptor<Agent>(
+            predicate: #Predicate { $0.parentAgent == nil },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        agents = (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    func createAgent(name: String) -> Agent {
+        let soul = DefaultPrompts.defaultSoul
+        let memory = DefaultPrompts.defaultMemory
+        let user = DefaultPrompts.defaultUser
+
+        let agent = Agent(
+            name: name,
+            soulMarkdown: soul,
+            memoryMarkdown: memory,
+            userMarkdown: user
+        )
+        modelContext.insert(agent)
+        try? modelContext.save()
+        fetchAgents()
+        return agent
+    }
+
+    func deleteAgent(_ agent: Agent) {
+        modelContext.delete(agent)
+        try? modelContext.save()
+        fetchAgents()
+    }
+
+    func updateAgent(_ agent: Agent) {
+        agent.updatedAt = Date()
+        try? modelContext.save()
+        fetchAgents()
+    }
+}
