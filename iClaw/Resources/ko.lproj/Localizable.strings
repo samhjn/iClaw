@@ -1,0 +1,281 @@
+/* 한국어 */
+
+// MARK: - Tabs
+"tabs.sessions" = "세션";
+"tabs.agents" = "에이전트";
+"tabs.skills" = "스킬";
+"tabs.settings" = "설정";
+
+// MARK: - Common
+"common.save" = "저장";
+"common.cancel" = "취소";
+"common.delete" = "삭제";
+"common.create" = "생성";
+"common.edit" = "편집";
+"common.done" = "완료";
+"common.copy" = "복사";
+"common.copied" = "복사됨";
+"common.dismiss" = "닫기";
+"common.enable" = "활성화";
+"common.disable" = "비활성화";
+"common.default" = "기본";
+"common.active" = "활성";
+"common.preview" = "미리보기";
+"common.empty" = "*비어있음*";
+"common.refresh" = "새로고침";
+"common.add" = "추가";
+"common.name" = "이름";
+"common.unknown" = "알 수 없음";
+
+// MARK: - Chat
+"chat.messagePlaceholder" = "메시지…";
+"chat.cancelling" = "중지 중…";
+"chat.thinking" = "생각 중…";
+"chat.compressingContext" = "컨텍스트 압축 중…";
+"chat.renameSession" = "세션 이름 변경";
+"chat.rename" = "이름 변경";
+"chat.compressContext" = "컨텍스트 압축";
+"chat.title" = "제목";
+"chat.openLink" = "링크 열기";
+"chat.share" = "공유";
+"chat.loadingImage" = "이미지 로딩 중…";
+"chat.imageLoadFailed" = "이미지 로딩 실패";
+"chat.newChat" = "새 대화";
+"chat.aborted" = "\n\n⚠️ *[중지됨]*";
+"chat.toolCallAborted" = "⚠️ *[도구 호출이 중지됨]*";
+"chat.noAgent" = "이 세션에 연결된 에이전트가 없습니다";
+"chat.noCompressModel" = "압축에 사용 가능한 모델이 없습니다";
+"chat.sessionBlocked" = "「%@」이(가) 처리 중입니다. 동일 에이전트당 하나의 활성 세션만 허용됩니다.";
+"chat.compressionInfo" = "컨텍스트 ≈%@ / %@ | %d개 메시지 (%d개 압축됨)";
+
+// MARK: - Agents
+"agents.title" = "에이전트";
+"agents.newAgent" = "새 에이전트";
+"agents.agentName" = "에이전트 이름";
+"agents.createAgent" = "에이전트 생성";
+"agents.noAgents" = "에이전트 없음";
+"agents.createAgentDescription" = "AI 에이전트를 생성하여 시작하세요.";
+"agents.enterName" = "새 에이전트의 이름을 입력하세요.";
+
+// MARK: - Agent Detail
+"agentDetail.config" = "설정";
+"agentDetail.modelConfig" = "모델 설정";
+"agentDetail.skills" = "스킬";
+"agentDetail.cronJobs" = "예약 작업";
+"agentDetail.customConfigs" = "사용자 정의 설정";
+"agentDetail.subAgents" = "서브 에이전트";
+"agentDetail.codeSnippets" = "코드 스니펫";
+"agentDetail.newConfig" = "새 설정";
+"agentDetail.keyPlaceholder" = "키 이름 (예: RULES)";
+"agentDetail.noSubAgents" = "서브 에이전트 없음";
+"agentDetail.subAgentsDescription" = "서브 에이전트는 대화 중 AI에 의해 생성됩니다.";
+"agentDetail.sessionsCount" = "%d개 세션";
+"agentDetail.msgsCount" = "%d개 메시지";
+"agentDetail.subAgentsTitle" = "서브 에이전트 (%d)";
+"agentDetail.noCodeSnippets" = "코드 스니펫 없음";
+"agentDetail.codeSnippetsDescription" = "코드 스니펫은 AI 에이전트에 의해 저장됩니다.";
+
+// MARK: - Model Config
+"modelConfig.title" = "모델 설정";
+"modelConfig.globalDefault" = "전역 기본";
+"modelConfig.primaryModel" = "기본 모델";
+"modelConfig.primaryModelFooter" = "이 에이전트와의 대화에 사용되는 주요 모델입니다.";
+"modelConfig.noFallback" = "폴백 모델 미설정";
+"modelConfig.addFallback" = "폴백 추가";
+"modelConfig.fallbackChain" = "폴백 체인";
+"modelConfig.fallbackFooter" = "기본 모델이 실패하면 이 순서대로 시도합니다. 드래그하여 순서 변경.";
+"modelConfig.inheritFromPrimary" = "기본 모델에서 상속";
+"modelConfig.subAgentModel" = "서브 에이전트 모델";
+"modelConfig.subAgentDefault" = "서브 에이전트 기본";
+"modelConfig.subAgentFooter" = "이 에이전트가 생성하는 서브 에이전트의 기본 모델입니다.";
+"modelConfig.compressionThreshold" = "압축 임계값 (토큰)";
+"modelConfig.defaultThreshold" = "기본 (%d)";
+"modelConfig.systemDefault" = "0 = 시스템 기본";
+"modelConfig.resetDefault" = "기본값으로 복원";
+"modelConfig.contextCompression" = "컨텍스트 압축";
+"modelConfig.compressionFooter" = "세션의 누적 토큰이 이 임계값을 초과하면 이전 메시지가 자동으로 요약으로 압축됩니다. 값을 높이면 더 많은 원본 컨텍스트가 보존되지만 API 비용이 증가합니다.";
+"modelConfig.noModels" = "사용 가능한 모델이 없습니다 — 설정에서 제공자를 구성하세요";
+"modelConfig.override" = "(재정의)";
+"modelConfig.primary" = "기본";
+"modelConfig.fallback" = "폴백";
+"modelConfig.subAgent" = "서브 에이전트";
+"modelConfig.resolutionOrder" = "해결 순서";
+"modelConfig.resolutionFooter" = "모델은 이 순서대로 시도됩니다. 동일 제공자가 다른 모델로 여러 번 나타날 수 있습니다.";
+
+// MARK: - Cron Jobs
+"cronJobs.title" = "예약 작업";
+"cronJobs.noCronJobs" = "예약 작업 없음";
+"cronJobs.noCronJobsDescription" = "여기서 반복 작업을 생성하거나 AI 에이전트에게 생성을 요청하세요.";
+"cronJobs.shortcutsTrigger" = "단축어 연동 트리거";
+"cronJobs.shortcutsDescription" = "Apple 단축어로 작업의 안정적 실행 보장";
+"cronJobs.runsCount" = "%d회 실행";
+"cronJobs.nextPrefix" = "다음: ";
+"cronJobs.jobInfo" = "작업 정보";
+"cronJobs.schedule" = "스케줄";
+"cronJobs.description" = "설명";
+"cronJobs.enabled" = "활성화됨";
+"cronJobs.jobHint" = "작업 힌트";
+"cronJobs.statistics" = "통계";
+"cronJobs.totalRuns" = "총 실행 횟수";
+"cronJobs.lastRun" = "마지막 실행";
+"cronJobs.ago" = " 전";
+"cronJobs.nextRun" = "다음 실행";
+"cronJobs.created" = "생성일";
+"cronJobs.triggerURL" = "트리거 URL";
+"cronJobs.viewShortcutsGuide" = "단축어 설정 가이드 보기";
+"cronJobs.shortcutsIntegration" = "단축어 연동";
+"cronJobs.shortcutsIntegrationFooter" = "Apple 단축어의 \"자동화\" 기능으로 이 URL을 사용하여 예약 작업을 안정적으로 트리거합니다.";
+"cronJobs.lastSession" = "마지막 세션";
+"cronJobs.editJob" = "작업 편집";
+"cronJobs.newCronJob" = "새 예약 작업";
+"cronJobs.basic" = "기본";
+"cronJobs.jobName" = "작업 이름";
+"cronJobs.cronExpression" = "Cron 표현식";
+"cronJobs.nextFire" = "다음 실행:";
+"cronJobs.cronFormat" = "형식: 분 시 일 월 요일\n프리셋: @hourly @daily @weekly @monthly @yearly";
+"cronJobs.quickPresets" = "빠른 프리셋";
+"cronJobs.everyHour" = "매시간";
+"cronJobs.daily9am" = "매일 오전 9시";
+"cronJobs.weekdays9am" = "평일 오전 9시";
+"cronJobs.weeklyMon" = "매주 월요일";
+"cronJobs.every30min" = "30분마다";
+"cronJobs.monthly1st" = "매월 1일";
+"cronJobs.jobHintFooter" = "작업이 트리거될 때마다 이 프롬프트가 LLM에 전송됩니다.";
+
+// MARK: - Shortcuts Guide
+"shortcuts.title" = "단축어 가이드";
+"shortcuts.headerTitle" = "단축어로 예약 작업 트리거";
+"shortcuts.headerSubtitle" = "백그라운드에서 Cron 작업의 안정적 실행 보장";
+"shortcuts.whyNeeded" = "왜 단축어가 필요한가요?";
+"shortcuts.whyDescription" = "iOS는 백그라운드 작업에 엄격한 제한이 있습니다. 시스템이 BGAppRefreshTask를 지연하거나 건너뛸 수 있어 예약 작업이 정시에 트리거되지 않을 수 있습니다. Apple 단축어의 \"자동화\" 기능을 사용하면 지정된 시간에 자동으로 iClaw의 URL Scheme을 열어 작업이 예정대로 실행되도록 보장할 수 있습니다.";
+"shortcuts.setupSteps" = "설정 단계";
+"shortcuts.step1Title" = "단축어 앱 열기";
+"shortcuts.step1Detail" = "\"단축어\" 앱으로 이동하여 하단의 \"자동화\" 탭을 선택합니다.";
+"shortcuts.step2Title" = "개인 자동화 만들기";
+"shortcuts.step2Detail" = "오른쪽 상단 \"+\" → \"개인 자동화 만들기\" → \"시간\"을 선택합니다.";
+"shortcuts.step3Title" = "트리거 시간 설정";
+"shortcuts.step3Detail" = "Cron 작업 스케줄에 맞는 시간과 반복 규칙(매일/평일/특정 날짜)을 설정합니다.";
+"shortcuts.step4Title" = "동작 추가";
+"shortcuts.step4Detail" = "\"URL 열기\" 동작을 검색하여 추가하고 다음 URL을 입력합니다:";
+"shortcuts.step5Title" = "\"실행 전 묻기\" 비활성화";
+"shortcuts.step5Detail" = "\"실행 전 묻기\"를 끄면 자동화가 백그라운드에서 조용히 실행됩니다.";
+"shortcuts.step6Title" = "완료";
+"shortcuts.step6Detail" = "\"완료\"를 탭하여 자동화를 저장합니다. 이제 Cron 작업이 단축어를 통해 지정된 시간에 안정적으로 트리거됩니다.";
+"shortcuts.urlReference" = "URL 참조";
+"shortcuts.triggerSpecific" = "특정 작업 트리거";
+"shortcuts.triggerSpecificDesc" = "지정된 ID의 Cron 작업을 트리거";
+"shortcuts.runAllDue" = "만기된 모든 작업 실행";
+"shortcuts.runAllDueDesc" = "만기된 모든 Cron 작업을 확인하고 실행";
+"shortcuts.tips" = "팁";
+"shortcuts.tip1" = "고빈도 작업(예: 매시간)의 경우 앱 내 스케줄링과 단축어를 이중으로 사용하는 것을 권장합니다.";
+"shortcuts.tip2" = "단축어 자동화는 기기가 잠금 화면일 때도 실행할 수 있지만 네트워크 연결이 필요합니다.";
+"shortcuts.tip3" = "여러 Cron 작업이 있는 경우 \"만기된 모든 작업 실행\" URL로 한꺼번에 트리거할 수 있습니다.";
+"shortcuts.tip4" = "URL Scheme을 처음 사용할 때 시스템이 확인 대화상자를 표시할 수 있습니다. 확인 후 이후 호출은 조용히 실행됩니다.";
+
+// MARK: - Sessions
+"sessions.title" = "세션";
+"sessions.noSessions" = "세션 없음";
+"sessions.noSessionsDescription" = "새 세션을 만들어 AI 에이전트와 대화를 시작하세요.";
+"sessions.newSession" = "새 세션";
+"sessions.noAgents" = "에이전트 없음";
+"sessions.noAgentsDescription" = "먼저 에이전트 탭에서 에이전트를 생성하세요.";
+"sessions.sessionsCount" = "%d개 세션";
+"sessions.selectAgent" = "에이전트 선택";
+"sessions.messagesCount" = "%d개 메시지";
+
+// MARK: - Settings
+"settings.title" = "설정";
+"settings.llmProviders" = "LLM 제공자";
+"settings.addProvider" = "제공자 추가";
+"settings.about" = "정보";
+"settings.version" = "버전";
+
+// MARK: - LLM Provider
+"provider.editProvider" = "제공자 편집";
+"provider.addProvider" = "제공자 추가";
+"provider.addModel" = "모델 추가";
+"provider.modelNamePlaceholder" = "모델 이름 (예: gpt-4o-mini)";
+"provider.provider" = "제공자";
+"provider.endpoint" = "엔드포인트";
+"provider.authentication" = "인증";
+"provider.apiKey" = "API 키";
+"provider.defaultModel" = "기본 모델";
+"provider.defaultModelFooter" = "특정 모델이 선택되지 않았을 때 사용되는 기본 모델입니다.";
+"provider.noModelsEnabled" = "활성화된 모델 없음";
+"provider.setDefault" = "기본으로 설정";
+"provider.manuallyAddModel" = "수동으로 모델 추가";
+"provider.enabledModels" = "활성화된 모델";
+"provider.enabledModelsFooter" = "왼쪽 스와이프로 비활성화, 오른쪽 스와이프로 기본 설정. 활성화된 모델만 에이전트 모델 선택에 표시됩니다.";
+"provider.fetchFromAPI" = "API에서 가져오기";
+"provider.availableToEnable" = "활성화 가능 (%d)";
+"provider.allModelsEnabled" = "가져온 전체 %d개 모델이 활성화되었습니다";
+"provider.enableAll" = "모두 활성화";
+"provider.remoteModels" = "원격 모델";
+"provider.remoteModelsFooter" = "API 엔드포인트에서 모델을 가져온 다음 필요한 모델을 활성화하세요.";
+"provider.maxTokens" = "최대 토큰: %d";
+"provider.parameters" = "매개변수";
+"provider.presets" = "프리셋";
+
+// MARK: - Skills
+"skills.title" = "스킬";
+"skills.noSkills" = "스킬 없음";
+"skills.noSkillsDescription" = "스킬을 생성하거나 AI 에이전트에게 구축을 요청하세요.";
+"skills.createSkill" = "스킬 생성";
+"skills.customSkills" = "사용자 정의 스킬";
+"skills.builtInSkills" = "기본 제공 스킬";
+"skills.builtIn" = "기본 제공";
+"skills.searchSkills" = "스킬 검색…";
+"skills.deleteSkill" = "스킬 삭제";
+"skills.deleteSkillMessage" = "「%@」을(를) 영구적으로 삭제하고 모든 에이전트에서 제거합니다.";
+"skills.content" = "콘텐츠";
+"skills.noAgents" = "에이전트 없음";
+"skills.noAgentsDescription" = "먼저 에이전트를 생성하세요.";
+"skills.install" = "%@ 설치";
+"skills.skillsActive" = "%d개 스킬 활성";
+"skills.agents" = "에이전트";
+"skills.editSkill" = "스킬 편집";
+"skills.newSkill" = "새 스킬";
+"skills.info" = "정보";
+"skills.skillName" = "스킬 이름";
+"skills.summary" = "요약 (한 줄 설명)";
+"skills.tags" = "태그 (쉼표로 구분)";
+"skills.contentMarkdown" = "콘텐츠 (Markdown)";
+"skills.contentFooter" = "지침, 방법론 또는 지식을 작성합니다. 설치 후 에이전트의 시스템 프롬프트에 주입됩니다.";
+"skills.noSkillsInstalled" = "설치된 스킬 없음";
+"skills.installDescription" = "라이브러리에서 스킬을 설치하여 이 에이전트에 전문 능력을 추가하세요.";
+"skills.browseLibrary" = "라이브러리 찾아보기";
+"skills.uninstall" = "제거";
+"skills.skillLibrary" = "스킬 라이브러리";
+"skills.activeInstalled" = "%d개 활성 / %d개 설치됨";
+
+// MARK: - Cron Description
+"cron.invalidExpression" = "잘못된 Cron 표현식";
+"cron.everyMinute" = "매분";
+"cron.atMinute" = "%d분에";
+"cron.atMinutes" = "%@분에";
+"cron.ofEveryHour" = "매시간";
+"cron.ofHour" = "%d시에";
+"cron.ofHours" = "%@시에";
+"cron.onDays" = "매월 %@일에";
+"cron.inMonths" = "%@월에";
+"cron.onWeekdays" = "%@에";
+"cron.sun" = "일";
+"cron.mon" = "월";
+"cron.tue" = "화";
+"cron.wed" = "수";
+"cron.thu" = "목";
+"cron.fri" = "금";
+"cron.sat" = "토";
+
+// MARK: - Cron Executor
+"cronExec.completed" = "예약 작업 완료";
+"cronExec.completedBody" = "%@이(가) 완료되었습니다. 탭하여 세션을 확인하세요.";
+"cronExec.noProvider" = "[예약 작업 오류] LLM 제공자가 설정되지 않았습니다.";
+
+// MARK: - Chat Errors
+"chatError.noProvider" = "LLM 제공자가 설정되지 않았습니다. 설정에서 추가하세요.";
+"chatError.noAgent" = "이 세션에 연결된 에이전트가 없습니다.";
+
+// MARK: - Markdown Editor
+"markdownEditor.preview" = "미리보기";
+"markdownEditor.edit" = "편집";

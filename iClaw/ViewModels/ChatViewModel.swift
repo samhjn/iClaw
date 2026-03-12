@@ -65,7 +65,7 @@ final class ChatViewModel {
         }
 
         if let blocking = otherActive {
-            sendBlockedReason = "「\(blocking.title)」正在处理中，同一 Agent 同时只允许一个活跃 Session。"
+            sendBlockedReason = L10n.Chat.sessionBlocked(blocking.title)
         } else {
             sendBlockedReason = nil
         }
@@ -100,7 +100,7 @@ final class ChatViewModel {
         session.messages.append(userMessage)
         session.updatedAt = Date()
 
-        if !session.isTitleCustomized && session.title == "New Chat" {
+        if !session.isTitleCustomized && session.title == L10n.Chat.newChat {
             let titleText = text.prefix(40)
             session.title = titleText.count < text.count ? "\(titleText)..." : String(titleText)
         }
@@ -132,7 +132,7 @@ final class ChatViewModel {
         }
 
         guard let agent = session.agent else {
-            errorMessage = "No agent associated with this session"
+            errorMessage = L10n.Chat.noAgent
             return
         }
 
@@ -164,7 +164,7 @@ final class ChatViewModel {
                     if !fullContent.isEmpty {
                         let partialMsg = Message(
                             role: .assistant,
-                            content: fullContent + "\n\n⚠️ *[已中止]*",
+                            content: fullContent + L10n.Chat.aborted,
                             session: session
                         )
                         modelContext.insert(partialMsg)
@@ -194,7 +194,7 @@ final class ChatViewModel {
                 if !fullContent.isEmpty {
                     let partialMsg = Message(
                         role: .assistant,
-                        content: fullContent + "\n\n⚠️ *[已中止]*",
+                        content: fullContent + L10n.Chat.aborted,
                         session: session
                     )
                     modelContext.insert(partialMsg)
@@ -248,7 +248,7 @@ final class ChatViewModel {
             if Task.isCancelled || cancelled {
                 let cancelMsg = Message(
                     role: .assistant,
-                    content: "⚠️ *[工具调用已中止]*",
+                    content: L10n.Chat.toolCallAborted,
                     session: session
                 )
                 modelContext.insert(cancelMsg)
@@ -312,7 +312,7 @@ final class ChatViewModel {
 
             let router = ModelRouter(modelContext: self.modelContext)
             guard let provider = router.primaryProvider(for: agent) else {
-                self.errorMessage = "没有可用的模型来执行压缩"
+                self.errorMessage = L10n.Chat.noCompressModel
                 return
             }
 
@@ -463,7 +463,7 @@ final class ChatViewModel {
             n >= 1000 ? String(format: "%.1fk", Double(n) / 1000.0) : "\(n)"
         }
 
-        return "上下文 ≈\(fmt(active)) / \(fmt(threshold)) | \(msgCount)条(\(compressed)条已压缩)"
+        return L10n.Chat.compressionInfo(active: fmt(active), threshold: fmt(threshold), total: msgCount, compressed: compressed)
     }
 }
 
@@ -474,9 +474,9 @@ enum ChatError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noProviderConfigured:
-            return "No LLM provider configured. Please add one in Settings."
+            return L10n.ChatError.noProvider
         case .noAgentAssociated:
-            return "No agent associated with this session."
+            return L10n.ChatError.noAgent
         }
     }
 }

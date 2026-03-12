@@ -40,7 +40,7 @@ struct AgentModelConfigView: View {
             compressionSection
             resolutionPreviewSection
         }
-        .navigationTitle("Model Config")
+        .navigationTitle(L10n.ModelConfig.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -49,16 +49,16 @@ struct AgentModelConfigView: View {
     @ViewBuilder
     private var primarySection: some View {
         Section {
-            Picker("Primary Model", selection: primaryBinding) {
-                Text("Global Default").tag("" as String)
+            Picker(L10n.ModelConfig.primaryModel, selection: primaryBinding) {
+                Text(L10n.ModelConfig.globalDefault).tag("" as String)
                 ForEach(allProviderModels) { pm in
                     Text(pm.displayName).tag(pm.id)
                 }
             }
         } header: {
-            Text("Primary Model")
+            Text(L10n.ModelConfig.primaryModel)
         } footer: {
-            Text("The main model used for conversations with this agent.")
+            Text(L10n.ModelConfig.primaryModelFooter)
         }
     }
 
@@ -105,7 +105,7 @@ struct AgentModelConfigView: View {
         Section {
             let chain = buildFallbackChain()
             if chain.isEmpty {
-                Text("No fallback models configured")
+                Text(L10n.ModelConfig.noFallback)
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(chain.enumerated()), id: \.offset) { index, pm in
@@ -147,13 +147,13 @@ struct AgentModelConfigView: View {
                     }
                 }
             } label: {
-                Label("Add Fallback", systemImage: "plus.circle")
+                Label(L10n.ModelConfig.addFallback, systemImage: "plus.circle")
             }
             .disabled(availableFallbackModels.isEmpty)
         } header: {
-            Text("Fallback Chain")
+            Text(L10n.ModelConfig.fallbackChain)
         } footer: {
-            Text("When the primary model fails, these are tried in order. Drag to reorder.")
+            Text(L10n.ModelConfig.fallbackFooter)
         }
     }
 
@@ -203,16 +203,16 @@ struct AgentModelConfigView: View {
     @ViewBuilder
     private var subAgentSection: some View {
         Section {
-            Picker("Sub-Agent Model", selection: subAgentBinding) {
-                Text("Inherit from Primary").tag("" as String)
+            Picker(L10n.ModelConfig.subAgentModel, selection: subAgentBinding) {
+                Text(L10n.ModelConfig.inheritFromPrimary).tag("" as String)
                 ForEach(allProviderModels) { pm in
                     Text(pm.displayName).tag(pm.id)
                 }
             }
         } header: {
-            Text("Sub-Agent Default")
+            Text(L10n.ModelConfig.subAgentDefault)
         } footer: {
-            Text("The default model for sub-agents created by this agent.")
+            Text(L10n.ModelConfig.subAgentFooter)
         }
     }
 
@@ -259,11 +259,11 @@ struct AgentModelConfigView: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("压缩阈值 (tokens)")
+                    Text(L10n.ModelConfig.compressionThreshold)
                     Spacer()
                     Text(agent.compressionThreshold > 0
                          ? "\(agent.compressionThreshold)"
-                         : "默认 (\(ContextManager.compressionThreshold))")
+                         : L10n.ModelConfig.defaultThreshold(ContextManager.compressionThreshold))
                         .foregroundStyle(.secondary)
                 }
 
@@ -274,12 +274,12 @@ struct AgentModelConfigView: View {
                 )
 
                 HStack {
-                    Text("0 = 系统默认")
+                    Text(L10n.ModelConfig.systemDefault)
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                     Spacer()
                     if agent.compressionThreshold > 0 {
-                        Button("恢复默认") {
+                        Button(L10n.ModelConfig.resetDefault) {
                             agent.compressionThreshold = 0
                             agent.updatedAt = Date()
                             try? modelContext.save()
@@ -289,9 +289,9 @@ struct AgentModelConfigView: View {
                 }
             }
         } header: {
-            Text("上下文压缩")
+            Text(L10n.ModelConfig.contextCompression)
         } footer: {
-            Text("当 Session 的累计 token 超过此阈值时，自动压缩旧消息为摘要。调高可保留更多原始上下文，但会增加 API 开销。")
+            Text(L10n.ModelConfig.compressionFooter)
         }
     }
 
@@ -315,7 +315,7 @@ struct AgentModelConfigView: View {
             let chain = router.resolveProviderChainWithModels(for: agent)
 
             if chain.isEmpty {
-                Text("No models available — configure a provider in Settings")
+                Text(L10n.ModelConfig.noModels)
                     .foregroundStyle(.red)
             } else {
                 ForEach(Array(chain.enumerated()), id: \.offset) { index, entry in
@@ -346,7 +346,7 @@ struct AgentModelConfigView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 if isOverride {
-                                    Text("(override)")
+                                    Text(L10n.ModelConfig.override)
                                         .font(.caption2)
                                         .foregroundStyle(.orange)
                                 }
@@ -356,14 +356,14 @@ struct AgentModelConfigView: View {
                         Spacer()
 
                         if index == 0 {
-                            Text("Primary")
+                            Text(L10n.ModelConfig.primary)
                                 .font(.caption2)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Capsule().fill(.blue))
                         } else {
-                            Text("Fallback")
+                            Text(L10n.ModelConfig.fallback)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 6)
@@ -397,7 +397,7 @@ struct AgentModelConfigView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text("Sub-Agent")
+                    Text(L10n.ModelConfig.subAgent)
                         .font(.caption2)
                         .foregroundStyle(.orange)
                         .padding(.horizontal, 6)
@@ -407,9 +407,9 @@ struct AgentModelConfigView: View {
                 .padding(.vertical, 2)
             }
         } header: {
-            Text("Resolution Order")
+            Text(L10n.ModelConfig.resolutionOrder)
         } footer: {
-            Text("Models are tried in this order. Same provider can appear with different models.")
+            Text(L10n.ModelConfig.resolutionFooter)
         }
     }
 }

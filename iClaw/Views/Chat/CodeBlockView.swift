@@ -22,7 +22,7 @@ struct CodeBlockView: View {
                     }
                 } label: {
                     Label(
-                        copied ? "Copied" : "Copy",
+                        copied ? L10n.Common.copied : L10n.Common.copy,
                         systemImage: copied ? "checkmark" : "doc.on.doc"
                     )
                     .font(.caption)

@@ -657,7 +657,7 @@ private struct MarkdownImageView: View {
                     case .empty:
                         HStack(spacing: 8) {
                             ProgressView()
-                            Text("加载图片中…")
+                            Text(L10n.Chat.loadingImage)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -672,7 +672,7 @@ private struct MarkdownImageView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "photo.badge.exclamationmark")
                                 .foregroundStyle(.secondary)
-                            Text("图片加载失败")
+                            Text(L10n.Chat.imageLoadFailed)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

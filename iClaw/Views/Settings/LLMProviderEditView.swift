@@ -41,31 +41,31 @@ struct LLMProviderEditView: View {
                 parametersSection
                 presetsSection
             }
-            .navigationTitle(isEditing ? "Edit Provider" : "Add Provider")
+            .navigationTitle(isEditing ? L10n.Provider.editProvider : L10n.Provider.addProvider)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.Common.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L10n.Common.save) {
                         save()
                         dismiss()
                     }
                     .disabled(name.isEmpty || endpoint.isEmpty || modelName.isEmpty)
                 }
             }
-            .alert("Add Model", isPresented: $showAddModel) {
-                TextField("Model name (e.g. gpt-4o-mini)", text: $newModelName)
+            .alert(L10n.Provider.addModel, isPresented: $showAddModel) {
+                TextField(L10n.Provider.modelNamePlaceholder, text: $newModelName)
                     .autocapitalization(.none)
-                Button("Add") {
+                Button(L10n.Common.add) {
                     let trimmed = newModelName.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty {
                         enabledModels.insert(trimmed)
                     }
                     newModelName = ""
                 }
-                Button("Cancel", role: .cancel) { newModelName = "" }
+                Button(L10n.Common.cancel, role: .cancel) { newModelName = "" }
             }
         }
         .onAppear {
@@ -87,9 +87,9 @@ struct LLMProviderEditView: View {
     // MARK: - Sections
 
     private var providerSection: some View {
-        Section("Provider") {
-            TextField("Name", text: $name)
-            TextField("Endpoint", text: $endpoint)
+        Section(L10n.Provider.provider) {
+            TextField(L10n.Common.name, text: $name)
+            TextField(L10n.Provider.endpoint, text: $endpoint)
                 .textContentType(.URL)
                 .autocapitalization(.none)
                 .keyboardType(.URL)
@@ -97,8 +97,8 @@ struct LLMProviderEditView: View {
     }
 
     private var authSection: some View {
-        Section("Authentication") {
-            SecureField("API Key", text: $apiKey)
+        Section(L10n.Provider.authentication) {
+            SecureField(L10n.Provider.apiKey, text: $apiKey)
                 .autocapitalization(.none)
         }
     }
@@ -106,7 +106,7 @@ struct LLMProviderEditView: View {
     private var defaultModelSection: some View {
         Section {
             HStack {
-                TextField("Default Model", text: $modelName)
+                TextField(L10n.Provider.defaultModel, text: $modelName)
                     .autocapitalization(.none)
                 if !allKnownModels.isEmpty {
                     Menu {
@@ -124,16 +124,16 @@ struct LLMProviderEditView: View {
                 }
             }
         } header: {
-            Text("Default Model")
+            Text(L10n.Provider.defaultModel)
         } footer: {
-            Text("The default model used when no specific model is selected.")
+            Text(L10n.Provider.defaultModelFooter)
         }
     }
 
     private var enabledModelsSection: some View {
         Section {
             if enabledModels.isEmpty {
-                Text("No models enabled")
+                Text(L10n.Provider.noModelsEnabled)
                     .foregroundStyle(.secondary)
                     .font(.subheadline)
             } else {
@@ -143,7 +143,7 @@ struct LLMProviderEditView: View {
                             Text(model)
                                 .font(.subheadline)
                             if model == modelName {
-                                Text("Default")
+                                Text(L10n.Common.defaultLabel)
                                     .font(.caption2)
                                     .foregroundStyle(.blue)
                             }
@@ -160,13 +160,13 @@ struct LLMProviderEditView: View {
                             Button(role: .destructive) {
                                 enabledModels.remove(model)
                             } label: {
-                                Label("Disable", systemImage: "xmark")
+                                Label(L10n.Common.disable, systemImage: "xmark")
                             }
                         }
                     }
                     .swipeActions(edge: .leading) {
                         if model != modelName {
-                            Button("Set Default") {
+                            Button(L10n.Provider.setDefault) {
                                 modelName = model
                             }
                             .tint(.blue)
@@ -178,18 +178,18 @@ struct LLMProviderEditView: View {
             Button {
                 showAddModel = true
             } label: {
-                Label("Manually Add Model", systemImage: "plus")
+                Label(L10n.Provider.manuallyAddModel, systemImage: "plus")
             }
         } header: {
             HStack {
-                Text("Enabled Models")
+                Text(L10n.Provider.enabledModels)
                 Spacer()
                 Text("\(enabledModels.count)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         } footer: {
-            Text("Swipe left to disable, swipe right to set as default. Only enabled models appear in agent model selection.")
+            Text(L10n.Provider.enabledModelsFooter)
         }
     }
 
@@ -199,7 +199,7 @@ struct LLMProviderEditView: View {
                 fetchModels()
             } label: {
                 HStack {
-                    Label("Fetch from API", systemImage: "arrow.triangle.2.circlepath")
+                    Label(L10n.Provider.fetchFromAPI, systemImage: "arrow.triangle.2.circlepath")
                     Spacer()
                     if isFetchingModels {
                         ProgressView()
@@ -224,7 +224,7 @@ struct LLMProviderEditView: View {
             if !fetchedModels.isEmpty {
                 let notEnabled = fetchedModels.filter { !enabledModels.contains($0) }
                 if !notEnabled.isEmpty {
-                    DisclosureGroup("Available to Enable (\(notEnabled.count))") {
+                    DisclosureGroup(L10n.Provider.availableToEnable(notEnabled.count)) {
                         ForEach(notEnabled, id: \.self) { model in
                             HStack {
                                 Text(model)
@@ -241,12 +241,12 @@ struct LLMProviderEditView: View {
                         }
                     }
                 } else {
-                    Text("All \(fetchedModels.count) fetched models are enabled")
+                    Text(L10n.Provider.allModelsEnabled(fetchedModels.count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Button("Enable All") {
+                Button(L10n.Provider.enableAll) {
                     for m in fetchedModels {
                         enabledModels.insert(m)
                     }
@@ -254,26 +254,26 @@ struct LLMProviderEditView: View {
                 .font(.subheadline)
             }
         } header: {
-            Text("Remote Models")
+            Text(L10n.Provider.remoteModels)
         } footer: {
-            Text("Fetch models from the API endpoint, then enable the ones you need.")
+            Text(L10n.Provider.remoteModelsFooter)
         }
     }
 
     private var parametersSection: some View {
         Section {
-            Stepper("Max Tokens: \(maxTokens)", value: $maxTokens, in: 256...128000, step: 256)
+            Stepper(L10n.Provider.maxTokens(maxTokens), value: $maxTokens, in: 256...128000, step: 256)
             HStack {
                 Text("Temperature: \(temperature, specifier: "%.2f")")
                 Slider(value: $temperature, in: 0...2, step: 0.05)
             }
         } header: {
-            Text("Parameters")
+            Text(L10n.Provider.parameters)
         }
     }
 
     private var presetsSection: some View {
-        Section("Presets") {
+        Section(L10n.Provider.presets) {
             Button("OpenAI") {
                 endpoint = "https://api.openai.com/v1"
                 modelName = "gpt-4o"

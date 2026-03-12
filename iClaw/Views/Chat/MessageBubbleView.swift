@@ -132,14 +132,14 @@ private struct MessageContextMenuModifier: ViewModifier {
                         showCopied = false
                     }
                 } label: {
-                    Label("复制", systemImage: "doc.on.doc")
+                    Label(L10n.Common.copy, systemImage: "doc.on.doc")
                 }
 
                 if let url = URL(string: text), UIApplication.shared.canOpenURL(url) {
                     Button {
                         UIApplication.shared.open(url)
                     } label: {
-                        Label("打开链接", systemImage: "safari")
+                        Label(L10n.Chat.openLink, systemImage: "safari")
                     }
                 }
 
@@ -162,12 +162,12 @@ private struct MessageContextMenuModifier: ViewModifier {
                         topVC.present(activityVC, animated: true)
                     }
                 } label: {
-                    Label("分享", systemImage: "square.and.arrow.up")
+                    Label(L10n.Chat.share, systemImage: "square.and.arrow.up")
                 }
             }
             .overlay(alignment: .top) {
                 if showCopied {
-                    Text("已复制")
+                    Text(L10n.Common.copied)
                         .font(.caption)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)

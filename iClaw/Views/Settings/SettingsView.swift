@@ -15,7 +15,7 @@ struct SettingsView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.Settings.title)
             .sheet(isPresented: $showAddProvider) {
                 if let vm = viewModel {
                     LLMProviderEditView(viewModel: vm)
@@ -33,7 +33,7 @@ struct SettingsView: View {
 
     private func settingsList(_ vm: SettingsViewModel) -> some View {
         List {
-            Section("LLM Providers") {
+            Section(L10n.Settings.llmProviders) {
                 ForEach(vm.providers, id: \.id) { provider in
                     NavigationLink {
                         LLMProviderEditView(viewModel: vm, existingProvider: provider)
@@ -71,13 +71,13 @@ struct SettingsView: View {
                         Button(role: .destructive) {
                             vm.deleteProvider(provider)
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L10n.Common.delete, systemImage: "trash")
                         }
                         if !provider.isDefault {
                             Button {
                                 vm.setDefault(provider)
                             } label: {
-                                Label("Default", systemImage: "checkmark")
+                                Label(L10n.Common.defaultLabel, systemImage: "checkmark")
                             }
                             .tint(.green)
                         }
@@ -87,13 +87,13 @@ struct SettingsView: View {
                 Button {
                     showAddProvider = true
                 } label: {
-                    Label("Add Provider", systemImage: "plus")
+                    Label(L10n.Settings.addProvider, systemImage: "plus")
                 }
             }
 
-            Section("About") {
+            Section(L10n.Settings.about) {
                 HStack {
-                    Text("Version")
+                    Text(L10n.Settings.version)
                     Spacer()
                     Text("1.0.0")
                         .foregroundStyle(.secondary)

@@ -1,0 +1,281 @@
+/* 繁體中文 */
+
+// MARK: - Tabs
+"tabs.sessions" = "對話";
+"tabs.agents" = "智能體";
+"tabs.skills" = "技能";
+"tabs.settings" = "設定";
+
+// MARK: - Common
+"common.save" = "儲存";
+"common.cancel" = "取消";
+"common.delete" = "刪除";
+"common.create" = "建立";
+"common.edit" = "編輯";
+"common.done" = "完成";
+"common.copy" = "複製";
+"common.copied" = "已複製";
+"common.dismiss" = "關閉";
+"common.enable" = "啟用";
+"common.disable" = "停用";
+"common.default" = "預設";
+"common.active" = "活躍";
+"common.preview" = "預覽";
+"common.empty" = "*空*";
+"common.refresh" = "重新整理";
+"common.add" = "新增";
+"common.name" = "名稱";
+"common.unknown" = "未知";
+
+// MARK: - Chat
+"chat.messagePlaceholder" = "輸入訊息…";
+"chat.cancelling" = "正在中止…";
+"chat.thinking" = "思考中…";
+"chat.compressingContext" = "正在壓縮上下文…";
+"chat.renameSession" = "重新命名對話";
+"chat.rename" = "重新命名";
+"chat.compressContext" = "壓縮上下文";
+"chat.title" = "標題";
+"chat.openLink" = "開啟連結";
+"chat.share" = "分享";
+"chat.loadingImage" = "載入圖片中…";
+"chat.imageLoadFailed" = "圖片載入失敗";
+"chat.newChat" = "新對話";
+"chat.aborted" = "\n\n⚠️ *[已中止]*";
+"chat.toolCallAborted" = "⚠️ *[工具呼叫已中止]*";
+"chat.noAgent" = "此對話未關聯智能體";
+"chat.noCompressModel" = "沒有可用的模型來執行壓縮";
+"chat.sessionBlocked" = "「%@」正在處理中，同一智能體同時只允許一個活躍對話。";
+"chat.compressionInfo" = "上下文 ≈%@ / %@ | %d 則訊息（%d 則已壓縮）";
+
+// MARK: - Agents
+"agents.title" = "智能體";
+"agents.newAgent" = "新建智能體";
+"agents.agentName" = "智能體名稱";
+"agents.createAgent" = "建立智能體";
+"agents.noAgents" = "尚無智能體";
+"agents.createAgentDescription" = "建立一個 AI 智能體以開始使用。";
+"agents.enterName" = "請輸入新智能體的名稱。";
+
+// MARK: - Agent Detail
+"agentDetail.config" = "設定";
+"agentDetail.modelConfig" = "模型設定";
+"agentDetail.skills" = "技能";
+"agentDetail.cronJobs" = "排程任務";
+"agentDetail.customConfigs" = "自訂設定";
+"agentDetail.subAgents" = "子智能體";
+"agentDetail.codeSnippets" = "程式碼片段";
+"agentDetail.newConfig" = "新建設定";
+"agentDetail.keyPlaceholder" = "鍵名（如 RULES）";
+"agentDetail.noSubAgents" = "尚無子智能體";
+"agentDetail.subAgentsDescription" = "子智能體由 AI 在對話過程中建立。";
+"agentDetail.sessionsCount" = "%d 個對話";
+"agentDetail.msgsCount" = "%d 則訊息";
+"agentDetail.subAgentsTitle" = "子智能體（%d）";
+"agentDetail.noCodeSnippets" = "尚無程式碼片段";
+"agentDetail.codeSnippetsDescription" = "程式碼片段由 AI 智能體儲存。";
+
+// MARK: - Model Config
+"modelConfig.title" = "模型設定";
+"modelConfig.globalDefault" = "全域預設";
+"modelConfig.primaryModel" = "主模型";
+"modelConfig.primaryModelFooter" = "此智能體對話使用的主要模型。";
+"modelConfig.noFallback" = "未設定備用模型";
+"modelConfig.addFallback" = "新增備用模型";
+"modelConfig.fallbackChain" = "備用模型鏈";
+"modelConfig.fallbackFooter" = "當主模型失敗時，將按順序嘗試這些模型。拖曳可調整順序。";
+"modelConfig.inheritFromPrimary" = "繼承主模型";
+"modelConfig.subAgentModel" = "子智能體模型";
+"modelConfig.subAgentDefault" = "子智能體預設";
+"modelConfig.subAgentFooter" = "此智能體建立的子智能體的預設模型。";
+"modelConfig.compressionThreshold" = "壓縮閾值（tokens）";
+"modelConfig.defaultThreshold" = "預設（%d）";
+"modelConfig.systemDefault" = "0 = 系統預設";
+"modelConfig.resetDefault" = "恢復預設";
+"modelConfig.contextCompression" = "上下文壓縮";
+"modelConfig.compressionFooter" = "當對話的累計 token 超過此閾值時，自動壓縮舊訊息為摘要。調高可保留更多原始上下文，但會增加 API 開銷。";
+"modelConfig.noModels" = "沒有可用模型 - 請在設定中配置服務商";
+"modelConfig.override" = "（覆寫）";
+"modelConfig.primary" = "主要";
+"modelConfig.fallback" = "備用";
+"modelConfig.subAgent" = "子智能體";
+"modelConfig.resolutionOrder" = "解析順序";
+"modelConfig.resolutionFooter" = "模型將按此順序嘗試。同一服務商可以使用不同的模型出現多次。";
+
+// MARK: - Cron Jobs
+"cronJobs.title" = "排程任務";
+"cronJobs.noCronJobs" = "尚無排程任務";
+"cronJobs.noCronJobsDescription" = "在此建立週期性任務，或讓 AI 智能體為你建立。";
+"cronJobs.shortcutsTrigger" = "捷徑輔助觸發";
+"cronJobs.shortcutsDescription" = "使用 Apple 捷徑確保任務可靠執行";
+"cronJobs.runsCount" = "%d 次執行";
+"cronJobs.nextPrefix" = "下次：";
+"cronJobs.jobInfo" = "任務資訊";
+"cronJobs.schedule" = "排程";
+"cronJobs.description" = "描述";
+"cronJobs.enabled" = "已啟用";
+"cronJobs.jobHint" = "任務提示";
+"cronJobs.statistics" = "統計";
+"cronJobs.totalRuns" = "總執行次數";
+"cronJobs.lastRun" = "上次執行";
+"cronJobs.ago" = "前";
+"cronJobs.nextRun" = "下次執行";
+"cronJobs.created" = "建立時間";
+"cronJobs.triggerURL" = "觸發 URL";
+"cronJobs.viewShortcutsGuide" = "查看捷徑設定指引";
+"cronJobs.shortcutsIntegration" = "捷徑整合";
+"cronJobs.shortcutsIntegrationFooter" = "透過 Apple 捷徑的「自動化」功能，使用此 URL 確保排程任務可靠觸發。";
+"cronJobs.lastSession" = "上次對話";
+"cronJobs.editJob" = "編輯任務";
+"cronJobs.newCronJob" = "新建排程任務";
+"cronJobs.basic" = "基本";
+"cronJobs.jobName" = "任務名稱";
+"cronJobs.cronExpression" = "Cron 表達式";
+"cronJobs.nextFire" = "下次執行：";
+"cronJobs.cronFormat" = "格式：分 時 日 月 星期\n預設：@hourly @daily @weekly @monthly @yearly";
+"cronJobs.quickPresets" = "快捷預設";
+"cronJobs.everyHour" = "每小時";
+"cronJobs.daily9am" = "每天 9 點";
+"cronJobs.weekdays9am" = "工作日 9 點";
+"cronJobs.weeklyMon" = "每週一";
+"cronJobs.every30min" = "每 30 分鐘";
+"cronJobs.monthly1st" = "每月 1 日";
+"cronJobs.jobHintFooter" = "每次任務觸發時，此提示將傳送給 LLM。";
+
+// MARK: - Shortcuts Guide
+"shortcuts.title" = "捷徑指引";
+"shortcuts.headerTitle" = "使用捷徑輔助觸發排程任務";
+"shortcuts.headerSubtitle" = "確保 Cron Job 在背景也能可靠執行";
+"shortcuts.whyNeeded" = "為什麼需要捷徑？";
+"shortcuts.whyDescription" = "iOS 對背景任務有嚴格限制。系統可能延遲或跳過 BGAppRefreshTask，導致排程任務無法準時觸發。透過 Apple 捷徑的「自動化」功能，可以在指定時間自動開啟 iClaw 的 URL Scheme，確保任務準時執行。";
+"shortcuts.setupSteps" = "設定步驟";
+"shortcuts.step1Title" = "開啟捷徑 App";
+"shortcuts.step1Detail" = "前往「捷徑」App，選擇底部「自動化」標籤頁。";
+"shortcuts.step2Title" = "建立個人自動化";
+"shortcuts.step2Detail" = "點擊右上角「+」→「建立個人自動化」→ 選擇「特定時間」。";
+"shortcuts.step3Title" = "設定觸發時間";
+"shortcuts.step3Detail" = "根據你的排程任務設定對應的時間和重複規則（每天/工作日/特定日期）。";
+"shortcuts.step4Title" = "新增動作";
+"shortcuts.step4Detail" = "搜尋並新增「打開 URL」動作，填入以下 URL：";
+"shortcuts.step5Title" = "關閉「執行前詢問」";
+"shortcuts.step5Detail" = "確保關閉「執行前詢問」開關，這樣自動化才能在背景靜默執行。";
+"shortcuts.step6Title" = "完成";
+"shortcuts.step6Detail" = "點擊「完成」儲存自動化。現在你的排程任務會透過捷徑在指定時間可靠觸發。";
+"shortcuts.urlReference" = "URL 參考";
+"shortcuts.triggerSpecific" = "觸發特定任務";
+"shortcuts.triggerSpecificDesc" = "觸發指定 ID 的排程任務";
+"shortcuts.runAllDue" = "執行所有到期任務";
+"shortcuts.runAllDueDesc" = "檢查並執行所有到期的排程任務";
+"shortcuts.tips" = "提示";
+"shortcuts.tip1" = "對於高頻任務（如每小時），建議同時保留 App 內排程和捷徑雙重保障。";
+"shortcuts.tip2" = "捷徑自動化在裝置鎖定畫面時也能執行，但需要裝置有網路連線。";
+"shortcuts.tip3" = "如果有多個排程任務，可以使用「執行所有到期任務」URL 統一觸發。";
+"shortcuts.tip4" = "首次使用 URL Scheme 時，系統可能會彈出確認對話框，確認後後續呼叫將靜默執行。";
+
+// MARK: - Sessions
+"sessions.title" = "對話";
+"sessions.noSessions" = "尚無對話";
+"sessions.noSessionsDescription" = "建立新對話，開始與 AI 智能體聊天。";
+"sessions.newSession" = "新建對話";
+"sessions.noAgents" = "尚無智能體";
+"sessions.noAgentsDescription" = "請先在智能體標籤頁中建立一個智能體。";
+"sessions.sessionsCount" = "%d 個對話";
+"sessions.selectAgent" = "選擇智能體";
+"sessions.messagesCount" = "%d 則訊息";
+
+// MARK: - Settings
+"settings.title" = "設定";
+"settings.llmProviders" = "LLM 服務商";
+"settings.addProvider" = "新增服務商";
+"settings.about" = "關於";
+"settings.version" = "版本";
+
+// MARK: - LLM Provider
+"provider.editProvider" = "編輯服務商";
+"provider.addProvider" = "新增服務商";
+"provider.addModel" = "新增模型";
+"provider.modelNamePlaceholder" = "模型名稱（如 gpt-4o-mini）";
+"provider.provider" = "服務商";
+"provider.endpoint" = "端點位址";
+"provider.authentication" = "認證";
+"provider.apiKey" = "API 金鑰";
+"provider.defaultModel" = "預設模型";
+"provider.defaultModelFooter" = "未選擇特定模型時使用的預設模型。";
+"provider.noModelsEnabled" = "未啟用任何模型";
+"provider.setDefault" = "設為預設";
+"provider.manuallyAddModel" = "手動新增模型";
+"provider.enabledModels" = "已啟用模型";
+"provider.enabledModelsFooter" = "左滑停用，右滑設為預設。只有已啟用的模型會出現在智能體模型選擇中。";
+"provider.fetchFromAPI" = "從 API 擷取";
+"provider.availableToEnable" = "可啟用（%d）";
+"provider.allModelsEnabled" = "全部 %d 個已擷取模型已啟用";
+"provider.enableAll" = "全部啟用";
+"provider.remoteModels" = "遠端模型";
+"provider.remoteModelsFooter" = "從 API 端點擷取模型列表，然後啟用你需要的模型。";
+"provider.maxTokens" = "最大 Tokens：%d";
+"provider.parameters" = "參數";
+"provider.presets" = "預設";
+
+// MARK: - Skills
+"skills.title" = "技能";
+"skills.noSkills" = "尚無技能";
+"skills.noSkillsDescription" = "建立技能，或讓 AI 智能體為你構建。";
+"skills.createSkill" = "建立技能";
+"skills.customSkills" = "自訂技能";
+"skills.builtInSkills" = "內建技能";
+"skills.builtIn" = "內建";
+"skills.searchSkills" = "搜尋技能…";
+"skills.deleteSkill" = "刪除技能";
+"skills.deleteSkillMessage" = "這將永久刪除「%@」並從所有智能體中移除。";
+"skills.content" = "內容";
+"skills.noAgents" = "尚無智能體";
+"skills.noAgentsDescription" = "請先建立一個智能體。";
+"skills.install" = "安裝 %@";
+"skills.skillsActive" = "%d 個技能已啟用";
+"skills.agents" = "個智能體";
+"skills.editSkill" = "編輯技能";
+"skills.newSkill" = "新建技能";
+"skills.info" = "資訊";
+"skills.skillName" = "技能名稱";
+"skills.summary" = "摘要（一句話描述）";
+"skills.tags" = "標籤（逗號分隔）";
+"skills.contentMarkdown" = "內容（Markdown）";
+"skills.contentFooter" = "編寫指令、方法論或知識，安裝後將注入智能體的系統提示中。";
+"skills.noSkillsInstalled" = "未安裝技能";
+"skills.installDescription" = "從技能庫安裝技能，賦予此智能體專業能力。";
+"skills.browseLibrary" = "瀏覽技能庫";
+"skills.uninstall" = "解除安裝";
+"skills.skillLibrary" = "技能庫";
+"skills.activeInstalled" = "%d 個啟用 / %d 個已安裝";
+
+// MARK: - Cron Description
+"cron.invalidExpression" = "無效的 Cron 表達式";
+"cron.everyMinute" = "每分鐘";
+"cron.atMinute" = "第 %d 分鐘";
+"cron.atMinutes" = "第 %@ 分鐘";
+"cron.ofEveryHour" = "每小時";
+"cron.ofHour" = "%d 點";
+"cron.ofHours" = "%@ 點";
+"cron.onDays" = "每月第 %@ 天";
+"cron.inMonths" = "%@ 月";
+"cron.onWeekdays" = "週 %@";
+"cron.sun" = "日";
+"cron.mon" = "一";
+"cron.tue" = "二";
+"cron.wed" = "三";
+"cron.thu" = "四";
+"cron.fri" = "五";
+"cron.sat" = "六";
+
+// MARK: - Cron Executor
+"cronExec.completed" = "排程任務已完成";
+"cronExec.completedBody" = "%@ 已完成。點擊查看對話。";
+"cronExec.noProvider" = "[排程任務錯誤] 未設定 LLM 服務商。";
+
+// MARK: - Chat Errors
+"chatError.noProvider" = "未設定 LLM 服務商。請在設定中新增。";
+"chatError.noAgent" = "此對話未關聯智能體。";
+
+// MARK: - Markdown Editor
+"markdownEditor.preview" = "預覽";
+"markdownEditor.edit" = "編輯";

@@ -31,10 +31,10 @@ struct SkillDetailView: View {
                 if !skill.isBuiltIn {
                     Menu {
                         Button { isEditing = true } label: {
-                            Label("Edit", systemImage: "pencil")
+                            Label(L10n.Common.edit, systemImage: "pencil")
                         }
                         Button(role: .destructive) { showDeleteConfirm = true } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L10n.Common.delete, systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -48,15 +48,15 @@ struct SkillDetailView: View {
         .sheet(isPresented: $showInstallSheet) {
             InstallSkillOnAgentSheet(skill: skill)
         }
-        .alert("Delete Skill", isPresented: $showDeleteConfirm) {
-            Button("Delete", role: .destructive) {
+        .alert(L10n.Skills.deleteSkill, isPresented: $showDeleteConfirm) {
+            Button(L10n.Common.delete, role: .destructive) {
                 SkillService(modelContext: modelContext).deleteSkill(skill)
                 onDelete?()
                 dismiss()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.Common.cancel, role: .cancel) {}
         } message: {
-            Text("This will permanently delete '\(skill.name)' and remove it from all agents.")
+            Text(L10n.Skills.deleteSkillMessage(skill.name))
         }
     }
 
@@ -82,7 +82,7 @@ struct SkillDetailView: View {
         HStack(spacing: 20) {
             Label(skill.author, systemImage: "person")
             Label("v\(skill.version)", systemImage: "tag")
-            Label("\(skill.installCount) agents", systemImage: "cpu")
+            Label("\(skill.installCount) \(L10n.Skills.agents)", systemImage: "cpu")
             Spacer()
         }
         .font(.caption)
@@ -91,7 +91,7 @@ struct SkillDetailView: View {
 
     private var contentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Content")
+            Text(L10n.Skills.content)
                 .font(.headline)
 
             Text(skill.content)
@@ -113,7 +113,7 @@ struct InstallSkillOnAgentSheet: View {
         NavigationStack {
             List {
                 if agents.isEmpty {
-                    ContentUnavailableView("No Agents", systemImage: "cpu", description: Text("Create an agent first."))
+                    ContentUnavailableView(L10n.Skills.noAgents, systemImage: "cpu", description: Text(L10n.Skills.noAgentsDescription))
                 } else {
                     ForEach(agents, id: \.id) { agent in
                         let installed = agent.installedSkills.contains { $0.skill?.id == skill.id }
@@ -130,7 +130,7 @@ struct InstallSkillOnAgentSheet: View {
                                 VStack(alignment: .leading) {
                                     Text(agent.name).font(.headline)
                                     let count = agent.activeSkills.count
-                                    Text("\(count) skill\(count == 1 ? "" : "s") active")
+                                    Text(L10n.Skills.skillsActive(count))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -148,11 +148,11 @@ struct InstallSkillOnAgentSheet: View {
                     }
                 }
             }
-            .navigationTitle("Install \(skill.name)")
+            .navigationTitle(L10n.Skills.install(skill.name))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.Common.done) { dismiss() }
                 }
             }
             .onAppear { loadAgents() }
@@ -192,10 +192,10 @@ struct SkillEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Info") {
-                    TextField("Skill Name", text: $name)
-                    TextField("Summary (one-line description)", text: $summary)
-                    TextField("Tags (comma-separated)", text: $tagsText)
+                Section(L10n.Skills.info) {
+                    TextField(L10n.Skills.skillName, text: $name)
+                    TextField(L10n.Skills.summary, text: $summary)
+                    TextField(L10n.Skills.tags, text: $tagsText)
                         .autocapitalization(.none)
                 }
 
@@ -204,19 +204,19 @@ struct SkillEditView: View {
                         .frame(minHeight: 250)
                         .font(.system(.body, design: .monospaced))
                 } header: {
-                    Text("Content (Markdown)")
+                    Text(L10n.Skills.contentMarkdown)
                 } footer: {
-                    Text("Write instructions, methodology, or knowledge that will be injected into the agent's system prompt when this skill is installed.")
+                    Text(L10n.Skills.contentFooter)
                 }
             }
-            .navigationTitle(isEditing ? "Edit Skill" : "New Skill")
+            .navigationTitle(isEditing ? L10n.Skills.editSkill : L10n.Skills.newSkill)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.Common.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L10n.Common.save) {
                         save()
                         dismiss()
                     }

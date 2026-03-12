@@ -14,25 +14,25 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             SessionListView()
                 .tabItem {
-                    Label("Sessions", systemImage: "bubble.left.and.bubble.right")
+                    Label(L10n.Tabs.sessions, systemImage: "bubble.left.and.bubble.right")
                 }
                 .tag(Tab.sessions)
 
             AgentListView()
                 .tabItem {
-                    Label("Agents", systemImage: "cpu")
+                    Label(L10n.Tabs.agents, systemImage: "cpu")
                 }
                 .tag(Tab.agents)
 
             SkillLibraryView()
                 .tabItem {
-                    Label("Skills", systemImage: "sparkles")
+                    Label(L10n.Tabs.skills, systemImage: "sparkles")
                 }
                 .tag(Tab.skills)
 
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Label(L10n.Tabs.settings, systemImage: "gearshape")
                 }
                 .tag(Tab.settings)
         }

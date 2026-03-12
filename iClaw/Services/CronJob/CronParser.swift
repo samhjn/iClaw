@@ -116,40 +116,40 @@ struct CronParser {
 
     static func describe(_ expression: String) -> String {
         guard let schedule = try? parse(expression) else {
-            return "Invalid cron expression"
+            return L10n.CronDesc.invalidExpression
         }
 
         var parts: [String] = []
 
         if schedule.minutes == Set(0...59) {
-            parts.append("every minute")
+            parts.append(L10n.CronDesc.everyMinute)
         } else if schedule.minutes.count == 1, let m = schedule.minutes.first {
-            parts.append("at minute \(m)")
+            parts.append(L10n.CronDesc.atMinute(m))
         } else {
-            parts.append("at minutes \(schedule.minutes.sorted().map(String.init).joined(separator: ","))")
+            parts.append(L10n.CronDesc.atMinutes(schedule.minutes.sorted().map(String.init).joined(separator: ",")))
         }
 
         if schedule.hours == Set(0...23) {
-            parts.append("of every hour")
+            parts.append(L10n.CronDesc.ofEveryHour)
         } else if schedule.hours.count == 1, let h = schedule.hours.first {
-            parts.append("of hour \(h)")
+            parts.append(L10n.CronDesc.ofHour(h))
         } else {
-            parts.append("of hours \(schedule.hours.sorted().map(String.init).joined(separator: ","))")
+            parts.append(L10n.CronDesc.ofHours(schedule.hours.sorted().map(String.init).joined(separator: ",")))
         }
 
         if schedule.daysOfMonth != Set(1...31) {
-            parts.append("on day(s) \(schedule.daysOfMonth.sorted().map(String.init).joined(separator: ","))")
+            parts.append(L10n.CronDesc.onDays(schedule.daysOfMonth.sorted().map(String.init).joined(separator: ",")))
         }
 
         if schedule.months != Set(1...12) {
-            parts.append("in month(s) \(schedule.months.sorted().map(String.init).joined(separator: ","))")
+            parts.append(L10n.CronDesc.inMonths(schedule.months.sorted().map(String.init).joined(separator: ",")))
         }
 
         let allDow = Set(0...6)
         if schedule.daysOfWeek != allDow {
-            let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+            let names = L10n.CronDesc.weekdayNames
             let dowNames = schedule.daysOfWeek.sorted().compactMap { $0 < names.count ? names[$0] : nil }
-            parts.append("on \(dowNames.joined(separator: ","))")
+            parts.append(L10n.CronDesc.onWeekdays(dowNames.joined(separator: ",")))
         }
 
         return parts.joined(separator: " ")

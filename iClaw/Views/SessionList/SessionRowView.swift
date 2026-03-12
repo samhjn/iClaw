@@ -28,7 +28,7 @@ struct SessionRowView: View {
                 }
 
                 if session.isActive {
-                    Text("Active")
+                    Text(L10n.Common.active)
                         .font(.caption2)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
@@ -38,7 +38,7 @@ struct SessionRowView: View {
 
                 Spacer()
 
-                Text("\(session.messages.count) messages")
+                Text(L10n.Sessions.messagesCount(session.messages.count))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
