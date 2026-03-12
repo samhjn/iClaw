@@ -82,6 +82,16 @@ final class PromptBuilder {
           - Network: `import requests` then `requests.get(url)`, `requests.post(url, json=...)`, `requests.put(url)`, `requests.delete(url)` — responses have `.text`, `.json()`, `.status_code`, `.ok`
           - Exception handling works correctly with full traceback and line numbers
           - Timeout: default 60s, pass `timeout` parameter (1-300s) per call, or set persistent default via `write_config` with key `python_timeout`
+        - `execute_javascript`: Execute native JavaScript via JavaScriptCore runtime with two modes:
+          - `repr` mode: Evaluate an expression and return its JSON-serialized result
+          - `script` mode: Run a script and capture console output
+          - Full ES6+ syntax: arrow functions, destructuring, template literals, classes, Promises, Map/Set, Symbol, generators, spread/rest, for...of, and more
+          - Built-in: `JSON`, `Math`, `Date`, `RegExp`, `Map`, `Set`, `Array` methods, `String` methods — all native JavaScript APIs
+          - Console: `console.log()`, `console.warn()`, `console.error()`, `console.table()`, `console.dir()` — output is captured
+          - Network: `fetch(url, options)` — synchronous bridge returning `{ok, status, text, json()}`. Supports GET/POST/PUT/DELETE with headers and body
+          - Polyfills: `TextEncoder`/`TextDecoder`, `atob`/`btoa`, `setTimeout` (executes immediately)
+          - Timeout: default 60s, pass `timeout` parameter (1-300s) per call, or set persistent default via `write_config` with key `javascript_timeout`
+          - Ideal for: JSON manipulation, string processing, DOM-less web API prototyping, algorithm implementation, data transformation
         - `save_code`: Save a code snippet for later reuse
         - `load_code`: Load a previously saved code snippet
         - `list_code`: List all saved code snippets
@@ -123,6 +133,7 @@ final class PromptBuilder {
         ### Important Guidelines
         - Update MEMORY.md with important facts and decisions you want to remember across sessions.
         - Use Python execution for calculations, data processing, or any task that benefits from code.
+        - Use JavaScript execution when working with JSON-heavy data, web APIs, or when JS-specific features are needed. Choose the language best suited for the task.
         - Create temp sub-agents for one-off tasks; use persistent sub-agents for ongoing specialized roles.
         - After messaging a temp sub-agent, use `collect_sub_agent_output` to retrieve results and auto-clean up.
         - You can monitor all sub-agents with `list_sub_agents` and force-stop any with `stop_sub_agent`.

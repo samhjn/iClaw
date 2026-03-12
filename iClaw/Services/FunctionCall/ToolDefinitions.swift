@@ -6,6 +6,7 @@ enum ToolDefinitions {
             readConfigTool,
             writeConfigTool,
             executePythonTool,
+            executeJavaScriptTool,
             saveCodeTool,
             loadCodeTool,
             listCodeTool,
@@ -56,6 +57,17 @@ enum ToolDefinitions {
             "code": ToolDefinitionBuilder.stringParam("The Python code to execute"),
             "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
             "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60 or agent config)")
+        ],
+        required: ["code"]
+    )
+
+    static let executeJavaScriptTool = ToolDefinitionBuilder.build(
+        name: "execute_javascript",
+        description: "Execute JavaScript code natively via JavaScriptCore. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). Default timeout 60s (max 300s).",
+        properties: [
+            "code": ToolDefinitionBuilder.stringParam("The JavaScript code to execute"),
+            "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
+            "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60)")
         ],
         required: ["code"]
     )

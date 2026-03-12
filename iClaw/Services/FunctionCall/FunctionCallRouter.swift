@@ -33,6 +33,10 @@ final class FunctionCallRouter {
             let tools = CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
             return await tools.executePython(arguments: arguments)
 
+        case "execute_javascript":
+            let tools = CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
+            return await tools.executeJavaScript(arguments: arguments)
+
         case "save_code":
             return CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
                 .saveCode(arguments: arguments)
