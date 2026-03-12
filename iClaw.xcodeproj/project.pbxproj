@@ -13,6 +13,7 @@
 		076B61C851641A6F8F6FA78E /* MarkdownEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F83422956DC29BF68C138F /* MarkdownEditorView.swift */; };
 		07DB6EDE202EDEFCA724940D /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */; };
 		08C1208AFBCC9A7CE2993922 /* modbuiltins.c in Sources */ = {isa = PBXBuildFile; fileRef = 2E66C96699E695C1A4E41B15 /* modbuiltins.c */; };
+		09324DBCB8B51199B96545F5 /* JavaScriptExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */; };
 		0937EEE912F882F128417057 /* ExecutionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF142E825A15CFC6EC137150 /* ExecutionResult.swift */; };
 		0B76B6A987EB3B0682EB0AD7 /* ShortcutsGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */; };
 		0E2D27DF8D652AAB0B490EBC /* emitnarm.c in Sources */ = {isa = PBXBuildFile; fileRef = 265B5306CC8C9D27530FC9FE /* emitnarm.c */; };
@@ -402,6 +403,7 @@
 		A05924DD888008A5C6F934E7 /* pairheap.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = pairheap.c; sourceTree = "<group>"; };
 		A0CC913C654782E0B5B3FD82 /* objcell.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = objcell.c; sourceTree = "<group>"; };
 		A16F9E97375EF090F317A411 /* emitinlinethumb.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = emitinlinethumb.c; sourceTree = "<group>"; };
+		A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptExecutor.swift; sourceTree = "<group>"; };
 		A46783025E0E2ACF634CDD71 /* objtype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = objtype.h; sourceTree = "<group>"; };
 		A8CED44D93A3EAD456F76420 /* reader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = reader.h; sourceTree = "<group>"; };
 		AB4845603F169879185B9CAF /* ContextManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextManager.swift; sourceTree = "<group>"; };
@@ -977,6 +979,7 @@
 			children = (
 				B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */,
 				CF142E825A15CFC6EC137150 /* ExecutionResult.swift */,
+				A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */,
 				BEA7476BE4E08236F8C3B01C /* JSCorePythonExecutor.swift */,
 				9B6201F663FBA5C71C24813B /* MicroPythonExecutor.swift */,
 				7A3EDB1A5F8D62CFCB38DB57 /* MockExecutor.swift */,
@@ -1138,6 +1141,7 @@
 				261E583DCD29AB3EAA06AD92 /* InputBarView.swift in Sources */,
 				E2C10B1CA83F4B3DD0B8FCCE /* InstalledSkill.swift in Sources */,
 				AA0215677440BECF874F53BF /* JSCorePythonExecutor.swift in Sources */,
+				09324DBCB8B51199B96545F5 /* JavaScriptExecutor.swift in Sources */,
 				BB2C9EEBD4C6477D6E70C0E2 /* LLMProvider.swift in Sources */,
 				AF5B2C7EA9437645FC81C988 /* LLMProviderEditView.swift in Sources */,
 				EE8A5D3C8795060CE1E9A02C /* LLMService.swift in Sources */,

@@ -11,6 +11,8 @@ final class CodeExecutorRegistry: @unchecked Sendable {
     private init() {
         let micropythonExecutor = MicroPythonExecutor()
         register(micropythonExecutor)
+        let jsExecutor = JavaScriptExecutor()
+        register(jsExecutor)
     }
 
     func register(_ executor: CodeExecutor) {
