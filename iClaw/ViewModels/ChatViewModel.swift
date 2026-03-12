@@ -300,17 +300,20 @@ final class ChatViewModel {
         session.isCompressingContext = true
         try? modelContext.save()
 
+        let session = self.session
+        let modelContext = self.modelContext
+
         compressionTask = Task { @MainActor [weak self] in
             defer {
                 self?.isCompressing = false
-                self?.session.isCompressingContext = false
+                session.isCompressingContext = false
                 self?.compressionTask = nil
-                try? self?.modelContext.save()
+                try? modelContext.save()
             }
 
             guard let self else { return }
 
-            let router = ModelRouter(modelContext: self.modelContext)
+            let router = ModelRouter(modelContext: modelContext)
             guard let provider = router.primaryProvider(for: agent) else {
                 self.errorMessage = L10n.Chat.noCompressModel
                 return
@@ -319,7 +322,7 @@ final class ChatViewModel {
             let threshold = agent.effectiveCompressionThreshold
             let compressor = SessionCompressor(compressionThreshold: threshold)
             let llmService = LLMService(provider: provider)
-            await compressor.compress(session: self.session, llmService: llmService, modelContext: self.modelContext)
+            await compressor.compress(session: session, llmService: llmService, modelContext: modelContext)
             self.loadMessages()
         }
     }
@@ -340,6 +343,9 @@ final class ChatViewModel {
 
     func onViewDisappear() {
         stopMonitoring()
+        compressionTask?.cancel()
+        compressionTask = nil
+        isCompressing = false
     }
 
     // MARK: - Stale Active State Recovery
@@ -380,6 +386,8 @@ final class ChatViewModel {
     /// Poll the persistent flag to track an orphaned compression task.
     private func startCompressionMonitoring() {
         guard compressionTask == nil else { return }
+        let session = self.session
+        let modelContext = self.modelContext
         compressionTask = Task { @MainActor [weak self] in
             defer {
                 self?.isCompressing = false
@@ -388,15 +396,15 @@ final class ChatViewModel {
             var ticks = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
-                guard let self, !Task.isCancelled else { return }
-                if !self.session.isCompressingContext {
-                    self.loadMessages()
+                guard !Task.isCancelled else { return }
+                if !session.isCompressingContext {
+                    self?.loadMessages()
                     return
                 }
                 ticks += 1
                 if ticks > 120 {
-                    self.session.isCompressingContext = false
-                    try? self.modelContext.save()
+                    session.isCompressingContext = false
+                    try? modelContext.save()
                     return
                 }
             }
