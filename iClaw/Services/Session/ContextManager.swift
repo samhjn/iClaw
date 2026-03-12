@@ -22,7 +22,7 @@ final class ContextManager {
         }
         messages.append(.system(fullSystemPrompt))
 
-        let systemTokens = estimateTokens(fullSystemPrompt)
+        let systemTokens = TokenEstimator.estimate(fullSystemPrompt)
         let availableTokens = maxContextTokens - systemTokens
 
         let sorted = session.sortedMessages.filter { $0.role != .system }
@@ -40,8 +40,31 @@ final class ContextManager {
         return messages
     }
 
+    /// Tokens for ALL messages (including already-compressed ones). Useful for stats.
     func totalSessionTokens(session: Session) -> Int {
-        session.messages.reduce(0) { $0 + $1.tokenEstimate }
+        session.messages.reduce(0) { total, msg in
+            let est = msg.tokenEstimate
+            return total + (est > 0 ? est : TokenEstimator.estimateMessage(msg))
+        }
+    }
+
+    /// Tokens that would actually be sent to the LLM:
+    /// compressed summary + messages after `compressedUpToIndex`.
+    func activeContextTokens(session: Session) -> Int {
+        var total = 0
+
+        if let compressed = session.compressedContext, !compressed.isEmpty {
+            total += TokenEstimator.estimate(compressed)
+        }
+
+        let sorted = session.sortedMessages.filter { $0.role != .system }
+        let active = sorted.dropFirst(session.compressedUpToIndex)
+        for msg in active {
+            let est = msg.tokenEstimate
+            total += est > 0 ? est : TokenEstimator.estimateMessage(msg)
+        }
+
+        return total
     }
 
     private func selectRecentMessages(
@@ -55,7 +78,9 @@ final class ContextManager {
         var tokenCount = 0
 
         for message in eligible.reversed() {
-            let tokens = message.tokenEstimate > 0 ? message.tokenEstimate : estimateTokens(message.content ?? "")
+            let tokens = message.tokenEstimate > 0
+                ? message.tokenEstimate
+                : TokenEstimator.estimateMessage(message)
             if tokenCount + tokens > maxTokens && !selected.isEmpty {
                 break
             }
@@ -63,26 +88,19 @@ final class ContextManager {
             tokenCount += tokens
         }
 
-        // Ensure tool call pairs are intact:
-        // - A tool message must be preceded by an assistant message with matching tool_calls
-        // - An assistant message with tool_calls must be followed by all its tool responses
         selected = repairToolCallPairs(selected)
 
         return selected
     }
 
     /// Ensures tool call message pairs are intact.
-    /// Removes orphan tool messages at the start (no preceding assistant with tool_calls),
-    /// and removes trailing assistant+tool_calls that lack their tool responses.
     private func repairToolCallPairs(_ messages: [Message]) -> [Message] {
         var result = messages
 
-        // Remove orphan tool messages at the beginning
         while let first = result.first, first.role == .tool {
             result.removeFirst()
         }
 
-        // Remove trailing assistant with tool_calls if its tool responses are missing
         if let last = result.last, last.role == .assistant, last.toolCallsData != nil {
             if let toolCalls = try? JSONDecoder().decode([LLMToolCall].self, from: last.toolCallsData!) {
                 let expectedIds = Set(toolCalls.map(\.id))
@@ -121,8 +139,108 @@ final class ContextManager {
             return .system(message.content ?? "")
         }
     }
+}
 
-    func estimateTokens(_ text: String) -> Int {
-        max(1, text.count / 4)
+// MARK: - Token Estimator
+
+/// BPE-aware token estimator for mixed CJK/Latin text.
+///
+/// Calibrated against GPT-4 / Claude tokenizer behavior:
+/// - ASCII text: ~1 token per 4 characters
+/// - CJK ideographs: ~2 tokens per character
+/// - Hangul syllables: ~2 tokens per character
+/// - Emoji / symbols: ~3 tokens each
+/// - Whitespace/punctuation grouped with surrounding text
+/// - Per-message overhead: ~4 tokens (role tag, delimiters)
+enum TokenEstimator {
+
+    static func estimate(_ text: String) -> Int {
+        guard !text.isEmpty else { return 0 }
+
+        var asciiCount = 0
+        var cjkCount = 0
+        var emojiCount = 0
+
+        for scalar in text.unicodeScalars {
+            let v = scalar.value
+            if v <= 0x7F {
+                asciiCount += 1
+            } else if isCJK(v) {
+                cjkCount += 1
+            } else if isEmoji(v) || v > 0xFFFF {
+                emojiCount += 1
+            } else {
+                // Other multi-byte (Cyrillic, Arabic, Thai, extended Latin, etc.)
+                // ~2 characters per token on average
+                cjkCount += 1
+            }
+        }
+
+        let asciiTokens = max(asciiCount / 4, asciiCount > 0 ? 1 : 0)
+        let cjkTokens = cjkCount * 2
+        let emojiTokens = emojiCount * 3
+
+        return asciiTokens + cjkTokens + emojiTokens
+    }
+
+    /// Estimate tokens for a Message, including content, tool calls, and overhead.
+    static func estimateMessage(_ message: Message) -> Int {
+        let overhead = 4
+        var total = overhead
+
+        if let content = message.content {
+            total += estimate(content)
+        }
+
+        if let toolData = message.toolCallsData {
+            if let calls = try? JSONDecoder().decode([LLMToolCall].self, from: toolData) {
+                for call in calls {
+                    total += estimate(call.function.name)
+                    total += estimate(call.function.arguments)
+                    total += 8 // id, type, structural tokens
+                }
+            }
+        }
+
+        if let name = message.name {
+            total += estimate(name) + 1
+        }
+
+        return total
+    }
+
+    private static func isCJK(_ v: UInt32) -> Bool {
+        // CJK Unified Ideographs
+        (v >= 0x4E00 && v <= 0x9FFF) ||
+        // CJK Extension A
+        (v >= 0x3400 && v <= 0x4DBF) ||
+        // CJK Extension B-F
+        (v >= 0x20000 && v <= 0x2FA1F) ||
+        // CJK Compatibility Ideographs
+        (v >= 0xF900 && v <= 0xFAFF) ||
+        // Hiragana
+        (v >= 0x3040 && v <= 0x309F) ||
+        // Katakana
+        (v >= 0x30A0 && v <= 0x30FF) ||
+        // Hangul Syllables
+        (v >= 0xAC00 && v <= 0xD7AF) ||
+        // CJK Symbols and Punctuation
+        (v >= 0x3000 && v <= 0x303F) ||
+        // Fullwidth Forms
+        (v >= 0xFF00 && v <= 0xFFEF) ||
+        // Bopomofo
+        (v >= 0x3100 && v <= 0x312F)
+    }
+
+    private static func isEmoji(_ v: UInt32) -> Bool {
+        (v >= 0x1F600 && v <= 0x1F64F) ||
+        (v >= 0x1F300 && v <= 0x1F5FF) ||
+        (v >= 0x1F680 && v <= 0x1F6FF) ||
+        (v >= 0x1F900 && v <= 0x1F9FF) ||
+        (v >= 0x2600 && v <= 0x26FF) ||
+        (v >= 0x2700 && v <= 0x27BF) ||
+        (v >= 0xFE00 && v <= 0xFE0F) ||
+        (v >= 0x1FA00 && v <= 0x1FA6F) ||
+        (v >= 0x1FA70 && v <= 0x1FAFF)
     }
 }

@@ -40,6 +40,9 @@ final class Agent {
     /// SubAgent lifecycle: "temp" = auto-destroy after task, "persistent" = long-lived, nil = main agent
     var subAgentType: String? = nil
 
+    /// Context compression threshold in tokens (0 = use system default 6000)
+    var compressionThreshold: Int = 0
+
     var createdAt: Date
     var updatedAt: Date
 
@@ -107,6 +110,10 @@ final class Agent {
         self.subAgentType = nil
         self.createdAt = Date()
         self.updatedAt = Date()
+    }
+
+    var effectiveCompressionThreshold: Int {
+        compressionThreshold > 0 ? compressionThreshold : ContextManager.compressionThreshold
     }
 
     var isTempSubAgent: Bool { subAgentType == "temp" }
