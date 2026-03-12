@@ -23,7 +23,7 @@ final class SessionListViewModel {
     }
 
     func createSession(agent: Agent) -> Session {
-        let session = Session(title: "New Chat", agent: agent)
+        let session = Session(title: L10n.Chat.newChat, agent: agent)
         modelContext.insert(session)
         try? modelContext.save()
         fetchSessions()

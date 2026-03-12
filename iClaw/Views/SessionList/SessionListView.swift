@@ -50,6 +50,11 @@ struct SessionListView: View {
                 viewModel?.fetchSessions()
             }
         }
+        .onChange(of: navigateToSession) { oldValue, newValue in
+            if oldValue != nil && newValue == nil {
+                viewModel?.fetchSessions()
+            }
+        }
     }
 
     private var emptyStateView: some View {
