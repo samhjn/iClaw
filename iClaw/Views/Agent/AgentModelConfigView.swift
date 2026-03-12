@@ -37,6 +37,7 @@ struct AgentModelConfigView: View {
             primarySection
             fallbackSection
             subAgentSection
+            compressionSection
             resolutionPreviewSection
         }
         .navigationTitle("Model Config")
@@ -245,6 +246,60 @@ struct AgentModelConfigView: View {
                         }
                     }
                 }
+                agent.updatedAt = Date()
+                try? modelContext.save()
+            }
+        )
+    }
+
+    // MARK: - Compression
+
+    @ViewBuilder
+    private var compressionSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("压缩阈值 (tokens)")
+                    Spacer()
+                    Text(agent.compressionThreshold > 0
+                         ? "\(agent.compressionThreshold)"
+                         : "默认 (\(ContextManager.compressionThreshold))")
+                        .foregroundStyle(.secondary)
+                }
+
+                Slider(
+                    value: compressionThresholdBinding,
+                    in: 0...20000,
+                    step: 500
+                )
+
+                HStack {
+                    Text("0 = 系统默认")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    if agent.compressionThreshold > 0 {
+                        Button("恢复默认") {
+                            agent.compressionThreshold = 0
+                            agent.updatedAt = Date()
+                            try? modelContext.save()
+                        }
+                        .font(.caption)
+                    }
+                }
+            }
+        } header: {
+            Text("上下文压缩")
+        } footer: {
+            Text("当 Session 的累计 token 超过此阈值时，自动压缩旧消息为摘要。调高可保留更多原始上下文，但会增加 API 开销。")
+        }
+    }
+
+    private var compressionThresholdBinding: Binding<Double> {
+        Binding(
+            get: { Double(agent.compressionThreshold) },
+            set: { newValue in
+                agent.compressionThreshold = Int(newValue)
                 agent.updatedAt = Date()
                 try? modelContext.save()
             }

@@ -20,11 +20,30 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    editingTitle = session.title
-                    showTitleEditor = true
+                Menu {
+                    Button {
+                        editingTitle = session.title
+                        showTitleEditor = true
+                    } label: {
+                        Label("重命名", systemImage: "pencil")
+                    }
+
+                    if let vm = viewModel {
+                        Section {
+                            Button {
+                                vm.manualCompress()
+                            } label: {
+                                Label("压缩上下文", systemImage: "arrow.down.right.and.arrow.up.left")
+                            }
+                            .disabled(vm.isCompressing || vm.isLoading)
+                        }
+
+                        Section {
+                            Text(vm.compressionInfo)
+                        }
+                    }
                 } label: {
-                    Image(systemName: "pencil")
+                    Image(systemName: "ellipsis.circle")
                         .font(.caption)
                 }
             }
@@ -54,6 +73,8 @@ struct ChatView: View {
 
 private struct ChatContentView: View {
     @Bindable var vm: ChatViewModel
+    @State private var scrollPosition: UUID?
+    @State private var hasRestoredScroll = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -76,15 +97,50 @@ private struct ChatContentView: View {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 4)
-                                Text("Thinking...")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                if vm.isCancelling {
+                                    Text("正在中止…")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.orange)
+                                } else {
+                                    Text("思考中…")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             .padding()
                             .id("loading")
                         }
+
+                        if vm.isCompressing {
+                            HStack {
+                                ProgressView()
+                                    .padding(.trailing, 4)
+                                Text("正在压缩上下文…")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding()
+                            .id("compressing")
+                        }
                     }
                     .padding()
+                }
+                .scrollPosition(id: $scrollPosition, anchor: .top)
+                .onAppear {
+                    if !hasRestoredScroll {
+                        hasRestoredScroll = true
+                        if let target = vm.initialScrollTarget {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    proxy.scrollTo(target, anchor: .top)
+                                }
+                            }
+                        } else if let lastId = vm.messages.last?.id {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                proxy.scrollTo(lastId, anchor: .bottom)
+                            }
+                        }
+                    }
                 }
                 .onChange(of: vm.messages.count) {
                     withAnimation {
@@ -94,6 +150,13 @@ private struct ChatContentView: View {
                 .onChange(of: vm.streamingContent) {
                     withAnimation {
                         proxy.scrollTo("streaming", anchor: .bottom)
+                    }
+                }
+                .onDisappear {
+                    if let visibleId = scrollPosition {
+                        vm.saveScrollPosition(visibleId)
+                    } else if let lastId = vm.messages.last?.id {
+                        vm.saveScrollPosition(lastId)
                     }
                 }
             }
@@ -116,7 +179,6 @@ private struct ChatContentView: View {
                 .background(.ultraThinMaterial)
             }
 
-            // Blocked reason banner
             if let reason = vm.sendBlockedReason {
                 HStack(spacing: 8) {
                     Image(systemName: "lock.fill")
@@ -149,10 +211,11 @@ private struct ChatContentView: View {
             InputBarView(
                 text: $vm.inputText,
                 isLoading: vm.isLoading,
-                isBlocked: !vm.canSend
-            ) {
-                vm.sendMessage()
-            }
+                isBlocked: !vm.canSend,
+                isCancelling: vm.isCancelling,
+                onSend: { vm.sendMessage() },
+                onStop: { vm.cancelGeneration() }
+            )
         }
     }
 }

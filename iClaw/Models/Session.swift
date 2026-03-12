@@ -17,8 +17,19 @@ final class Session {
     /// Whether this session is currently active (agent is generating / processing).
     var isActive: Bool = false
 
+    /// Whether context compression is currently in progress.
+    var isCompressingContext: Bool = false
+
     /// Whether the user has manually renamed this session's title.
     var isTitleCustomized: Bool = false
+
+    /// UUID of the last message visible when the user left this session (for scroll restoration).
+    var lastViewedMessageIdRaw: String?
+
+    var lastViewedMessageId: UUID? {
+        get { lastViewedMessageIdRaw.flatMap { UUID(uuidString: $0) } }
+        set { lastViewedMessageIdRaw = newValue?.uuidString }
+    }
 
     /// UUID of the parent session that spawned this sub-agent session (for content relay).
     var parentSessionIdRaw: String?
@@ -38,6 +49,7 @@ final class Session {
         self.isArchived = false
         self.isActive = false
         self.isTitleCustomized = false
+        self.lastViewedMessageIdRaw = nil
         self.parentSessionIdRaw = nil
         self.createdAt = Date()
         self.updatedAt = Date()

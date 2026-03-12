@@ -42,6 +42,44 @@ final class Message {
         self.toolCallId = toolCallId
         self.name = name
         self.timestamp = Date()
-        self.tokenEstimate = tokenEstimate
+        if tokenEstimate > 0 {
+            self.tokenEstimate = tokenEstimate
+        } else {
+            self.tokenEstimate = Self.computeTokenEstimate(
+                content: content,
+                toolCallsData: toolCallsData,
+                name: name
+            )
+        }
+    }
+
+    /// Compute a BPE-aware token estimate from the message payload.
+    private static func computeTokenEstimate(
+        content: String?,
+        toolCallsData: Data?,
+        name: String?
+    ) -> Int {
+        let overhead = 4
+        var total = overhead
+
+        if let content {
+            total += TokenEstimator.estimate(content)
+        }
+
+        if let toolData = toolCallsData {
+            if let calls = try? JSONDecoder().decode([LLMToolCall].self, from: toolData) {
+                for call in calls {
+                    total += TokenEstimator.estimate(call.function.name)
+                    total += TokenEstimator.estimate(call.function.arguments)
+                    total += 8
+                }
+            }
+        }
+
+        if let name {
+            total += TokenEstimator.estimate(name) + 1
+        }
+
+        return total
     }
 }

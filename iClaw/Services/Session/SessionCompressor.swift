@@ -10,8 +10,8 @@ final class SessionCompressor {
 
     func shouldCompress(session: Session) -> Bool {
         let contextManager = ContextManager()
-        let total = contextManager.totalSessionTokens(session: session)
-        return total > compressionThreshold
+        let active = contextManager.activeContextTokens(session: session)
+        return active > compressionThreshold
     }
 
     @MainActor

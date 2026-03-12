@@ -38,19 +38,22 @@ private struct SingleToolCallCard: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
+                        .fixedSize(horizontal: true, vertical: false)
 
                     if let summary = parseSummary(call) {
                         Text(summary)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
+                        .fixedSize()
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -83,7 +86,7 @@ private struct SingleToolCallCard: View {
         }
 
         switch call.function.name {
-        case "execute_python":
+        case "execute_python", "execute_javascript":
             let mode = dict["mode"] as? String ?? "script"
             return "(\(mode))"
         case "read_config", "write_config":
@@ -141,7 +144,7 @@ struct ToolResultCardView: View {
     }
 
     private var isCodeExecution: Bool {
-        toolName == "execute_python"
+        toolName == "execute_python" || toolName == "execute_javascript"
     }
 
     var body: some View {
@@ -149,35 +152,7 @@ struct ToolResultCardView: View {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: isError ? "xmark.circle.fill" : "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(isError ? .red : .green)
-
-                    Image(systemName: toolMeta.icon)
-                        .font(.caption)
-                        .foregroundStyle(toolMeta.color)
-
-                    Text(toolMeta.displayName)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-
-                    if !isExpanded {
-                        Text(content.prefix(60).replacingOccurrences(of: "\n", with: " "))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
+                cardHeader
             }
             .buttonStyle(.plain)
 
@@ -207,9 +182,46 @@ struct ToolResultCardView: View {
     }
 
     @ViewBuilder
+    private var cardHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: isError ? "xmark.circle.fill" : "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(isError ? .red : .green)
+
+                Image(systemName: toolMeta.icon)
+                    .font(.caption)
+                    .foregroundStyle(toolMeta.color)
+
+                Text(toolMeta.displayName)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 4)
+
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize()
+            }
+
+            if !isExpanded && !content.isEmpty {
+                Text(content.prefix(120).replacingOccurrences(of: "\n", with: " "))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+    }
+
+    @ViewBuilder
     private var codeResultView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Stdout section
             let parts = parseCodeOutput(content)
 
             if let stdout = parts.stdout, !stdout.isEmpty {
@@ -351,6 +363,8 @@ struct ToolMeta {
         switch toolName {
         case "execute_python":
             return ToolMeta(displayName: "Python", icon: "terminal", color: .blue)
+        case "execute_javascript":
+            return ToolMeta(displayName: "JavaScript", icon: "terminal.fill", color: .yellow)
         case "read_config":
             return ToolMeta(displayName: "Read Config", icon: "doc.text", color: .purple)
         case "write_config":

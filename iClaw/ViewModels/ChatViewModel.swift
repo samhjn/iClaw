@@ -14,26 +14,46 @@ final class ChatViewModel {
     /// If another session of the same agent is active, this holds the blocking reason.
     var sendBlockedReason: String?
 
+    /// True while a cancel request is being processed.
+    var isCancelling: Bool = false
+
+    /// Whether a manual compression is running.
+    var isCompressing: Bool = false
+
+    /// The message ID the scroll view should initially restore to.
+    var initialScrollTarget: UUID?
+
     let session: Session
     private var modelContext: ModelContext
     private var generationTask: Task<Void, Never>?
+    private var compressionTask: Task<Void, Never>?
     private var monitoringTask: Task<Void, Never>?
+    private var cancelled = false
 
     init(session: Session, modelContext: ModelContext) {
         self.session = session
         self.modelContext = modelContext
         loadMessages()
         checkActiveSessionLock()
+        recoverStaleActiveState()
+        recoverCompressionState()
         startMonitoringIfNeeded()
+        initialScrollTarget = session.lastViewedMessageId
     }
 
     func loadMessages() {
         messages = session.sortedMessages
     }
 
+    // MARK: - Scroll Position Tracking
+
+    func saveScrollPosition(_ messageId: UUID?) {
+        session.lastViewedMessageId = messageId
+        try? modelContext.save()
+    }
+
     // MARK: - Active Session Lock
 
-    /// Check if another session of the same agent is currently active.
     func checkActiveSessionLock() {
         guard let agent = session.agent else {
             sendBlockedReason = nil
@@ -55,6 +75,15 @@ final class ChatViewModel {
         sendBlockedReason == nil
     }
 
+    // MARK: - Cancel Generation
+
+    func cancelGeneration() {
+        guard isLoading, generationTask != nil else { return }
+        isCancelling = true
+        cancelled = true
+        generationTask?.cancel()
+    }
+
     // MARK: - Send Message
 
     func sendMessage() {
@@ -71,7 +100,6 @@ final class ChatViewModel {
         session.messages.append(userMessage)
         session.updatedAt = Date()
 
-        // Auto-title from first user message
         if !session.isTitleCustomized && session.title == "New Chat" {
             let titleText = text.prefix(40)
             session.title = titleText.count < text.count ? "\(titleText)..." : String(titleText)
@@ -80,6 +108,7 @@ final class ChatViewModel {
         try? modelContext.save()
         loadMessages()
 
+        cancelled = false
         generationTask = Task {
             await generateResponse()
         }
@@ -96,6 +125,7 @@ final class ChatViewModel {
         defer {
             isLoading = false
             streamingContent = ""
+            isCancelling = false
             session.isActive = false
             generationTask = nil
             try? modelContext.save()
@@ -130,6 +160,22 @@ final class ChatViewModel {
             activeModelName = providerName
 
             for await chunk in stream {
+                if Task.isCancelled || cancelled {
+                    if !fullContent.isEmpty {
+                        let partialMsg = Message(
+                            role: .assistant,
+                            content: fullContent + "\n\n⚠️ *[已中止]*",
+                            session: session
+                        )
+                        modelContext.insert(partialMsg)
+                        session.messages.append(partialMsg)
+                        session.updatedAt = Date()
+                        try? modelContext.save()
+                        loadMessages()
+                    }
+                    return
+                }
+
                 switch chunk {
                 case .content(let text):
                     fullContent += text
@@ -142,6 +188,22 @@ final class ChatViewModel {
                     errorMessage = error
                     return
                 }
+            }
+
+            if Task.isCancelled || cancelled {
+                if !fullContent.isEmpty {
+                    let partialMsg = Message(
+                        role: .assistant,
+                        content: fullContent + "\n\n⚠️ *[已中止]*",
+                        session: session
+                    )
+                    modelContext.insert(partialMsg)
+                    session.messages.append(partialMsg)
+                    session.updatedAt = Date()
+                    try? modelContext.save()
+                    loadMessages()
+                }
+                return
             }
 
             if !pendingToolCalls.isEmpty {
@@ -168,7 +230,9 @@ final class ChatViewModel {
 
             await checkAndCompress(agent: agent, router: router)
         } catch {
-            errorMessage = error.localizedDescription
+            if !Task.isCancelled && !cancelled {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -181,6 +245,19 @@ final class ChatViewModel {
         let fnRouter = FunctionCallRouter(agent: agent, modelContext: modelContext)
 
         for toolCall in toolCalls {
+            if Task.isCancelled || cancelled {
+                let cancelMsg = Message(
+                    role: .assistant,
+                    content: "⚠️ *[工具调用已中止]*",
+                    session: session
+                )
+                modelContext.insert(cancelMsg)
+                session.messages.append(cancelMsg)
+                try? modelContext.save()
+                loadMessages()
+                return
+            }
+
             let result = await fnRouter.execute(toolCall: toolCall)
             let toolMsg = Message(
                 role: .tool,
@@ -196,12 +273,15 @@ final class ChatViewModel {
         try? modelContext.save()
         loadMessages()
 
+        if Task.isCancelled || cancelled { return }
+
         await generateResponse()
     }
 
     @MainActor
     private func checkAndCompress(agent: Agent, router: ModelRouter) async {
-        let compressor = SessionCompressor()
+        let threshold = agent.effectiveCompressionThreshold
+        let compressor = SessionCompressor(compressionThreshold: threshold)
         if compressor.shouldCompress(session: session) {
             guard let provider = router.primaryProvider(for: agent) else { return }
             let llmService = LLMService(provider: provider)
@@ -210,12 +290,47 @@ final class ChatViewModel {
         }
     }
 
+    // MARK: - Manual Compression
+
+    func manualCompress() {
+        guard !isCompressing, compressionTask == nil else { return }
+        guard let agent = session.agent else { return }
+
+        isCompressing = true
+        session.isCompressingContext = true
+        try? modelContext.save()
+
+        compressionTask = Task { @MainActor [weak self] in
+            defer {
+                self?.isCompressing = false
+                self?.session.isCompressingContext = false
+                self?.compressionTask = nil
+                try? self?.modelContext.save()
+            }
+
+            guard let self else { return }
+
+            let router = ModelRouter(modelContext: self.modelContext)
+            guard let provider = router.primaryProvider(for: agent) else {
+                self.errorMessage = "没有可用的模型来执行压缩"
+                return
+            }
+
+            let threshold = agent.effectiveCompressionThreshold
+            let compressor = SessionCompressor(compressionThreshold: threshold)
+            let llmService = LLMService(provider: provider)
+            await compressor.compress(session: self.session, llmService: llmService, modelContext: self.modelContext)
+            self.loadMessages()
+        }
+    }
+
     // MARK: - View Lifecycle
 
-    /// Called when the chat view re-appears (not the first appear, which is handled by init).
     func onViewAppear() {
         loadMessages()
         checkActiveSessionLock()
+        recoverStaleActiveState()
+        recoverCompressionState()
         if !session.isActive && generationTask == nil {
             isLoading = false
             streamingContent = ""
@@ -227,11 +342,69 @@ final class ChatViewModel {
         stopMonitoring()
     }
 
+    // MARK: - Stale Active State Recovery
+
+    /// If the session is marked active but no task is running and this is a fresh
+    /// ViewModel (app was killed / navigated away for a long time), reset the flag.
+    private func recoverStaleActiveState() {
+        guard session.isActive, generationTask == nil else { return }
+
+        let lastUpdate = session.updatedAt
+        let staleDuration: TimeInterval = 120
+        if Date().timeIntervalSince(lastUpdate) > staleDuration {
+            session.isActive = false
+            try? modelContext.save()
+        }
+    }
+
+    // MARK: - Compression State Recovery
+
+    /// Recover the UI compression indicator when the persistent flag is set
+    /// but this ViewModel doesn't own the task (e.g. view was recreated).
+    private func recoverCompressionState() {
+        if session.isCompressingContext && compressionTask == nil {
+            let staleDuration: TimeInterval = 120
+            if Date().timeIntervalSince(session.updatedAt) > staleDuration {
+                session.isCompressingContext = false
+                try? modelContext.save()
+                isCompressing = false
+            } else {
+                isCompressing = true
+                startCompressionMonitoring()
+            }
+        } else if !session.isCompressingContext {
+            isCompressing = false
+        }
+    }
+
+    /// Poll the persistent flag to track an orphaned compression task.
+    private func startCompressionMonitoring() {
+        guard compressionTask == nil else { return }
+        compressionTask = Task { @MainActor [weak self] in
+            defer {
+                self?.isCompressing = false
+                self?.compressionTask = nil
+            }
+            var ticks = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self, !Task.isCancelled else { return }
+                if !self.session.isCompressingContext {
+                    self.loadMessages()
+                    return
+                }
+                ticks += 1
+                if ticks > 120 {
+                    self.session.isCompressingContext = false
+                    try? self.modelContext.save()
+                    return
+                }
+            }
+        }
+    }
+
     // MARK: - Orphaned Loop Monitoring
 
-    /// When the session is still active but this view model has no running generation
-    /// task (e.g. the user navigated away and back), poll for new messages saved by
-    /// the detached task until the session becomes inactive.
     private func startMonitoringIfNeeded() {
         guard session.isActive, generationTask == nil, monitoringTask == nil else { return }
         isLoading = true
@@ -242,11 +415,23 @@ final class ChatViewModel {
                 self?.checkActiveSessionLock()
                 self?.monitoringTask = nil
             }
+
+            var tickCount = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 guard let self, !Task.isCancelled else { return }
                 self.loadMessages()
+                tickCount += 1
+
                 guard self.session.isActive else { return }
+
+                // Safety: if session has been "active" for 5 minutes without
+                // updates, treat it as stale and force-reset.
+                if tickCount > 300 {
+                    self.session.isActive = false
+                    try? self.modelContext.save()
+                    return
+                }
             }
         }
     }
@@ -263,6 +448,22 @@ final class ChatViewModel {
         session.isTitleCustomized = true
         session.updatedAt = Date()
         try? modelContext.save()
+    }
+
+    // MARK: - Info
+
+    var compressionInfo: String {
+        let contextManager = ContextManager()
+        let active = contextManager.activeContextTokens(session: session)
+        let threshold = session.agent?.effectiveCompressionThreshold ?? ContextManager.compressionThreshold
+        let compressed = session.compressedUpToIndex
+        let msgCount = session.messages.count
+
+        func fmt(_ n: Int) -> String {
+            n >= 1000 ? String(format: "%.1fk", Double(n) / 1000.0) : "\(n)"
+        }
+
+        return "上下文 ≈\(fmt(active)) / \(fmt(threshold)) | \(msgCount)条(\(compressed)条已压缩)"
     }
 }
 

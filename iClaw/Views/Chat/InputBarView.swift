@@ -4,7 +4,9 @@ struct InputBarView: View {
     @Binding var text: String
     let isLoading: Bool
     var isBlocked: Bool = false
+    var isCancelling: Bool = false
     let onSend: () -> Void
+    var onStop: (() -> Void)?
 
     @FocusState private var isFocused: Bool
 
@@ -25,15 +27,27 @@ struct InputBarView: View {
                 )
                 .focused($isFocused)
 
-            Button {
-                onSend()
-            } label: {
-                Image(systemName: isBlocked ? "lock.fill" : "arrow.up.circle.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(isBlocked ? .orange : .accentColor)
+            if isLoading, let onStop {
+                Button {
+                    onStop()
+                } label: {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.red)
+                }
+                .disabled(isCancelling)
+            } else {
+                Button {
+                    onSend()
+                } label: {
+                    Image(systemName: isBlocked ? "lock.fill" : "arrow.up.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(isBlocked ? .orange : .accentColor)
+                }
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading || isBlocked)
             }
-            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading || isBlocked)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
