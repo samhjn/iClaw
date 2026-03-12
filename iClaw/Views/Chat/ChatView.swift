@@ -25,7 +25,7 @@ struct ChatView: View {
                         editingTitle = session.title
                         showTitleEditor = true
                     } label: {
-                        Label("重命名", systemImage: "pencil")
+                        Label(L10n.Chat.rename, systemImage: "pencil")
                     }
 
                     if let vm = viewModel {
@@ -33,7 +33,7 @@ struct ChatView: View {
                             Button {
                                 vm.manualCompress()
                             } label: {
-                                Label("压缩上下文", systemImage: "arrow.down.right.and.arrow.up.left")
+                                Label(L10n.Chat.compressContext, systemImage: "arrow.down.right.and.arrow.up.left")
                             }
                             .disabled(vm.isCompressing || vm.isLoading)
                         }
@@ -48,15 +48,15 @@ struct ChatView: View {
                 }
             }
         }
-        .alert("Rename Session", isPresented: $showTitleEditor) {
-            TextField("Title", text: $editingTitle)
-            Button("Save") {
+        .alert(L10n.Chat.renameSession, isPresented: $showTitleEditor) {
+            TextField(L10n.Chat.title, text: $editingTitle)
+            Button(L10n.Common.save) {
                 let trimmed = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     viewModel?.setCustomTitle(trimmed)
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.Common.cancel, role: .cancel) {}
         }
         .onAppear {
             if viewModel == nil {
@@ -98,11 +98,11 @@ private struct ChatContentView: View {
                                 ProgressView()
                                     .padding(.trailing, 4)
                                 if vm.isCancelling {
-                                    Text("正在中止…")
+                                    Text(L10n.Chat.cancelling)
                                         .font(.subheadline)
                                         .foregroundStyle(.orange)
                                 } else {
-                                    Text("思考中…")
+                                    Text(L10n.Chat.thinking)
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                 }
@@ -115,7 +115,7 @@ private struct ChatContentView: View {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 4)
-                                Text("正在压缩上下文…")
+                                Text(L10n.Chat.compressingContext)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
@@ -169,7 +169,7 @@ private struct ChatContentView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button("Dismiss") {
+                    Button(L10n.Common.dismiss) {
                         vm.errorMessage = nil
                     }
                     .font(.caption)
@@ -191,7 +191,7 @@ private struct ChatContentView: View {
                     Button {
                         vm.checkActiveSessionLock()
                     } label: {
-                        Text("刷新")
+                        Text(L10n.Common.refresh)
                             .font(.caption)
                     }
                 }

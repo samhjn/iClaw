@@ -10,11 +10,11 @@ struct AgentSkillsView: View {
         List {
             if agent.installedSkills.isEmpty {
                 ContentUnavailableView {
-                    Label("No Skills Installed", systemImage: "sparkles")
+                    Label(L10n.Skills.noSkillsInstalled, systemImage: "sparkles")
                 } description: {
-                    Text("Install skills from the library to give this agent specialized capabilities.")
+                    Text(L10n.Skills.installDescription)
                 } actions: {
-                    Button("Browse Library") { showLibraryPicker = true }
+                    Button(L10n.Skills.browseLibrary) { showLibraryPicker = true }
                         .buttonStyle(.borderedProminent)
                 }
             } else {
@@ -27,7 +27,7 @@ struct AgentSkillsView: View {
                                         Text(skill.name)
                                             .font(.headline)
                                         if skill.isBuiltIn {
-                                            Text("built-in")
+                                            Text(L10n.Skills.builtIn)
                                                 .font(.caption2)
                                                 .padding(.horizontal, 4)
                                                 .padding(.vertical, 1)
@@ -54,17 +54,17 @@ struct AgentSkillsView: View {
                                     let service = SkillService(modelContext: modelContext)
                                     _ = service.uninstallSkill(skill, from: agent)
                                 } label: {
-                                    Label("Uninstall", systemImage: "minus.circle")
+                                    Label(L10n.Skills.uninstall, systemImage: "minus.circle")
                                 }
                             }
                         }
                     }
                 } header: {
-                    Text("\(agent.activeSkills.count) active / \(agent.installedSkills.count) installed")
+                    Text(L10n.Skills.activeInstalled(active: agent.activeSkills.count, installed: agent.installedSkills.count))
                 }
             }
         }
-        .navigationTitle("Skills")
+        .navigationTitle(L10n.Skills.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showLibraryPicker = true } label: {
@@ -110,7 +110,7 @@ struct SkillPickerSheet: View {
                                 HStack(spacing: 4) {
                                     Text(skill.name).font(.headline)
                                     if skill.isBuiltIn {
-                                        Text("built-in")
+                                        Text(L10n.Skills.builtIn)
                                             .font(.caption2)
                                             .foregroundStyle(.blue)
                                     }
@@ -128,12 +128,12 @@ struct SkillPickerSheet: View {
                     .tint(.primary)
                 }
             }
-            .searchable(text: $searchText, prompt: "Search skills...")
-            .navigationTitle("Skill Library")
+            .searchable(text: $searchText, prompt: L10n.Skills.searchSkills)
+            .navigationTitle(L10n.Skills.skillLibrary)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.Common.done) { dismiss() }
                 }
             }
             .onAppear { reload() }

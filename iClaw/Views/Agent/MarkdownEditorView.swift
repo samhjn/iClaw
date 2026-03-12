@@ -17,7 +17,7 @@ struct MarkdownEditorView: View {
                     isEditing.toggle()
                 } label: {
                     Label(
-                        isEditing ? "Preview" : "Edit",
+                        isEditing ? L10n.MarkdownEditor.preview : L10n.MarkdownEditor.edit,
                         systemImage: isEditing ? "eye" : "pencil"
                     )
                     .font(.subheadline)
@@ -36,7 +36,7 @@ struct MarkdownEditorView: View {
             } else {
                 ScrollView {
                     if content.isEmpty {
-                        Text("*Empty*")
+                        Text(L10n.Common.empty)
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)

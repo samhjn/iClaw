@@ -20,7 +20,7 @@ struct SessionListView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("Sessions")
+            .navigationTitle(L10n.Sessions.title)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -54,11 +54,11 @@ struct SessionListView: View {
 
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label("No Sessions", systemImage: "bubble.left.and.bubble.right")
+            Label(L10n.Sessions.noSessions, systemImage: "bubble.left.and.bubble.right")
         } description: {
-            Text("Create a new session to start chatting with an AI agent.")
+            Text(L10n.Sessions.noSessionsDescription)
         } actions: {
-            Button("New Session") {
+            Button(L10n.Sessions.newSession) {
                 showNewSessionSheet = true
             }
             .buttonStyle(.borderedProminent)
@@ -97,9 +97,9 @@ struct NewSessionSheet: View {
             List {
                 if agents.isEmpty {
                     ContentUnavailableView {
-                        Label("No Agents", systemImage: "cpu")
+                        Label(L10n.Sessions.noAgents, systemImage: "cpu")
                     } description: {
-                        Text("Create an agent first in the Agents tab.")
+                        Text(L10n.Sessions.noAgentsDescription)
                     }
                 } else {
                     ForEach(agents, id: \.id) { agent in
@@ -123,11 +123,11 @@ struct NewSessionSheet: View {
                     }
                 }
             }
-            .navigationTitle("Select Agent")
+            .navigationTitle(L10n.Sessions.selectAgent)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.Common.cancel) { dismiss() }
                 }
             }
         }

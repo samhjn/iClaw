@@ -12,7 +12,7 @@ struct InputBarView: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            TextField("Message...", text: $text, axis: .vertical)
+            TextField(L10n.Chat.messagePlaceholder, text: $text, axis: .vertical)
                 .lineLimit(1...6)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)

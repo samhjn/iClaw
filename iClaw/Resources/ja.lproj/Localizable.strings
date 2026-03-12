@@ -1,0 +1,281 @@
+/* 日本語 */
+
+// MARK: - Tabs
+"tabs.sessions" = "セッション";
+"tabs.agents" = "エージェント";
+"tabs.skills" = "スキル";
+"tabs.settings" = "設定";
+
+// MARK: - Common
+"common.save" = "保存";
+"common.cancel" = "キャンセル";
+"common.delete" = "削除";
+"common.create" = "作成";
+"common.edit" = "編集";
+"common.done" = "完了";
+"common.copy" = "コピー";
+"common.copied" = "コピー済み";
+"common.dismiss" = "閉じる";
+"common.enable" = "有効化";
+"common.disable" = "無効化";
+"common.default" = "デフォルト";
+"common.active" = "アクティブ";
+"common.preview" = "プレビュー";
+"common.empty" = "*空*";
+"common.refresh" = "更新";
+"common.add" = "追加";
+"common.name" = "名前";
+"common.unknown" = "不明";
+
+// MARK: - Chat
+"chat.messagePlaceholder" = "メッセージ…";
+"chat.cancelling" = "中止中…";
+"chat.thinking" = "考え中…";
+"chat.compressingContext" = "コンテキストを圧縮中…";
+"chat.renameSession" = "セッション名を変更";
+"chat.rename" = "名前変更";
+"chat.compressContext" = "コンテキスト圧縮";
+"chat.title" = "タイトル";
+"chat.openLink" = "リンクを開く";
+"chat.share" = "共有";
+"chat.loadingImage" = "画像を読み込み中…";
+"chat.imageLoadFailed" = "画像の読み込みに失敗しました";
+"chat.newChat" = "新しいチャット";
+"chat.aborted" = "\n\n⚠️ *[中止済み]*";
+"chat.toolCallAborted" = "⚠️ *[ツール呼び出しが中止されました]*";
+"chat.noAgent" = "このセッションにエージェントが関連付けられていません";
+"chat.noCompressModel" = "圧縮に使用できるモデルがありません";
+"chat.sessionBlocked" = "「%@」が処理中です。同一エージェントでは同時に1つのアクティブセッションのみ許可されます。";
+"chat.compressionInfo" = "コンテキスト ≈%@ / %@ | %d件（%d件圧縮済み）";
+
+// MARK: - Agents
+"agents.title" = "エージェント";
+"agents.newAgent" = "新規エージェント";
+"agents.agentName" = "エージェント名";
+"agents.createAgent" = "エージェントを作成";
+"agents.noAgents" = "エージェントなし";
+"agents.createAgentDescription" = "AIエージェントを作成して始めましょう。";
+"agents.enterName" = "新しいエージェントの名前を入力してください。";
+
+// MARK: - Agent Detail
+"agentDetail.config" = "設定";
+"agentDetail.modelConfig" = "モデル設定";
+"agentDetail.skills" = "スキル";
+"agentDetail.cronJobs" = "定期タスク";
+"agentDetail.customConfigs" = "カスタム設定";
+"agentDetail.subAgents" = "サブエージェント";
+"agentDetail.codeSnippets" = "コードスニペット";
+"agentDetail.newConfig" = "新規設定";
+"agentDetail.keyPlaceholder" = "キー名（例：RULES）";
+"agentDetail.noSubAgents" = "サブエージェントなし";
+"agentDetail.subAgentsDescription" = "サブエージェントは会話中にAIによって作成されます。";
+"agentDetail.sessionsCount" = "%d セッション";
+"agentDetail.msgsCount" = "%d 件";
+"agentDetail.subAgentsTitle" = "サブエージェント（%d）";
+"agentDetail.noCodeSnippets" = "コードスニペットなし";
+"agentDetail.codeSnippetsDescription" = "コードスニペットはAIエージェントによって保存されます。";
+
+// MARK: - Model Config
+"modelConfig.title" = "モデル設定";
+"modelConfig.globalDefault" = "グローバルデフォルト";
+"modelConfig.primaryModel" = "プライマリモデル";
+"modelConfig.primaryModelFooter" = "このエージェントとの会話に使用されるメインモデルです。";
+"modelConfig.noFallback" = "フォールバックモデル未設定";
+"modelConfig.addFallback" = "フォールバック追加";
+"modelConfig.fallbackChain" = "フォールバックチェーン";
+"modelConfig.fallbackFooter" = "プライマリモデルが失敗した場合、この順番で試行されます。ドラッグで並べ替え。";
+"modelConfig.inheritFromPrimary" = "プライマリから継承";
+"modelConfig.subAgentModel" = "サブエージェントモデル";
+"modelConfig.subAgentDefault" = "サブエージェントデフォルト";
+"modelConfig.subAgentFooter" = "このエージェントが作成するサブエージェントのデフォルトモデルです。";
+"modelConfig.compressionThreshold" = "圧縮しきい値（トークン）";
+"modelConfig.defaultThreshold" = "デフォルト（%d）";
+"modelConfig.systemDefault" = "0 = システムデフォルト";
+"modelConfig.resetDefault" = "デフォルトに戻す";
+"modelConfig.contextCompression" = "コンテキスト圧縮";
+"modelConfig.compressionFooter" = "セッションの累計トークンがこのしきい値を超えると、古いメッセージが自動的に要約に圧縮されます。値を上げるとより多くの元のコンテキストが保持されますが、APIコストが増加します。";
+"modelConfig.noModels" = "利用可能なモデルがありません — 設定でプロバイダーを構成してください";
+"modelConfig.override" = "（上書き）";
+"modelConfig.primary" = "プライマリ";
+"modelConfig.fallback" = "フォールバック";
+"modelConfig.subAgent" = "サブエージェント";
+"modelConfig.resolutionOrder" = "解決順序";
+"modelConfig.resolutionFooter" = "モデルはこの順序で試行されます。同じプロバイダーが異なるモデルで複数回表示される場合があります。";
+
+// MARK: - Cron Jobs
+"cronJobs.title" = "定期タスク";
+"cronJobs.noCronJobs" = "定期タスクなし";
+"cronJobs.noCronJobsDescription" = "ここから定期タスクを作成するか、AIエージェントに作成を依頼してください。";
+"cronJobs.shortcutsTrigger" = "ショートカット連携";
+"cronJobs.shortcutsDescription" = "Apple ショートカットでタスクの確実な実行を保証";
+"cronJobs.runsCount" = "%d 回実行";
+"cronJobs.nextPrefix" = "次回：";
+"cronJobs.jobInfo" = "タスク情報";
+"cronJobs.schedule" = "スケジュール";
+"cronJobs.description" = "説明";
+"cronJobs.enabled" = "有効";
+"cronJobs.jobHint" = "タスクヒント";
+"cronJobs.statistics" = "統計";
+"cronJobs.totalRuns" = "合計実行回数";
+"cronJobs.lastRun" = "前回実行";
+"cronJobs.ago" = "前";
+"cronJobs.nextRun" = "次回実行";
+"cronJobs.created" = "作成日";
+"cronJobs.triggerURL" = "トリガーURL";
+"cronJobs.viewShortcutsGuide" = "ショートカット設定ガイドを表示";
+"cronJobs.shortcutsIntegration" = "ショートカット連携";
+"cronJobs.shortcutsIntegrationFooter" = "Apple ショートカットの「オートメーション」機能を使用して、このURLで定期タスクを確実にトリガーします。";
+"cronJobs.lastSession" = "前回のセッション";
+"cronJobs.editJob" = "タスクを編集";
+"cronJobs.newCronJob" = "新規定期タスク";
+"cronJobs.basic" = "基本";
+"cronJobs.jobName" = "タスク名";
+"cronJobs.cronExpression" = "Cron 式";
+"cronJobs.nextFire" = "次回実行：";
+"cronJobs.cronFormat" = "形式：分 時 日 月 曜日\nプリセット：@hourly @daily @weekly @monthly @yearly";
+"cronJobs.quickPresets" = "クイックプリセット";
+"cronJobs.everyHour" = "毎時";
+"cronJobs.daily9am" = "毎日9時";
+"cronJobs.weekdays9am" = "平日9時";
+"cronJobs.weeklyMon" = "毎週月曜";
+"cronJobs.every30min" = "30分毎";
+"cronJobs.monthly1st" = "毎月1日";
+"cronJobs.jobHintFooter" = "タスクがトリガーされるたびに、このプロンプトがLLMに送信されます。";
+
+// MARK: - Shortcuts Guide
+"shortcuts.title" = "ショートカットガイド";
+"shortcuts.headerTitle" = "ショートカットで定期タスクをトリガー";
+"shortcuts.headerSubtitle" = "Cronジョブをバックグラウンドで確実に実行";
+"shortcuts.whyNeeded" = "なぜショートカットが必要？";
+"shortcuts.whyDescription" = "iOSはバックグラウンドタスクに厳しい制限があります。システムがBGAppRefreshTaskを遅延またはスキップすることがあり、定期タスクが時間通りにトリガーされない場合があります。Apple ショートカットの「オートメーション」機能を使えば、指定した時間にiClawのURL Schemeを自動的に開き、タスクが予定通り実行されることを保証できます。";
+"shortcuts.setupSteps" = "設定手順";
+"shortcuts.step1Title" = "ショートカット Appを開く";
+"shortcuts.step1Detail" = "「ショートカット」Appを開き、下部の「オートメーション」タブを選択します。";
+"shortcuts.step2Title" = "個人用オートメーションを作成";
+"shortcuts.step2Detail" = "右上の「+」→「個人用オートメーションを作成」→「時刻」を選択。";
+"shortcuts.step3Title" = "トリガー時刻を設定";
+"shortcuts.step3Detail" = "Cronジョブのスケジュールに合わせた時刻と繰り返しルール（毎日/平日/特定日）を設定。";
+"shortcuts.step4Title" = "アクションを追加";
+"shortcuts.step4Detail" = "「URLを開く」アクションを検索して追加し、以下のURLを入力：";
+"shortcuts.step5Title" = "「実行前に尋ねる」をオフに";
+"shortcuts.step5Detail" = "「実行前に尋ねる」をオフにして、オートメーションがバックグラウンドで静かに実行されるようにします。";
+"shortcuts.step6Title" = "完了";
+"shortcuts.step6Detail" = "「完了」をタップしてオートメーションを保存。これでCronジョブはショートカットを通じて指定時刻に確実にトリガーされます。";
+"shortcuts.urlReference" = "URL リファレンス";
+"shortcuts.triggerSpecific" = "特定タスクをトリガー";
+"shortcuts.triggerSpecificDesc" = "指定IDのCronジョブをトリガー";
+"shortcuts.runAllDue" = "期限到来タスクをすべて実行";
+"shortcuts.runAllDueDesc" = "期限到来のCronジョブをすべてチェックして実行";
+"shortcuts.tips" = "ヒント";
+"shortcuts.tip1" = "高頻度タスク（毎時など）の場合、アプリ内スケジューリングとショートカットの二重保護を推奨します。";
+"shortcuts.tip2" = "ショートカットのオートメーションはデバイスがロック画面でも実行できますが、ネットワーク接続が必要です。";
+"shortcuts.tip3" = "複数のCronジョブがある場合、「期限到来タスクをすべて実行」URLでまとめてトリガーできます。";
+"shortcuts.tip4" = "URL Schemeの初回使用時にシステムが確認ダイアログを表示する場合があります。確認後、以降の呼び出しは静かに実行されます。";
+
+// MARK: - Sessions
+"sessions.title" = "セッション";
+"sessions.noSessions" = "セッションなし";
+"sessions.noSessionsDescription" = "新しいセッションを作成してAIエージェントとチャットを始めましょう。";
+"sessions.newSession" = "新規セッション";
+"sessions.noAgents" = "エージェントなし";
+"sessions.noAgentsDescription" = "まずエージェントタブでエージェントを作成してください。";
+"sessions.sessionsCount" = "%d セッション";
+"sessions.selectAgent" = "エージェントを選択";
+"sessions.messagesCount" = "%d 件のメッセージ";
+
+// MARK: - Settings
+"settings.title" = "設定";
+"settings.llmProviders" = "LLM プロバイダー";
+"settings.addProvider" = "プロバイダーを追加";
+"settings.about" = "このアプリについて";
+"settings.version" = "バージョン";
+
+// MARK: - LLM Provider
+"provider.editProvider" = "プロバイダーを編集";
+"provider.addProvider" = "プロバイダーを追加";
+"provider.addModel" = "モデルを追加";
+"provider.modelNamePlaceholder" = "モデル名（例：gpt-4o-mini）";
+"provider.provider" = "プロバイダー";
+"provider.endpoint" = "エンドポイント";
+"provider.authentication" = "認証";
+"provider.apiKey" = "API キー";
+"provider.defaultModel" = "デフォルトモデル";
+"provider.defaultModelFooter" = "特定のモデルが選択されていない場合に使用されるデフォルトモデルです。";
+"provider.noModelsEnabled" = "有効なモデルがありません";
+"provider.setDefault" = "デフォルトに設定";
+"provider.manuallyAddModel" = "手動でモデルを追加";
+"provider.enabledModels" = "有効なモデル";
+"provider.enabledModelsFooter" = "左スワイプで無効化、右スワイプでデフォルトに設定。有効なモデルのみがエージェントのモデル選択に表示されます。";
+"provider.fetchFromAPI" = "APIから取得";
+"provider.availableToEnable" = "有効化可能（%d）";
+"provider.allModelsEnabled" = "取得した全 %d モデルが有効です";
+"provider.enableAll" = "すべて有効化";
+"provider.remoteModels" = "リモートモデル";
+"provider.remoteModelsFooter" = "APIエンドポイントからモデルを取得し、必要なものを有効にします。";
+"provider.maxTokens" = "最大トークン数：%d";
+"provider.parameters" = "パラメータ";
+"provider.presets" = "プリセット";
+
+// MARK: - Skills
+"skills.title" = "スキル";
+"skills.noSkills" = "スキルなし";
+"skills.noSkillsDescription" = "スキルを作成するか、AIエージェントに構築を依頼してください。";
+"skills.createSkill" = "スキルを作成";
+"skills.customSkills" = "カスタムスキル";
+"skills.builtInSkills" = "組み込みスキル";
+"skills.builtIn" = "組み込み";
+"skills.searchSkills" = "スキルを検索…";
+"skills.deleteSkill" = "スキルを削除";
+"skills.deleteSkillMessage" = "「%@」を完全に削除し、すべてのエージェントから削除します。";
+"skills.content" = "コンテンツ";
+"skills.noAgents" = "エージェントなし";
+"skills.noAgentsDescription" = "まずエージェントを作成してください。";
+"skills.install" = "%@ をインストール";
+"skills.skillsActive" = "%d 個のスキルがアクティブ";
+"skills.agents" = "エージェント";
+"skills.editSkill" = "スキルを編集";
+"skills.newSkill" = "新規スキル";
+"skills.info" = "情報";
+"skills.skillName" = "スキル名";
+"skills.summary" = "概要（一行の説明）";
+"skills.tags" = "タグ（カンマ区切り）";
+"skills.contentMarkdown" = "コンテンツ（Markdown）";
+"skills.contentFooter" = "指示、方法論、または知識を記述します。インストール後、エージェントのシステムプロンプトに注入されます。";
+"skills.noSkillsInstalled" = "スキル未インストール";
+"skills.installDescription" = "ライブラリからスキルをインストールして、このエージェントに専門能力を追加します。";
+"skills.browseLibrary" = "ライブラリを参照";
+"skills.uninstall" = "アンインストール";
+"skills.skillLibrary" = "スキルライブラリ";
+"skills.activeInstalled" = "%d 個アクティブ / %d 個インストール済み";
+
+// MARK: - Cron Description
+"cron.invalidExpression" = "無効なCron式";
+"cron.everyMinute" = "毎分";
+"cron.atMinute" = "%d 分に";
+"cron.atMinutes" = "%@ 分に";
+"cron.ofEveryHour" = "毎時";
+"cron.ofHour" = "%d 時に";
+"cron.ofHours" = "%@ 時に";
+"cron.onDays" = "毎月 %@ 日に";
+"cron.inMonths" = "%@ 月に";
+"cron.onWeekdays" = "%@ に";
+"cron.sun" = "日";
+"cron.mon" = "月";
+"cron.tue" = "火";
+"cron.wed" = "水";
+"cron.thu" = "木";
+"cron.fri" = "金";
+"cron.sat" = "土";
+
+// MARK: - Cron Executor
+"cronExec.completed" = "定期タスク完了";
+"cronExec.completedBody" = "%@ が完了しました。タップしてセッションを表示。";
+"cronExec.noProvider" = "[定期タスクエラー] LLMプロバイダーが設定されていません。";
+
+// MARK: - Chat Errors
+"chatError.noProvider" = "LLMプロバイダーが設定されていません。設定で追加してください。";
+"chatError.noAgent" = "このセッションにエージェントが関連付けられていません。";
+
+// MARK: - Markdown Editor
+"markdownEditor.preview" = "プレビュー";
+"markdownEditor.edit" = "編集";

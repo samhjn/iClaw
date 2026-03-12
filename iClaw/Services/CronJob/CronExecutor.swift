@@ -29,7 +29,7 @@ final class CronExecutor {
         guard router.primaryProvider(for: agent) != nil else {
             let errorMsg = Message(
                 role: .assistant,
-                content: "[CronJob Error] No LLM provider configured.",
+                content: L10n.CronExec.noProvider,
                 session: session
             )
             context.insert(errorMsg)
@@ -167,8 +167,8 @@ final class CronExecutor {
         }
 
         let content = UNMutableNotificationContent()
-        content.title = "CronJob Completed"
-        content.body = "\(jobName) finished. Tap to view the session."
+        content.title = L10n.CronExec.completed
+        content.body = L10n.CronExec.completedBody(jobName)
         content.sound = .default
 
         let request = UNNotificationRequest(

@@ -1,0 +1,281 @@
+/* English — Base language */
+
+// MARK: - Tabs
+"tabs.sessions" = "Sessions";
+"tabs.agents" = "Agents";
+"tabs.skills" = "Skills";
+"tabs.settings" = "Settings";
+
+// MARK: - Common
+"common.save" = "Save";
+"common.cancel" = "Cancel";
+"common.delete" = "Delete";
+"common.create" = "Create";
+"common.edit" = "Edit";
+"common.done" = "Done";
+"common.copy" = "Copy";
+"common.copied" = "Copied";
+"common.dismiss" = "Dismiss";
+"common.enable" = "Enable";
+"common.disable" = "Disable";
+"common.default" = "Default";
+"common.active" = "Active";
+"common.preview" = "Preview";
+"common.empty" = "*Empty*";
+"common.refresh" = "Refresh";
+"common.add" = "Add";
+"common.name" = "Name";
+"common.unknown" = "unknown";
+
+// MARK: - Chat
+"chat.messagePlaceholder" = "Message...";
+"chat.cancelling" = "Cancelling…";
+"chat.thinking" = "Thinking…";
+"chat.compressingContext" = "Compressing context…";
+"chat.renameSession" = "Rename Session";
+"chat.rename" = "Rename";
+"chat.compressContext" = "Compress Context";
+"chat.title" = "Title";
+"chat.openLink" = "Open Link";
+"chat.share" = "Share";
+"chat.loadingImage" = "Loading image…";
+"chat.imageLoadFailed" = "Image load failed";
+"chat.newChat" = "New Chat";
+"chat.aborted" = "\n\n⚠️ *[Aborted]*";
+"chat.toolCallAborted" = "⚠️ *[Tool call aborted]*";
+"chat.noAgent" = "No agent associated with this session";
+"chat.noCompressModel" = "No model available for compression";
+"chat.sessionBlocked" = "\"%@\" is processing. Only one active session per agent is allowed.";
+"chat.compressionInfo" = "Context ≈%@ / %@ | %d messages (%d compressed)";
+
+// MARK: - Agents
+"agents.title" = "Agents";
+"agents.newAgent" = "New Agent";
+"agents.agentName" = "Agent Name";
+"agents.createAgent" = "Create Agent";
+"agents.noAgents" = "No Agents";
+"agents.createAgentDescription" = "Create an AI agent to get started.";
+"agents.enterName" = "Enter a name for the new agent.";
+
+// MARK: - Agent Detail
+"agentDetail.config" = "Config";
+"agentDetail.modelConfig" = "Model Config";
+"agentDetail.skills" = "Skills";
+"agentDetail.cronJobs" = "Cron Jobs";
+"agentDetail.customConfigs" = "Custom Configs";
+"agentDetail.subAgents" = "Sub-Agents";
+"agentDetail.codeSnippets" = "Code Snippets";
+"agentDetail.newConfig" = "New Config";
+"agentDetail.keyPlaceholder" = "Key (e.g. RULES)";
+"agentDetail.noSubAgents" = "No Sub-Agents";
+"agentDetail.subAgentsDescription" = "Sub-agents are created by the AI during conversations.";
+"agentDetail.sessionsCount" = "%d sessions";
+"agentDetail.msgsCount" = "%d msgs";
+"agentDetail.subAgentsTitle" = "Sub-Agents (%d)";
+"agentDetail.noCodeSnippets" = "No Code Snippets";
+"agentDetail.codeSnippetsDescription" = "Code snippets are saved by the AI agent.";
+
+// MARK: - Model Config
+"modelConfig.title" = "Model Config";
+"modelConfig.globalDefault" = "Global Default";
+"modelConfig.primaryModel" = "Primary Model";
+"modelConfig.primaryModelFooter" = "The main model used for conversations with this agent.";
+"modelConfig.noFallback" = "No fallback models configured";
+"modelConfig.addFallback" = "Add Fallback";
+"modelConfig.fallbackChain" = "Fallback Chain";
+"modelConfig.fallbackFooter" = "When the primary model fails, these are tried in order. Drag to reorder.";
+"modelConfig.inheritFromPrimary" = "Inherit from Primary";
+"modelConfig.subAgentModel" = "Sub-Agent Model";
+"modelConfig.subAgentDefault" = "Sub-Agent Default";
+"modelConfig.subAgentFooter" = "The default model for sub-agents created by this agent.";
+"modelConfig.compressionThreshold" = "Compression Threshold (tokens)";
+"modelConfig.defaultThreshold" = "Default (%d)";
+"modelConfig.systemDefault" = "0 = System default";
+"modelConfig.resetDefault" = "Reset to Default";
+"modelConfig.contextCompression" = "Context Compression";
+"modelConfig.compressionFooter" = "When a session's cumulative tokens exceed this threshold, old messages are automatically compressed into a summary. Increasing this preserves more original context but increases API costs.";
+"modelConfig.noModels" = "No models available — configure a provider in Settings";
+"modelConfig.override" = "(override)";
+"modelConfig.primary" = "Primary";
+"modelConfig.fallback" = "Fallback";
+"modelConfig.subAgent" = "Sub-Agent";
+"modelConfig.resolutionOrder" = "Resolution Order";
+"modelConfig.resolutionFooter" = "Models are tried in this order. Same provider can appear with different models.";
+
+// MARK: - Cron Jobs
+"cronJobs.title" = "Cron Jobs";
+"cronJobs.noCronJobs" = "No Cron Jobs";
+"cronJobs.noCronJobsDescription" = "Schedule recurring jobs from here or ask your AI agent to create one.";
+"cronJobs.shortcutsTrigger" = "Shortcuts Trigger";
+"cronJobs.shortcutsDescription" = "Use Apple Shortcuts to ensure reliable job execution";
+"cronJobs.runsCount" = "%d runs";
+"cronJobs.nextPrefix" = "Next: ";
+"cronJobs.jobInfo" = "Job Info";
+"cronJobs.schedule" = "Schedule";
+"cronJobs.description" = "Description";
+"cronJobs.enabled" = "Enabled";
+"cronJobs.jobHint" = "Job Hint";
+"cronJobs.statistics" = "Statistics";
+"cronJobs.totalRuns" = "Total Runs";
+"cronJobs.lastRun" = "Last Run";
+"cronJobs.ago" = " ago";
+"cronJobs.nextRun" = "Next Run";
+"cronJobs.created" = "Created";
+"cronJobs.triggerURL" = "Trigger URL";
+"cronJobs.viewShortcutsGuide" = "View Shortcuts Guide";
+"cronJobs.shortcutsIntegration" = "Shortcuts Integration";
+"cronJobs.shortcutsIntegrationFooter" = "Use Apple Shortcuts automation to trigger this URL at the scheduled time for reliable execution.";
+"cronJobs.lastSession" = "Last Session";
+"cronJobs.editJob" = "Edit Job";
+"cronJobs.newCronJob" = "New Cron Job";
+"cronJobs.basic" = "Basic";
+"cronJobs.jobName" = "Job Name";
+"cronJobs.cronExpression" = "Cron Expression";
+"cronJobs.nextFire" = "Next fire:";
+"cronJobs.cronFormat" = "Format: minute hour day-of-month month day-of-week\nPresets: @hourly @daily @weekly @monthly @yearly";
+"cronJobs.quickPresets" = "Quick Presets";
+"cronJobs.everyHour" = "Every hour";
+"cronJobs.daily9am" = "Daily 9am";
+"cronJobs.weekdays9am" = "Weekdays 9am";
+"cronJobs.weeklyMon" = "Weekly Mon";
+"cronJobs.every30min" = "Every 30min";
+"cronJobs.monthly1st" = "Monthly 1st";
+"cronJobs.jobHintFooter" = "This prompt will be sent to the LLM each time the job triggers.";
+
+// MARK: - Shortcuts Guide
+"shortcuts.title" = "Shortcuts Guide";
+"shortcuts.headerTitle" = "Use Shortcuts to Trigger Scheduled Tasks";
+"shortcuts.headerSubtitle" = "Ensure cron jobs run reliably in the background";
+"shortcuts.whyNeeded" = "Why Shortcuts?";
+"shortcuts.whyDescription" = "iOS has strict limits on background tasks. The system may delay or skip BGAppRefreshTask, causing scheduled tasks to not trigger on time. With Apple Shortcuts automation, you can automatically open iClaw's URL scheme at the specified time, ensuring tasks execute on schedule.";
+"shortcuts.setupSteps" = "Setup Steps";
+"shortcuts.step1Title" = "Open Shortcuts App";
+"shortcuts.step1Detail" = "Go to the Shortcuts app and select the \"Automation\" tab at the bottom.";
+"shortcuts.step2Title" = "Create Personal Automation";
+"shortcuts.step2Detail" = "Tap \"+\" in the upper right → \"Create Personal Automation\" → Select \"Time of Day\".";
+"shortcuts.step3Title" = "Set Trigger Time";
+"shortcuts.step3Detail" = "Set the time and repeat rules (daily/weekdays/specific dates) matching your cron job schedule.";
+"shortcuts.step4Title" = "Add Action";
+"shortcuts.step4Detail" = "Search for and add the \"Open URL\" action, then fill in the following URL:";
+"shortcuts.step5Title" = "Disable \"Ask Before Running\"";
+"shortcuts.step5Detail" = "Make sure \"Ask Before Running\" is turned off so the automation runs silently.";
+"shortcuts.step6Title" = "Done";
+"shortcuts.step6Detail" = "Tap \"Done\" to save the automation. Your cron job will now be reliably triggered via Shortcuts at the scheduled time.";
+"shortcuts.urlReference" = "URL Reference";
+"shortcuts.triggerSpecific" = "Trigger Specific Job";
+"shortcuts.triggerSpecificDesc" = "Trigger the cron job with the specified ID";
+"shortcuts.runAllDue" = "Run All Due Jobs";
+"shortcuts.runAllDueDesc" = "Check and execute all due cron jobs";
+"shortcuts.tips" = "Tips";
+"shortcuts.tip1" = "For high-frequency tasks (e.g. hourly), keep both in-app scheduling and Shortcuts as dual safeguards.";
+"shortcuts.tip2" = "Shortcuts automation can run even when the device is locked, but requires network connectivity.";
+"shortcuts.tip3" = "If you have multiple cron jobs, use the \"Run All Due Jobs\" URL to trigger them all at once.";
+"shortcuts.tip4" = "The first time a URL scheme is used, the system may show a confirmation dialog. After confirming, subsequent calls will run silently.";
+
+// MARK: - Sessions
+"sessions.title" = "Sessions";
+"sessions.noSessions" = "No Sessions";
+"sessions.noSessionsDescription" = "Create a new session to start chatting with an AI agent.";
+"sessions.newSession" = "New Session";
+"sessions.noAgents" = "No Agents";
+"sessions.noAgentsDescription" = "Create an agent first in the Agents tab.";
+"sessions.sessionsCount" = "%d sessions";
+"sessions.selectAgent" = "Select Agent";
+"sessions.messagesCount" = "%d messages";
+
+// MARK: - Settings
+"settings.title" = "Settings";
+"settings.llmProviders" = "LLM Providers";
+"settings.addProvider" = "Add Provider";
+"settings.about" = "About";
+"settings.version" = "Version";
+
+// MARK: - LLM Provider
+"provider.editProvider" = "Edit Provider";
+"provider.addProvider" = "Add Provider";
+"provider.addModel" = "Add Model";
+"provider.modelNamePlaceholder" = "Model name (e.g. gpt-4o-mini)";
+"provider.provider" = "Provider";
+"provider.endpoint" = "Endpoint";
+"provider.authentication" = "Authentication";
+"provider.apiKey" = "API Key";
+"provider.defaultModel" = "Default Model";
+"provider.defaultModelFooter" = "The default model used when no specific model is selected.";
+"provider.noModelsEnabled" = "No models enabled";
+"provider.setDefault" = "Set Default";
+"provider.manuallyAddModel" = "Manually Add Model";
+"provider.enabledModels" = "Enabled Models";
+"provider.enabledModelsFooter" = "Swipe left to disable, swipe right to set as default. Only enabled models appear in agent model selection.";
+"provider.fetchFromAPI" = "Fetch from API";
+"provider.availableToEnable" = "Available to Enable (%d)";
+"provider.allModelsEnabled" = "All %d fetched models are enabled";
+"provider.enableAll" = "Enable All";
+"provider.remoteModels" = "Remote Models";
+"provider.remoteModelsFooter" = "Fetch models from the API endpoint, then enable the ones you need.";
+"provider.maxTokens" = "Max Tokens: %d";
+"provider.parameters" = "Parameters";
+"provider.presets" = "Presets";
+
+// MARK: - Skills
+"skills.title" = "Skills";
+"skills.noSkills" = "No Skills";
+"skills.noSkillsDescription" = "Create a skill or let your AI agent build one.";
+"skills.createSkill" = "Create Skill";
+"skills.customSkills" = "Custom Skills";
+"skills.builtInSkills" = "Built-in Skills";
+"skills.builtIn" = "built-in";
+"skills.searchSkills" = "Search skills...";
+"skills.deleteSkill" = "Delete Skill";
+"skills.deleteSkillMessage" = "This will permanently delete '%@' and remove it from all agents.";
+"skills.content" = "Content";
+"skills.noAgents" = "No Agents";
+"skills.noAgentsDescription" = "Create an agent first.";
+"skills.install" = "Install %@";
+"skills.skillsActive" = "%d skill(s) active";
+"skills.agents" = "agents";
+"skills.editSkill" = "Edit Skill";
+"skills.newSkill" = "New Skill";
+"skills.info" = "Info";
+"skills.skillName" = "Skill Name";
+"skills.summary" = "Summary (one-line description)";
+"skills.tags" = "Tags (comma-separated)";
+"skills.contentMarkdown" = "Content (Markdown)";
+"skills.contentFooter" = "Write instructions, methodology, or knowledge that will be injected into the agent's system prompt when this skill is installed.";
+"skills.noSkillsInstalled" = "No Skills Installed";
+"skills.installDescription" = "Install skills from the library to give this agent specialized capabilities.";
+"skills.browseLibrary" = "Browse Library";
+"skills.uninstall" = "Uninstall";
+"skills.skillLibrary" = "Skill Library";
+"skills.activeInstalled" = "%d active / %d installed";
+
+// MARK: - Cron Description
+"cron.invalidExpression" = "Invalid cron expression";
+"cron.everyMinute" = "every minute";
+"cron.atMinute" = "at minute %d";
+"cron.atMinutes" = "at minutes %@";
+"cron.ofEveryHour" = "of every hour";
+"cron.ofHour" = "of hour %d";
+"cron.ofHours" = "of hours %@";
+"cron.onDays" = "on day(s) %@";
+"cron.inMonths" = "in month(s) %@";
+"cron.onWeekdays" = "on %@";
+"cron.sun" = "Sun";
+"cron.mon" = "Mon";
+"cron.tue" = "Tue";
+"cron.wed" = "Wed";
+"cron.thu" = "Thu";
+"cron.fri" = "Fri";
+"cron.sat" = "Sat";
+
+// MARK: - Cron Executor
+"cronExec.completed" = "CronJob Completed";
+"cronExec.completedBody" = "%@ finished. Tap to view the session.";
+"cronExec.noProvider" = "[CronJob Error] No LLM provider configured.";
+
+// MARK: - Chat Errors
+"chatError.noProvider" = "No LLM provider configured. Please add one in Settings.";
+"chatError.noAgent" = "No agent associated with this session.";
+
+// MARK: - Markdown Editor
+"markdownEditor.preview" = "Preview";
+"markdownEditor.edit" = "Edit";

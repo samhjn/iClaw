@@ -11,9 +11,9 @@ struct CronJobListView: View {
         List {
             if agent.cronJobs.isEmpty {
                 ContentUnavailableView(
-                    "No Cron Jobs",
+                    L10n.CronJobs.noCronJobs,
                     systemImage: "clock.badge",
-                    description: Text("Schedule recurring jobs from here or ask your AI agent to create one.")
+                    description: Text(L10n.CronJobs.noCronJobsDescription)
                 )
             } else {
                 ForEach(sortedJobs, id: \.id) { job in
@@ -27,7 +27,7 @@ struct CronJobListView: View {
                             modelContext.delete(job)
                             try? modelContext.save()
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L10n.Common.delete, systemImage: "trash")
                         }
                         Button {
                             job.isEnabled.toggle()
@@ -38,7 +38,7 @@ struct CronJobListView: View {
                             try? modelContext.save()
                         } label: {
                             Label(
-                                job.isEnabled ? "Disable" : "Enable",
+                                job.isEnabled ? L10n.Common.disable : L10n.Common.enable,
                                 systemImage: job.isEnabled ? "pause" : "play"
                             )
                         }
@@ -52,9 +52,9 @@ struct CronJobListView: View {
                     } label: {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Shortcuts 辅助触发")
+                                Text(L10n.CronJobs.shortcutsTrigger)
                                     .font(.subheadline)
-                                Text("使用 Apple Shortcuts 确保任务可靠执行")
+                                Text(L10n.CronJobs.shortcutsDescription)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -66,7 +66,7 @@ struct CronJobListView: View {
                 }
             }
         }
-        .navigationTitle("Cron Jobs")
+        .navigationTitle(L10n.CronJobs.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showAddSheet = true } label: {
@@ -119,7 +119,7 @@ struct CronJobRowView: View {
                         .font(.caption2)
                         .foregroundStyle(.blue)
                 }
-                Label("\(job.runCount) runs", systemImage: "arrow.clockwise")
+                Label(L10n.CronJobs.runsCount(job.runCount), systemImage: "arrow.clockwise")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -136,7 +136,7 @@ struct CronJobRowView: View {
 private extension Label where Title == Text, Icon == Image {
     init(_ date: Date, style: Text.DateStyle) {
         self.init {
-            Text("Next: ") + Text(date, style: style)
+            Text(L10n.CronJobs.nextPrefix) + Text(date, style: style)
         } icon: {
             Image(systemName: "clock")
         }
@@ -156,11 +156,11 @@ struct CronJobDetailView: View {
 
     var body: some View {
         Form {
-            Section("Job Info") {
-                LabeledContent("Name", value: job.name)
-                LabeledContent("Schedule", value: job.cronExpression)
-                LabeledContent("Description", value: CronParser.describe(job.cronExpression))
-                Toggle("Enabled", isOn: $job.isEnabled)
+            Section(L10n.CronJobs.jobInfo) {
+                LabeledContent(L10n.Common.name, value: job.name)
+                LabeledContent(L10n.CronJobs.schedule, value: job.cronExpression)
+                LabeledContent(L10n.CronJobs.description, value: CronParser.describe(job.cronExpression))
+                Toggle(L10n.CronJobs.enabled, isOn: $job.isEnabled)
                     .onChange(of: job.isEnabled) { _, enabled in
                         if enabled {
                             job.nextRunAt = try? CronParser.nextFireDate(after: Date(), for: job.cronExpression)
@@ -170,24 +170,24 @@ struct CronJobDetailView: View {
                     }
             }
 
-            Section("Job Hint") {
+            Section(L10n.CronJobs.jobHint) {
                 Text(job.jobHint)
                     .font(.body)
             }
 
-            Section("Statistics") {
-                LabeledContent("Total Runs", value: "\(job.runCount)")
+            Section(L10n.CronJobs.statistics) {
+                LabeledContent(L10n.CronJobs.totalRuns, value: "\(job.runCount)")
                 if let last = job.lastRunAt {
-                    LabeledContent("Last Run") {
-                        Text(last, style: .relative) + Text(" ago")
+                    LabeledContent(L10n.CronJobs.lastRun) {
+                        Text(last, style: .relative) + Text(L10n.CronJobs.ago)
                     }
                 }
                 if let next = job.nextRunAt, job.isEnabled {
-                    LabeledContent("Next Run") {
+                    LabeledContent(L10n.CronJobs.nextRun) {
                         Text(next, style: .relative)
                     }
                 }
-                LabeledContent("Created") {
+                LabeledContent(L10n.CronJobs.created) {
                     Text(job.createdAt, style: .date)
                 }
             }
@@ -195,7 +195,7 @@ struct CronJobDetailView: View {
             Section {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("触发 URL")
+                        Text(L10n.CronJobs.triggerURL)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(triggerURL)
@@ -217,16 +217,16 @@ struct CronJobDetailView: View {
                 Button {
                     showShortcutsGuide = true
                 } label: {
-                    Label("查看 Shortcuts 设置指引", systemImage: "shortcuts")
+                    Label(L10n.CronJobs.viewShortcutsGuide, systemImage: "shortcuts")
                 }
             } header: {
-                Text("Shortcuts 集成")
+                Text(L10n.CronJobs.shortcutsIntegration)
             } footer: {
-                Text("通过 Apple Shortcuts 的「自动化」功能，使用此 URL 确保定时任务可靠触发。")
+                Text(L10n.CronJobs.shortcutsIntegrationFooter)
             }
 
             if let sessionId = job.lastSessionId {
-                Section("Last Session") {
+                Section(L10n.CronJobs.lastSession) {
                     Text("Session ID: \(sessionId.uuidString)")
                         .font(.caption)
                         .fontDesign(.monospaced)
@@ -263,13 +263,13 @@ struct CronJobEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Basic") {
-                    TextField("Job Name", text: $name)
-                    Toggle("Enabled", isOn: $isEnabled)
+                Section(L10n.CronJobs.basic) {
+                    TextField(L10n.CronJobs.jobName, text: $name)
+                    Toggle(L10n.CronJobs.enabled, isOn: $isEnabled)
                 }
 
                 Section {
-                    TextField("Cron Expression", text: $cronExpression)
+                    TextField(L10n.CronJobs.cronExpression, text: $cronExpression)
                         .fontDesign(.monospaced)
                         .autocapitalization(.none)
                         .onChange(of: cronExpression) { _, _ in validate() }
@@ -285,7 +285,7 @@ struct CronJobEditView: View {
 
                         if let next = try? CronParser.nextFireDate(after: Date(), for: cronExpression) {
                             HStack {
-                                Text("Next fire:")
+                                Text(L10n.CronJobs.nextFire)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Text(next, style: .date)
@@ -296,20 +296,20 @@ struct CronJobEditView: View {
                         }
                     }
                 } header: {
-                    Text("Schedule")
+                    Text(L10n.CronJobs.schedule)
                 } footer: {
-                    Text("Format: minute hour day-of-month month day-of-week\nPresets: @hourly @daily @weekly @monthly @yearly")
+                    Text(L10n.CronJobs.cronFormat)
                 }
 
-                Section("Quick Presets") {
+                Section(L10n.CronJobs.quickPresets) {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            presetButton("Every hour", "0 * * * *")
-                            presetButton("Daily 9am", "0 9 * * *")
-                            presetButton("Weekdays 9am", "0 9 * * 1-5")
-                            presetButton("Weekly Mon", "0 9 * * 1")
-                            presetButton("Every 30min", "*/30 * * * *")
-                            presetButton("Monthly 1st", "0 0 1 * *")
+                            presetButton(L10n.CronJobs.everyHour, "0 * * * *")
+                            presetButton(L10n.CronJobs.daily9am, "0 9 * * *")
+                            presetButton(L10n.CronJobs.weekdays9am, "0 9 * * 1-5")
+                            presetButton(L10n.CronJobs.weeklyMon, "0 9 * * 1")
+                            presetButton(L10n.CronJobs.every30min, "*/30 * * * *")
+                            presetButton(L10n.CronJobs.monthly1st, "0 0 1 * *")
                         }
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -319,19 +319,19 @@ struct CronJobEditView: View {
                     TextEditor(text: $jobHint)
                         .frame(minHeight: 120)
                 } header: {
-                    Text("Job Hint")
+                    Text(L10n.CronJobs.jobHint)
                 } footer: {
-                    Text("This prompt will be sent to the LLM each time the job triggers.")
+                    Text(L10n.CronJobs.jobHintFooter)
                 }
             }
-            .navigationTitle(isEditing ? "Edit Job" : "New Cron Job")
+            .navigationTitle(isEditing ? L10n.CronJobs.editJob : L10n.CronJobs.newCronJob)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.Common.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L10n.Common.save) {
                         save()
                         if !isEditing {
                             showShortcutsGuide = true

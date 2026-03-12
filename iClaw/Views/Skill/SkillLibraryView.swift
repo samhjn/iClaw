@@ -12,11 +12,11 @@ struct SkillLibraryView: View {
             Group {
                 if filteredSkills.isEmpty && searchText.isEmpty {
                     ContentUnavailableView {
-                        Label("No Skills", systemImage: "sparkles")
+                        Label(L10n.Skills.noSkills, systemImage: "sparkles")
                     } description: {
-                        Text("Create a skill or let your AI agent build one.")
+                        Text(L10n.Skills.noSkillsDescription)
                     } actions: {
-                        Button("Create Skill") { showCreateSheet = true }
+                        Button(L10n.Skills.createSkill) { showCreateSheet = true }
                             .buttonStyle(.borderedProminent)
                     }
                 } else if filteredSkills.isEmpty {
@@ -25,8 +25,8 @@ struct SkillLibraryView: View {
                     skillList
                 }
             }
-            .navigationTitle("Skills")
-            .searchable(text: $searchText, prompt: "Search skills...")
+            .navigationTitle(L10n.Skills.title)
+            .searchable(text: $searchText, prompt: L10n.Skills.searchSkills)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showCreateSheet = true } label: {
@@ -60,7 +60,7 @@ struct SkillLibraryView: View {
             let custom = filteredSkills.filter { !$0.isBuiltIn }
 
             if !custom.isEmpty {
-                Section("Custom Skills") {
+                Section(L10n.Skills.customSkills) {
                     ForEach(custom, id: \.id) { skill in
                         NavigationLink {
                             SkillDetailView(skill: skill, onDelete: { reload() })
@@ -72,7 +72,7 @@ struct SkillLibraryView: View {
             }
 
             if !builtIn.isEmpty {
-                Section("Built-in Skills") {
+                Section(L10n.Skills.builtInSkills) {
                     ForEach(builtIn, id: \.id) { skill in
                         NavigationLink {
                             SkillDetailView(skill: skill, onDelete: nil)
@@ -107,7 +107,7 @@ struct SkillRowView: View {
                     .font(.headline)
                 Spacer()
                 if skill.isBuiltIn {
-                    Text("built-in")
+                    Text(L10n.Skills.builtIn)
                         .font(.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)

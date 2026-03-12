@@ -31,22 +31,22 @@ struct AgentDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    NavigationLink("Model Config") {
+                    NavigationLink(L10n.AgentDetail.modelConfig) {
                         AgentModelConfigView(agent: agent)
                     }
-                    NavigationLink("Skills") {
+                    NavigationLink(L10n.AgentDetail.skills) {
                         AgentSkillsView(agent: agent)
                     }
-                    NavigationLink("Cron Jobs") {
+                    NavigationLink(L10n.AgentDetail.cronJobs) {
                         CronJobListView(agent: agent)
                     }
-                    NavigationLink("Custom Configs") {
+                    NavigationLink(L10n.AgentDetail.customConfigs) {
                         CustomConfigsView(agent: agent)
                     }
-                    NavigationLink("Sub-Agents") {
+                    NavigationLink(L10n.AgentDetail.subAgents) {
                         SubAgentListView(parentAgent: agent)
                     }
-                    NavigationLink("Code Snippets") {
+                    NavigationLink(L10n.AgentDetail.codeSnippets) {
                         CodeSnippetListView(agent: agent)
                     }
                 } label: {
@@ -101,7 +101,7 @@ struct CustomConfigsView: View {
                 }
             }
         }
-        .navigationTitle("Custom Configs")
+        .navigationTitle(L10n.AgentDetail.customConfigs)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showAddSheet = true } label: {
@@ -109,9 +109,9 @@ struct CustomConfigsView: View {
                 }
             }
         }
-        .alert("New Config", isPresented: $showAddSheet) {
-            TextField("Key (e.g. RULES)", text: $newKey)
-            Button("Create") {
+        .alert(L10n.AgentDetail.newConfig, isPresented: $showAddSheet) {
+            TextField(L10n.AgentDetail.keyPlaceholder, text: $newKey)
+            Button(L10n.Common.create) {
                 let key = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !key.isEmpty {
                     let config = AgentConfig(key: key, content: "", agent: agent)
@@ -120,7 +120,7 @@ struct CustomConfigsView: View {
                 }
                 newKey = ""
             }
-            Button("Cancel", role: .cancel) { newKey = "" }
+            Button(L10n.Common.cancel, role: .cancel) { newKey = "" }
         }
     }
 }
@@ -133,9 +133,9 @@ struct SubAgentListView: View {
         List {
             if parentAgent.subAgents.isEmpty {
                 ContentUnavailableView(
-                    "No Sub-Agents",
+                    L10n.AgentDetail.noSubAgents,
                     systemImage: "cpu",
-                    description: Text("Sub-agents are created by the AI during conversations.")
+                    description: Text(L10n.AgentDetail.subAgentsDescription)
                 )
             } else {
                 ForEach(parentAgent.subAgents, id: \.id) { sub in
@@ -143,7 +143,7 @@ struct SubAgentListView: View {
                         HStack {
                             Text(sub.name).font(.headline)
                             Spacer()
-                            Text(sub.subAgentType ?? "unknown")
+                            Text(sub.subAgentType ?? L10n.Common.unknown)
                                 .font(.caption2)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 6)
@@ -158,18 +158,18 @@ struct SubAgentListView: View {
                             if hasActive {
                                 HStack(spacing: 4) {
                                     Circle().fill(.green).frame(width: 6, height: 6)
-                                    Text("Active")
+                                    Text(L10n.Common.active)
                                         .font(.caption2)
                                         .foregroundStyle(.green)
                                 }
                             }
 
-                            Text("\(sub.sessions.count) sessions")
+                            Text(L10n.AgentDetail.sessionsCount(sub.sessions.count))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
                             if let lastSession = sub.sessions.sorted(by: { $0.updatedAt > $1.updatedAt }).first {
-                                Text("\(lastSession.messages.count) msgs")
+                                Text(L10n.AgentDetail.msgsCount(lastSession.messages.count))
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
                             }
@@ -181,13 +181,13 @@ struct SubAgentListView: View {
                             modelContext.delete(sub)
                             try? modelContext.save()
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L10n.Common.delete, systemImage: "trash")
                         }
                     }
                 }
             }
         }
-        .navigationTitle("Sub-Agents (\(parentAgent.subAgents.count))")
+        .navigationTitle(L10n.AgentDetail.subAgentsTitle(parentAgent.subAgents.count))
     }
 }
 
@@ -198,9 +198,9 @@ struct CodeSnippetListView: View {
         List {
             if agent.codeSnippets.isEmpty {
                 ContentUnavailableView(
-                    "No Code Snippets",
+                    L10n.AgentDetail.noCodeSnippets,
                     systemImage: "doc.text",
-                    description: Text("Code snippets are saved by the AI agent.")
+                    description: Text(L10n.AgentDetail.codeSnippetsDescription)
                 )
             } else {
                 ForEach(agent.codeSnippets, id: \.id) { snippet in
@@ -223,6 +223,6 @@ struct CodeSnippetListView: View {
                 }
             }
         }
-        .navigationTitle("Code Snippets")
+        .navigationTitle(L10n.AgentDetail.codeSnippets)
     }
 }

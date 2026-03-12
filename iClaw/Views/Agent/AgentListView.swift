@@ -20,7 +20,7 @@ struct AgentListView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("Agents")
+            .navigationTitle(L10n.Agents.title)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -31,17 +31,17 @@ struct AgentListView: View {
                     }
                 }
             }
-            .alert("New Agent", isPresented: $showCreateSheet) {
-                TextField("Agent Name", text: $newAgentName)
-                Button("Create") {
+            .alert(L10n.Agents.newAgent, isPresented: $showCreateSheet) {
+                TextField(L10n.Agents.agentName, text: $newAgentName)
+                Button(L10n.Common.create) {
                     let name = newAgentName.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !name.isEmpty {
                         _ = viewModel?.createAgent(name: name)
                     }
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(L10n.Common.cancel, role: .cancel) {}
             } message: {
-                Text("Enter a name for the new agent.")
+                Text(L10n.Agents.enterName)
             }
         }
         .onAppear {
@@ -55,11 +55,11 @@ struct AgentListView: View {
 
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label("No Agents", systemImage: "cpu")
+            Label(L10n.Agents.noAgents, systemImage: "cpu")
         } description: {
-            Text("Create an AI agent to get started.")
+            Text(L10n.Agents.createAgentDescription)
         } actions: {
-            Button("Create Agent") {
+            Button(L10n.Agents.createAgent) {
                 newAgentName = ""
                 showCreateSheet = true
             }
