@@ -242,7 +242,7 @@ final class ChatViewModel {
         router: ModelRouter,
         agent: Agent
     ) async {
-        let fnRouter = FunctionCallRouter(agent: agent, modelContext: modelContext)
+        let fnRouter = FunctionCallRouter(agent: agent, modelContext: modelContext, sessionId: session.id)
 
         for toolCall in toolCalls {
             if Task.isCancelled || cancelled {

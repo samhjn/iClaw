@@ -19,6 +19,7 @@ enum L10n {
     enum Tabs {
         static var sessions: String { tr("tabs.sessions") }
         static var agents: String { tr("tabs.agents") }
+        static var browser: String { tr("tabs.browser") }
         static var skills: String { tr("tabs.skills") }
         static var settings: String { tr("tabs.settings") }
     }
@@ -334,6 +335,17 @@ enum L10n {
     enum ChatError {
         static var noProvider: String { tr("chatError.noProvider") }
         static var noAgent: String { tr("chatError.noAgent") }
+    }
+
+    // MARK: - Browser
+
+    enum Browser {
+        static var title: String { tr("browser.title") }
+        static var urlPlaceholder: String { tr("browser.urlPlaceholder") }
+        static func agentControlling(_ name: String) -> String { tr("browser.agentControlling", name) }
+        static var takeOver: String { tr("browser.takeOver") }
+        static var takeOverTitle: String { tr("browser.takeOverTitle") }
+        static func takeOverMessage(_ name: String) -> String { tr("browser.takeOverMessage", name) }
     }
 
     // MARK: - Markdown Editor

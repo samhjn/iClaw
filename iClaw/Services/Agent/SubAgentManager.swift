@@ -98,7 +98,7 @@ final class SubAgentManager {
         let router = ModelRouter(modelContext: modelContext)
         let promptBuilder = PromptBuilder()
         let contextManager = ContextManager()
-        let fnRouter = FunctionCallRouter(agent: subAgent, modelContext: modelContext)
+        let fnRouter = FunctionCallRouter(agent: subAgent, modelContext: modelContext, sessionId: session.id)
 
         for _ in 0..<maxRounds {
             let systemPrompt = promptBuilder.buildSystemPrompt(for: subAgent, isSubAgent: true)

@@ -106,6 +106,15 @@ private struct SingleToolCallCard: View {
             return dict["name"] as? String
         case "install_skill", "uninstall_skill":
             return dict["name"] as? String
+        case "browser_navigate":
+            if let url = dict["url"] as? String {
+                return url.count > 40 ? String(url.prefix(40)) + "..." : url
+            }
+            return dict["action"] as? String
+        case "browser_click", "browser_input", "browser_extract", "browser_wait", "browser_select":
+            return dict["selector"] as? String
+        case "browser_scroll":
+            return dict["direction"] as? String ?? "down"
         default:
             return nil
         }
@@ -401,6 +410,24 @@ struct ToolMeta {
             return ToolMeta(displayName: "Get Model", icon: "cpu", color: .teal)
         case "list_models":
             return ToolMeta(displayName: "List Models", icon: "list.bullet.rectangle", color: .teal)
+        case "browser_navigate":
+            return ToolMeta(displayName: "Browse", icon: "globe", color: .cyan)
+        case "browser_get_page_info":
+            return ToolMeta(displayName: "Page Info", icon: "doc.text.magnifyingglass", color: .cyan)
+        case "browser_click":
+            return ToolMeta(displayName: "Click", icon: "cursorarrow.click", color: .cyan)
+        case "browser_input":
+            return ToolMeta(displayName: "Input", icon: "keyboard", color: .cyan)
+        case "browser_select":
+            return ToolMeta(displayName: "Select", icon: "checklist", color: .cyan)
+        case "browser_extract":
+            return ToolMeta(displayName: "Extract", icon: "text.magnifyingglass", color: .cyan)
+        case "browser_execute_js":
+            return ToolMeta(displayName: "Browser JS", icon: "chevron.left.forwardslash.chevron.right", color: .cyan)
+        case "browser_wait":
+            return ToolMeta(displayName: "Wait Element", icon: "clock.arrow.circlepath", color: .cyan)
+        case "browser_scroll":
+            return ToolMeta(displayName: "Scroll", icon: "scroll", color: .cyan)
         default:
             return ToolMeta(displayName: toolName, icon: "wrench", color: .gray)
         }

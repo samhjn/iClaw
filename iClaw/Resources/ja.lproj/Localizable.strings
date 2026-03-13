@@ -276,6 +276,15 @@
 "chatError.noProvider" = "LLMプロバイダーが設定されていません。設定で追加してください。";
 "chatError.noAgent" = "このセッションにエージェントが関連付けられていません。";
 
+// MARK: - Browser
+"tabs.browser" = "ブラウザ";
+"browser.title" = "ブラウザ";
+"browser.urlPlaceholder" = "検索またはURLを入力";
+"browser.agentControlling" = "「%@」がブラウザを制御中";
+"browser.takeOver" = "操作を引き継ぐ";
+"browser.takeOverTitle" = "ブラウザを引き継ぐ";
+"browser.takeOverMessage" = "エージェント「%@」がブラウザを自動操作中です。引き継ぐとその操作が中断されます。続行しますか？";
+
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "プレビュー";
 "markdownEditor.edit" = "編集";

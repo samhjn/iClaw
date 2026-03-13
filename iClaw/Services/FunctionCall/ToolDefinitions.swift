@@ -28,6 +28,15 @@ enum ToolDefinitions {
             setModelTool,
             getModelTool,
             listModelsTool,
+            browserNavigateTool,
+            browserGetPageInfoTool,
+            browserClickTool,
+            browserInputTool,
+            browserSelectTool,
+            browserExtractTool,
+            browserExecuteJSTool,
+            browserWaitTool,
+            browserScrollTool,
         ]
     }
 
@@ -276,6 +285,97 @@ enum ToolDefinitions {
         name: "list_models",
         description: "List all available LLM providers/models that can be assigned to agents.",
         properties: [:],
+        required: []
+    )
+
+    // MARK: - Browser Tools
+
+    static let browserNavigateTool = ToolDefinitionBuilder.build(
+        name: "browser_navigate",
+        description: "Navigate the in-app browser to a URL, or perform back/forward/reload actions. The browser persists across calls — use it for multi-step web automation.",
+        properties: [
+            "url": ToolDefinitionBuilder.stringParam("The URL to navigate to (e.g. 'https://example.com')"),
+            "action": ToolDefinitionBuilder.enumParam("Navigation action instead of URL", values: ["back", "forward", "reload"])
+        ],
+        required: []
+    )
+
+    static let browserGetPageInfoTool = ToolDefinitionBuilder.build(
+        name: "browser_get_page_info",
+        description: "Get information about the current browser page: URL, title, and optionally a simplified readable representation of the page content (text, links, forms, buttons).",
+        properties: [
+            "include_content": ToolDefinitionBuilder.boolParam("Include page content (default: false). Set true to read page text, links, and form elements."),
+            "simplified": ToolDefinitionBuilder.boolParam("Use simplified DOM extraction (default: true). If false, returns raw HTML.")
+        ],
+        required: []
+    )
+
+    static let browserClickTool = ToolDefinitionBuilder.build(
+        name: "browser_click",
+        description: "Click an element on the current page by CSS selector. Triggers the element's click event.",
+        properties: [
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the element to click (e.g. '#submit-btn', '.login-button', 'a[href=\"/login\"]')")
+        ],
+        required: ["selector"]
+    )
+
+    static let browserInputTool = ToolDefinitionBuilder.build(
+        name: "browser_input",
+        description: "Type text into an input field or textarea on the current page. Dispatches input and change events for React/Vue compatibility.",
+        properties: [
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the input element"),
+            "text": ToolDefinitionBuilder.stringParam("The text to type into the field"),
+            "clear_first": ToolDefinitionBuilder.boolParam("Clear existing value before typing (default: true)")
+        ],
+        required: ["selector", "text"]
+    )
+
+    static let browserSelectTool = ToolDefinitionBuilder.build(
+        name: "browser_select",
+        description: "Select an option in a <select> dropdown element.",
+        properties: [
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the <select> element"),
+            "value": ToolDefinitionBuilder.stringParam("The option value to select")
+        ],
+        required: ["selector", "value"]
+    )
+
+    static let browserExtractTool = ToolDefinitionBuilder.build(
+        name: "browser_extract",
+        description: "Extract text content or attribute values from elements matching a CSS selector. Returns up to 50 matches.",
+        properties: [
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector to match elements (e.g. 'h1', '.price', 'a.nav-link')"),
+            "attribute": ToolDefinitionBuilder.stringParam("Optional: extract a specific attribute (e.g. 'href', 'src') instead of text content")
+        ],
+        required: ["selector"]
+    )
+
+    static let browserExecuteJSTool = ToolDefinitionBuilder.build(
+        name: "browser_execute_js",
+        description: "Execute arbitrary JavaScript code in the browser page context. Use for complex interactions not covered by other browser tools. Has full access to the page DOM and JavaScript APIs.",
+        properties: [
+            "code": ToolDefinitionBuilder.stringParam("JavaScript code to execute in the page context. Return a value to see the result.")
+        ],
+        required: ["code"]
+    )
+
+    static let browserWaitTool = ToolDefinitionBuilder.build(
+        name: "browser_wait",
+        description: "Wait for an element matching a CSS selector to appear on the page. Polls every 300ms until the element is found or timeout is reached.",
+        properties: [
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector to wait for"),
+            "timeout": ToolDefinitionBuilder.numberParam("Max wait time in seconds (1-30, default: 10)")
+        ],
+        required: ["selector"]
+    )
+
+    static let browserScrollTool = ToolDefinitionBuilder.build(
+        name: "browser_scroll",
+        description: "Scroll the current page up or down by a specified number of pixels.",
+        properties: [
+            "direction": ToolDefinitionBuilder.enumParam("Scroll direction", values: ["down", "up"]),
+            "pixels": ToolDefinitionBuilder.intParam("Number of pixels to scroll (default: 500)")
+        ],
         required: []
     )
 }

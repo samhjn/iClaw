@@ -6,6 +6,7 @@ struct ContentView: View {
     enum Tab: String {
         case sessions
         case agents
+        case browser
         case skills
         case settings
     }
@@ -23,6 +24,12 @@ struct ContentView: View {
                     Label(L10n.Tabs.agents, systemImage: "cpu")
                 }
                 .tag(Tab.agents)
+
+            BrowserView()
+                .tabItem {
+                    Label(L10n.Tabs.browser, systemImage: "globe")
+                }
+                .tag(Tab.browser)
 
             SkillLibraryView()
                 .tabItem {
