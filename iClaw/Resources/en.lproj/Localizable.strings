@@ -276,6 +276,15 @@
 "chatError.noProvider" = "No LLM provider configured. Please add one in Settings.";
 "chatError.noAgent" = "No agent associated with this session.";
 
+// MARK: - Browser
+"tabs.browser" = "Browser";
+"browser.title" = "Browser";
+"browser.urlPlaceholder" = "Search or enter URL";
+"browser.agentControlling" = "\"%@\" is controlling the browser";
+"browser.takeOver" = "Take Over";
+"browser.takeOverTitle" = "Take Over Browser";
+"browser.takeOverMessage" = "Agent \"%@\" is currently automating the browser. Taking over will interrupt its operations. Continue?";
+
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "Preview";
 "markdownEditor.edit" = "Edit";

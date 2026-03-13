@@ -61,7 +61,7 @@ final class CronExecutor {
     ) async {
         let promptBuilder = PromptBuilder()
         let contextManager = ContextManager()
-        let fnRouter = FunctionCallRouter(agent: agent, modelContext: context)
+        let fnRouter = FunctionCallRouter(agent: agent, modelContext: context, sessionId: session.id)
 
         for _ in 0..<maxRounds {
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)

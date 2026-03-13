@@ -276,6 +276,15 @@
 "chatError.noProvider" = "LLM 제공자가 설정되지 않았습니다. 설정에서 추가하세요.";
 "chatError.noAgent" = "이 세션에 연결된 에이전트가 없습니다.";
 
+// MARK: - Browser
+"tabs.browser" = "브라우저";
+"browser.title" = "브라우저";
+"browser.urlPlaceholder" = "검색 또는 URL 입력";
+"browser.agentControlling" = "「%@」이(가) 브라우저를 제어 중";
+"browser.takeOver" = "제어 가져오기";
+"browser.takeOverTitle" = "브라우저 제어 가져오기";
+"browser.takeOverMessage" = "에이전트 「%@」이(가) 브라우저를 자동 조작 중입니다. 제어를 가져오면 해당 작업이 중단됩니다. 계속하시겠습니까?";
+
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "미리보기";
 "markdownEditor.edit" = "편집";

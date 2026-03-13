@@ -4,13 +4,15 @@ import SwiftData
 final class FunctionCallRouter {
     let agent: Agent
     let modelContext: ModelContext
+    let sessionId: UUID?
     private let agentService: AgentService
     private let subAgentManager: SubAgentManager
     private let executor: CodeExecutor
 
-    init(agent: Agent, modelContext: ModelContext, executor: CodeExecutor? = nil) {
+    init(agent: Agent, modelContext: ModelContext, sessionId: UUID? = nil, executor: CodeExecutor? = nil) {
         self.agent = agent
         self.modelContext = modelContext
+        self.sessionId = sessionId
         self.agentService = AgentService(modelContext: modelContext)
         self.subAgentManager = SubAgentManager(modelContext: modelContext)
         self.executor = executor ?? CodeExecutorRegistry.shared.defaultExecutor()
@@ -121,9 +123,40 @@ final class FunctionCallRouter {
             return ModelTools(agent: agent, modelContext: modelContext)
                 .listModels(arguments: arguments)
 
+        case "browser_navigate":
+            return await browserTools.navigate(arguments: arguments)
+
+        case "browser_get_page_info":
+            return await browserTools.getPageInfo(arguments: arguments)
+
+        case "browser_click":
+            return await browserTools.click(arguments: arguments)
+
+        case "browser_input":
+            return await browserTools.input(arguments: arguments)
+
+        case "browser_select":
+            return await browserTools.select(arguments: arguments)
+
+        case "browser_extract":
+            return await browserTools.extract(arguments: arguments)
+
+        case "browser_execute_js":
+            return await browserTools.executeJS(arguments: arguments)
+
+        case "browser_wait":
+            return await browserTools.waitForElement(arguments: arguments)
+
+        case "browser_scroll":
+            return await browserTools.scroll(arguments: arguments)
+
         default:
             return "[Error] Unknown tool: \(name)"
         }
+    }
+
+    private var browserTools: BrowserTools {
+        BrowserTools(sessionId: sessionId ?? agent.id, agentName: agent.name)
     }
 
     private func parseArguments(_ json: String) -> [String: Any] {

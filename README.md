@@ -27,6 +27,7 @@ Most AI chat apps are just chat boxes. **iClaw is different** — it's a full-bl
 |---|---|---|
 | **Personas** | Single conversation | Multiple agents, each with independent personality & memory |
 | **Code Execution** | Not supported | Built-in Python & JavaScript interpreters |
+| **Web Automation** | Not supported | In-App Browser with agent-driven automation |
 | **Context** | Long conversations lose context | Auto-compression + summary injection — never forgets |
 | **Extensibility** | Closed | Skill system + Cron jobs + Sub-agents |
 | **Privacy** | Cloud-stored | All data stays on-device via SwiftData |
@@ -84,12 +85,20 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 - Built-in presets: OpenAI / DeepSeek / OpenRouter / Ollama (local)
 - Configure multiple providers and switch freely
 
+### 🌐 In-App Browser & Web Automation
+- Built-in browser powered by WKWebView — browse the web without leaving the app
+- **Agent-driven automation**: agents can navigate pages, click elements, fill forms, extract data, and execute JavaScript — all through function calling
+- 9 browser tools: `browser_navigate`, `browser_click`, `browser_input`, `browser_extract`, `browser_execute_js`, `browser_get_page_info`, `browser_select`, `browser_wait`, `browser_scroll`
+- **Mutex lock** ensures only one agent session controls the browser at a time; users see a live banner and can take over at any time
+- Simplified DOM extraction gives agents a readable view of page structure (links, forms, buttons, text)
+
 ### 🛠 Powerful Function Calling
 - `read_config` / `write_config` — read and modify agent mind files
 - `execute_python` / `execute_javascript` — run code
 - `save_code` / `load_code` / `list_code` — manage code snippets
 - `create_sub_agent` / `message_sub_agent` — sub-agent lifecycle management
 - `schedule_cron` / `unschedule_cron` — scheduled task management
+- `browser_*` — 9 browser automation tools (see In-App Browser section above)
 
 ### 📦 Skill System
 - Installable skill library to give agents new capabilities
@@ -148,6 +157,7 @@ iClaw/
 │   │   ├── Prompt/          # System prompt construction
 │   │   ├── FunctionCall/    # Tool definitions & routing
 │   │   ├── CodeExecution/   # Code execution engines
+│   │   ├── Browser/         # In-App Browser service & automation
 │   │   ├── CronJob/         # Cron job scheduling
 │   │   └── Skill/           # Skill management
 │   ├── ViewModels/          # Observable view models
@@ -163,6 +173,7 @@ iClaw/
 | State | Observation Framework (`@Observable`) |
 | Persistence | SwiftData |
 | Code Execution | MicroPython · JavaScriptCore |
+| Web Automation | WKWebView + Agent-driven function calling |
 | Networking | URLSession + SSE Streaming |
 | Project Gen | XcodeGen |
 

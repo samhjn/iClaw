@@ -276,6 +276,15 @@
 "chatError.noProvider" = "未配置 LLM 服务商。请在设置中添加。";
 "chatError.noAgent" = "此会话未关联智能体。";
 
+// MARK: - Browser
+"tabs.browser" = "浏览器";
+"browser.title" = "浏览器";
+"browser.urlPlaceholder" = "搜索或输入网址";
+"browser.agentControlling" = "「%@」正在控制浏览器";
+"browser.takeOver" = "接管";
+"browser.takeOverTitle" = "接管浏览器";
+"browser.takeOverMessage" = "智能体「%@」正在自动化操作浏览器。接管将中断其操作，是否继续？";
+
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "预览";
 "markdownEditor.edit" = "编辑";
