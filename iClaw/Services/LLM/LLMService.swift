@@ -33,6 +33,9 @@ final class LLMService: @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        request.addValue("iClaw/1.0 (https://iclaw.shadow.mov)", forHTTPHeaderField: "User-Agent")
+        request.addValue("https://iclaw.shadow.mov", forHTTPHeaderField: "HTTP-Referer")
+        request.addValue("iClaw", forHTTPHeaderField: "X-Title")
         if !apiKey.isEmpty {
             request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
@@ -233,6 +236,9 @@ final class LLMService: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("iClaw/1.0 (https://iclaw.shadow.mov)", forHTTPHeaderField: "User-Agent")
+        request.addValue("https://iclaw.shadow.mov", forHTTPHeaderField: "HTTP-Referer")
+        request.addValue("iClaw", forHTTPHeaderField: "X-Title")
 
         if !apiKey.isEmpty {
             request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
