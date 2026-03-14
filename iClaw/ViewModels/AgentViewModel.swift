@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class AgentViewModel {
     var agents: [Agent] = []
+    var agentToDelete: Agent?
 
     private var modelContext: ModelContext
 

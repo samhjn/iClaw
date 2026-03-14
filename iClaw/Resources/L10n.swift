@@ -72,6 +72,12 @@ enum L10n {
         static func compressionInfo(active: String, threshold: String, total: Int, compressed: Int) -> String {
             tr("chat.compressionInfo", active, threshold, total, compressed)
         }
+        static var cancelStuckReason: String { tr("chat.cancelStuckReason") }
+        static var forceStoppedContent: String { tr("chat.forceStoppedContent") }
+        static var deleteSessionTitle: String { tr("chat.deleteSessionTitle") }
+        static var deleteSessionMessage: String { tr("chat.deleteSessionMessage") }
+        static var deleteAgentTitle: String { tr("chat.deleteAgentTitle") }
+        static func deleteAgentMessage(_ name: String) -> String { tr("chat.deleteAgentMessage", name) }
     }
 
     // MARK: - Agents
@@ -346,6 +352,9 @@ enum L10n {
         static var takeOver: String { tr("browser.takeOver") }
         static var takeOverTitle: String { tr("browser.takeOverTitle") }
         static func takeOverMessage(_ name: String) -> String { tr("browser.takeOverMessage", name) }
+        static var closePage: String { tr("browser.closePage") }
+        static var closePageTitle: String { tr("browser.closePageTitle") }
+        static var closePageMessage: String { tr("browser.closePageMessage") }
     }
 
     // MARK: - Markdown Editor

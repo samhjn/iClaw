@@ -47,6 +47,12 @@
 "chat.noCompressModel" = "沒有可用的模型來執行壓縮";
 "chat.sessionBlocked" = "「%@」正在處理中，同一智能體同時只允許一個活躍對話。";
 "chat.compressionInfo" = "上下文 ≈%@ / %@ | %d 則訊息（%d 則已壓縮）";
+"chat.cancelStuckReason" = "停止耗時超出預期 — 可能有工具呼叫仍在執行中，即將強制停止…";
+"chat.forceStoppedContent" = "\n\n⚠️ *[已強制停止 — 某個工具呼叫無法及時中斷]*";
+"chat.deleteSessionTitle" = "刪除對話";
+"chat.deleteSessionMessage" = "此對話及其所有訊息將被永久刪除，此操作無法撤銷。";
+"chat.deleteAgentTitle" = "刪除智能體";
+"chat.deleteAgentMessage" = "智能體「%@」及其所有對話、子智能體和資料將被永久刪除，此操作無法撤銷。";
 
 // MARK: - Agents
 "agents.title" = "智能體";
@@ -284,6 +290,9 @@
 "browser.takeOver" = "接管";
 "browser.takeOverTitle" = "接管瀏覽器";
 "browser.takeOverMessage" = "智能體「%@」正在自動化操作瀏覽器。接管將中斷其操作，是否繼續？";
+"browser.closePage" = "關閉頁面";
+"browser.closePageTitle" = "關閉目前頁面";
+"browser.closePageMessage" = "將關閉目前頁面並返回空白瀏覽器。";
 
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "預覽";

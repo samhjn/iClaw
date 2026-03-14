@@ -6,8 +6,10 @@ import Observation
 final class SessionListViewModel {
     var sessions: [Session] = []
     var selectedSession: Session?
+    var sessionToDelete: Session?
 
     private var modelContext: ModelContext
+    private var autoRefreshTask: Task<Void, Never>?
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -20,6 +22,25 @@ final class SessionListViewModel {
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
         sessions = all.filter { !$0.isArchived && $0.agent?.parentAgent == nil }
+    }
+
+    func startAutoRefresh() {
+        guard autoRefreshTask == nil else { return }
+        autoRefreshTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard let self, !Task.isCancelled else { return }
+                let hasActive = self.sessions.contains { $0.isActive }
+                if hasActive {
+                    self.fetchSessions()
+                }
+            }
+        }
+    }
+
+    func stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 
     func createSession(agent: Agent) -> Session {

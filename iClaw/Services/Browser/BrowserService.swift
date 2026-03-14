@@ -107,6 +107,14 @@ final class BrowserService: NSObject {
         })
     }
 
+    // MARK: - Close / Reset
+
+    func closeAllPages() {
+        webView.load(URLRequest(url: URL(string: "about:blank")!))
+        currentURL = nil
+        pageTitle = nil
+    }
+
     // MARK: - Navigation
 
     @discardableResult
@@ -181,6 +189,25 @@ final class BrowserService: NSObject {
         return .success(info)
     }
 
+    // MARK: - Keyboard Suppression
+
+    /// Dismiss the keyboard by resigning first responder from the web view.
+    func dismissKeyboard() {
+        webView.resignFirstResponder()
+        webView.endEditing(true)
+        // Also blur any focused element inside the web content
+        webView.evaluateJavaScript("document.activeElement && document.activeElement.blur()") { _, _ in }
+    }
+
+    /// If the browser is agent-controlled, dismiss the keyboard after a short delay
+    /// to allow the JS operation to complete first.
+    private func dismissKeyboardIfAgentControlled() {
+        guard isAgentControlled else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.dismissKeyboard()
+        }
+    }
+
     // MARK: - Element Interaction
 
     func click(selector: String) async -> Result<String, BrowserError> {
@@ -189,10 +216,13 @@ final class BrowserService: NSObject {
             const el = document.querySelector(\(jsEscape(selector)));
             if (!el) return JSON.stringify({error: 'Element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
             el.click();
-            return JSON.stringify({ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 100)});
+            var r = JSON.stringify({ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 100)});
+            if (document.activeElement) document.activeElement.blur();
+            return r;
         })()
         """
         let result = await executeJavaScript(script)
+        dismissKeyboardIfAgentControlled()
         return parseJSResult(result, action: "click")
     }
 
@@ -213,10 +243,12 @@ final class BrowserService: NSObject {
             }
             el.dispatchEvent(new Event('input', {bubbles: true}));
             el.dispatchEvent(new Event('change', {bubbles: true}));
+            el.blur();
             return JSON.stringify({ok: true, tag: el.tagName, value: el.value.substring(0, 100)});
         })()
         """
         let result = await executeJavaScript(script)
+        dismissKeyboardIfAgentControlled()
         return parseJSResult(result, action: "input")
     }
 
@@ -227,10 +259,12 @@ final class BrowserService: NSObject {
             if (!el || el.tagName !== 'SELECT') return JSON.stringify({error: 'SELECT element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
             el.value = \(jsEscape(value));
             el.dispatchEvent(new Event('change', {bubbles: true}));
+            el.blur();
             return JSON.stringify({ok: true, selectedValue: el.value, selectedText: el.options[el.selectedIndex]?.text || ''});
         })()
         """
         let result = await executeJavaScript(script)
+        dismissKeyboardIfAgentControlled()
         return parseJSResult(result, action: "select")
     }
 

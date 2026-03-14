@@ -88,11 +88,26 @@ struct AgentListView: View {
                 }
             }
             .onDelete { offsets in
-                for index in offsets {
-                    vm.deleteAgent(vm.agents[index])
-                }
+                guard let first = offsets.first else { return }
+                vm.agentToDelete = vm.agents[first]
             }
         }
         .listStyle(.insetGrouped)
+        .alert(L10n.Chat.deleteAgentTitle, isPresented: Binding(
+            get: { vm.agentToDelete != nil },
+            set: { if !$0 { vm.agentToDelete = nil } }
+        )) {
+            Button(L10n.Common.delete, role: .destructive) {
+                if let agent = vm.agentToDelete {
+                    vm.deleteAgent(agent)
+                    vm.agentToDelete = nil
+                }
+            }
+            Button(L10n.Common.cancel, role: .cancel) {
+                vm.agentToDelete = nil
+            }
+        } message: {
+            Text(L10n.Chat.deleteAgentMessage(vm.agentToDelete?.name ?? ""))
+        }
     }
 }

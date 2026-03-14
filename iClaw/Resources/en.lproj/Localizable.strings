@@ -47,6 +47,12 @@
 "chat.noCompressModel" = "No model available for compression";
 "chat.sessionBlocked" = "\"%@\" is processing. Only one active session per agent is allowed.";
 "chat.compressionInfo" = "Context ≈%@ / %@ | %d messages (%d compressed)";
+"chat.cancelStuckReason" = "Stop is taking longer than expected — a tool call may still be running. Will force stop shortly…";
+"chat.forceStoppedContent" = "\n\n⚠️ *[Force stopped — a tool call could not be interrupted in time]*";
+"chat.deleteSessionTitle" = "Delete Session";
+"chat.deleteSessionMessage" = "This session and all its messages will be permanently deleted. This cannot be undone.";
+"chat.deleteAgentTitle" = "Delete Agent";
+"chat.deleteAgentMessage" = "Agent \"%@\" and all its sessions, sub-agents, and data will be permanently deleted. This cannot be undone.";
 
 // MARK: - Agents
 "agents.title" = "Agents";
@@ -284,6 +290,9 @@
 "browser.takeOver" = "Take Over";
 "browser.takeOverTitle" = "Take Over Browser";
 "browser.takeOverMessage" = "Agent \"%@\" is currently automating the browser. Taking over will interrupt its operations. Continue?";
+"browser.closePage" = "Close Page";
+"browser.closePageTitle" = "Close Current Page";
+"browser.closePageMessage" = "This will close the current page and return to a blank browser.";
 
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "Preview";

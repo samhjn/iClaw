@@ -17,8 +17,14 @@ final class ChatViewModel {
     /// True while a cancel request is being processed.
     var isCancelling: Bool = false
 
+    /// If cancel fails or takes too long, explains why.
+    var cancelFailureReason: String?
+
     /// Whether a manual compression is running.
     var isCompressing: Bool = false
+
+    /// True while a compression cancel is being processed.
+    var isCancellingCompression: Bool = false
 
     /// The message ID the scroll view should initially restore to.
     var initialScrollTarget: UUID?
@@ -26,7 +32,10 @@ final class ChatViewModel {
     let session: Session
     private var modelContext: ModelContext
     private var generationTask: Task<Void, Never>?
+    /// The actual compression work task — should NOT be cancelled on view disappear.
     private var compressionTask: Task<Void, Never>?
+    /// A lightweight polling task that tracks an orphaned compression (started by a previous ViewModel).
+    private var compressionMonitorTask: Task<Void, Never>?
     private var monitoringTask: Task<Void, Never>?
     private var cancelled = false
 
@@ -77,11 +86,50 @@ final class ChatViewModel {
 
     // MARK: - Cancel Generation
 
+    private var cancelWatchdog: Task<Void, Never>?
+
     func cancelGeneration() {
         guard isLoading, generationTask != nil else { return }
         isCancelling = true
+        cancelFailureReason = nil
         cancelled = true
         generationTask?.cancel()
+
+        cancelWatchdog?.cancel()
+        cancelWatchdog = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(8))
+            guard let self, !Task.isCancelled, self.isCancelling, self.isLoading else { return }
+            self.cancelFailureReason = L10n.Chat.cancelStuckReason
+
+            try? await Task.sleep(for: .seconds(15))
+            guard !Task.isCancelled, self.isCancelling, self.isLoading else { return }
+            self.forceStopGeneration()
+        }
+    }
+
+    @MainActor
+    private func forceStopGeneration() {
+        generationTask?.cancel()
+        generationTask = nil
+        isLoading = false
+        isCancelling = false
+        session.isActive = false
+        session.pendingStreamingContent = nil
+        cancelFailureReason = nil
+        cancelWatchdog?.cancel()
+        cancelWatchdog = nil
+        BrowserService.shared.releaseLock(sessionId: session.id)
+
+        let forceStopMsg = Message(
+            role: .assistant,
+            content: L10n.Chat.forceStoppedContent,
+            session: session
+        )
+        modelContext.insert(forceStopMsg)
+        session.messages.append(forceStopMsg)
+        session.updatedAt = Date()
+        try? modelContext.save()
+        loadMessages()
     }
 
     // MARK: - Send Message
@@ -114,21 +162,38 @@ final class ChatViewModel {
         }
     }
 
+    private var generationDepth = 0
+
     @MainActor
     func generateResponse() async {
-        isLoading = true
-        streamingContent = ""
-        errorMessage = nil
-        session.isActive = true
-        try? modelContext.save()
+        let isTopLevel = generationDepth == 0
+        generationDepth += 1
+
+        if isTopLevel {
+            isLoading = true
+            streamingContent = ""
+            errorMessage = nil
+            session.isActive = true
+            try? modelContext.save()
+        } else {
+            streamingContent = ""
+        }
 
         defer {
-            isLoading = false
-            streamingContent = ""
-            isCancelling = false
-            session.isActive = false
-            generationTask = nil
-            try? modelContext.save()
+            generationDepth -= 1
+            if generationDepth == 0 {
+                isLoading = false
+                streamingContent = ""
+                isCancelling = false
+                cancelFailureReason = nil
+                cancelWatchdog?.cancel()
+                cancelWatchdog = nil
+                session.isActive = false
+                session.pendingStreamingContent = nil
+                generationTask = nil
+                try? modelContext.save()
+                BrowserService.shared.releaseLock(sessionId: session.id)
+            }
         }
 
         guard let agent = session.agent else {
@@ -159,6 +224,8 @@ final class ChatViewModel {
             )
             activeModelName = providerName
 
+            var lastPersistTime = Date()
+
             for await chunk in stream {
                 if Task.isCancelled || cancelled {
                     if !fullContent.isEmpty {
@@ -170,6 +237,7 @@ final class ChatViewModel {
                         modelContext.insert(partialMsg)
                         session.messages.append(partialMsg)
                         session.updatedAt = Date()
+                        session.pendingStreamingContent = nil
                         try? modelContext.save()
                         loadMessages()
                     }
@@ -180,6 +248,13 @@ final class ChatViewModel {
                 case .content(let text):
                     fullContent += text
                     streamingContent = fullContent
+                    let now = Date()
+                    if now.timeIntervalSince(lastPersistTime) >= 1.0 {
+                        session.pendingStreamingContent = fullContent
+                        session.updatedAt = now
+                        try? modelContext.save()
+                        lastPersistTime = now
+                    }
                 case .toolCall(let toolCall):
                     pendingToolCalls.append(toolCall)
                 case .done:
@@ -189,6 +264,8 @@ final class ChatViewModel {
                     return
                 }
             }
+
+            session.pendingStreamingContent = nil
 
             if Task.isCancelled || cancelled {
                 if !fullContent.isEmpty {
@@ -280,9 +357,18 @@ final class ChatViewModel {
 
     @MainActor
     private func checkAndCompress(agent: Agent, router: ModelRouter) async {
+        guard !Task.isCancelled, !cancelled else { return }
         let threshold = agent.effectiveCompressionThreshold
         let compressor = SessionCompressor(compressionThreshold: threshold)
         if compressor.shouldCompress(session: session) {
+            isCompressing = true
+            session.isCompressingContext = true
+            try? modelContext.save()
+            defer {
+                isCompressing = false
+                session.isCompressingContext = false
+                try? modelContext.save()
+            }
             guard let provider = router.primaryProvider(for: agent) else { return }
             let llmService = LLMService(provider: provider)
             await compressor.compress(session: session, llmService: llmService, modelContext: modelContext)
@@ -297,6 +383,7 @@ final class ChatViewModel {
         guard let agent = session.agent else { return }
 
         isCompressing = true
+        isCancellingCompression = false
         session.isCompressingContext = true
         try? modelContext.save()
 
@@ -306,6 +393,7 @@ final class ChatViewModel {
         compressionTask = Task { @MainActor [weak self] in
             defer {
                 self?.isCompressing = false
+                self?.isCancellingCompression = false
                 session.isCompressingContext = false
                 self?.compressionTask = nil
                 try? modelContext.save()
@@ -327,6 +415,19 @@ final class ChatViewModel {
         }
     }
 
+    func cancelCompression() {
+        guard isCompressing else { return }
+        isCancellingCompression = true
+        compressionTask?.cancel()
+        compressionTask = nil
+        compressionMonitorTask?.cancel()
+        compressionMonitorTask = nil
+        isCompressing = false
+        isCancellingCompression = false
+        session.isCompressingContext = false
+        try? modelContext.save()
+    }
+
     // MARK: - View Lifecycle
 
     func onViewAppear() {
@@ -343,9 +444,11 @@ final class ChatViewModel {
 
     func onViewDisappear() {
         stopMonitoring()
-        compressionTask?.cancel()
-        compressionTask = nil
+        compressionMonitorTask?.cancel()
+        compressionMonitorTask = nil
         isCompressing = false
+        cancelWatchdog?.cancel()
+        cancelWatchdog = nil
     }
 
     // MARK: - Stale Active State Recovery
@@ -359,7 +462,12 @@ final class ChatViewModel {
         let staleDuration: TimeInterval = 120
         if Date().timeIntervalSince(lastUpdate) > staleDuration {
             session.isActive = false
+            session.pendingStreamingContent = nil
             try? modelContext.save()
+            let sessionId = session.id
+            Task { @MainActor in
+                BrowserService.shared.releaseLock(sessionId: sessionId)
+            }
         }
     }
 
@@ -368,36 +476,51 @@ final class ChatViewModel {
     /// Recover the UI compression indicator when the persistent flag is set
     /// but this ViewModel doesn't own the task (e.g. view was recreated).
     private func recoverCompressionState() {
-        if session.isCompressingContext && compressionTask == nil {
-            let staleDuration: TimeInterval = 120
-            if Date().timeIntervalSince(session.updatedAt) > staleDuration {
-                session.isCompressingContext = false
-                try? modelContext.save()
-                isCompressing = false
-            } else {
+        if session.isCompressingContext {
+            if compressionTask != nil {
+                // We own the real task — just restore the UI flag.
                 isCompressing = true
-                startCompressionMonitoring()
+            } else {
+                // We don't own the task; either it's running from a previous
+                // ViewModel instance, or it's stale.
+                let staleDuration: TimeInterval = 120
+                if Date().timeIntervalSince(session.updatedAt) > staleDuration {
+                    session.isCompressingContext = false
+                    try? modelContext.save()
+                    isCompressing = false
+                } else {
+                    isCompressing = true
+                    startCompressionMonitoring()
+                }
             }
-        } else if !session.isCompressingContext {
+        } else {
             isCompressing = false
         }
     }
 
     /// Poll the persistent flag to track an orphaned compression task.
     private func startCompressionMonitoring() {
-        guard compressionTask == nil else { return }
+        guard compressionMonitorTask == nil else { return }
         let session = self.session
         let modelContext = self.modelContext
-        compressionTask = Task { @MainActor [weak self] in
+        compressionMonitorTask = Task { @MainActor [weak self] in
             defer {
                 self?.isCompressing = false
-                self?.compressionTask = nil
+                self?.compressionMonitorTask = nil
             }
             var ticks = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 guard !Task.isCancelled else { return }
                 if !session.isCompressingContext {
+                    self?.loadMessages()
+                    return
+                }
+                // If the session is no longer active and compression flag is stale,
+                // the orphaned task likely finished but failed to clear the flag.
+                if !session.isActive && ticks > 5 {
+                    session.isCompressingContext = false
+                    try? modelContext.save()
                     self?.loadMessages()
                     return
                 }
@@ -416,9 +539,18 @@ final class ChatViewModel {
     private func startMonitoringIfNeeded() {
         guard session.isActive, generationTask == nil, monitoringTask == nil else { return }
         isLoading = true
+
+        if let pending = session.pendingStreamingContent, !pending.isEmpty {
+            streamingContent = pending
+        }
+
         monitoringTask = Task { @MainActor [weak self] in
             defer {
                 self?.isLoading = false
+                self?.streamingContent = ""
+                if let self, !self.session.isCompressingContext {
+                    self.isCompressing = false
+                }
                 self?.loadMessages()
                 self?.checkActiveSessionLock()
                 self?.monitoringTask = nil
@@ -429,12 +561,19 @@ final class ChatViewModel {
                 try? await Task.sleep(for: .seconds(1))
                 guard let self, !Task.isCancelled else { return }
                 self.loadMessages()
+
+                if let pending = self.session.pendingStreamingContent, !pending.isEmpty {
+                    self.streamingContent = pending
+                }
+
+                if !self.session.isCompressingContext && self.isCompressing && self.compressionTask == nil {
+                    self.isCompressing = false
+                }
+
                 tickCount += 1
 
                 guard self.session.isActive else { return }
 
-                // Safety: if session has been "active" for 5 minutes without
-                // updates, treat it as stale and force-reset.
                 if tickCount > 300 {
                     self.session.isActive = false
                     try? self.modelContext.save()

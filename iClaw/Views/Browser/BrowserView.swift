@@ -5,9 +5,11 @@ struct BrowserView: View {
     @State private var urlText: String = ""
     @State private var isEditing: Bool = false
     @State private var showTakeOverConfirm: Bool = false
+    @State private var showClosePageConfirm: Bool = false
     @Bindable private var browser = BrowserService.shared
 
     private var isLocked: Bool { browser.isAgentControlled }
+    private var hasPage: Bool { browser.currentURL != nil && browser.currentURL?.absoluteString != "about:blank" }
 
     var body: some View {
         NavigationStack {
@@ -30,6 +32,11 @@ struct BrowserView: View {
             }
             .navigationTitle(L10n.Browser.title)
             .navigationBarTitleDisplayMode(.inline)
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                if isLocked {
+                    browser.dismissKeyboard()
+                }
+            }
             .alert(L10n.Browser.takeOverTitle, isPresented: $showTakeOverConfirm) {
                 Button(L10n.Browser.takeOver, role: .destructive) {
                     browser.forceReleaseLock()
@@ -37,6 +44,15 @@ struct BrowserView: View {
                 Button(L10n.Common.cancel, role: .cancel) {}
             } message: {
                 Text(L10n.Browser.takeOverMessage(browser.lockedByAgentName ?? L10n.Common.unknown))
+            }
+            .alert(L10n.Browser.closePageTitle, isPresented: $showClosePageConfirm) {
+                Button(L10n.Browser.closePage, role: .destructive) {
+                    browser.closeAllPages()
+                    urlText = ""
+                }
+                Button(L10n.Common.cancel, role: .cancel) {}
+            } message: {
+                Text(L10n.Browser.closePageMessage)
             }
         }
     }
@@ -184,6 +200,10 @@ struct BrowserView: View {
                    let root = scene.windows.first?.rootViewController {
                     root.present(av, animated: true)
                 }
+            }
+
+            toolButton(icon: "xmark.square", enabled: hasPage && !isLocked) {
+                showClosePageConfirm = true
             }
         }
         .padding(.horizontal, 4)

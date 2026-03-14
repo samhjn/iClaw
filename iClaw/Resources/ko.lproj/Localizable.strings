@@ -47,6 +47,12 @@
 "chat.noCompressModel" = "압축에 사용 가능한 모델이 없습니다";
 "chat.sessionBlocked" = "「%@」이(가) 처리 중입니다. 동일 에이전트당 하나의 활성 세션만 허용됩니다.";
 "chat.compressionInfo" = "컨텍스트 ≈%@ / %@ | %d개 메시지 (%d개 압축됨)";
+"chat.cancelStuckReason" = "중지하는 데 예상보다 오래 걸리고 있습니다 — 도구 호출이 아직 실행 중일 수 있습니다. 곧 강제 중지합니다…";
+"chat.forceStoppedContent" = "\n\n⚠️ *[강제 중지됨 — 도구 호출을 제시간에 중단할 수 없었습니다]*";
+"chat.deleteSessionTitle" = "세션 삭제";
+"chat.deleteSessionMessage" = "이 세션과 모든 메시지가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
+"chat.deleteAgentTitle" = "에이전트 삭제";
+"chat.deleteAgentMessage" = "에이전트 \"%@\"와 모든 세션, 하위 에이전트 및 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
 
 // MARK: - Agents
 "agents.title" = "에이전트";
@@ -284,6 +290,9 @@
 "browser.takeOver" = "제어 가져오기";
 "browser.takeOverTitle" = "브라우저 제어 가져오기";
 "browser.takeOverMessage" = "에이전트 「%@」이(가) 브라우저를 자동 조작 중입니다. 제어를 가져오면 해당 작업이 중단됩니다. 계속하시겠습니까?";
+"browser.closePage" = "페이지 닫기";
+"browser.closePageTitle" = "현재 페이지 닫기";
+"browser.closePageMessage" = "현재 페이지를 닫고 빈 브라우저로 돌아갑니다.";
 
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "미리보기";
