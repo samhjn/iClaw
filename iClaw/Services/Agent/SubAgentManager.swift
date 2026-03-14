@@ -38,10 +38,31 @@ final class SubAgentManager {
             subAgent.primaryProviderId = overrideId
         } else if let subDefault = parentAgent.subAgentProviderId {
             subAgent.primaryProviderId = subDefault
+            subAgent.primaryModelNameOverride = parentAgent.subAgentModelNameOverride
         } else {
-            subAgent.primaryProviderId = parentAgent.primaryProviderId
+            // Resolve the parent's actual primary provider (including global default fallback)
+            // so the sub-agent inherits the effective model, not just the raw field.
+            let router = ModelRouter(modelContext: modelContext)
+            let resolvedChain = router.resolveProviderChainWithModels(for: parentAgent)
+            if let primary = resolvedChain.first {
+                subAgent.primaryProviderId = primary.provider.id
+                subAgent.primaryModelNameOverride = primary.modelName
+            } else {
+                subAgent.primaryProviderId = parentAgent.primaryProviderId
+                subAgent.primaryModelNameOverride = parentAgent.primaryModelNameOverride
+            }
         }
-        subAgent.fallbackProviderIds = parentAgent.fallbackProviderIds
+        // Copy fallback chain: resolve parent's effective chain, skip the first (primary).
+        let router = ModelRouter(modelContext: modelContext)
+        let fullChain = router.resolveProviderChainWithModels(for: parentAgent)
+        if fullChain.count > 1 {
+            let fallbacks = Array(fullChain.dropFirst())
+            subAgent.fallbackProviderIds = fallbacks.map { $0.provider.id }
+            subAgent.fallbackModelNames = fallbacks.map { $0.modelName ?? "" }
+        } else {
+            subAgent.fallbackProviderIds = parentAgent.fallbackProviderIds
+            subAgent.fallbackModelNamesRaw = parentAgent.fallbackModelNamesRaw
+        }
 
         try? modelContext.save()
 

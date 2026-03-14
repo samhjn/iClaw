@@ -31,6 +31,9 @@ final class Session {
         set { lastViewedMessageIdRaw = newValue?.uuidString }
     }
 
+    /// Partial streaming content from assistant (persisted so re-entry can display progress).
+    var pendingStreamingContent: String?
+
     /// UUID of the parent session that spawned this sub-agent session (for content relay).
     var parentSessionIdRaw: String?
 

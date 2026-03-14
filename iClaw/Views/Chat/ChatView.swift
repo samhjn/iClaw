@@ -93,7 +93,7 @@ private struct ChatContentView: View {
                             .id("streaming")
                         }
 
-                        if vm.isLoading && vm.streamingContent.isEmpty {
+                        if vm.isLoading && vm.streamingContent.isEmpty && !vm.isCompressing {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 4)
@@ -112,14 +112,27 @@ private struct ChatContentView: View {
                         }
 
                         if vm.isCompressing {
-                            HStack {
+                            HStack(spacing: 8) {
                                 ProgressView()
-                                    .padding(.trailing, 4)
+
                                 Text(L10n.Chat.compressingContext)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
+
+                                Spacer()
+
+                                Button {
+                                    vm.cancelCompression()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.subheadline)
+                                        .symbolRenderingMode(.hierarchical)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .disabled(vm.isCancellingCompression)
                             }
-                            .padding()
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
                             .id("compressing")
                         }
                     }
@@ -130,13 +143,11 @@ private struct ChatContentView: View {
                     if !hasRestoredScroll {
                         hasRestoredScroll = true
                         if let target = vm.initialScrollTarget {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    proxy.scrollTo(target, anchor: .top)
-                                }
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(target, anchor: .top)
                             }
                         } else if let lastId = vm.messages.last?.id {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            DispatchQueue.main.async {
                                 proxy.scrollTo(lastId, anchor: .bottom)
                             }
                         }
@@ -211,10 +222,14 @@ private struct ChatContentView: View {
             InputBarView(
                 text: $vm.inputText,
                 isLoading: vm.isLoading,
+                isCompressing: vm.isCompressing && !vm.isLoading,
                 isBlocked: !vm.canSend,
                 isCancelling: vm.isCancelling,
+                cancelFailureReason: vm.cancelFailureReason,
                 onSend: { vm.sendMessage() },
-                onStop: { vm.cancelGeneration() }
+                onStop: { vm.cancelGeneration() },
+                onStopCompression: { vm.cancelCompression() },
+                onDismissKeyboard: {}
             )
         }
     }

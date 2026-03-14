@@ -375,10 +375,22 @@ struct AgentModelConfigView: View {
                 }
             }
 
-            // Sub-agent preview
+            // Sub-agent preview: resolve what a sub-agent would actually use
             let subRouter = ModelRouter(modelContext: modelContext)
-            if let subProvider = subRouter.subAgentProvider(for: agent) {
-                let subModel = agent.subAgentModelNameOverride ?? subProvider.modelName
+            let subProviderInfo: (provider: LLMProvider, modelName: String)? = {
+                if let subId = agent.subAgentProviderId,
+                   let p = subRouter.providerById(subId) {
+                    return (p, agent.subAgentModelNameOverride ?? p.modelName)
+                }
+                // "Inherit from primary" — use the parent's resolved primary
+                let resolved = subRouter.resolveProviderChainWithModels(for: agent)
+                if let primary = resolved.first {
+                    return (primary.provider, primary.modelName ?? primary.provider.modelName)
+                }
+                return nil
+            }()
+            if let info = subProviderInfo {
+                let isInherited = agent.subAgentProviderId == nil
                 Divider()
                 HStack(spacing: 10) {
                     ZStack {
@@ -390,11 +402,18 @@ struct AgentModelConfigView: View {
                             .foregroundStyle(.orange)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(subModel)
+                        Text(info.modelName)
                             .font(.subheadline.bold())
-                        Text("\(subProvider.name) · Sub-Agent")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 4) {
+                            Text("\(info.provider.name) · Sub-Agent")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if isInherited {
+                                Text("= Primary")
+                                    .font(.caption2)
+                                    .foregroundStyle(.blue.opacity(0.7))
+                            }
+                        }
                     }
                     Spacer()
                     Text(L10n.ModelConfig.subAgent)

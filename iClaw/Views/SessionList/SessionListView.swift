@@ -49,6 +49,10 @@ struct SessionListView: View {
             } else {
                 viewModel?.fetchSessions()
             }
+            viewModel?.startAutoRefresh()
+        }
+        .onDisappear {
+            viewModel?.stopAutoRefresh()
         }
         .onChange(of: navigateToSession) { oldValue, newValue in
             if oldValue != nil && newValue == nil {
@@ -80,12 +84,29 @@ struct SessionListView: View {
                     }
             }
             .onDelete { offsets in
-                vm.deleteSessionAtOffsets(offsets)
+                guard let first = offsets.first else { return }
+                vm.sessionToDelete = vm.sessions[first]
             }
         }
         .listStyle(.insetGrouped)
         .refreshable {
             vm.fetchSessions()
+        }
+        .alert(L10n.Chat.deleteSessionTitle, isPresented: Binding(
+            get: { vm.sessionToDelete != nil },
+            set: { if !$0 { vm.sessionToDelete = nil } }
+        )) {
+            Button(L10n.Common.delete, role: .destructive) {
+                if let session = vm.sessionToDelete {
+                    vm.deleteSession(session)
+                    vm.sessionToDelete = nil
+                }
+            }
+            Button(L10n.Common.cancel, role: .cancel) {
+                vm.sessionToDelete = nil
+            }
+        } message: {
+            Text(L10n.Chat.deleteSessionMessage)
         }
     }
 }

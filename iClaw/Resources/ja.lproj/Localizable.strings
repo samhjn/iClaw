@@ -47,6 +47,12 @@
 "chat.noCompressModel" = "圧縮に使用できるモデルがありません";
 "chat.sessionBlocked" = "「%@」が処理中です。同一エージェントでは同時に1つのアクティブセッションのみ許可されます。";
 "chat.compressionInfo" = "コンテキスト ≈%@ / %@ | %d件（%d件圧縮済み）";
+"chat.cancelStuckReason" = "停止に予想以上の時間がかかっています — ツール呼び出しがまだ実行中の可能性があります。まもなく強制停止します…";
+"chat.forceStoppedContent" = "\n\n⚠️ *[強制停止されました — ツール呼び出しを時間内に中断できませんでした]*";
+"chat.deleteSessionTitle" = "セッションを削除";
+"chat.deleteSessionMessage" = "このセッションとすべてのメッセージが完全に削除されます。この操作は元に戻せません。";
+"chat.deleteAgentTitle" = "エージェントを削除";
+"chat.deleteAgentMessage" = "エージェント「%@」とそのすべてのセッション、サブエージェント、データが完全に削除されます。この操作は元に戻せません。";
 
 // MARK: - Agents
 "agents.title" = "エージェント";
@@ -284,6 +290,9 @@
 "browser.takeOver" = "操作を引き継ぐ";
 "browser.takeOverTitle" = "ブラウザを引き継ぐ";
 "browser.takeOverMessage" = "エージェント「%@」がブラウザを自動操作中です。引き継ぐとその操作が中断されます。続行しますか？";
+"browser.closePage" = "ページを閉じる";
+"browser.closePageTitle" = "現在のページを閉じる";
+"browser.closePageMessage" = "現在のページを閉じて空白ブラウザに戻ります。";
 
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "プレビュー";
