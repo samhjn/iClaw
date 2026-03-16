@@ -4,54 +4,6 @@ import SwiftData
 struct CodeExecutionTools {
     let agent: Agent
     let modelContext: ModelContext
-    let executor: CodeExecutor
-
-    func executePython(arguments: [String: Any]) async -> String {
-        guard let code = arguments["code"] as? String else {
-            return "[Error] Missing required parameter: code"
-        }
-
-        let modeStr = arguments["mode"] as? String ?? "script"
-        let mode: ExecutionMode = modeStr == "repr" ? .repr : .script
-        let timeout = resolveTimeout(arguments: arguments)
-
-        do {
-            let result = try await executor.execute(code: code, mode: mode, timeout: timeout)
-            var output = ""
-            if !result.stdout.isEmpty {
-                output += result.stdout
-            }
-            if !result.stderr.isEmpty {
-                if !output.isEmpty { output += "\n" }
-                output += "[stderr] \(result.stderr)"
-            }
-            if let repr = result.repr {
-                if !output.isEmpty { output += "\n" }
-                output += repr
-            }
-            return output.isEmpty ? "(No output)" : output
-        } catch CodeExecutorError.timeout {
-            return "[Error] Execution timed out after \(Int(timeout))s"
-        } catch {
-            return "[Error] \(error.localizedDescription)"
-        }
-    }
-
-    /// Resolve timeout in order: tool call argument > agent config > default (60s).
-    /// Clamped to [1, 300] seconds.
-    private func resolveTimeout(arguments: [String: Any]) -> TimeInterval {
-        if let t = arguments["timeout"] as? Double, t > 0 {
-            return min(max(t, 1), 300)
-        }
-        if let t = arguments["timeout"] as? Int, t > 0 {
-            return min(max(TimeInterval(t), 1), 300)
-        }
-        if let config = agent.customConfigs.first(where: { $0.key == "python_timeout" }),
-           let t = Double(config.content), t > 0 {
-            return min(max(t, 1), 300)
-        }
-        return 60
-    }
 
     func executeJavaScript(arguments: [String: Any]) async -> String {
         guard let code = arguments["code"] as? String else {
@@ -83,6 +35,8 @@ struct CodeExecutionTools {
             return output.isEmpty ? "(No output)" : output
         } catch CodeExecutorError.timeout {
             return "[Error] Execution timed out after \(Int(timeout))s"
+        } catch CodeExecutorError.runtimeCrashed {
+            return "[Error] JavaScript runtime crashed due to excessive memory usage. The runtime has been automatically recovered. Please simplify your code to use less memory (e.g. process data in smaller batches, avoid large arrays/strings) and try again."
         } catch {
             return "[Error] \(error.localizedDescription)"
         }
@@ -109,7 +63,7 @@ struct CodeExecutionTools {
         guard let code = arguments["code"] as? String else {
             return "[Error] Missing required parameter: code"
         }
-        let language = arguments["language"] as? String ?? "python"
+        let language = arguments["language"] as? String ?? "javascript"
 
         if let existing = agent.codeSnippets.first(where: { $0.name == name }) {
             existing.code = code

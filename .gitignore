@@ -42,7 +42,6 @@ fastlane/test_output
 *.dSYM.zip
 *.dSYM
 
-# MicroPython vendor source (cloned at build time)
 vendor/
 
 # Misc

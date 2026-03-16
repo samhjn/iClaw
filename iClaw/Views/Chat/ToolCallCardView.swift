@@ -86,7 +86,7 @@ private struct SingleToolCallCard: View {
         }
 
         switch call.function.name {
-        case "execute_python", "execute_javascript":
+        case "execute_javascript":
             let mode = dict["mode"] as? String ?? "script"
             return "(\(mode))"
         case "read_config", "write_config":
@@ -153,7 +153,7 @@ struct ToolResultCardView: View {
     }
 
     private var isCodeExecution: Bool {
-        toolName == "execute_python" || toolName == "execute_javascript"
+        toolName == "execute_javascript"
     }
 
     var body: some View {
@@ -370,8 +370,6 @@ struct ToolMeta {
 
     static func resolve(_ toolName: String) -> ToolMeta {
         switch toolName {
-        case "execute_python":
-            return ToolMeta(displayName: "Python", icon: "terminal", color: .blue)
         case "execute_javascript":
             return ToolMeta(displayName: "JavaScript", icon: "terminal.fill", color: .yellow)
         case "read_config":
