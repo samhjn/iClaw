@@ -7,7 +7,7 @@
 #include <string.h>
 #include "py/mphal.h"
 
-#define MPY_OUTPUT_BUF_SIZE (128 * 1024)
+#define MPY_OUTPUT_BUF_SIZE (256 * 1024)
 
 static char mpy_stdout_buf[MPY_OUTPUT_BUF_SIZE];
 static size_t mpy_stdout_len = 0;
