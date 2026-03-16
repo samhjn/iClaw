@@ -25,7 +25,7 @@
 
 /* ── GC heap ─────────────────────────────────────────────────────── */
 
-#define MPY_GC_HEAP_SIZE (256 * 1024)
+#define MPY_GC_HEAP_SIZE (1024 * 1024)
 static char mpy_gc_heap[MPY_GC_HEAP_SIZE];
 
 /* ── Stdout buffer (defined in mphalport.c) ──────────────────────── */
@@ -36,7 +36,7 @@ extern void mpy_reset_stdout_buf(void);
 
 /* ── Stderr capture buffer ───────────────────────────────────────── */
 
-#define MPY_STDERR_BUF_SIZE (32 * 1024)
+#define MPY_STDERR_BUF_SIZE (64 * 1024)
 static char mpy_stderr_buf[MPY_STDERR_BUF_SIZE];
 static size_t mpy_stderr_len = 0;
 
@@ -62,7 +62,7 @@ static void set_stderr(const char *msg) {
 
 /* ── Repr result buffer ──────────────────────────────────────────── */
 
-#define MPY_REPR_BUF_SIZE (64 * 1024)
+#define MPY_REPR_BUF_SIZE (128 * 1024)
 static char mpy_repr_buf[MPY_REPR_BUF_SIZE];
 static size_t mpy_repr_len = 0;
 
@@ -251,7 +251,7 @@ bool mpy_exec_script(const char *code) {
     if (nlr_push(&nlr) == 0) {
         MPY_LOG("exec_script: calling mp_embed_init");
         mp_embed_init(mpy_gc_heap, sizeof(mpy_gc_heap), &stack_top);
-        mp_stack_set_limit(128 * 1024);
+        mp_stack_set_limit(192 * 1024);
         inited = true;
         MPY_LOG("exec_script: mp_embed_init OK");
 
@@ -300,7 +300,7 @@ const char *mpy_eval_repr(const char *expr) {
     if (nlr_push(&nlr) == 0) {
         MPY_LOG("eval_repr: calling mp_embed_init");
         mp_embed_init(mpy_gc_heap, sizeof(mpy_gc_heap), &stack_top);
-        mp_stack_set_limit(128 * 1024);
+        mp_stack_set_limit(192 * 1024);
         inited = true;
         MPY_LOG("eval_repr: mp_embed_init OK");
 

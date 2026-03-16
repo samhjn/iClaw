@@ -8,21 +8,71 @@ final class JSCorePythonExecutor: CodeExecutor, @unchecked Sendable {
     let language = "python"
     let isAvailable = true
 
-    func execute(code: String, mode: ExecutionMode) async throws -> ExecutionResult {
+    private static let sharedVM = JSVirtualMachine()!
+    private static let maxMemoryGrowth: UInt64 = 64 * 1024 * 1024
+
+    private static func residentMemoryBytes() -> UInt64 {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(
+            MemoryLayout<mach_task_basic_info>.size / MemoryLayout<natural_t>.size
+        )
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? info.resident_size : 0
+    }
+
+    func execute(code: String, mode: ExecutionMode, timeout: TimeInterval) async throws -> ExecutionResult {
         try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    let result = try self.run(code: code, mode: mode)
-                    continuation.resume(returning: result)
-                } catch {
-                    continuation.resume(throwing: error)
+            var resumed = false
+            let lock = NSLock()
+
+            func resumeOnce(with result: Result<ExecutionResult, Error>) {
+                lock.lock()
+                guard !resumed else { lock.unlock(); return }
+                resumed = true
+                lock.unlock()
+                continuation.resume(with: result)
+            }
+
+            let memBaseline = Self.residentMemoryBytes()
+
+            let memWatchdog = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+            memWatchdog.schedule(deadline: .now() + 0.5, repeating: 0.5)
+            memWatchdog.setEventHandler {
+                let current = Self.residentMemoryBytes()
+                if memBaseline > 0, current > 0, current > memBaseline + Self.maxMemoryGrowth {
+                    memWatchdog.cancel()
+                    resumeOnce(with: .failure(CodeExecutorError.memoryLimitExceeded))
                 }
+            }
+
+            let workItem = DispatchWorkItem {
+                do {
+                    let result = try autoreleasepool { try self.run(code: code, mode: mode) }
+                    memWatchdog.cancel()
+                    resumeOnce(with: .success(result))
+                } catch {
+                    memWatchdog.cancel()
+                    resumeOnce(with: .failure(error))
+                }
+            }
+
+            DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
+            memWatchdog.resume()
+
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout) {
+                workItem.cancel()
+                memWatchdog.cancel()
+                resumeOnce(with: .failure(CodeExecutorError.timeout))
             }
         }
     }
 
     private func run(code: String, mode: ExecutionMode) throws -> ExecutionResult {
-        let ctx = JSContext()!
+        let ctx = JSContext(virtualMachine: Self.sharedVM)!
         var jsException: String?
         ctx.exceptionHandler = { _, exception in
             jsException = exception?.toString()
@@ -30,11 +80,12 @@ final class JSCorePythonExecutor: CodeExecutor, @unchecked Sendable {
 
         ctx.evaluateScript(Self.pythonRuntime)
         injectNetworkBridge(ctx)
+        Self.injectMemoryGuard(ctx)
 
         switch mode {
         case .repr:
             let js = PythonTranspiler.transpileExpression(code)
-            let wrapped = "(function() { try { return __py_repr(\(js)); } catch(e) { __stderr += String(e); return null; } })()"
+            let wrapped = "(function() { try { return __py_repr(\(js)); } catch(e) { __appendErr(String(e)); return null; } })()"
             let result = ctx.evaluateScript(wrapped)
 
             let stdout = ctx.evaluateScript("__stdout")?.toString() ?? ""
@@ -60,6 +111,17 @@ final class JSCorePythonExecutor: CodeExecutor, @unchecked Sendable {
             }
             return .success(stdout: stdout, stderr: stderr)
         }
+    }
+
+    private static func injectMemoryGuard(_ ctx: JSContext) {
+        let baseline = residentMemoryBytes()
+        let limit = maxMemoryGrowth
+        let memCheck: @convention(block) () -> Bool = {
+            let current = residentMemoryBytes()
+            guard current > 0, baseline > 0 else { return true }
+            return current < baseline + limit
+        }
+        ctx.setObject(memCheck, forKeyedSubscript: "__native_mem_ok" as NSString)
     }
 
     private func pythonizeError(_ jsError: String) -> String {
@@ -123,6 +185,10 @@ final class JSCorePythonExecutor: CodeExecutor, @unchecked Sendable {
     static let pythonRuntime: String = """
     var __stdout = '';
     var __stderr = '';
+    var __MAX_OUTPUT = 1048576;
+
+    function __appendOut(s) { if (__stdout.length < __MAX_OUTPUT) __stdout += s; }
+    function __appendErr(s) { if (__stderr.length < __MAX_OUTPUT) __stderr += s; }
 
     // --- Python constants ---
     var None = null;
@@ -202,7 +268,7 @@ final class JSCorePythonExecutor: CodeExecutor, @unchecked Sendable {
         }
         var sep = kwargs.sep !== undefined ? kwargs.sep : ' ';
         var end = kwargs.end !== undefined ? kwargs.end : '\\n';
-        __stdout += args.map(function(a) { return __py_str(a); }).join(sep) + end;
+        __appendOut(args.map(function(a) { return __py_str(a); }).join(sep) + end);
     }
 
     function len(x) {
@@ -548,6 +614,66 @@ final class JSCorePythonExecutor: CodeExecutor, @unchecked Sendable {
         'string': string_mod, 'time': time_mod, 'os': os, 'os.path': os.path,
         'urllib': urllib, 'urllib.request': urllib.request, 'urllib.parse': urllib.parse,
         'requests': requests
+    };
+
+    // --- Memory guard ---
+    var __memOps = 0;
+    var __MEM_STR_MAX = 10485760;
+    function __checkMem() {
+        if (++__memOps % 1024 === 0 && typeof __native_mem_ok === 'function' && !__native_mem_ok()) {
+            throw new RangeError('MemoryError: memory limit exceeded');
+        }
+    }
+
+    // Array mutations
+    var __origPush = Array.prototype.push;
+    Array.prototype.push = function() { __checkMem(); return __origPush.apply(this, arguments); };
+    var __origUnshift = Array.prototype.unshift;
+    Array.prototype.unshift = function() { __checkMem(); return __origUnshift.apply(this, arguments); };
+    var __origSplice = Array.prototype.splice;
+    Array.prototype.splice = function() { __checkMem(); return __origSplice.apply(this, arguments); };
+    var __origConcat = Array.prototype.concat;
+    Array.prototype.concat = function() { __checkMem(); return __origConcat.apply(this, arguments); };
+
+    // Array creation
+    var __origMap = Array.prototype.map;
+    Array.prototype.map = function() { __checkMem(); return __origMap.apply(this, arguments); };
+    var __origFilter = Array.prototype.filter;
+    Array.prototype.filter = function() { __checkMem(); return __origFilter.apply(this, arguments); };
+    var __origSlice = Array.prototype.slice;
+    Array.prototype.slice = function() { __checkMem(); return __origSlice.apply(this, arguments); };
+    var __origFlat = Array.prototype.flat;
+    if (__origFlat) Array.prototype.flat = function() { __checkMem(); return __origFlat.apply(this, arguments); };
+    var __origFlatMap = Array.prototype.flatMap;
+    if (__origFlatMap) Array.prototype.flatMap = function() { __checkMem(); return __origFlatMap.apply(this, arguments); };
+    var __origArrayFrom = Array.from;
+    Array.from = function() { __checkMem(); return __origArrayFrom.apply(this, arguments); };
+
+    // String expansion
+    var __origRepeat = String.prototype.repeat;
+    String.prototype.repeat = function(n) {
+        if (n > 0 && this.length * n > __MEM_STR_MAX) throw new RangeError('MemoryError: string size limit exceeded');
+        return __origRepeat.call(this, n);
+    };
+    var __origPadStart = String.prototype.padStart;
+    String.prototype.padStart = function(n) {
+        if (n > __MEM_STR_MAX) throw new RangeError('MemoryError: string size limit exceeded');
+        return __origPadStart.apply(this, arguments);
+    };
+    var __origPadEnd = String.prototype.padEnd;
+    String.prototype.padEnd = function(n) {
+        if (n > __MEM_STR_MAX) throw new RangeError('MemoryError: string size limit exceeded');
+        return __origPadEnd.apply(this, arguments);
+    };
+    var __origSplit = String.prototype.split;
+    String.prototype.split = function() { __checkMem(); return __origSplit.apply(this, arguments); };
+
+    // JSON
+    var __origJSONParse = JSON.parse;
+    JSON.parse = function(s) {
+        if (typeof s === 'string' && s.length > __MEM_STR_MAX) throw new RangeError('MemoryError: JSON input too large');
+        __checkMem();
+        return __origJSONParse.apply(this, arguments);
     };
     """
 }

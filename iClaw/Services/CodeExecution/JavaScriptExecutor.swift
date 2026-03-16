@@ -10,6 +10,22 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     let language = "javascript"
     let isAvailable = true
 
+    private static let sharedVM = JSVirtualMachine()!
+    private static let maxMemoryGrowth: UInt64 = 64 * 1024 * 1024
+
+    private static func residentMemoryBytes() -> UInt64 {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(
+            MemoryLayout<mach_task_basic_info>.size / MemoryLayout<natural_t>.size
+        )
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? info.resident_size : 0
+    }
+
     func execute(code: String, mode: ExecutionMode, timeout: TimeInterval) async throws -> ExecutionResult {
         os_log(.info, log: jsLog, "[JS] execute called, mode=%{public}@, timeout=%{public}f", mode.rawValue, timeout)
 
@@ -25,15 +41,30 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
                 continuation.resume(with: result)
             }
 
+            let memBaseline = Self.residentMemoryBytes()
+
+            let memWatchdog = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+            memWatchdog.schedule(deadline: .now() + 0.5, repeating: 0.5)
+            memWatchdog.setEventHandler {
+                let current = Self.residentMemoryBytes()
+                if memBaseline > 0, current > 0, current > memBaseline + Self.maxMemoryGrowth {
+                    memWatchdog.cancel()
+                    resumeOnce(with: .failure(CodeExecutorError.memoryLimitExceeded))
+                }
+            }
+
             let workItem = DispatchWorkItem {
-                let result = Self.run(code: code, mode: mode)
+                let result = autoreleasepool { Self.run(code: code, mode: mode) }
+                memWatchdog.cancel()
                 resumeOnce(with: .success(result))
             }
 
             DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
+            memWatchdog.resume()
 
             DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout) {
                 workItem.cancel()
+                memWatchdog.cancel()
                 resumeOnce(with: .failure(CodeExecutorError.timeout))
             }
         }
@@ -42,7 +73,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     // MARK: - Core Execution
 
     private static func run(code: String, mode: ExecutionMode) -> ExecutionResult {
-        let ctx = JSContext()!
+        let ctx = JSContext(virtualMachine: sharedVM)!
         var jsException: String?
 
         ctx.exceptionHandler = { _, exception in
@@ -59,7 +90,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
                     var __result = eval(\(escapeForJS(code)));
                     return __result;
                 } catch(e) {
-                    __stderr += String(e) + '\\n';
+                    __appendErr(String(e) + '\\n');
                     return undefined;
                 }
             })()
@@ -95,6 +126,18 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     private static func injectRuntime(_ ctx: JSContext) {
         ctx.evaluateScript(Self.runtimeScript)
         injectNetworkBridge(ctx)
+        injectMemoryGuard(ctx)
+    }
+
+    private static func injectMemoryGuard(_ ctx: JSContext) {
+        let baseline = residentMemoryBytes()
+        let limit = maxMemoryGrowth
+        let memCheck: @convention(block) () -> Bool = {
+            let current = residentMemoryBytes()
+            guard current > 0, baseline > 0 else { return true }
+            return current < baseline + limit
+        }
+        ctx.setObject(memCheck, forKeyedSubscript: "__native_mem_ok" as NSString)
     }
 
     private static func injectNetworkBridge(_ ctx: JSContext) {
@@ -179,39 +222,41 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     static let runtimeScript: String = """
     var __stdout = '';
     var __stderr = '';
+    var __MAX_OUTPUT = 1048576;
+
+    function __appendOut(s) { if (__stdout.length < __MAX_OUTPUT) __stdout += s; }
+    function __appendErr(s) { if (__stderr.length < __MAX_OUTPUT) __stderr += s; }
 
     // --- Console ---
     var console = {
         log: function() {
             var args = Array.prototype.slice.call(arguments);
-            __stdout += args.map(function(a) {
+            __appendOut(args.map(function(a) {
                 if (a === null) return 'null';
                 if (a === undefined) return 'undefined';
                 if (typeof a === 'object') { try { return JSON.stringify(a); } catch(e) { return String(a); } }
                 return String(a);
-            }).join(' ') + '\\n';
+            }).join(' ') + '\\n');
         },
         warn: function() {
             var args = Array.prototype.slice.call(arguments);
-            __stderr += '[warn] ' + args.map(String).join(' ') + '\\n';
+            __appendErr('[warn] ' + args.map(String).join(' ') + '\\n');
         },
         error: function() {
             var args = Array.prototype.slice.call(arguments);
-            __stderr += '[error] ' + args.map(String).join(' ') + '\\n';
+            __appendErr('[error] ' + args.map(String).join(' ') + '\\n');
         },
         info: function() { console.log.apply(null, arguments); },
         debug: function() { console.log.apply(null, arguments); },
         table: function(data) { console.log(JSON.stringify(data, null, 2)); },
         time: function() {},
         timeEnd: function() {},
-        assert: function(cond, msg) { if (!cond) __stderr += '[assert] ' + (msg || 'Assertion failed') + '\\n'; },
+        assert: function(cond, msg) { if (!cond) __appendErr('[assert] ' + (msg || 'Assertion failed') + '\\n'); },
         dir: function(obj) { console.log(JSON.stringify(obj, null, 2)); },
         clear: function() { __stdout = ''; __stderr = ''; }
     };
 
-    function print() {
-        console.log.apply(null, arguments);
-    }
+    function print() { console.log.apply(null, arguments); }
 
     // --- Timer polyfills (synchronous: run immediately) ---
     var __timerId = 0;
@@ -294,5 +339,65 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
             return o;
         }
     }
+
+    // --- Memory guard ---
+    var __memOps = 0;
+    var __MEM_STR_MAX = 10485760;
+    function __checkMem() {
+        if (++__memOps % 1024 === 0 && typeof __native_mem_ok === 'function' && !__native_mem_ok()) {
+            throw new RangeError('Memory limit exceeded');
+        }
+    }
+
+    // Array mutations
+    var __origPush = Array.prototype.push;
+    Array.prototype.push = function() { __checkMem(); return __origPush.apply(this, arguments); };
+    var __origUnshift = Array.prototype.unshift;
+    Array.prototype.unshift = function() { __checkMem(); return __origUnshift.apply(this, arguments); };
+    var __origSplice = Array.prototype.splice;
+    Array.prototype.splice = function() { __checkMem(); return __origSplice.apply(this, arguments); };
+    var __origConcat = Array.prototype.concat;
+    Array.prototype.concat = function() { __checkMem(); return __origConcat.apply(this, arguments); };
+
+    // Array creation
+    var __origMap = Array.prototype.map;
+    Array.prototype.map = function() { __checkMem(); return __origMap.apply(this, arguments); };
+    var __origFilter = Array.prototype.filter;
+    Array.prototype.filter = function() { __checkMem(); return __origFilter.apply(this, arguments); };
+    var __origSlice = Array.prototype.slice;
+    Array.prototype.slice = function() { __checkMem(); return __origSlice.apply(this, arguments); };
+    var __origFlat = Array.prototype.flat;
+    if (__origFlat) Array.prototype.flat = function() { __checkMem(); return __origFlat.apply(this, arguments); };
+    var __origFlatMap = Array.prototype.flatMap;
+    if (__origFlatMap) Array.prototype.flatMap = function() { __checkMem(); return __origFlatMap.apply(this, arguments); };
+    var __origArrayFrom = Array.from;
+    Array.from = function() { __checkMem(); return __origArrayFrom.apply(this, arguments); };
+
+    // String expansion
+    var __origRepeat = String.prototype.repeat;
+    String.prototype.repeat = function(n) {
+        if (n > 0 && this.length * n > __MEM_STR_MAX) throw new RangeError('String size limit exceeded');
+        return __origRepeat.call(this, n);
+    };
+    var __origPadStart = String.prototype.padStart;
+    String.prototype.padStart = function(n) {
+        if (n > __MEM_STR_MAX) throw new RangeError('String size limit exceeded');
+        return __origPadStart.apply(this, arguments);
+    };
+    var __origPadEnd = String.prototype.padEnd;
+    String.prototype.padEnd = function(n) {
+        if (n > __MEM_STR_MAX) throw new RangeError('String size limit exceeded');
+        return __origPadEnd.apply(this, arguments);
+    };
+    var __origSplit = String.prototype.split;
+    String.prototype.split = function() { __checkMem(); return __origSplit.apply(this, arguments); };
+
+    // JSON
+    var __origJSONParse = JSON.parse;
+    JSON.parse = function(s) {
+        if (typeof s === 'string' && s.length > __MEM_STR_MAX) throw new RangeError('JSON input too large');
+        __checkMem();
+        return __origJSONParse.apply(this, arguments);
+    };
     """
 }
