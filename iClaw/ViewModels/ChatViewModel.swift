@@ -113,11 +113,17 @@ final class ChatViewModel {
         generationTask = nil
         isLoading = false
         isCancelling = false
+        isCompressing = false
         session.isActive = false
+        session.isCompressingContext = false
         session.pendingStreamingContent = nil
         cancelFailureReason = nil
         cancelWatchdog?.cancel()
         cancelWatchdog = nil
+        compressionTask?.cancel()
+        compressionTask = nil
+        compressionMonitorTask?.cancel()
+        compressionMonitorTask = nil
         BrowserService.shared.releaseLock(sessionId: session.id)
 
         let forceStopMsg = Message(
@@ -205,6 +211,12 @@ final class ChatViewModel {
             let router = ModelRouter(modelContext: modelContext)
             let promptBuilder = PromptBuilder()
             let contextManager = ContextManager()
+
+            // Compress BEFORE building context so the LLM always gets a
+            // right-sized window instead of a bloated or empty one.
+            await compressIfNeeded(agent: agent, router: router)
+
+            guard !Task.isCancelled, !cancelled else { return }
 
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
             let contextMessages = contextManager.buildContextWindow(
@@ -304,8 +316,6 @@ final class ChatViewModel {
                 try? modelContext.save()
                 loadMessages()
             }
-
-            await checkAndCompress(agent: agent, router: router)
         } catch {
             if !Task.isCancelled && !cancelled {
                 errorMessage = error.localizedDescription
@@ -355,25 +365,54 @@ final class ChatViewModel {
         await generateResponse()
     }
 
+    /// Compress context if active tokens exceed the threshold.
+    /// Called BEFORE each LLM call so the context window stays right-sized.
     @MainActor
-    private func checkAndCompress(agent: Agent, router: ModelRouter) async {
+    private func compressIfNeeded(agent: Agent, router: ModelRouter) async {
         guard !Task.isCancelled, !cancelled else { return }
         let threshold = agent.effectiveCompressionThreshold
         let compressor = SessionCompressor(compressionThreshold: threshold)
-        if compressor.shouldCompress(session: session) {
-            isCompressing = true
-            session.isCompressingContext = true
-            try? modelContext.save()
-            defer {
-                isCompressing = false
-                session.isCompressingContext = false
-                try? modelContext.save()
-            }
-            guard let provider = router.primaryProvider(for: agent) else { return }
-            let llmService = LLMService(provider: provider)
-            await compressor.compress(session: session, llmService: llmService, modelContext: modelContext)
-            loadMessages()
+        let contextManager = ContextManager()
+        let activeTokens = contextManager.activeContextTokens(session: session)
+
+        guard compressor.shouldCompress(session: session) else {
+            print("[AutoCompress] Not needed — activeTokens=\(activeTokens), threshold=\(threshold)")
+            return
         }
+
+        print("[AutoCompress] Triggered — activeTokens=\(activeTokens) > threshold=\(threshold)")
+
+        isCompressing = true
+        session.isCompressingContext = true
+        try? modelContext.save()
+        defer {
+            isCompressing = false
+            session.isCompressingContext = false
+            try? modelContext.save()
+        }
+
+        guard let provider = router.primaryProvider(for: agent) else {
+            print("[AutoCompress] FAIL: No provider available for compression")
+            return
+        }
+
+        let llmService = LLMService(provider: provider)
+        let result = await compressor.compress(session: session, llmService: llmService)
+
+        guard !Task.isCancelled, !cancelled else {
+            print("[AutoCompress] Cancelled after compress() returned")
+            return
+        }
+
+        if let result {
+            compressor.commit(result: result, to: session, modelContext: modelContext)
+            compressor.autoGenerateTitleIfNeeded(session: session, llmService: llmService, modelContext: modelContext)
+            let newTokens = contextManager.activeContextTokens(session: session)
+            print("[AutoCompress] Committed — tokens \(activeTokens) → \(newTokens)")
+        } else {
+            print("[AutoCompress] compress() returned nil — compression was not applied, continuing with uncompressed context (\(activeTokens) tokens)")
+        }
+        loadMessages()
     }
 
     // MARK: - Manual Compression
@@ -391,15 +430,19 @@ final class ChatViewModel {
         let modelContext = self.modelContext
 
         compressionTask = Task { @MainActor [weak self] in
-            defer {
-                self?.isCompressing = false
-                self?.isCancellingCompression = false
+            guard let self else {
                 session.isCompressingContext = false
-                self?.compressionTask = nil
                 try? modelContext.save()
+                return
             }
 
-            guard let self else { return }
+            defer {
+                self.isCompressing = false
+                self.isCancellingCompression = false
+                session.isCompressingContext = false
+                self.compressionTask = nil
+                try? modelContext.save()
+            }
 
             let router = ModelRouter(modelContext: modelContext)
             guard let provider = router.primaryProvider(for: agent) else {
@@ -409,8 +452,26 @@ final class ChatViewModel {
 
             let threshold = agent.effectiveCompressionThreshold
             let compressor = SessionCompressor(compressionThreshold: threshold)
+            let contextManager = ContextManager()
+            let beforeTokens = contextManager.activeContextTokens(session: session)
+            print("[ManualCompress] Start — activeTokens=\(beforeTokens), threshold=\(threshold)")
+
             let llmService = LLMService(provider: provider)
-            await compressor.compress(session: session, llmService: llmService, modelContext: modelContext)
+            let result = await compressor.compress(session: session, llmService: llmService)
+
+            guard !Task.isCancelled else {
+                print("[ManualCompress] Cancelled")
+                return
+            }
+
+            if let result {
+                compressor.commit(result: result, to: session, modelContext: modelContext)
+                compressor.autoGenerateTitleIfNeeded(session: session, llmService: llmService, modelContext: modelContext)
+                let afterTokens = contextManager.activeContextTokens(session: session)
+                print("[ManualCompress] Committed — tokens \(beforeTokens) → \(afterTokens)")
+            } else {
+                print("[ManualCompress] compress() returned nil — no changes applied")
+            }
             self.loadMessages()
         }
     }
@@ -504,33 +565,29 @@ final class ChatViewModel {
         let session = self.session
         let modelContext = self.modelContext
         compressionMonitorTask = Task { @MainActor [weak self] in
-            defer {
-                self?.isCompressing = false
-                self?.compressionMonitorTask = nil
-            }
             var ticks = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else { break }
                 if !session.isCompressingContext {
                     self?.loadMessages()
-                    return
+                    break
                 }
-                // If the session is no longer active and compression flag is stale,
-                // the orphaned task likely finished but failed to clear the flag.
                 if !session.isActive && ticks > 5 {
                     session.isCompressingContext = false
                     try? modelContext.save()
                     self?.loadMessages()
-                    return
+                    break
                 }
                 ticks += 1
                 if ticks > 120 {
                     session.isCompressingContext = false
                     try? modelContext.save()
-                    return
+                    break
                 }
             }
+            self?.isCompressing = false
+            self?.compressionMonitorTask = nil
         }
     }
 
@@ -599,18 +656,45 @@ final class ChatViewModel {
 
     // MARK: - Info
 
-    var compressionInfo: String {
+    var compressionStats: CompressionStats {
         let contextManager = ContextManager()
         let active = contextManager.activeContextTokens(session: session)
         let threshold = session.agent?.effectiveCompressionThreshold ?? ContextManager.compressionThreshold
-        let compressed = session.compressedUpToIndex
-        let msgCount = session.messages.count
+        let compressedIdx = session.compressedUpToIndex
+        let totalMsgs = session.messages.count
 
-        func fmt(_ n: Int) -> String {
-            n >= 1000 ? String(format: "%.1fk", Double(n) / 1000.0) : "\(n)"
-        }
+        let sorted = session.sortedMessages
+        let pendingEnd = max(totalMsgs - 3, compressedIdx)
+        let pendingCount = max(pendingEnd - compressedIdx, 0)
 
-        return L10n.Chat.compressionInfo(active: fmt(active), threshold: fmt(threshold), total: msgCount, compressed: compressed)
+        return CompressionStats(
+            activeTokens: active,
+            threshold: threshold,
+            totalMessages: totalMsgs,
+            compressedCount: compressedIdx,
+            pendingCount: pendingCount
+        )
+    }
+}
+
+struct CompressionStats {
+    let activeTokens: Int
+    let threshold: Int
+    let totalMessages: Int
+    let compressedCount: Int
+    /// Messages eligible for the next compression pass.
+    let pendingCount: Int
+
+    var activeFormatted: String { Self.fmt(activeTokens) }
+    var thresholdFormatted: String { Self.fmt(threshold) }
+
+    var tokenRatio: Double {
+        guard threshold > 0 else { return 0 }
+        return Double(activeTokens) / Double(threshold)
+    }
+
+    private static func fmt(_ n: Int) -> String {
+        n >= 1000 ? String(format: "%.1fk", Double(n) / 1000.0) : "\(n)"
     }
 }
 

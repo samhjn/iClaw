@@ -29,6 +29,8 @@ struct ChatView: View {
                     }
 
                     if let vm = viewModel {
+                        let stats = vm.compressionStats
+
                         Section {
                             Button {
                                 vm.manualCompress()
@@ -39,7 +41,16 @@ struct ChatView: View {
                         }
 
                         Section {
-                            Text(vm.compressionInfo)
+                            Label {
+                                Text(L10n.Chat.tokenUsage(active: stats.activeFormatted, threshold: stats.thresholdFormatted))
+                            } icon: {
+                                Image(systemName: "gauge.medium")
+                            }
+                            Label {
+                                Text(L10n.Chat.messageStats(total: stats.totalMessages, compressed: stats.compressedCount))
+                            } icon: {
+                                Image(systemName: "doc.text")
+                            }
                         }
                     }
                 } label: {
@@ -112,27 +123,9 @@ private struct ChatContentView: View {
                         }
 
                         if vm.isCompressing {
-                            HStack(spacing: 8) {
-                                ProgressView()
-
-                                Text(L10n.Chat.compressingContext)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-
-                                Spacer()
-
-                                Button {
-                                    vm.cancelCompression()
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.subheadline)
-                                        .symbolRenderingMode(.hierarchical)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .disabled(vm.isCancellingCompression)
+                            CompressionPanel(stats: vm.compressionStats, isCancelling: vm.isCancellingCompression) {
+                                vm.cancelCompression()
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
                             .id("compressing")
                         }
                     }
@@ -232,5 +225,74 @@ private struct ChatContentView: View {
                 onDismissKeyboard: {}
             )
         }
+    }
+}
+
+// MARK: - Compression Panel
+
+private struct CompressionPanel: View {
+    let stats: CompressionStats
+    let isCancelling: Bool
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .scaleEffect(0.8)
+
+                Text(L10n.Chat.compressingContext)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Button(action: onCancel) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                }
+                .disabled(isCancelling)
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color(.systemGray5))
+
+                    Capsule()
+                        .fill(tokenColor(for: stats.tokenRatio))
+                        .frame(width: geo.size.width * min(CGFloat(stats.tokenRatio), 1.0))
+                }
+            }
+            .frame(height: 6)
+
+            HStack {
+                Text(L10n.Chat.tokenUsage(active: stats.activeFormatted, threshold: stats.thresholdFormatted))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                if stats.pendingCount > 0 {
+                    Text(L10n.Chat.pendingCompression(stats.pendingCount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 4)
+    }
+}
+
+private func tokenColor(for ratio: Double) -> Color {
+    switch ratio {
+    case ..<0.6: return .green
+    case ..<0.85: return .yellow
+    case ..<1.0: return .orange
+    default: return .red
     }
 }

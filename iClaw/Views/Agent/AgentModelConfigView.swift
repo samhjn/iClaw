@@ -254,56 +254,118 @@ struct AgentModelConfigView: View {
 
     // MARK: - Compression
 
+    private static let thresholdPresets: [(label: String, value: Int)] = [
+        ("4k", 4_000),
+        ("8k", 8_000),
+        ("16k", 16_000),
+        ("24k", 24_000),
+        ("32k", 32_000),
+        ("64k", 64_000),
+        ("128k", 128_000),
+        ("200k", 200_000),
+        ("500k", 500_000),
+        ("1M", 1_000_000),
+    ]
+
+    @State private var customThresholdText: String = ""
+    @State private var showCustomInput: Bool = false
+
     @ViewBuilder
     private var compressionSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(L10n.ModelConfig.compressionThreshold)
-                    Spacer()
-                    Text(agent.compressionThreshold > 0
-                         ? "\(agent.compressionThreshold)"
-                         : L10n.ModelConfig.defaultThreshold(ContextManager.compressionThreshold))
-                        .foregroundStyle(.secondary)
-                }
+            HStack {
+                Text(L10n.ModelConfig.compressionThreshold)
+                Spacer()
+                Text(agent.compressionThreshold > 0
+                     ? Self.formatTokenCount(agent.compressionThreshold)
+                     : L10n.ModelConfig.defaultThreshold(ContextManager.compressionThreshold))
+                    .foregroundStyle(.secondary)
+            }
 
-                Slider(
-                    value: compressionThresholdBinding,
-                    in: 0...20000,
-                    step: 500
-                )
-
-                HStack {
-                    Text(L10n.ModelConfig.systemDefault)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                    if agent.compressionThreshold > 0 {
-                        Button(L10n.ModelConfig.resetDefault) {
-                            agent.compressionThreshold = 0
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Self.thresholdPresets, id: \.value) { preset in
+                        let isSelected = agent.compressionThreshold == preset.value
+                        Button {
+                            agent.compressionThreshold = preset.value
                             agent.updatedAt = Date()
                             try? modelContext.save()
+                        } label: {
+                            Text(preset.label)
+                                .font(.caption.weight(isSelected ? .bold : .regular))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.systemGray6))
+                                .foregroundStyle(isSelected ? Color.accentColor : .primary)
+                                .clipShape(Capsule())
                         }
-                        .font(.caption)
+                        .buttonStyle(.plain)
                     }
+
+                    let isCustom = agent.compressionThreshold > 0
+                        && !Self.thresholdPresets.contains(where: { $0.value == agent.compressionThreshold })
+                    Button {
+                        customThresholdText = agent.compressionThreshold > 0
+                            ? "\(agent.compressionThreshold)" : ""
+                        showCustomInput = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "pencil")
+                                .font(.caption2)
+                            if isCustom {
+                                Text(Self.formatTokenCount(agent.compressionThreshold))
+                                    .font(.caption.weight(.bold))
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(isCustom ? Color.accentColor.opacity(0.15) : Color(.systemGray6))
+                        .foregroundStyle(isCustom ? Color.accentColor : .primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
+            }
+
+            if agent.compressionThreshold > 0 {
+                Button(L10n.ModelConfig.resetDefault) {
+                    agent.compressionThreshold = 0
+                    agent.updatedAt = Date()
+                    try? modelContext.save()
+                }
+                .font(.caption)
             }
         } header: {
             Text(L10n.ModelConfig.contextCompression)
         } footer: {
             Text(L10n.ModelConfig.compressionFooter)
         }
+        .alert(L10n.ModelConfig.compressionThreshold, isPresented: $showCustomInput) {
+            TextField("tokens", text: $customThresholdText)
+                .keyboardType(.numberPad)
+            Button(L10n.Common.save) {
+                if let value = Int(customThresholdText.trimmingCharacters(in: .whitespaces)),
+                   value >= 1000 {
+                    agent.compressionThreshold = value
+                    agent.updatedAt = Date()
+                    try? modelContext.save()
+                }
+            }
+            Button(L10n.Common.cancel, role: .cancel) {}
+        }
     }
 
-    private var compressionThresholdBinding: Binding<Double> {
-        Binding(
-            get: { Double(agent.compressionThreshold) },
-            set: { newValue in
-                agent.compressionThreshold = Int(newValue)
-                agent.updatedAt = Date()
-                try? modelContext.save()
-            }
-        )
+    private static func formatTokenCount(_ n: Int) -> String {
+        if n >= 1_000_000 {
+            let v = Double(n) / 1_000_000.0
+            return v.truncatingRemainder(dividingBy: 1) == 0
+                ? "\(Int(v))M" : String(format: "%.1fM", v)
+        } else if n >= 1_000 {
+            let v = Double(n) / 1_000.0
+            return v.truncatingRemainder(dividingBy: 1) == 0
+                ? "\(Int(v))k" : String(format: "%.1fk", v)
+        }
+        return "\(n)"
     }
 
     // MARK: - Preview

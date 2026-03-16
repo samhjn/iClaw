@@ -47,6 +47,10 @@
 "chat.noCompressModel" = "圧縮に使用できるモデルがありません";
 "chat.sessionBlocked" = "「%@」が処理中です。同一エージェントでは同時に1つのアクティブセッションのみ許可されます。";
 "chat.compressionInfo" = "コンテキスト ≈%@ / %@ | %d件（%d件圧縮済み）";
+"chat.tokenUsage" = "%@ / %@ tokens";
+"chat.messageStats" = "%d件（%d件圧縮済み）";
+"chat.pendingCompression" = "%d件を圧縮中";
+"chat.compressedBadge" = "%d件圧縮済み";
 "chat.cancelStuckReason" = "停止に予想以上の時間がかかっています — ツール呼び出しがまだ実行中の可能性があります。まもなく強制停止します…";
 "chat.forceStoppedContent" = "\n\n⚠️ *[強制停止されました — ツール呼び出しを時間内に中断できませんでした]*";
 "chat.deleteSessionTitle" = "セッションを削除";

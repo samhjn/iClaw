@@ -47,6 +47,10 @@
 "chat.noCompressModel" = "No model available for compression";
 "chat.sessionBlocked" = "\"%@\" is processing. Only one active session per agent is allowed.";
 "chat.compressionInfo" = "Context ≈%@ / %@ | %d messages (%d compressed)";
+"chat.tokenUsage" = "%@ / %@ tokens";
+"chat.messageStats" = "%d messages (%d compressed)";
+"chat.pendingCompression" = "Compressing %d msgs";
+"chat.compressedBadge" = "%d compressed";
 "chat.cancelStuckReason" = "Stop is taking longer than expected — a tool call may still be running. Will force stop shortly…";
 "chat.forceStoppedContent" = "\n\n⚠️ *[Force stopped — a tool call could not be interrupted in time]*";
 "chat.deleteSessionTitle" = "Delete Session";

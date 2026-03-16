@@ -72,6 +72,18 @@ enum L10n {
         static func compressionInfo(active: String, threshold: String, total: Int, compressed: Int) -> String {
             tr("chat.compressionInfo", active, threshold, total, compressed)
         }
+        static func tokenUsage(active: String, threshold: String) -> String {
+            tr("chat.tokenUsage", active, threshold)
+        }
+        static func messageStats(total: Int, compressed: Int) -> String {
+            tr("chat.messageStats", total, compressed)
+        }
+        static func pendingCompression(_ count: Int) -> String {
+            tr("chat.pendingCompression", count)
+        }
+        static func compressedBadge(_ count: Int) -> String {
+            tr("chat.compressedBadge", count)
+        }
         static var cancelStuckReason: String { tr("chat.cancelStuckReason") }
         static var forceStoppedContent: String { tr("chat.forceStoppedContent") }
         static var deleteSessionTitle: String { tr("chat.deleteSessionTitle") }
