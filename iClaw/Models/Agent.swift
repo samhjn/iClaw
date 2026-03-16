@@ -40,7 +40,7 @@ final class Agent {
     /// SubAgent lifecycle: "temp" = auto-destroy after task, "persistent" = long-lived, nil = main agent
     var subAgentType: String? = nil
 
-    /// Context compression threshold in tokens (0 = use system default 6000)
+    /// Context compression threshold in tokens (0 = use system default 24000)
     var compressionThreshold: Int = 0
 
     var createdAt: Date

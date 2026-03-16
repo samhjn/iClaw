@@ -47,6 +47,10 @@
 "chat.noCompressModel" = "没有可用的模型来执行压缩";
 "chat.sessionBlocked" = "「%@」正在处理中，同一智能体同时只允许一个活跃会话。";
 "chat.compressionInfo" = "上下文 ≈%@ / %@ | %d 条消息（%d 条已压缩）";
+"chat.tokenUsage" = "%@ / %@ tokens";
+"chat.messageStats" = "%d 条消息（%d 条已压缩）";
+"chat.pendingCompression" = "压缩 %d 条消息";
+"chat.compressedBadge" = "%d 条已压缩";
 "chat.cancelStuckReason" = "停止耗时超出预期 — 可能有工具调用仍在执行中，即将强制停止…";
 "chat.forceStoppedContent" = "\n\n⚠️ *[已强制停止 — 某个工具调用无法及时中断]*";
 "chat.deleteSessionTitle" = "删除会话";

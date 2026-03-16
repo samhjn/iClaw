@@ -1,8 +1,8 @@
 import Foundation
 
 final class ContextManager {
-    static let defaultMaxTokens = 8000
-    static let compressionThreshold = 6000
+    static let defaultMaxTokens = 32000
+    static let compressionThreshold = 24000
 
     let maxContextTokens: Int
 
@@ -16,16 +16,35 @@ final class ContextManager {
     ) -> [LLMChatMessage] {
         var messages: [LLMChatMessage] = []
 
+        let hasCompressed = session.compressedUpToIndex > 0
+        let compressed = session.compressedContext ?? ""
+
         var fullSystemPrompt = systemPrompt
-        if let compressed = session.compressedContext, !compressed.isEmpty {
-            fullSystemPrompt += "\n\n---\n\n## Earlier Conversation Summary\n\n\(compressed)"
+        if hasCompressed, !compressed.isEmpty {
+            fullSystemPrompt += "\n\n---\n\n"
+            fullSystemPrompt += "## Compressed Conversation History\n\n"
+            fullSystemPrompt += "**The following is a structured summary of earlier messages. "
+            fullSystemPrompt += "The \"Active Directives\" section contains user instructions that are STILL IN EFFECT — "
+            fullSystemPrompt += "you MUST continue to follow them as if the user just said them.**\n\n"
+            fullSystemPrompt += compressed
         }
         messages.append(.system(fullSystemPrompt))
 
         let systemTokens = TokenEstimator.estimate(fullSystemPrompt)
-        let availableTokens = maxContextTokens - systemTokens
+        var availableTokens = maxContextTokens - systemTokens
 
         let sorted = session.sortedMessages.filter { $0.role != .system }
+
+        // When compression has occurred, pin the first user message (original
+        // task instruction) so the LLM never loses the user's initial intent.
+        if hasCompressed {
+            if let firstUserMsg = sorted.first(where: { $0.role == .user }) {
+                let anchor = convertToLLMMessage(firstUserMsg)
+                let anchorTokens = TokenEstimator.estimateMessage(firstUserMsg)
+                messages.append(anchor)
+                availableTokens -= anchorTokens
+            }
+        }
 
         let recentMessages = selectRecentMessages(
             from: sorted,
