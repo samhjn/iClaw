@@ -5,7 +5,6 @@ enum ToolDefinitions {
         [
             readConfigTool,
             writeConfigTool,
-            executePythonTool,
             executeJavaScriptTool,
             saveCodeTool,
             loadCodeTool,
@@ -59,20 +58,9 @@ enum ToolDefinitions {
         required: ["key", "content"]
     )
 
-    static let executePythonTool = ToolDefinitionBuilder.build(
-        name: "execute_python",
-        description: "Execute Python code in a sandbox. In 'repr' mode, evaluates an expression and returns its repr(). In 'script' mode, runs a script and captures stdout/stderr. Supports: math, json, re, datetime, random, base64, collections modules. Network: requests.get()/post() and urllib.request.urlopen(). String/list/dict methods work as in Python. Default timeout is 60s (configurable via 'python_timeout' config key, max 300s).",
-        properties: [
-            "code": ToolDefinitionBuilder.stringParam("The Python code to execute"),
-            "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
-            "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60 or agent config)")
-        ],
-        required: ["code"]
-    )
-
     static let executeJavaScriptTool = ToolDefinitionBuilder.build(
         name: "execute_javascript",
-        description: "Execute JavaScript code natively via JavaScriptCore. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). Default timeout 60s (max 300s).",
+        description: "Execute JavaScript code in a WKWebView sandbox. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). Default timeout 60s (max 300s).",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The JavaScript code to execute"),
             "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
@@ -86,7 +74,7 @@ enum ToolDefinitions {
         description: "Save a code snippet to the agent's config space for later reuse.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("A descriptive name for the code snippet"),
-            "language": ToolDefinitionBuilder.stringParam("The programming language (e.g. 'python', 'javascript')"),
+            "language": ToolDefinitionBuilder.stringParam("The programming language (e.g. 'javascript')"),
             "code": ToolDefinitionBuilder.stringParam("The code content to save")
         ],
         required: ["name", "code"]

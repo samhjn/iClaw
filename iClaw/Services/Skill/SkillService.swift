@@ -156,7 +156,7 @@ enum BuiltInSkills {
 
             ## Process
             1. **Decompose** the question into sub-questions
-            2. **Search** for information using available tools (Python for web scraping, etc.)
+            2. **Search** for information using available tools (JavaScript for web scraping, etc.)
             3. **Evaluate** source credibility and recency
             4. **Synthesize** findings into a coherent analysis
             5. **Cite** sources and note confidence levels

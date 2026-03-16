@@ -1,6 +1,4 @@
 //
 //  iClaw-Bridging-Header.h
-//  Bridging header to expose C functions to Swift.
+//  Bridging header — currently unused.
 //
-
-#import "MicroPython/micropython_bridge.h"

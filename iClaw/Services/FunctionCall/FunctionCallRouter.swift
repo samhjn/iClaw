@@ -7,15 +7,13 @@ final class FunctionCallRouter {
     let sessionId: UUID?
     private let agentService: AgentService
     private let subAgentManager: SubAgentManager
-    private let executor: CodeExecutor
 
-    init(agent: Agent, modelContext: ModelContext, sessionId: UUID? = nil, executor: CodeExecutor? = nil) {
+    init(agent: Agent, modelContext: ModelContext, sessionId: UUID? = nil) {
         self.agent = agent
         self.modelContext = modelContext
         self.sessionId = sessionId
         self.agentService = AgentService(modelContext: modelContext)
         self.subAgentManager = SubAgentManager(modelContext: modelContext)
-        self.executor = executor ?? CodeExecutorRegistry.shared.defaultExecutor()
     }
 
     func execute(toolCall: LLMToolCall) async -> String {
@@ -31,24 +29,20 @@ final class FunctionCallRouter {
             return ConfigTools(agentService: agentService, agent: agent)
                 .writeConfig(arguments: arguments)
 
-        case "execute_python":
-            let tools = CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
-            return await tools.executePython(arguments: arguments)
-
         case "execute_javascript":
-            let tools = CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
+            let tools = CodeExecutionTools(agent: agent, modelContext: modelContext)
             return await tools.executeJavaScript(arguments: arguments)
 
         case "save_code":
-            return CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
+            return CodeExecutionTools(agent: agent, modelContext: modelContext)
                 .saveCode(arguments: arguments)
 
         case "load_code":
-            return CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
+            return CodeExecutionTools(agent: agent, modelContext: modelContext)
                 .loadCode(arguments: arguments)
 
         case "list_code":
-            return CodeExecutionTools(agent: agent, modelContext: modelContext, executor: executor)
+            return CodeExecutionTools(agent: agent, modelContext: modelContext)
                 .listCode()
 
         case "create_sub_agent":

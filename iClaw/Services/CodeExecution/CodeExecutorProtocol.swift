@@ -45,14 +45,14 @@ enum CodeExecutorError: LocalizedError {
     case executorNotAvailable(String)
     case executionFailed(String)
     case timeout
-    case memoryLimitExceeded
+    case runtimeCrashed
 
     var errorDescription: String? {
         switch self {
         case .executorNotAvailable(let lang): return "\(lang) executor is not available"
         case .executionFailed(let msg): return "Execution failed: \(msg)"
         case .timeout: return "Execution timed out"
-        case .memoryLimitExceeded: return "Memory limit exceeded"
+        case .runtimeCrashed: return "JavaScript runtime crashed — will auto-recover on next execution"
         }
     }
 }

@@ -663,7 +663,7 @@ final class ChatViewModel {
         let compressedIdx = session.compressedUpToIndex
         let totalMsgs = session.messages.count
 
-        let sorted = session.sortedMessages
+        _ = session.sortedMessages
         let pendingEnd = max(totalMsgs - 3, compressedIdx)
         let pendingCount = max(pendingEnd - compressedIdx, 0)
 

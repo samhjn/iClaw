@@ -90,7 +90,7 @@ final class SessionCompressor {
         """
 
         let promptTokens = TokenEstimator.estimate(compressionPrompt)
-        print("\(tag) Compression prompt ≈\(promptTokens) tokens, model=\(llmService.provider.modelName), maxOutputTokens=\(llmService.provider.maxTokens ?? -1)")
+        print("\(tag) Compression prompt ≈\(promptTokens) tokens, model=\(llmService.provider.modelName), maxOutputTokens=\(llmService.provider.maxTokens)")
 
         do {
             let messages: [LLMChatMessage] = [

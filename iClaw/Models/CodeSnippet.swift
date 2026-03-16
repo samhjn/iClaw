@@ -11,7 +11,7 @@ final class CodeSnippet {
     var createdAt: Date
     var updatedAt: Date
 
-    init(name: String, language: String = "python", code: String, agent: Agent? = nil) {
+    init(name: String, language: String = "javascript", code: String, agent: Agent? = nil) {
         self.id = UUID()
         self.name = name
         self.language = language

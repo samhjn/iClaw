@@ -6,13 +6,8 @@ final class CodeExecutorRegistry: @unchecked Sendable {
 
     private var executors: [String: CodeExecutor] = [:]
 
-    private let fallbackExecutor = JSCorePythonExecutor()
-
     private init() {
-        let micropythonExecutor = MicroPythonExecutor()
-        register(micropythonExecutor)
-        let jsExecutor = JavaScriptExecutor()
-        register(jsExecutor)
+        register(JavaScriptExecutor())
     }
 
     func register(_ executor: CodeExecutor) {
@@ -28,6 +23,6 @@ final class CodeExecutorRegistry: @unchecked Sendable {
     }
 
     func defaultExecutor() -> CodeExecutor {
-        executors["python"] ?? fallbackExecutor
+        executors["javascript"] ?? JavaScriptExecutor()
     }
 }

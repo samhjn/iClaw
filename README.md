@@ -26,7 +26,7 @@ Most AI chat apps are just chat boxes. **iClaw is different** — it's a full-bl
 | | Typical AI Chat | iClaw |
 |---|---|---|
 | **Personas** | Single conversation | Multiple agents, each with independent personality & memory |
-| **Code Execution** | Not supported | Built-in Python & JavaScript interpreters |
+| **Code Execution** | Not supported | Built-in JavaScript interpreters |
 | **Web Automation** | Not supported | In-App Browser with agent-driven automation |
 | **Context** | Long conversations lose context | Auto-compression + summary injection — never forgets |
 | **Extensibility** | Closed | Skill system + Cron jobs + Sub-agents |
@@ -50,7 +50,7 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 | **Architecture** | Client-Server — requires a Gateway running on Mac/Linux/Windows | Fully standalone — everything runs natively on iOS, no server needed |
 | **Tech stack** | TypeScript + Node.js | Swift + SwiftUI + SwiftData |
 | **Channels** | 29+ messaging platforms (WhatsApp, Telegram, Slack…) | Dedicated native iOS experience, optimized for mobile |
-| **Code execution** | Server-side shell & Docker sandboxing | On-device Python (MicroPython) & JavaScript (JSCore), works offline |
+| **Code execution** | Server-side shell & Docker sandboxing | On-device JavaScript (WKWebView sandbox), works offline |
 | **Data storage** | JSONL transcripts + vector DB on Gateway | SwiftData on-device, zero cloud dependency |
 | **Setup** | Install Node ≥22, run Gateway, pair clients | Open Xcode, build, done |
 | **Target** | Power users running a home server or VPS | Anyone with an iPhone who wants AI agents on the go |
@@ -68,8 +68,7 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 - Flexible Markdown config space — you define how each agent behaves
 
 ### ⚡ On-Device Code Execution
-- **Python interpreter** — powered by MicroPython, runs offline
-- **JavaScript interpreter** — powered by JSCore, native performance
+- **JavaScript interpreter** — executed in a WKWebView sandbox with automatic crash recovery
 - Two execution modes: `repr` (expression evaluation) and `script` (full scripts)
 - Save and reuse code snippets — build your mobile code library
 
@@ -94,7 +93,7 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 
 ### 🛠 Powerful Function Calling
 - `read_config` / `write_config` — read and modify agent mind files
-- `execute_python` / `execute_javascript` — run code
+- `execute_javascript` — run code
 - `save_code` / `load_code` / `list_code` — manage code snippets
 - `create_sub_agent` / `message_sub_agent` — sub-agent lifecycle management
 - `schedule_cron` / `unschedule_cron` — scheduled task management
@@ -172,7 +171,7 @@ iClaw/
 | UI | SwiftUI + Declarative Navigation |
 | State | Observation Framework (`@Observable`) |
 | Persistence | SwiftData |
-| Code Execution | MicroPython · JavaScriptCore |
+| Code Execution | WKWebView Sandbox |
 | Web Automation | WKWebView + Agent-driven function calling |
 | Networking | URLSession + SSE Streaming |
 | Project Gen | XcodeGen |

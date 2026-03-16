@@ -41,15 +41,4 @@ targets:
         CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED: "YES"
         ENABLE_USER_SCRIPT_SANDBOXING: "YES"
         ENABLE_PREVIEWS: "YES"
-        SWIFT_OBJC_BRIDGING_HEADER: iClaw/iClaw-Bridging-Header.h
-        OTHER_CFLAGS:
-          - "-IiClaw/MicroPython"
-          - "-IiClaw/MicroPython/micropython_embed"
-          - "-IiClaw/MicroPython/micropython_embed/port"
-          - "-Wno-unused-parameter"
-          - "-Wno-sign-compare"
-          - "-Wno-missing-field-initializers"
-          - "-Wno-unreachable-code"
-          - "-Wno-unused-variable"
-          - "-Wno-error"
-          - "-std=c99"
+        SWIFT_OBJC_BRIDGING_HEADER: ""
