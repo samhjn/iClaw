@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Renders markdown content with support for headers, code blocks, inline code,
 /// bold, italic, strikethrough, links, images, tables, task lists, lists,
@@ -267,6 +268,7 @@ struct MarkdownContentView: View {
                    t.hasPrefix("- ") || t.hasPrefix("* ") || t.hasPrefix("+ ") ||
                    t == "---" || t == "***" || t == "___" ||
                    isTaskListItem(t) ||
+                   parseBlockImage(t) != nil ||
                    t.range(of: "^\\d+[.)]+\\s", options: .regularExpression) != nil {
                     break
                 }
@@ -274,7 +276,21 @@ struct MarkdownContentView: View {
                 i += 1
             }
             if !paraLines.isEmpty {
-                blocks.append(.paragraph(text: paraLines.joined(separator: " ")))
+                let joined = paraLines.joined(separator: " ")
+                let segments = splitParagraphIntoSegments(joined)
+                if segments.count == 1, case .text = segments[0] {
+                    blocks.append(.paragraph(text: joined))
+                } else {
+                    for seg in segments {
+                        switch seg {
+                        case .text(let t):
+                            let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmed.isEmpty { blocks.append(.paragraph(text: trimmed)) }
+                        case .image(let alt, let url):
+                            blocks.append(.image(alt: alt, url: url))
+                        }
+                    }
+                }
             }
         }
 
@@ -344,6 +360,56 @@ struct MarkdownContentView: View {
             alignments: normalizedAlignments,
             rows: normalizedRows
         )
+    }
+
+    // MARK: - Paragraph Segment Splitting
+
+    private enum ParagraphSegment {
+        case text(String)
+        case image(alt: String, url: String)
+    }
+
+    private func splitParagraphIntoSegments(_ text: String) -> [ParagraphSegment] {
+        var segments: [ParagraphSegment] = []
+        var remaining = text[text.startIndex...]
+
+        while let imgStart = remaining.range(of: "![") {
+            let before = String(remaining[remaining.startIndex..<imgStart.lowerBound])
+            if !before.trimmingCharacters(in: .whitespaces).isEmpty {
+                segments.append(.text(before))
+            }
+
+            let afterBang = remaining[imgStart.upperBound...]
+            guard let closeBracket = afterBang.firstIndex(of: "]") else {
+                segments.append(.text(String(remaining)))
+                return segments
+            }
+            let alt = String(afterBang[afterBang.startIndex..<closeBracket])
+            let afterBracket = afterBang[afterBang.index(after: closeBracket)...]
+            guard afterBracket.hasPrefix("(") else {
+                segments.append(.text(String(remaining[remaining.startIndex...closeBracket])))
+                remaining = afterBracket
+                continue
+            }
+            let urlPart = afterBracket.dropFirst()
+            guard let closeParen = urlPart.firstIndex(of: ")") else {
+                segments.append(.text(String(remaining)))
+                return segments
+            }
+            let url = String(urlPart[urlPart.startIndex..<closeParen])
+            segments.append(.image(alt: alt, url: url))
+            remaining = urlPart[urlPart.index(after: closeParen)...]
+        }
+
+        let tail = String(remaining)
+        if !tail.trimmingCharacters(in: .whitespaces).isEmpty {
+            segments.append(.text(tail))
+        }
+
+        if segments.isEmpty {
+            return [.text(text)]
+        }
+        return segments
     }
 
     // MARK: - Image Parsing
@@ -645,9 +711,28 @@ private struct MarkdownImageView: View {
     let urlString: String
     let isUserMessage: Bool
 
+    private var isDataURI: Bool { urlString.hasPrefix("data:image/") }
+
+    private var dataURIImage: UIImage? {
+        guard isDataURI, let commaIdx = urlString.firstIndex(of: ",") else { return nil }
+        let base64 = String(urlString[urlString.index(after: commaIdx)...])
+        guard let data = Data(base64Encoded: base64, options: .ignoreUnknownCharacters) else { return nil }
+        return UIImage(data: data)
+    }
+
     var body: some View {
-        if let url = URL(string: urlString) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            if isDataURI {
+                if let uiImage = dataURIImage {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: 400, maxHeight: 400)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    imageFailedView
+                }
+            } else if let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
@@ -662,41 +747,45 @@ private struct MarkdownImageView: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 400, maxHeight: 300)
+                            .frame(maxWidth: 400, maxHeight: 400)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     case .failure:
-                        HStack(spacing: 6) {
-                            Image(systemName: "photo.badge.exclamationmark")
-                                .foregroundStyle(.secondary)
-                            Text(L10n.Chat.imageLoadFailed)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(.systemGray6))
-                        )
+                        imageFailedView
                     @unknown default:
                         EmptyView()
                     }
                 }
-
-                if !alt.isEmpty {
-                    Text(alt)
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "link.badge.plus")
+                        .foregroundStyle(.secondary)
+                    Text(alt.isEmpty ? urlString.prefix(80) + "…" : alt)
                         .font(.caption)
-                        .foregroundStyle(isUserMessage ? .white.opacity(0.6) : .secondary)
-                        .italic()
+                        .foregroundStyle(.secondary)
                 }
             }
-        } else {
-            HStack(spacing: 6) {
-                Image(systemName: "link.badge.plus")
-                    .foregroundStyle(.secondary)
-                Text(alt.isEmpty ? urlString : alt)
+
+            if !alt.isEmpty {
+                Text(alt)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isUserMessage ? .white.opacity(0.6) : .secondary)
+                    .italic()
             }
         }
+    }
+
+    private var imageFailedView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "photo.badge.exclamationmark")
+                .foregroundStyle(.secondary)
+            Text(L10n.Chat.imageLoadFailed)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemGray6))
+        )
     }
 }

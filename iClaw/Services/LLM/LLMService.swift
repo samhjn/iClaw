@@ -2,6 +2,7 @@ import Foundation
 
 enum StreamChunk {
     case content(String)
+    case thinking(String)
     case toolCall(LLMToolCall)
     case done
     case error(String)
@@ -63,6 +64,7 @@ final class LLMService: @unchecked Sendable {
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]? = nil
     ) async throws -> LLMChatResponse {
+        let modalities: [String]? = provider.supportsImageGeneration ? ["image", "text"] : nil
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -70,7 +72,8 @@ final class LLMService: @unchecked Sendable {
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: false,
             maxTokens: provider.maxTokens,
-            temperature: provider.temperature
+            temperature: provider.temperature,
+            modalities: modalities
         )
 
         let urlRequest = try buildRequest(body: request)
@@ -94,6 +97,7 @@ final class LLMService: @unchecked Sendable {
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]? = nil
     ) async throws -> AsyncStream<StreamChunk> {
+        let modalities: [String]? = provider.supportsImageGeneration ? ["image", "text"] : nil
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -101,7 +105,8 @@ final class LLMService: @unchecked Sendable {
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: true,
             maxTokens: provider.maxTokens,
-            temperature: provider.temperature
+            temperature: provider.temperature,
+            modalities: modalities
         )
 
         let urlRequest = try buildRequest(body: request)
@@ -141,6 +146,10 @@ final class LLMService: @unchecked Sendable {
                                 guard let chunk = try? JSONDecoder().decode(LLMChatResponse.self, from: jsonData) else { continue }
 
                                 if let delta = chunk.choices.first?.delta {
+                                    if let reasoning = delta.reasoningContent {
+                                        continuation.yield(.thinking(reasoning))
+                                    }
+
                                     if let content = delta.content {
                                         continuation.yield(.content(content))
                                     }

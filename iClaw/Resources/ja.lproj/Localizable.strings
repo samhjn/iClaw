@@ -57,6 +57,11 @@
 "chat.deleteSessionMessage" = "このセッションとすべてのメッセージが完全に削除されます。この操作は元に戻せません。";
 "chat.deleteAgentTitle" = "エージェントを削除";
 "chat.deleteAgentMessage" = "エージェント「%@」とそのすべてのセッション、サブエージェント、データが完全に削除されます。この操作は元に戻せません。";
+"chat.thinkingProcess" = "思考プロセス";
+"chat.addImage" = "画像を追加";
+"chat.photoLibrary" = "写真ライブラリ";
+"chat.camera" = "カメラ";
+"chat.pasteFromClipboard" = "クリップボードから貼り付け";
 
 // MARK: - Agents
 "agents.title" = "エージェント";
@@ -224,6 +229,12 @@
 "provider.remoteModelsFooter" = "APIエンドポイントからモデルを取得し、必要なものを有効にします。";
 "provider.maxTokens" = "最大トークン数：%d";
 "provider.parameters" = "パラメータ";
+"provider.supportsVision" = "ビジョン対応";
+"provider.supportsVisionFooter" = "このモデルが画像入力に対応している場合は有効にしてください（例：GPT-4o、Claude 3.5 Sonnet）";
+"provider.supportsToolUse" = "ツール使用対応";
+"provider.supportsToolUseFooter" = "このモデルが関数呼び出し/ツール使用に対応していない場合は無効にしてください（一部の OpenRouter モデル）";
+"provider.supportsImageGeneration" = "画像生成対応";
+"provider.supportsImageGenerationFooter" = "画像を生成できるモデルで有効にしてください（例：Gemini 2.5 Flash Image / Nano Banana）。APIにmodalitiesパラメータを送信します。";
 "provider.presets" = "プリセット";
 
 // MARK: - Skills

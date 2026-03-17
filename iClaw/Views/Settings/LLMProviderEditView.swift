@@ -12,6 +12,9 @@ struct LLMProviderEditView: View {
     @State private var modelName: String = "gpt-4o"
     @State private var maxTokens: Int = 4096
     @State private var temperature: Double = 0.7
+    @State private var supportsVision: Bool = false
+    @State private var supportsToolUse: Bool = true
+    @State private var supportsImageGeneration: Bool = false
 
     @State private var fetchedModels: [String] = []
     @State private var enabledModels: Set<String> = []
@@ -76,6 +79,9 @@ struct LLMProviderEditView: View {
                 modelName = p.modelName
                 maxTokens = p.maxTokens
                 temperature = p.temperature
+                supportsVision = p.supportsVision
+                supportsToolUse = p.supportsToolUse
+                supportsImageGeneration = p.supportsImageGeneration
                 enabledModels = Set(p.enabledModels)
                 fetchedModels = p.cachedModelList
             } else {
@@ -267,8 +273,21 @@ struct LLMProviderEditView: View {
                 Text("Temperature: \(temperature, specifier: "%.2f")")
                 Slider(value: $temperature, in: 0...2, step: 0.05)
             }
+            Toggle(L10n.Provider.supportsVision, isOn: $supportsVision)
+            Toggle(L10n.Provider.supportsToolUse, isOn: $supportsToolUse)
+            Toggle(L10n.Provider.supportsImageGeneration, isOn: $supportsImageGeneration)
         } header: {
             Text(L10n.Provider.parameters)
+        } footer: {
+            if supportsVision {
+                Text(L10n.Provider.supportsVisionFooter)
+            }
+            if !supportsToolUse {
+                Text(L10n.Provider.supportsToolUseFooter)
+            }
+            if supportsImageGeneration {
+                Text(L10n.Provider.supportsImageGenerationFooter)
+            }
         }
     }
 
@@ -310,6 +329,9 @@ struct LLMProviderEditView: View {
             p.modelName = modelName
             p.maxTokens = maxTokens
             p.temperature = temperature
+            p.supportsVision = supportsVision
+            p.supportsToolUse = supportsToolUse
+            p.supportsImageGeneration = supportsImageGeneration
             p.enabledModels = Array(enabledModels)
             p.cachedModelList = fetchedModels
             viewModel.updateProvider(p)
@@ -323,6 +345,9 @@ struct LLMProviderEditView: View {
                 maxTokens: maxTokens,
                 temperature: temperature
             )
+            provider.supportsVision = supportsVision
+            provider.supportsToolUse = supportsToolUse
+            provider.supportsImageGeneration = supportsImageGeneration
             provider.enabledModels = Array(enabledModels)
             provider.cachedModelList = fetchedModels
             viewModel.addProviderDirectly(provider)

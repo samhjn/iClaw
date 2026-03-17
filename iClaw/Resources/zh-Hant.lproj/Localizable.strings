@@ -57,6 +57,11 @@
 "chat.deleteSessionMessage" = "此對話及其所有訊息將被永久刪除，此操作無法撤銷。";
 "chat.deleteAgentTitle" = "刪除智能體";
 "chat.deleteAgentMessage" = "智能體「%@」及其所有對話、子智能體和資料將被永久刪除，此操作無法撤銷。";
+"chat.thinkingProcess" = "思考過程";
+"chat.addImage" = "新增圖片";
+"chat.photoLibrary" = "相簿";
+"chat.camera" = "拍照";
+"chat.pasteFromClipboard" = "從剪貼簿貼上";
 
 // MARK: - Agents
 "agents.title" = "智能體";
@@ -224,6 +229,12 @@
 "provider.remoteModelsFooter" = "從 API 端點擷取模型列表，然後啟用你需要的模型。";
 "provider.maxTokens" = "最大 Tokens：%d";
 "provider.parameters" = "參數";
+"provider.supportsVision" = "支援視覺";
+"provider.supportsVisionFooter" = "如果此模型支援圖片輸入請啟用（如 GPT-4o、Claude 3.5 Sonnet）";
+"provider.supportsToolUse" = "支援工具呼叫";
+"provider.supportsToolUseFooter" = "如果此模型不支援函式呼叫/工具使用請關閉（部分 OpenRouter 模型）";
+"provider.supportsImageGeneration" = "支援圖片生成";
+"provider.supportsImageGenerationFooter" = "為能生成圖片的模型啟用（如 Gemini 2.5 Flash Image / Nano Banana），將向 API 傳送 modalities 參數";
 "provider.presets" = "預設";
 
 // MARK: - Skills

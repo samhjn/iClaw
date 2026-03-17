@@ -57,6 +57,11 @@
 "chat.deleteSessionMessage" = "This session and all its messages will be permanently deleted. This cannot be undone.";
 "chat.deleteAgentTitle" = "Delete Agent";
 "chat.deleteAgentMessage" = "Agent \"%@\" and all its sessions, sub-agents, and data will be permanently deleted. This cannot be undone.";
+"chat.thinkingProcess" = "Thinking Process";
+"chat.addImage" = "Add Image";
+"chat.photoLibrary" = "Photo Library";
+"chat.camera" = "Camera";
+"chat.pasteFromClipboard" = "Paste from Clipboard";
 
 // MARK: - Agents
 "agents.title" = "Agents";
@@ -224,6 +229,12 @@
 "provider.remoteModelsFooter" = "Fetch models from the API endpoint, then enable the ones you need.";
 "provider.maxTokens" = "Max Tokens: %d";
 "provider.parameters" = "Parameters";
+"provider.supportsVision" = "Supports Vision";
+"provider.supportsVisionFooter" = "Enable if this model supports image inputs (e.g. GPT-4o, Claude 3.5 Sonnet)";
+"provider.supportsToolUse" = "Supports Tool Use";
+"provider.supportsToolUseFooter" = "Disable if this model does not support function calling / tool use (some OpenRouter models)";
+"provider.supportsImageGeneration" = "Supports Image Generation";
+"provider.supportsImageGenerationFooter" = "Enable for models that can generate images (e.g. Gemini 2.5 Flash Image / Nano Banana). Sends modalities parameter to the API.";
 "provider.presets" = "Presets";
 
 // MARK: - Skills

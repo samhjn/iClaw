@@ -97,14 +97,15 @@ private struct ChatContentView: View {
                                 .id(message.id)
                         }
 
-                        if vm.isLoading && !vm.streamingContent.isEmpty {
+                        if vm.isLoading && (!vm.streamingContent.isEmpty || !vm.streamingThinking.isEmpty) {
                             MessageBubbleView(
-                                streamingContent: vm.streamingContent
+                                streamingContent: vm.streamingContent,
+                                streamingThinking: vm.streamingThinking
                             )
                             .id("streaming")
                         }
 
-                        if vm.isLoading && vm.streamingContent.isEmpty && !vm.isCompressing {
+                        if vm.isLoading && vm.streamingContent.isEmpty && vm.streamingThinking.isEmpty && !vm.isCompressing {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 4)
@@ -219,10 +220,13 @@ private struct ChatContentView: View {
                 isBlocked: !vm.canSend,
                 isCancelling: vm.isCancelling,
                 cancelFailureReason: vm.cancelFailureReason,
+                pendingImages: vm.pendingImages,
                 onSend: { vm.sendMessage() },
                 onStop: { vm.cancelGeneration() },
                 onStopCompression: { vm.cancelCompression() },
-                onDismissKeyboard: {}
+                onDismissKeyboard: {},
+                onAddImage: { vm.addImage($0) },
+                onRemoveImage: { vm.removeImage(id: $0) }
             )
         }
     }
