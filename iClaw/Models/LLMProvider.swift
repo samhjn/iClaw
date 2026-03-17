@@ -24,6 +24,15 @@ final class LLMProvider {
     /// When the model list was last fetched.
     var cachedModelListDate: Date?
 
+    /// Whether this provider's default model supports image/vision inputs.
+    var supportsVision: Bool = false
+
+    /// Whether this provider's default model supports tool/function calling.
+    var supportsToolUse: Bool = true
+
+    /// Whether this provider's default model supports image generation output.
+    var supportsImageGeneration: Bool = false
+
     // MARK: - Computed
 
     var enabledModels: [String] {
@@ -72,5 +81,6 @@ final class LLMProvider {
         self.enabledModelsRaw = nil
         self.cachedModelListRaw = nil
         self.cachedModelListDate = nil
+        self.supportsVision = false
     }
 }

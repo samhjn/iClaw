@@ -90,6 +90,11 @@ enum L10n {
         static var deleteSessionMessage: String { tr("chat.deleteSessionMessage") }
         static var deleteAgentTitle: String { tr("chat.deleteAgentTitle") }
         static func deleteAgentMessage(_ name: String) -> String { tr("chat.deleteAgentMessage", name) }
+        static var thinkingProcess: String { tr("chat.thinkingProcess") }
+        static var addImage: String { tr("chat.addImage") }
+        static var photoLibrary: String { tr("chat.photoLibrary") }
+        static var camera: String { tr("chat.camera") }
+        static var pasteFromClipboard: String { tr("chat.pasteFromClipboard") }
     }
 
     // MARK: - Agents
@@ -281,6 +286,12 @@ enum L10n {
         static var remoteModelsFooter: String { tr("provider.remoteModelsFooter") }
         static func maxTokens(_ value: Int) -> String { tr("provider.maxTokens", value) }
         static var parameters: String { tr("provider.parameters") }
+        static var supportsVision: String { tr("provider.supportsVision") }
+        static var supportsVisionFooter: String { tr("provider.supportsVisionFooter") }
+        static var supportsToolUse: String { tr("provider.supportsToolUse") }
+        static var supportsToolUseFooter: String { tr("provider.supportsToolUseFooter") }
+        static var supportsImageGeneration: String { tr("provider.supportsImageGeneration") }
+        static var supportsImageGenerationFooter: String { tr("provider.supportsImageGenerationFooter") }
         static var presets: String { tr("provider.presets") }
     }
 

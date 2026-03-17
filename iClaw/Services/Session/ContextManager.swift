@@ -12,7 +12,8 @@ final class ContextManager {
 
     func buildContextWindow(
         session: Session,
-        systemPrompt: String
+        systemPrompt: String,
+        supportsVision: Bool = false
     ) -> [LLMChatMessage] {
         var messages: [LLMChatMessage] = []
 
@@ -39,7 +40,7 @@ final class ContextManager {
         // task instruction) so the LLM never loses the user's initial intent.
         if hasCompressed {
             if let firstUserMsg = sorted.first(where: { $0.role == .user }) {
-                let anchor = convertToLLMMessage(firstUserMsg)
+                let anchor = convertToLLMMessage(firstUserMsg, supportsVision: supportsVision)
                 let anchorTokens = TokenEstimator.estimateMessage(firstUserMsg)
                 messages.append(anchor)
                 availableTokens -= anchorTokens
@@ -53,7 +54,7 @@ final class ContextManager {
         )
 
         for msg in recentMessages {
-            messages.append(convertToLLMMessage(msg))
+            messages.append(convertToLLMMessage(msg, supportsVision: supportsVision))
         }
 
         return messages
@@ -138,10 +139,16 @@ final class ContextManager {
         return result
     }
 
-    private func convertToLLMMessage(_ message: Message) -> LLMChatMessage {
+    private func convertToLLMMessage(_ message: Message, supportsVision: Bool = false) -> LLMChatMessage {
         switch message.role {
         case .user:
-            return .user(message.content ?? "")
+            let text = message.content ?? ""
+            if supportsVision, let imgData = message.imageAttachmentsData,
+               let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
+               !images.isEmpty {
+                return .userWithImages(text, images: images)
+            }
+            return .user(text)
         case .assistant:
             var toolCalls: [LLMToolCall]? = nil
             if let data = message.toolCallsData {

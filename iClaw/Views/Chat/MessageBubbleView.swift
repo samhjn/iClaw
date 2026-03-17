@@ -3,6 +3,7 @@ import SwiftUI
 struct MessageBubbleView: View {
     var message: Message?
     var streamingContent: String?
+    var streamingThinking: String?
 
     private var role: MessageRole {
         message?.role ?? .assistant
@@ -27,6 +28,11 @@ struct MessageBubbleView: View {
     private var toolCalls: [LLMToolCall]? {
         guard let data = message?.toolCallsData else { return nil }
         return try? JSONDecoder().decode([LLMToolCall].self, from: data)
+    }
+
+    private var imageAttachments: [ImageAttachment] {
+        guard let data = message?.imageAttachmentsData else { return [] }
+        return (try? JSONDecoder().decode([ImageAttachment].self, from: data)) ?? []
     }
 
     /// The best copyable text for this message.
@@ -75,32 +81,60 @@ struct MessageBubbleView: View {
         }
     }
 
+    private var thinkingText: String? {
+        if let streaming = streamingThinking, !streaming.isEmpty { return streaming }
+        return message?.thinkingContent
+    }
+
+    private var isStreamingThinking: Bool {
+        streamingThinking != nil && !(streamingThinking?.isEmpty ?? true)
+    }
+
     @ViewBuilder
     private var bubbleView: some View {
         if isUser {
-            Text(content)
-                .font(.body)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.accentColor)
-                )
-                .foregroundStyle(.white)
-                .textSelection(.enabled)
+            VStack(alignment: .trailing, spacing: 6) {
+                if !imageAttachments.isEmpty {
+                    MessageImageGrid(images: imageAttachments)
+                }
+                if !content.isEmpty {
+                    Text(content)
+                        .font(.body)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.accentColor)
+                        )
+                        .foregroundStyle(.white)
+                        .textSelection(.enabled)
+                }
+            }
         } else {
-            MarkdownContentView(content, isUser: false)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemGray6))
-                )
-                .foregroundStyle(.primary)
+            VStack(alignment: .leading, spacing: 8) {
+                if let thinking = thinkingText, !thinking.isEmpty {
+                    ThinkingBubbleView(content: thinking, isStreaming: isStreamingThinking)
+                }
+
+                if !content.isEmpty {
+                    MarkdownContentView(content, isUser: false)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemGray6))
+                        )
+                        .foregroundStyle(.primary)
+                }
+            }
         }
     }
 
     @ViewBuilder
     private func assistantWithToolCalls(_ calls: [LLMToolCall]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+            if let thinking = thinkingText, !thinking.isEmpty {
+                ThinkingBubbleView(content: thinking, isStreaming: false)
+            }
+
             if !content.isEmpty {
                 MarkdownContentView(content, isUser: false)
                     .padding(12)
@@ -112,6 +146,31 @@ struct MessageBubbleView: View {
             }
 
             ToolCallCardView(toolCalls: calls)
+        }
+    }
+}
+
+// MARK: - Image Grid for User Messages
+
+private struct MessageImageGrid: View {
+    let images: [ImageAttachment]
+
+    var body: some View {
+        let columns = images.count == 1
+            ? [GridItem(.flexible())]
+            : [GridItem(.flexible()), GridItem(.flexible())]
+
+        LazyVGrid(columns: columns, spacing: 4) {
+            ForEach(images) { attachment in
+                if let uiImage = attachment.uiImage {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: images.count == 1 ? 240 : 140,
+                               maxHeight: images.count == 1 ? 240 : 140)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
         }
     }
 }

@@ -35,10 +35,12 @@
 		61421AF6F0FB7E917E95E6A9 /* BrowserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55F9A5CBD3F3B003E8A86C4 /* BrowserService.swift */; };
 		628BCBFC19D88157A8EFDD3C /* DefaultUSER.md in Resources */ = {isa = PBXBuildFile; fileRef = D07AF5898D7488DC64851298 /* DefaultUSER.md */; };
 		6B85CD4FB789F54E9FD8EBA3 /* CodeBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8354042E2D98C05EE37868DF /* CodeBlockView.swift */; };
+		6B907713A265A78879C9F169 /* ImageAttachmentBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60474D86762EE55CA8F081A5 /* ImageAttachmentBar.swift */; };
 		6D4BF00B528847FCAA2BCB0C /* BrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75A5996BFB27A762E437D7C8 /* BrowserView.swift */; };
 		6DA4A08DC1D5A92B9DA2F71C /* FunctionCallRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C739D21301D859C4813C401 /* FunctionCallRouter.swift */; };
 		7233CD62A03AF9B1557B2534 /* CodeExecutionTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */; };
 		728A3FDAD5084D7C4D2749F6 /* SkillTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4383D71D07DF723A7E50B296 /* SkillTools.swift */; };
+		7A671684A118FB4A6680AA21 /* ThinkingBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2916FDF1095FACD6720D86C /* ThinkingBubbleView.swift */; };
 		7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C079B073E715BB0CB659334 /* SessionService.swift */; };
 		8030E44584B6E3B97613AFAC /* SubAgentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 380F4D6FD89A274BEE1F4FB9 /* SubAgentManager.swift */; };
 		839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */; };
@@ -80,6 +82,7 @@
 		FDDE9D65862C12B78CA29B7A /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053D417C1955A1DA746C1ECC /* L10n.swift */; };
 		FF140850C540F0F7738C5541 /* AgentModelConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */; };
 		FFBFC17FDBADDACBBF100EEE /* CodeExecutorProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */; };
+		FFCC6CE88E20DC424CBBD97C /* ImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124D5FCA5AE888BFD29F9B04 /* ImageAttachment.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +93,7 @@
 		092DD5EE7670CFD435BCE570 /* CronJobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronJobListView.swift; sourceTree = "<group>"; };
 		0936D9E098400AFDB6A01F16 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		0CE0AD803ABD394A47164B27 /* BrowserTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTools.swift; sourceTree = "<group>"; };
+		124D5FCA5AE888BFD29F9B04 /* ImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachment.swift; sourceTree = "<group>"; };
 		1337C2E999915147B1255ADA /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		1B7413410EB1221E98EB56E6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		204B12CACEB21513C30E68E9 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
@@ -115,6 +119,7 @@
 		55554A279D2B534D4EA94DCD /* AgentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentListView.swift; sourceTree = "<group>"; };
 		59407F56C082212A159847D3 /* CronTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronTools.swift; sourceTree = "<group>"; };
 		5F1929975852A2927B4D6333 /* iClawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClawApp.swift; sourceTree = "<group>"; };
+		60474D86762EE55CA8F081A5 /* ImageAttachmentBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentBar.swift; sourceTree = "<group>"; };
 		6357B86866613D68EAD23432 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentViewModel.swift; sourceTree = "<group>"; };
 		65F951651FB3C7B10CA174E9 /* Skill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skill.swift; sourceTree = "<group>"; };
 		6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsGuideView.swift; sourceTree = "<group>"; };
@@ -137,6 +142,7 @@
 		9DE4015AC9EBAA287458CF47 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		9E711EB00274324F1C757A1F /* ToolDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDefinitions.swift; sourceTree = "<group>"; };
 		A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptExecutor.swift; sourceTree = "<group>"; };
+		A2916FDF1095FACD6720D86C /* ThinkingBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingBubbleView.swift; sourceTree = "<group>"; };
 		A55F9A5CBD3F3B003E8A86C4 /* BrowserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserService.swift; sourceTree = "<group>"; };
 		AB4845603F169879185B9CAF /* ContextManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextManager.swift; sourceTree = "<group>"; };
 		AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentConfig.swift; sourceTree = "<group>"; };
@@ -291,9 +297,11 @@
 				D3F0A84BDBA6BF872B7DBFDA /* ChatView.swift */,
 				8354042E2D98C05EE37868DF /* CodeBlockView.swift */,
 				3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */,
+				60474D86762EE55CA8F081A5 /* ImageAttachmentBar.swift */,
 				949EA8CFA50E16335110B086 /* InputBarView.swift */,
 				03610DC93526E131FBCC084A /* MarkdownContentView.swift */,
 				C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */,
+				A2916FDF1095FACD6720D86C /* ThinkingBubbleView.swift */,
 				6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */,
 			);
 			path = Chat;
@@ -306,6 +314,7 @@
 				AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */,
 				990101E729F85D3AF5936B8A /* CodeSnippet.swift */,
 				6FE286E760B594C5694F1A16 /* CronJob.swift */,
+				124D5FCA5AE888BFD29F9B04 /* ImageAttachment.swift */,
 				08103E26BB6C4174073E23F8 /* InstalledSkill.swift */,
 				23CF1A68532A315C891FBCE5 /* LLMProvider.swift */,
 				8C69D8A243470ECD39BB4C19 /* Message.swift */,
@@ -549,6 +558,8 @@
 				6DA4A08DC1D5A92B9DA2F71C /* FunctionCallRouter.swift in Sources */,
 				E0C9AA11D18FE2CB04D3ECAC /* FunctionCallView.swift in Sources */,
 				C2F719E1F6CFF4237169C442 /* FunctionDefinition.swift in Sources */,
+				FFCC6CE88E20DC424CBBD97C /* ImageAttachment.swift in Sources */,
+				6B907713A265A78879C9F169 /* ImageAttachmentBar.swift in Sources */,
 				261E583DCD29AB3EAA06AD92 /* InputBarView.swift in Sources */,
 				E2C10B1CA83F4B3DD0B8FCCE /* InstalledSkill.swift in Sources */,
 				09324DBCB8B51199B96545F5 /* JavaScriptExecutor.swift in Sources */,
@@ -581,6 +592,7 @@
 				728A3FDAD5084D7C4D2749F6 /* SkillTools.swift in Sources */,
 				8030E44584B6E3B97613AFAC /* SubAgentManager.swift in Sources */,
 				1122B3E2F538F3C12BE77183 /* SubAgentTools.swift in Sources */,
+				7A671684A118FB4A6680AA21 /* ThinkingBubbleView.swift in Sources */,
 				E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */,
 				E5C85FBCE012B13DC8A68D3A /* ToolDefinitions.swift in Sources */,
 				BB961A9FD25DD4BDFD6FD2D0 /* WKWebViewJSRuntime.swift in Sources */,

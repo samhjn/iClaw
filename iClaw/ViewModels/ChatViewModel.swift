@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Observation
+import UIKit
 
 @Observable
 final class ChatViewModel {
@@ -8,6 +9,8 @@ final class ChatViewModel {
     var inputText: String = ""
     var isLoading: Bool = false
     var streamingContent: String = ""
+    var streamingThinking: String = ""
+    var pendingImages: [ImageAttachment] = []
     var errorMessage: String?
     var activeModelName: String?
 
@@ -149,7 +152,11 @@ final class ChatViewModel {
 
         inputText = ""
 
+        let imageData: Data? = pendingImages.isEmpty ? nil : try? JSONEncoder().encode(pendingImages)
+        pendingImages = []
+
         let userMessage = Message(role: .user, content: text, session: session)
+        userMessage.imageAttachmentsData = imageData
         modelContext.insert(userMessage)
         session.messages.append(userMessage)
         session.updatedAt = Date()
@@ -178,11 +185,13 @@ final class ChatViewModel {
         if isTopLevel {
             isLoading = true
             streamingContent = ""
+            streamingThinking = ""
             errorMessage = nil
             session.isActive = true
             try? modelContext.save()
         } else {
             streamingContent = ""
+            streamingThinking = ""
         }
 
         defer {
@@ -190,6 +199,7 @@ final class ChatViewModel {
             if generationDepth == 0 {
                 isLoading = false
                 streamingContent = ""
+                streamingThinking = ""
                 isCancelling = false
                 cancelFailureReason = nil
                 cancelWatchdog?.cancel()
@@ -218,18 +228,22 @@ final class ChatViewModel {
 
             guard !Task.isCancelled, !cancelled else { return }
 
+            let supportsVision = router.primarySupportsVision(for: agent)
+
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
             let contextMessages = contextManager.buildContextWindow(
                 session: session,
-                systemPrompt: systemPrompt
+                systemPrompt: systemPrompt,
+                supportsVision: supportsVision
             )
 
             let toolDefs = ToolDefinitions.allTools
 
             var fullContent = ""
+            var fullThinking = ""
             var pendingToolCalls: [LLMToolCall] = []
 
-            let (stream, providerName) = try await router.chatCompletionStreamWithFailover(
+            let (stream, providerName, _) = try await router.chatCompletionStreamWithFailover(
                 agent: agent,
                 messages: contextMessages,
                 tools: toolDefs
@@ -257,6 +271,9 @@ final class ChatViewModel {
                 }
 
                 switch chunk {
+                case .thinking(let text):
+                    fullThinking += text
+                    streamingThinking = fullThinking
                 case .content(let text):
                     fullContent += text
                     streamingContent = fullContent
@@ -295,23 +312,35 @@ final class ChatViewModel {
                 return
             }
 
+            let (cleanedContent, thinkingFromTags) = Self.extractThinkTags(from: fullContent)
+            let combinedThinking: String? = {
+                var parts: [String] = []
+                if !fullThinking.isEmpty { parts.append(fullThinking) }
+                if !thinkingFromTags.isEmpty { parts.append(thinkingFromTags) }
+                return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
+            }()
+            let finalContent = thinkingFromTags.isEmpty ? fullContent : cleanedContent
+
             if !pendingToolCalls.isEmpty {
                 streamingContent = ""
+                streamingThinking = ""
 
                 let assistantMsg = Message(
                     role: .assistant,
-                    content: fullContent.isEmpty ? nil : fullContent,
+                    content: finalContent.isEmpty ? nil : finalContent,
                     toolCallsData: try? JSONEncoder().encode(pendingToolCalls),
                     session: session
                 )
+                assistantMsg.thinkingContent = combinedThinking
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 try? modelContext.save()
                 loadMessages()
 
                 await processToolCalls(pendingToolCalls, router: router, agent: agent)
-            } else if !fullContent.isEmpty {
-                let assistantMsg = Message(role: .assistant, content: fullContent, session: session)
+            } else if !finalContent.isEmpty || combinedThinking != nil {
+                let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent, session: session)
+                assistantMsg.thinkingContent = combinedThinking
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
@@ -668,6 +697,44 @@ final class ChatViewModel {
         session.isTitleCustomized = true
         session.updatedAt = Date()
         try? modelContext.save()
+    }
+
+    // MARK: - Image Management
+
+    func addImage(_ uiImage: UIImage) {
+        guard let attachment = ImageAttachment.from(image: uiImage) else { return }
+        pendingImages.append(attachment)
+    }
+
+    func removeImage(id: UUID) {
+        pendingImages.removeAll { $0.id == id }
+    }
+
+    // MARK: - Think Tag Extraction
+
+    /// Extracts `<think>...</think>` blocks from content, returning cleaned content and extracted thinking.
+    static func extractThinkTags(from content: String) -> (cleanedContent: String, thinking: String) {
+        let pattern = "<think>(.*?)</think>"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return (content, "")
+        }
+        let range = NSRange(content.startIndex..., in: content)
+        let matches = regex.matches(in: content, range: range)
+        guard !matches.isEmpty else { return (content, "") }
+
+        var thinkingParts: [String] = []
+        for match in matches {
+            if let thinkRange = Range(match.range(at: 1), in: content) {
+                let extracted = String(content[thinkRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !extracted.isEmpty {
+                    thinkingParts.append(extracted)
+                }
+            }
+        }
+
+        let cleaned = regex.stringByReplacingMatches(in: content, range: range, withTemplate: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return (cleaned, thinkingParts.joined(separator: "\n\n"))
     }
 
     // MARK: - Info

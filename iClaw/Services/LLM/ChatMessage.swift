@@ -1,16 +1,59 @@
 import Foundation
 
+// MARK: - Multimodal content parts
+
+enum ContentPart: Codable {
+    case text(String)
+    case imageURL(url: String, detail: String?)
+
+    enum CodingKeys: String, CodingKey {
+        case type, text
+        case imageUrl = "image_url"
+    }
+
+    struct ImageURLPayload: Codable {
+        let url: String
+        var detail: String?
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .text(let text):
+            try container.encode("text", forKey: .type)
+            try container.encode(text, forKey: .text)
+        case .imageURL(let url, let detail):
+            try container.encode("image_url", forKey: .type)
+            try container.encode(ImageURLPayload(url: url, detail: detail), forKey: .imageUrl)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "image_url":
+            let payload = try container.decode(ImageURLPayload.self, forKey: .imageUrl)
+            self = .imageURL(url: payload.url, detail: payload.detail)
+        default:
+            let text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
+            self = .text(text)
+        }
+    }
+}
+
 // MARK: - OpenAI-compatible request/response types
 
 struct LLMChatMessage: Codable {
     let role: String
     var content: String?
+    var contentParts: [ContentPart]?
     var toolCalls: [LLMToolCall]?
     var toolCallId: String?
     var name: String?
 
     enum CodingKeys: String, CodingKey {
-        case role, content, name
+        case role, content, name, images
         case toolCalls = "tool_calls"
         case toolCallId = "tool_call_id"
     }
@@ -19,9 +62,9 @@ struct LLMChatMessage: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(role, forKey: .role)
 
-        // For assistant messages with tool_calls, always encode content (even if null).
-        // Many APIs require "content": null explicitly.
-        if role == "assistant" && toolCalls != nil {
+        if let parts = contentParts, !parts.isEmpty {
+            try container.encode(parts, forKey: .content)
+        } else if role == "assistant" && toolCalls != nil {
             try container.encode(content, forKey: .content)
         } else if let content = content {
             try container.encode(content, forKey: .content)
@@ -38,12 +81,69 @@ struct LLMChatMessage: Codable {
         }
     }
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        role = try container.decode(String.self, forKey: .role)
+        toolCalls = try container.decodeIfPresent([LLMToolCall].self, forKey: .toolCalls)
+        toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+
+        // content can be a string or an array of ContentPart
+        var contentStr: String?
+        if let str = try? container.decodeIfPresent(String.self, forKey: .content) {
+            contentStr = str
+            contentParts = nil
+        } else if let parts = try? container.decodeIfPresent([ContentPart].self, forKey: .content) {
+            contentParts = parts
+            contentStr = parts.map { part in
+                switch part {
+                case .text(let t): return t
+                case .imageURL(let url, _): return "\n![image](\(url))\n"
+                }
+            }.joined()
+        } else {
+            contentStr = nil
+            contentParts = nil
+        }
+
+        // OpenRouter image generation: images in a separate field
+        if let images = try? container.decodeIfPresent([ContentPart].self, forKey: .images) {
+            let imageMarkdown = images.compactMap { part -> String? in
+                if case .imageURL(let url, _) = part { return "\n![image](\(url))\n" }
+                return nil
+            }.joined()
+            if !imageMarkdown.isEmpty {
+                contentStr = (contentStr ?? "") + imageMarkdown
+            }
+        }
+
+        content = contentStr
+    }
+
+    init(role: String, content: String? = nil, contentParts: [ContentPart]? = nil,
+         toolCalls: [LLMToolCall]? = nil, toolCallId: String? = nil, name: String? = nil) {
+        self.role = role
+        self.content = content
+        self.contentParts = contentParts
+        self.toolCalls = toolCalls
+        self.toolCallId = toolCallId
+        self.name = name
+    }
+
     static func system(_ content: String) -> LLMChatMessage {
         LLMChatMessage(role: "system", content: content)
     }
 
     static func user(_ content: String) -> LLMChatMessage {
         LLMChatMessage(role: "user", content: content)
+    }
+
+    static func userWithImages(_ text: String, images: [ImageAttachment]) -> LLMChatMessage {
+        var parts: [ContentPart] = [.text(text)]
+        for img in images {
+            parts.append(.imageURL(url: img.base64DataURI, detail: "auto"))
+        }
+        return LLMChatMessage(role: "user", content: text, contentParts: parts)
     }
 
     static func assistant(_ content: String?, toolCalls: [LLMToolCall]? = nil) -> LLMChatMessage {
@@ -80,9 +180,10 @@ struct LLMChatRequest: Codable {
     var stream: Bool?
     var maxTokens: Int?
     var temperature: Double?
+    var modalities: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case model, messages, tools, stream, temperature
+        case model, messages, tools, stream, temperature, modalities
         case toolChoice = "tool_choice"
         case maxTokens = "max_tokens"
     }
@@ -229,11 +330,52 @@ struct LLMChoice: Codable {
 struct LLMDelta: Codable {
     var role: String?
     var content: String?
+    var reasoningContent: String?
     var toolCalls: [LLMDeltaToolCall]?
 
     enum CodingKeys: String, CodingKey {
-        case role, content
+        case role, content, images
+        case reasoningContent = "reasoning_content"
         case toolCalls = "tool_calls"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(role, forKey: .role)
+        try container.encodeIfPresent(content, forKey: .content)
+        try container.encodeIfPresent(reasoningContent, forKey: .reasoningContent)
+        try container.encodeIfPresent(toolCalls, forKey: .toolCalls)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        role = try container.decodeIfPresent(String.self, forKey: .role)
+        reasoningContent = try container.decodeIfPresent(String.self, forKey: .reasoningContent)
+        toolCalls = try container.decodeIfPresent([LLMDeltaToolCall].self, forKey: .toolCalls)
+
+        var contentStr: String?
+        if let str = try? container.decodeIfPresent(String.self, forKey: .content) {
+            contentStr = str
+        } else if let parts = try? container.decodeIfPresent([ContentPart].self, forKey: .content) {
+            contentStr = parts.map { part in
+                switch part {
+                case .text(let t): return t
+                case .imageURL(let url, _): return "\n![image](\(url))\n"
+                }
+            }.joined()
+        }
+
+        if let images = try? container.decodeIfPresent([ContentPart].self, forKey: .images) {
+            let imageMarkdown = images.compactMap { part -> String? in
+                if case .imageURL(let url, _) = part { return "\n![image](\(url))\n" }
+                return nil
+            }.joined()
+            if !imageMarkdown.isEmpty {
+                contentStr = (contentStr ?? "") + imageMarkdown
+            }
+        }
+
+        content = contentStr
     }
 }
 

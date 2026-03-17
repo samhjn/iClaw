@@ -57,6 +57,11 @@
 "chat.deleteSessionMessage" = "이 세션과 모든 메시지가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
 "chat.deleteAgentTitle" = "에이전트 삭제";
 "chat.deleteAgentMessage" = "에이전트 \"%@\"와 모든 세션, 하위 에이전트 및 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
+"chat.thinkingProcess" = "사고 과정";
+"chat.addImage" = "이미지 추가";
+"chat.photoLibrary" = "사진 라이브러리";
+"chat.camera" = "카메라";
+"chat.pasteFromClipboard" = "클립보드에서 붙여넣기";
 
 // MARK: - Agents
 "agents.title" = "에이전트";
@@ -224,6 +229,12 @@
 "provider.remoteModelsFooter" = "API 엔드포인트에서 모델을 가져온 다음 필요한 모델을 활성화하세요.";
 "provider.maxTokens" = "최대 토큰: %d";
 "provider.parameters" = "매개변수";
+"provider.supportsVision" = "비전 지원";
+"provider.supportsVisionFooter" = "이 모델이 이미지 입력을 지원하는 경우 활성화하세요 (예: GPT-4o, Claude 3.5 Sonnet)";
+"provider.supportsToolUse" = "도구 사용 지원";
+"provider.supportsToolUseFooter" = "이 모델이 함수 호출/도구 사용을 지원하지 않는 경우 비활성화하세요 (일부 OpenRouter 모델)";
+"provider.supportsImageGeneration" = "이미지 생성 지원";
+"provider.supportsImageGenerationFooter" = "이미지를 생성할 수 있는 모델에 활성화하세요 (예: Gemini 2.5 Flash Image / Nano Banana). API에 modalities 매개변수를 전송합니다.";
 "provider.presets" = "프리셋";
 
 // MARK: - Skills

@@ -17,6 +17,8 @@ final class Message {
     var toolCallsData: Data?
     var toolCallId: String?
     var name: String?
+    var thinkingContent: String?
+    var imageAttachmentsData: Data?
     var timestamp: Date
     var tokenEstimate: Int
 
