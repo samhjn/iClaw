@@ -28,12 +28,11 @@ final class SessionListViewModel {
         guard autoRefreshTask == nil else { return }
         autoRefreshTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
                 guard let self, !Task.isCancelled else { return }
                 let hasActive = self.sessions.contains { $0.isActive }
-                if hasActive {
-                    self.fetchSessions()
-                }
+                try? await Task.sleep(for: .seconds(hasActive ? 2 : 5))
+                guard !Task.isCancelled else { return }
+                self.fetchSessions()
             }
         }
     }

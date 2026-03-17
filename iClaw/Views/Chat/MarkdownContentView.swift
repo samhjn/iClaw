@@ -106,6 +106,7 @@ struct MarkdownContentView: View {
         Text(attributed)
             .font(.body)
             .foregroundStyle(isUserMessage ? .white : .primary)
+            .fixedSize(horizontal: false, vertical: true)
             .textSelection(.enabled)
     }
 
@@ -573,46 +574,40 @@ private struct MarkdownTableView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Header row
-                HStack(spacing: 0) {
+            Grid(horizontalSpacing: 0, verticalSpacing: 0) {
+                GridRow {
                     ForEach(Array(table.headers.enumerated()), id: \.offset) { colIdx, header in
                         cellView(
                             text: header,
                             alignment: colIdx < table.alignments.count ? table.alignments[colIdx] : .leading,
                             isHeader: true,
-                            columnIndex: colIdx
+                            isLastColumn: colIdx == table.headers.count - 1
                         )
                     }
                 }
                 .background(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
 
-                // Separator
-                Rectangle()
-                    .fill(isUserMessage ? Color.white.opacity(0.3) : Color(.systemGray4))
-                    .frame(height: 1)
+                GridRow {
+                    Rectangle()
+                        .fill(isUserMessage ? Color.white.opacity(0.3) : Color(.systemGray4))
+                        .frame(height: 1)
+                        .gridCellColumns(table.headers.count)
+                }
 
-                // Data rows
                 ForEach(Array(table.rows.enumerated()), id: \.offset) { rowIdx, row in
-                    HStack(spacing: 0) {
+                    GridRow {
                         ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
                             cellView(
                                 text: cell,
                                 alignment: colIdx < table.alignments.count ? table.alignments[colIdx] : .leading,
                                 isHeader: false,
-                                columnIndex: colIdx
+                                isLastColumn: colIdx == table.headers.count - 1
                             )
                         }
                     }
                     .background(rowIdx % 2 == 1
                         ? (isUserMessage ? Color.white.opacity(0.05) : Color(.systemGray6).opacity(0.5))
                         : Color.clear)
-
-                    if rowIdx < table.rows.count - 1 {
-                        Rectangle()
-                            .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
-                            .frame(height: 0.5)
-                    }
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -623,22 +618,23 @@ private struct MarkdownTableView: View {
         }
     }
 
-    @ViewBuilder
-    private func cellView(text: String, alignment: TableAlignment, isHeader: Bool, columnIndex: Int) -> some View {
+    private func cellView(text: String, alignment: TableAlignment, isHeader: Bool, isLastColumn: Bool) -> some View {
         Text(text)
             .font(isHeader ? .caption.bold() : .caption)
             .foregroundStyle(isUserMessage ? .white : .primary)
             .multilineTextAlignment(alignment.textAlignment)
-            .frame(minWidth: 60, alignment: Alignment(horizontal: alignment.horizontal, vertical: .center))
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minWidth: 60, maxWidth: .infinity, alignment: Alignment(horizontal: alignment.horizontal, vertical: .center))
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .textSelection(.enabled)
-
-        if columnIndex < table.headers.count - 1 {
-            Rectangle()
-                .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
-                .frame(width: 0.5)
-        }
+            .overlay(alignment: .trailing) {
+                if !isLastColumn {
+                    Rectangle()
+                        .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
+                        .frame(width: 0.5)
+                }
+            }
     }
 }
 
