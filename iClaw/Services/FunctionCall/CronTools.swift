@@ -20,7 +20,7 @@ struct CronTools {
             return "[Error] Invalid cron expression: \(validationError)"
         }
 
-        let enabled = arguments["enabled"] as? Bool ?? true
+        let enabled = parseBool(arguments["enabled"], default: true)
 
         let job = CronJob(
             name: name,
@@ -66,7 +66,7 @@ struct CronTools {
             return "[Error] Missing or invalid job_id parameter"
         }
 
-        let deleteCompletely = arguments["delete"] as? Bool ?? false
+        let deleteCompletely = parseBool(arguments["delete"], default: false)
 
         guard let job = agent.cronJobs.first(where: { $0.id == jobId }) else {
             let available = agent.cronJobs.map { "  - \($0.name): \($0.id.uuidString)" }.joined(separator: "\n")
@@ -106,6 +106,19 @@ struct CronTools {
               Hint: \(job.jobHint.prefix(100))\(job.jobHint.count > 100 ? "..." : "")
             """
         }.joined(separator: "\n\n")
+    }
+
+    private func parseBool(_ value: Any?, default defaultValue: Bool) -> Bool {
+        if let b = value as? Bool { return b }
+        if let n = value as? NSNumber { return n.boolValue }
+        if let s = value as? String {
+            switch s.lowercased() {
+            case "true", "yes", "1": return true
+            case "false", "no", "0": return false
+            default: break
+            }
+        }
+        return defaultValue
     }
 
     private func formatDate(_ date: Date) -> String {

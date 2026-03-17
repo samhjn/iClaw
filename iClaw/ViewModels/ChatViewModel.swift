@@ -296,6 +296,8 @@ final class ChatViewModel {
             }
 
             if !pendingToolCalls.isEmpty {
+                streamingContent = ""
+
                 let assistantMsg = Message(
                     role: .assistant,
                     content: fullContent.isEmpty ? nil : fullContent,
@@ -346,6 +348,20 @@ final class ChatViewModel {
             }
 
             let result = await fnRouter.execute(toolCall: toolCall)
+
+            if Task.isCancelled || cancelled {
+                let cancelMsg = Message(
+                    role: .assistant,
+                    content: L10n.Chat.toolCallAborted,
+                    session: session
+                )
+                modelContext.insert(cancelMsg)
+                session.messages.append(cancelMsg)
+                try? modelContext.save()
+                loadMessages()
+                return
+            }
+
             let toolMsg = Message(
                 role: .tool,
                 content: result,

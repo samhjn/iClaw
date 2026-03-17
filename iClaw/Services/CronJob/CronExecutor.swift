@@ -17,6 +17,7 @@ final class CronExecutor {
 
         let sessionTitle = "⏰ \(job.name) — \(formatter.string(from: Date()))"
         let session = Session(title: sessionTitle, agent: agent)
+        session.isActive = true
         context.insert(session)
 
         let triggerMessage = buildTriggerMessage(job: job)
@@ -24,6 +25,11 @@ final class CronExecutor {
         context.insert(userMsg)
         session.messages.append(userMsg)
         try? context.save()
+
+        defer {
+            session.isActive = false
+            try? context.save()
+        }
 
         let router = ModelRouter(modelContext: context)
         guard router.primaryProvider(for: agent) != nil else {
