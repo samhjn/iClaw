@@ -86,6 +86,13 @@ struct AgentListView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        vm.agentToDelete = agent
+                    } label: {
+                        Label(L10n.Common.delete, systemImage: "trash")
+                    }
+                }
             }
             .onDelete { offsets in
                 guard let first = offsets.first else { return }

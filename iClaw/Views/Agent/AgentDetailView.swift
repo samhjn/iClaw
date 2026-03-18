@@ -184,6 +184,14 @@ struct SubAgentListView: View {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
                     }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            modelContext.delete(sub)
+                            try? modelContext.save()
+                        } label: {
+                            Label(L10n.Common.delete, systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
