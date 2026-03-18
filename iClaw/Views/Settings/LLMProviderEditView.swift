@@ -248,6 +248,21 @@ struct LLMProviderEditView: View {
                 .tint(.blue)
             }
         }
+        .contextMenu {
+            if model != modelName {
+                Button {
+                    modelName = model
+                } label: {
+                    Label(L10n.Provider.setDefault, systemImage: "star")
+                }
+                Button(role: .destructive) {
+                    enabledModels.remove(model)
+                    modelCapabilities.removeValue(forKey: model)
+                } label: {
+                    Label(L10n.Common.disable, systemImage: "xmark")
+                }
+            }
+        }
     }
 
     /// Create individual Bool bindings for each capability field of a model.

@@ -82,6 +82,13 @@ struct SessionListView: View {
                     .onTapGesture {
                         navigateToSession = session
                     }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            vm.sessionToDelete = session
+                        } label: {
+                            Label(L10n.Common.delete, systemImage: "trash")
+                        }
+                    }
             }
             .onDelete { offsets in
                 guard let first = offsets.first else { return }

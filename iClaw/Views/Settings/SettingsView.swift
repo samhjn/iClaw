@@ -82,6 +82,20 @@ struct SettingsView: View {
                             .tint(.green)
                         }
                     }
+                    .contextMenu {
+                        if !provider.isDefault {
+                            Button {
+                                vm.setDefault(provider)
+                            } label: {
+                                Label(L10n.Common.defaultLabel, systemImage: "checkmark.circle")
+                            }
+                        }
+                        Button(role: .destructive) {
+                            vm.deleteProvider(provider)
+                        } label: {
+                            Label(L10n.Common.delete, systemImage: "trash")
+                        }
+                    }
                 }
 
                 Button {

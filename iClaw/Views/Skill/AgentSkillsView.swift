@@ -57,6 +57,14 @@ struct AgentSkillsView: View {
                                     Label(L10n.Skills.uninstall, systemImage: "minus.circle")
                                 }
                             }
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    let service = SkillService(modelContext: modelContext)
+                                    _ = service.uninstallSkill(skill, from: agent)
+                                } label: {
+                                    Label(L10n.Skills.uninstall, systemImage: "minus.circle")
+                                }
+                            }
                         }
                     }
                 } header: {

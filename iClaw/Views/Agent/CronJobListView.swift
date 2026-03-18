@@ -44,6 +44,27 @@ struct CronJobListView: View {
                         }
                         .tint(job.isEnabled ? .orange : .green)
                     }
+                    .contextMenu {
+                        Button {
+                            job.isEnabled.toggle()
+                            job.updatedAt = Date()
+                            if job.isEnabled {
+                                job.nextRunAt = try? CronParser.nextFireDate(after: Date(), for: job.cronExpression)
+                            }
+                            try? modelContext.save()
+                        } label: {
+                            Label(
+                                job.isEnabled ? L10n.Common.disable : L10n.Common.enable,
+                                systemImage: job.isEnabled ? "pause.circle" : "play.circle"
+                            )
+                        }
+                        Button(role: .destructive) {
+                            modelContext.delete(job)
+                            try? modelContext.save()
+                        } label: {
+                            Label(L10n.Common.delete, systemImage: "trash")
+                        }
+                    }
                 }
 
                 Section {
