@@ -240,14 +240,24 @@ struct MarkdownContentView: View {
             }
 
             // Ordered list
-            if let _ = trimmed.range(of: "^\\d+[.)]+\\s", options: .regularExpression) {
+            if let _ = trimmed.range(of: "^\\d+[.)]\\s", options: .regularExpression) {
                 var items: [String] = []
                 while i < lines.count {
                     let t = lines[i].trimmingCharacters(in: .whitespaces)
-                    if let range = t.range(of: "^\\d+[.)]+\\s", options: .regularExpression) {
+                    if let range = t.range(of: "^\\d+[.)]\\s", options: .regularExpression) {
                         items.append(String(t[range.upperBound...]))
                         i += 1
                     } else if t.isEmpty {
+                        // Look ahead: if the next non-empty line is also an ordered list item, keep collecting
+                        var lookahead = i + 1
+                        while lookahead < lines.count && lines[lookahead].trimmingCharacters(in: .whitespaces).isEmpty {
+                            lookahead += 1
+                        }
+                        if lookahead < lines.count,
+                           lines[lookahead].trimmingCharacters(in: .whitespaces).range(of: "^\\d+[.)]\\s", options: .regularExpression) != nil {
+                            i = lookahead
+                            continue
+                        }
                         break
                     } else if !items.isEmpty {
                         items[items.count - 1] += " " + t
@@ -269,7 +279,7 @@ struct MarkdownContentView: View {
                    t == "---" || t == "***" || t == "___" ||
                    isTaskListItem(t) ||
                    parseBlockImage(t) != nil ||
-                   t.range(of: "^\\d+[.)]+\\s", options: .regularExpression) != nil {
+                   t.range(of: "^\\d+[.)]\\s", options: .regularExpression) != nil {
                     break
                 }
                 paraLines.append(t)
@@ -711,6 +721,9 @@ private struct MarkdownImageView: View {
     let urlString: String
     let isUserMessage: Bool
 
+    @State private var showPreview = false
+    @State private var resolvedImage: UIImage?
+
     private var isDataURI: Bool { urlString.hasPrefix("data:image/") }
 
     private var dataURIImage: UIImage? {
@@ -724,11 +737,8 @@ private struct MarkdownImageView: View {
         VStack(alignment: .leading, spacing: 4) {
             if isDataURI {
                 if let uiImage = dataURIImage {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 400, maxHeight: 400)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    thumbnailImage(Image(uiImage: uiImage))
+                        .onAppear { resolvedImage = uiImage }
                 } else {
                     imageFailedView
                 }
@@ -744,11 +754,8 @@ private struct MarkdownImageView: View {
                         }
                         .frame(height: 100)
                     case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 400, maxHeight: 400)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        thumbnailImage(image)
+                            .onAppear { resolvedImage = ImageRenderer(content: image).uiImage }
                     case .failure:
                         imageFailedView
                     @unknown default:
@@ -772,6 +779,21 @@ private struct MarkdownImageView: View {
                     .italic()
             }
         }
+        .fullScreenCover(isPresented: $showPreview) {
+            if let uiImage = resolvedImage {
+                ImagePreviewOverlay(image: uiImage, alt: alt)
+            }
+        }
+    }
+
+    private func thumbnailImage(_ image: Image) -> some View {
+        image
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(maxWidth: 400, maxHeight: 400)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(Rectangle())
+            .onTapGesture { showPreview = true }
     }
 
     private var imageFailedView: some View {
@@ -787,5 +809,134 @@ private struct MarkdownImageView: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(.systemGray6))
         )
+    }
+}
+
+// MARK: - Full-Screen Image Preview
+
+private struct ImagePreviewOverlay: View {
+    let image: UIImage
+    let alt: String
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+    @State private var lastScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+    @State private var showToast = false
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(dragGesture)
+                .gesture(magnificationGesture)
+                .onTapGesture(count: 2) { toggleZoom() }
+                .onTapGesture { dismiss() }
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .white.opacity(0.3))
+                    }
+                    .padding()
+                }
+                Spacer()
+                HStack(spacing: 32) {
+                    Button {
+                        UIPasteboard.general.image = image
+                        flashToast()
+                    } label: {
+                        Label(L10n.Chat.copyImage, systemImage: "doc.on.doc")
+                            .font(.callout)
+                            .foregroundStyle(.white)
+                    }
+                    Button {
+                        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                        flashToast()
+                    } label: {
+                        Label(L10n.Chat.saveImageToPhotos, systemImage: "square.and.arrow.down")
+                            .font(.callout)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.bottom, 40)
+            }
+
+            if showToast {
+                VStack {
+                    Spacer()
+                    Text(L10n.Chat.imageSaved)
+                        .font(.callout)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(.black.opacity(0.7)))
+                        .padding(.bottom, 100)
+                }
+                .transition(.opacity)
+            }
+        }
+        .statusBar(hidden: true)
+    }
+
+    private var magnificationGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                scale = lastScale * value.magnification
+            }
+            .onEnded { _ in
+                withAnimation(.spring(duration: 0.3)) {
+                    scale = max(1, min(scale, 5))
+                    if scale == 1 { offset = .zero }
+                }
+                lastScale = scale
+                lastOffset = offset
+            }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                if scale > 1 {
+                    offset = CGSize(
+                        width: lastOffset.width + value.translation.width,
+                        height: lastOffset.height + value.translation.height
+                    )
+                }
+            }
+            .onEnded { _ in
+                lastOffset = offset
+            }
+    }
+
+    private func toggleZoom() {
+        withAnimation(.spring(duration: 0.3)) {
+            if scale > 1 {
+                scale = 1
+                lastScale = 1
+                offset = .zero
+                lastOffset = .zero
+            } else {
+                scale = 3
+                lastScale = 3
+            }
+        }
+    }
+
+    private func flashToast() {
+        withAnimation { showToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation { showToast = false }
+        }
     }
 }

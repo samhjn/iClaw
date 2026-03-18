@@ -62,6 +62,10 @@
 "chat.photoLibrary" = "写真ライブラリ";
 "chat.camera" = "カメラ";
 "chat.pasteFromClipboard" = "クリップボードから貼り付け";
+"chat.imagePlaceholder" = "[画像]";
+"chat.saveImageToPhotos" = "画像を保存";
+"chat.imageSaved" = "写真に保存しました";
+"chat.copyImage" = "画像をコピー";
 
 // MARK: - Agents
 "agents.title" = "エージェント";

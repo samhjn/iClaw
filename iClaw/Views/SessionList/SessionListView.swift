@@ -77,7 +77,7 @@ struct SessionListView: View {
     private func sessionsList(_ vm: SessionListViewModel) -> some View {
         List {
             ForEach(vm.sessions, id: \.id) { session in
-                SessionRowView(session: session)
+                SessionRowView(session: session, rowData: vm.rowDataCache[session.id])
                     .contentShape(Rectangle())
                     .onTapGesture {
                         navigateToSession = session

@@ -62,6 +62,10 @@
 "chat.photoLibrary" = "相册";
 "chat.camera" = "拍照";
 "chat.pasteFromClipboard" = "从剪贴板粘贴";
+"chat.imagePlaceholder" = "[图片]";
+"chat.saveImageToPhotos" = "保存图片";
+"chat.imageSaved" = "已保存到相册";
+"chat.copyImage" = "拷贝图片";
 
 // MARK: - Agents
 "agents.title" = "智能体";

@@ -2,9 +2,16 @@ import Foundation
 import SwiftData
 import Observation
 
+struct SessionRowData {
+    let messageCount: Int
+    let previewContent: String?
+    let isStreaming: Bool
+}
+
 @Observable
 final class SessionListViewModel {
     var sessions: [Session] = []
+    var rowDataCache: [UUID: SessionRowData] = [:]
     var selectedSession: Session?
     var sessionToDelete: Session?
 
@@ -22,6 +29,50 @@ final class SessionListViewModel {
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
         sessions = all.filter { !$0.isArchived && $0.agent?.parentAgent == nil }
+        rebuildRowDataCache()
+    }
+
+    private func rebuildRowDataCache() {
+        var cache: [UUID: SessionRowData] = [:]
+        cache.reserveCapacity(sessions.count)
+        for session in sessions {
+            let isStreaming = session.isActive && session.pendingStreamingContent != nil
+                && !session.pendingStreamingContent!.isEmpty
+            let rawPreview: String? = {
+                if isStreaming {
+                    return session.pendingStreamingContent
+                }
+                if let lastMessage = session.messages.max(by: { $0.timestamp < $1.timestamp }),
+                   let content = lastMessage.content {
+                    return content
+                }
+                return nil
+            }()
+            let preview = rawPreview.map { Self.sanitizePreview($0) }
+            cache[session.id] = SessionRowData(
+                messageCount: session.messages.count,
+                previewContent: preview,
+                isStreaming: isStreaming
+            )
+        }
+        rowDataCache = cache
+    }
+
+    private static let imagePattern = try! NSRegularExpression(
+        pattern: "!\\[[^\\]]*\\]\\([^)]+\\)",
+        options: []
+    )
+
+    private static func sanitizePreview(_ text: String) -> String {
+        let range = NSRange(text.startIndex..., in: text)
+        let cleaned = imagePattern.stringByReplacingMatches(
+            in: text, options: [], range: range, withTemplate: "[图片]"
+        )
+        let maxLength = 200
+        if cleaned.count > maxLength {
+            return String(cleaned.prefix(maxLength))
+        }
+        return cleaned
     }
 
     func startAutoRefresh() {
@@ -30,7 +81,7 @@ final class SessionListViewModel {
             while !Task.isCancelled {
                 guard let self, !Task.isCancelled else { return }
                 let hasActive = self.sessions.contains { $0.isActive }
-                try? await Task.sleep(for: .seconds(hasActive ? 2 : 5))
+                try? await Task.sleep(for: .seconds(hasActive ? 3 : 10))
                 guard !Task.isCancelled else { return }
                 self.fetchSessions()
             }

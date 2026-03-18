@@ -62,6 +62,10 @@
 "chat.photoLibrary" = "사진 라이브러리";
 "chat.camera" = "카메라";
 "chat.pasteFromClipboard" = "클립보드에서 붙여넣기";
+"chat.imagePlaceholder" = "[이미지]";
+"chat.saveImageToPhotos" = "이미지 저장";
+"chat.imageSaved" = "사진에 저장되었습니다";
+"chat.copyImage" = "이미지 복사";
 
 // MARK: - Agents
 "agents.title" = "에이전트";

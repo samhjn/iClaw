@@ -35,6 +35,18 @@ struct MessageBubbleView: View {
         return (try? JSONDecoder().decode([ImageAttachment].self, from: data)) ?? []
     }
 
+    private static let imageMarkdownPattern = try! NSRegularExpression(
+        pattern: "!\\[[^\\]]*\\]\\([^)]+\\)",
+        options: []
+    )
+
+    private static func sanitizeForCopy(_ text: String) -> String {
+        let range = NSRange(text.startIndex..., in: text)
+        return imageMarkdownPattern.stringByReplacingMatches(
+            in: text, options: [], range: range, withTemplate: L10n.Chat.imagePlaceholder
+        )
+    }
+
     /// The best copyable text for this message.
     private var copyableText: String {
         if let msg = message {
@@ -43,15 +55,15 @@ struct MessageBubbleView: View {
             }
             if let calls = toolCalls, !calls.isEmpty {
                 var parts: [String] = []
-                if let c = msg.content, !c.isEmpty { parts.append(c) }
+                if let c = msg.content, !c.isEmpty { parts.append(Self.sanitizeForCopy(c)) }
                 for call in calls {
                     parts.append("[\(call.function.name)] \(call.function.arguments)")
                 }
                 return parts.joined(separator: "\n\n")
             }
-            return msg.content ?? ""
+            return Self.sanitizeForCopy(msg.content ?? "")
         }
-        return streamingContent ?? ""
+        return Self.sanitizeForCopy(streamingContent ?? "")
     }
 
     var body: some View {
