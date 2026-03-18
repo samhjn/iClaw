@@ -235,6 +235,11 @@
 "provider.supportsToolUseFooter" = "如果此模型不支援函式呼叫/工具使用請關閉（部分 OpenRouter 模型）";
 "provider.supportsImageGeneration" = "支援圖片生成";
 "provider.supportsImageGenerationFooter" = "為能生成圖片的模型啟用（如 Gemini 2.5 Flash Image / Nano Banana），將向 API 傳送 modalities 參數";
+"provider.supportsReasoning" = "支援推理";
+"provider.supportsReasoningFooter" = "為支援擴展思考/推理的模型啟用（如 Claude 擴展思考、DeepSeek R1、o1/o3）。思考過程將被擷取並顯示。";
+"provider.apiStyle" = "API 風格";
+"provider.apiStyleFooter" = "OpenAI：相容 OpenAI 的 chat/completions 介面。Anthropic：原生 Anthropic Messages API，支援擴展思考。";
+"provider.modelCapabilities" = "模型能力";
 "provider.presets" = "預設";
 
 // MARK: - Skills

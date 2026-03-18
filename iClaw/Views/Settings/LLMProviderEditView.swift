@@ -12,9 +12,10 @@ struct LLMProviderEditView: View {
     @State private var modelName: String = "gpt-4o"
     @State private var maxTokens: Int = 4096
     @State private var temperature: Double = 0.7
-    @State private var supportsVision: Bool = false
-    @State private var supportsToolUse: Bool = true
-    @State private var supportsImageGeneration: Bool = false
+    @State private var apiStyle: APIStyle = .openAI
+
+    // Per-model capabilities
+    @State private var modelCapabilities: [String: ModelCapabilities] = [:]
 
     @State private var fetchedModels: [String] = []
     @State private var enabledModels: Set<String> = []
@@ -26,17 +27,16 @@ struct LLMProviderEditView: View {
 
     private var isEditing: Bool { existingProvider != nil }
 
-    /// All models to display: enabled + fetched, deduplicated, sorted.
+    /// Only show enabled models in pickers.
     private var allKnownModels: [String] {
-        var all = enabledModels
-        all.formUnion(fetchedModels)
-        return Array(all).sorted()
+        Array(enabledModels).sorted()
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 providerSection
+                apiStyleSection
                 authSection
                 defaultModelSection
                 enabledModelsSection
@@ -79,11 +79,26 @@ struct LLMProviderEditView: View {
                 modelName = p.modelName
                 maxTokens = p.maxTokens
                 temperature = p.temperature
-                supportsVision = p.supportsVision
-                supportsToolUse = p.supportsToolUse
-                supportsImageGeneration = p.supportsImageGeneration
+                apiStyle = APIStyle(rawValue: p.apiStyleRaw) ?? .openAI
                 enabledModels = Set(p.enabledModels)
                 fetchedModels = p.cachedModelList
+
+                // Load model capabilities from raw JSON
+                if let json = p.modelCapabilitiesJSON,
+                   let data = json.data(using: .utf8),
+                   let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data) {
+                    modelCapabilities = dict
+                }
+
+                // Migrate legacy provider-level flags for existing models without capabilities
+                for model in p.enabledModels where modelCapabilities[model] == nil {
+                    modelCapabilities[model] = ModelCapabilities(
+                        supportsVision: p.supportsVision,
+                        supportsToolUse: p.supportsToolUse,
+                        supportsImageGeneration: p.supportsImageGeneration,
+                        supportsReasoning: false
+                    )
+                }
             } else {
                 enabledModels = [modelName]
             }
@@ -99,6 +114,20 @@ struct LLMProviderEditView: View {
                 .textContentType(.URL)
                 .autocapitalization(.none)
                 .keyboardType(.URL)
+        }
+    }
+
+    private var apiStyleSection: some View {
+        Section {
+            Picker(L10n.Provider.apiStyle, selection: $apiStyle) {
+                ForEach(APIStyle.allCases, id: \.self) { style in
+                    Text(style.displayName).tag(style)
+                }
+            }
+        } header: {
+            Text(L10n.Provider.apiStyle)
+        } footer: {
+            Text(L10n.Provider.apiStyleFooter)
         }
     }
 
@@ -144,40 +173,7 @@ struct LLMProviderEditView: View {
                     .font(.subheadline)
             } else {
                 ForEach(Array(enabledModels).sorted(), id: \.self) { model in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(model)
-                                .font(.subheadline)
-                            if model == modelName {
-                                Text(L10n.Common.defaultLabel)
-                                    .font(.caption2)
-                                    .foregroundStyle(.blue)
-                            }
-                        }
-                        Spacer()
-                        if model == modelName {
-                            Image(systemName: "star.fill")
-                                .font(.caption)
-                                .foregroundStyle(.yellow)
-                        }
-                    }
-                    .swipeActions(edge: .trailing) {
-                        if model != modelName {
-                            Button(role: .destructive) {
-                                enabledModels.remove(model)
-                            } label: {
-                                Label(L10n.Common.disable, systemImage: "xmark")
-                            }
-                        }
-                    }
-                    .swipeActions(edge: .leading) {
-                        if model != modelName {
-                            Button(L10n.Provider.setDefault) {
-                                modelName = model
-                            }
-                            .tint(.blue)
-                        }
-                    }
+                    modelRow(model)
                 }
             }
 
@@ -197,6 +193,108 @@ struct LLMProviderEditView: View {
         } footer: {
             Text(L10n.Provider.enabledModelsFooter)
         }
+    }
+
+    /// Inline model row with expandable capabilities toggles.
+    @ViewBuilder
+    private func modelRow(_ model: String) -> some View {
+        DisclosureGroup {
+            let binding = capabilitiesBinding(for: model)
+            Toggle(L10n.Provider.supportsVision, isOn: binding.supportsVision)
+            Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
+            Toggle(L10n.Provider.supportsReasoning, isOn: binding.supportsReasoning)
+            Toggle(L10n.Provider.supportsImageGeneration, isOn: binding.supportsImageGeneration)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model)
+                        .font(.subheadline)
+                    if model == modelName {
+                        Text(L10n.Common.defaultLabel)
+                            .font(.caption2)
+                            .foregroundStyle(.blue)
+                    }
+                    HStack(spacing: 4) {
+                        let c = modelCapabilities[model] ?? .default
+                        if c.supportsVision { capBadge("eye", color: .green) }
+                        if c.supportsToolUse { capBadge("wrench", color: .blue) }
+                        if c.supportsReasoning { capBadge("brain", color: .purple) }
+                        if c.supportsImageGeneration { capBadge("paintbrush", color: .orange) }
+                    }
+                }
+                Spacer()
+                if model == modelName {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                }
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            if model != modelName {
+                Button(role: .destructive) {
+                    enabledModels.remove(model)
+                    modelCapabilities.removeValue(forKey: model)
+                } label: {
+                    Label(L10n.Common.disable, systemImage: "xmark")
+                }
+            }
+        }
+        .swipeActions(edge: .leading) {
+            if model != modelName {
+                Button(L10n.Provider.setDefault) {
+                    modelName = model
+                }
+                .tint(.blue)
+            }
+        }
+    }
+
+    /// Create individual Bool bindings for each capability field of a model.
+    private func capabilitiesBinding(for model: String) -> CapabilitiesBindings {
+        CapabilitiesBindings(
+            supportsVision: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsVision },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.supportsVision = newVal
+                    modelCapabilities[model] = caps
+                }
+            ),
+            supportsToolUse: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsToolUse },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.supportsToolUse = newVal
+                    modelCapabilities[model] = caps
+                }
+            ),
+            supportsReasoning: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsReasoning },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.supportsReasoning = newVal
+                    modelCapabilities[model] = caps
+                }
+            ),
+            supportsImageGeneration: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsImageGeneration },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.supportsImageGeneration = newVal
+                    modelCapabilities[model] = caps
+                }
+            )
+        )
+    }
+
+    @ViewBuilder
+    private func capBadge(_ systemName: String, color: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 9))
+            .foregroundStyle(color)
+            .padding(3)
+            .background(color.opacity(0.1), in: Circle())
     }
 
     private var remoteModelsSection: some View {
@@ -273,21 +371,8 @@ struct LLMProviderEditView: View {
                 Text("Temperature: \(temperature, specifier: "%.2f")")
                 Slider(value: $temperature, in: 0...2, step: 0.05)
             }
-            Toggle(L10n.Provider.supportsVision, isOn: $supportsVision)
-            Toggle(L10n.Provider.supportsToolUse, isOn: $supportsToolUse)
-            Toggle(L10n.Provider.supportsImageGeneration, isOn: $supportsImageGeneration)
         } header: {
             Text(L10n.Provider.parameters)
-        } footer: {
-            if supportsVision {
-                Text(L10n.Provider.supportsVisionFooter)
-            }
-            if !supportsToolUse {
-                Text(L10n.Provider.supportsToolUseFooter)
-            }
-            if supportsImageGeneration {
-                Text(L10n.Provider.supportsImageGenerationFooter)
-            }
         }
     }
 
@@ -296,22 +381,38 @@ struct LLMProviderEditView: View {
             Button("OpenAI") {
                 endpoint = "https://api.openai.com/v1"
                 modelName = "gpt-4o"
+                apiStyle = .openAI
                 enabledModels.insert("gpt-4o")
+            }
+            Button("Anthropic") {
+                endpoint = "https://api.anthropic.com/v1"
+                modelName = "claude-sonnet-4-20250514"
+                apiStyle = .anthropic
+                enabledModels.insert("claude-sonnet-4-20250514")
+                modelCapabilities["claude-sonnet-4-20250514"] = ModelCapabilities(
+                    supportsVision: true,
+                    supportsToolUse: true,
+                    supportsImageGeneration: false,
+                    supportsReasoning: true
+                )
             }
             Button("DeepSeek") {
                 endpoint = "https://api.deepseek.com/v1"
                 modelName = "deepseek-chat"
+                apiStyle = .openAI
                 enabledModels.insert("deepseek-chat")
             }
             Button("OpenRouter") {
                 endpoint = "https://openrouter.ai/api/v1"
                 modelName = "openai/gpt-4o"
+                apiStyle = .openAI
                 enabledModels.insert("openai/gpt-4o")
             }
             Button("Local (Ollama)") {
                 endpoint = "http://localhost:11434/v1"
                 modelName = "llama3"
                 apiKey = "ollama"
+                apiStyle = .openAI
                 enabledModels.insert("llama3")
             }
         }
@@ -322,6 +423,17 @@ struct LLMProviderEditView: View {
     private func save() {
         enabledModels.insert(modelName)
 
+        // Encode capabilities JSON directly to avoid computed property setter issues with SwiftData
+        let capsJSON: String? = {
+            guard !modelCapabilities.isEmpty,
+                  let data = try? JSONEncoder().encode(modelCapabilities),
+                  let json = String(data: data, encoding: .utf8)
+            else { return nil }
+            return json
+        }()
+
+        let defaultCaps = modelCapabilities[modelName] ?? .default
+
         if let p = existingProvider {
             p.name = name
             p.endpoint = endpoint
@@ -329,11 +441,17 @@ struct LLMProviderEditView: View {
             p.modelName = modelName
             p.maxTokens = maxTokens
             p.temperature = temperature
-            p.supportsVision = supportsVision
-            p.supportsToolUse = supportsToolUse
-            p.supportsImageGeneration = supportsImageGeneration
+            // Write raw stored properties directly (not through computed setters)
+            p.apiStyleRaw = apiStyle.rawValue
+            p.modelCapabilitiesJSON = capsJSON
             p.enabledModels = Array(enabledModels)
             p.cachedModelList = fetchedModels
+
+            // Sync legacy flags from default model for backward compatibility
+            p.supportsVision = defaultCaps.supportsVision
+            p.supportsToolUse = defaultCaps.supportsToolUse
+            p.supportsImageGeneration = defaultCaps.supportsImageGeneration
+
             viewModel.updateProvider(p)
         } else {
             let provider = LLMProvider(
@@ -345,9 +463,14 @@ struct LLMProviderEditView: View {
                 maxTokens: maxTokens,
                 temperature: temperature
             )
-            provider.supportsVision = supportsVision
-            provider.supportsToolUse = supportsToolUse
-            provider.supportsImageGeneration = supportsImageGeneration
+            // Write raw stored properties directly
+            provider.apiStyleRaw = apiStyle.rawValue
+            provider.modelCapabilitiesJSON = capsJSON
+
+            provider.supportsVision = defaultCaps.supportsVision
+            provider.supportsToolUse = defaultCaps.supportsToolUse
+            provider.supportsImageGeneration = defaultCaps.supportsImageGeneration
+
             provider.enabledModels = Array(enabledModels)
             provider.cachedModelList = fetchedModels
             viewModel.addProviderDirectly(provider)
@@ -362,7 +485,8 @@ struct LLMProviderEditView: View {
             do {
                 let models = try await LLMService.fetchModels(
                     endpoint: endpoint,
-                    apiKey: apiKey
+                    apiKey: apiKey,
+                    apiStyle: apiStyle
                 )
                 await MainActor.run {
                     fetchedModels = models
@@ -383,4 +507,12 @@ struct LLMProviderEditView: View {
             }
         }
     }
+}
+
+/// Helper to bundle multiple Bool bindings for model capabilities.
+private struct CapabilitiesBindings {
+    let supportsVision: Binding<Bool>
+    let supportsToolUse: Binding<Bool>
+    let supportsReasoning: Binding<Bool>
+    let supportsImageGeneration: Binding<Bool>
 }

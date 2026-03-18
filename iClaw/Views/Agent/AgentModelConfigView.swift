@@ -24,10 +24,11 @@ struct AgentModelConfigView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \LLMProvider.name) private var allProviders: [LLMProvider]
 
+    /// Only show models that are explicitly enabled by the user.
     private var allProviderModels: [ProviderModel] {
         allProviders.flatMap { provider in
-            provider.enabledModels.map { modelName in
-                ProviderModel(provider: provider, modelName: modelName)
+            provider.enabledModels.map { model in
+                ProviderModel(provider: provider, modelName: model)
             }
         }
     }

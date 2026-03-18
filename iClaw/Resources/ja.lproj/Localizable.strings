@@ -235,6 +235,11 @@
 "provider.supportsToolUseFooter" = "このモデルが関数呼び出し/ツール使用に対応していない場合は無効にしてください（一部の OpenRouter モデル）";
 "provider.supportsImageGeneration" = "画像生成対応";
 "provider.supportsImageGenerationFooter" = "画像を生成できるモデルで有効にしてください（例：Gemini 2.5 Flash Image / Nano Banana）。APIにmodalitiesパラメータを送信します。";
+"provider.supportsReasoning" = "推論対応";
+"provider.supportsReasoningFooter" = "拡張思考/推論に対応するモデルで有効にしてください（例：Claude拡張思考、DeepSeek R1、o1/o3）。思考過程がキャプチャされ表示されます。";
+"provider.apiStyle" = "APIスタイル";
+"provider.apiStyleFooter" = "OpenAI：OpenAI互換のchat/completionsエンドポイント。Anthropic：ネイティブAnthropic Messages API、拡張思考対応。";
+"provider.modelCapabilities" = "モデル機能";
 "provider.presets" = "プリセット";
 
 // MARK: - Skills

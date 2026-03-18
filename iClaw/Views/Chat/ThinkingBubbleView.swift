@@ -5,16 +5,14 @@ struct ThinkingBubbleView: View {
     let isStreaming: Bool
 
     @State private var isExpanded = false
-
-    private var shouldDefaultExpand: Bool {
-        isStreaming || content.count < 200
-    }
+    @State private var hasBeenManuallyToggled = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isExpanded.toggle()
+                    hasBeenManuallyToggled = true
                 }
             } label: {
                 HStack(spacing: 6) {
@@ -61,7 +59,19 @@ struct ThinkingBubbleView: View {
                 .stroke(Color.purple.opacity(0.15), lineWidth: 0.5)
         )
         .onAppear {
-            isExpanded = shouldDefaultExpand
+            if isStreaming && !hasBeenManuallyToggled {
+                isExpanded = true
+            }
+        }
+        .onChange(of: isStreaming) { oldValue, newValue in
+            guard !hasBeenManuallyToggled else { return }
+            if !oldValue && newValue {
+                withAnimation { isExpanded = true }
+            } else if oldValue && !newValue {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isExpanded = false
+                }
+            }
         }
     }
 }

@@ -15,6 +15,12 @@ final class LLMService: @unchecked Sendable {
     private var baseURL: String { provider.endpoint }
     private var apiKey: String { provider.apiKey }
     private var model: String { modelNameOverride ?? provider.modelName }
+    private var apiStyle: APIStyle { provider.apiStyle }
+
+    /// Model capabilities resolved for the effective model.
+    var effectiveCapabilities: ModelCapabilities {
+        provider.capabilities(for: model)
+    }
 
     init(provider: LLMProvider, modelNameOverride: String? = nil) {
         self.provider = provider
@@ -23,10 +29,14 @@ final class LLMService: @unchecked Sendable {
 
     // MARK: - Fetch available models
 
-    static func fetchModels(endpoint: String, apiKey: String) async throws -> [String] {
-        let modelsEndpoint = endpoint.hasSuffix("/")
-            ? endpoint + "models"
-            : endpoint + "/models"
+    static func fetchModels(endpoint: String, apiKey: String, apiStyle: APIStyle = .openAI) async throws -> [String] {
+        let modelsEndpoint: String
+        switch apiStyle {
+        case .openAI:
+            modelsEndpoint = endpoint.hasSuffix("/") ? endpoint + "models" : endpoint + "/models"
+        case .anthropic:
+            modelsEndpoint = endpoint.hasSuffix("/") ? endpoint + "models" : endpoint + "/models"
+        }
 
         guard let url = URL(string: modelsEndpoint) else {
             throw LLMError.invalidURL(modelsEndpoint)
@@ -37,8 +47,17 @@ final class LLMService: @unchecked Sendable {
         request.addValue("iClaw/1.0 (https://iclaw.shadow.mov)", forHTTPHeaderField: "User-Agent")
         request.addValue("https://iclaw.shadow.mov", forHTTPHeaderField: "HTTP-Referer")
         request.addValue("iClaw", forHTTPHeaderField: "X-Title")
-        if !apiKey.isEmpty {
-            request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        switch apiStyle {
+        case .openAI:
+            if !apiKey.isEmpty {
+                request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            }
+        case .anthropic:
+            if !apiKey.isEmpty {
+                request.addValue(apiKey, forHTTPHeaderField: "x-api-key")
+            }
+            request.addValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         }
         request.timeoutInterval = 15
 
@@ -52,10 +71,17 @@ final class LLMService: @unchecked Sendable {
             throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
         }
 
-        let modelsResponse = try JSONDecoder().decode(ModelsListResponse.self, from: data)
-        return modelsResponse.data
-            .map(\.id)
-            .sorted()
+        switch apiStyle {
+        case .openAI:
+            let modelsResponse = try JSONDecoder().decode(ModelsListResponse.self, from: data)
+            return modelsResponse.data.map(\.id).sorted()
+        case .anthropic:
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let models = json["data"] as? [[String: Any]] {
+                return models.compactMap { $0["id"] as? String }.sorted()
+            }
+            return []
+        }
     }
 
     // MARK: - Non-streaming
@@ -64,7 +90,36 @@ final class LLMService: @unchecked Sendable {
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]? = nil
     ) async throws -> LLMChatResponse {
-        let modalities: [String]? = provider.supportsImageGeneration ? ["image", "text"] : nil
+        switch apiStyle {
+        case .openAI:
+            return try await openAIChatCompletion(messages: messages, tools: tools)
+        case .anthropic:
+            return try await anthropicChatCompletion(messages: messages, tools: tools)
+        }
+    }
+
+    // MARK: - Streaming
+
+    func chatCompletionStream(
+        messages: [LLMChatMessage],
+        tools: [LLMToolDefinition]? = nil
+    ) async throws -> AsyncStream<StreamChunk> {
+        switch apiStyle {
+        case .openAI:
+            return try await openAIChatCompletionStream(messages: messages, tools: tools)
+        case .anthropic:
+            return try await anthropicChatCompletionStream(messages: messages, tools: tools)
+        }
+    }
+
+    // MARK: - OpenAI Implementation
+
+    private func openAIChatCompletion(
+        messages: [LLMChatMessage],
+        tools: [LLMToolDefinition]?
+    ) async throws -> LLMChatResponse {
+        let caps = effectiveCapabilities
+        let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -76,13 +131,12 @@ final class LLMService: @unchecked Sendable {
             modalities: modalities
         )
 
-        let urlRequest = try buildRequest(body: request)
+        let urlRequest = try buildOpenAIRequest(body: request)
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.invalidResponse
         }
-
         guard (200...299).contains(httpResponse.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? "Unknown error"
             throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
@@ -91,13 +145,12 @@ final class LLMService: @unchecked Sendable {
         return try JSONDecoder().decode(LLMChatResponse.self, from: data)
     }
 
-    // MARK: - Streaming
-
-    func chatCompletionStream(
+    private func openAIChatCompletionStream(
         messages: [LLMChatMessage],
-        tools: [LLMToolDefinition]? = nil
+        tools: [LLMToolDefinition]?
     ) async throws -> AsyncStream<StreamChunk> {
-        let modalities: [String]? = provider.supportsImageGeneration ? ["image", "text"] : nil
+        let caps = effectiveCapabilities
+        let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -109,20 +162,16 @@ final class LLMService: @unchecked Sendable {
             modalities: modalities
         )
 
-        let urlRequest = try buildRequest(body: request)
-
+        let urlRequest = try buildOpenAIRequest(body: request)
         let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.invalidResponse
         }
-
         guard (200...299).contains(httpResponse.statusCode) else {
             var body = ""
-            for try await line in bytes.lines {
-                body += line
-            }
-            print("[LLMService] Stream error \(httpResponse.statusCode): \(body.prefix(300))")
+            for try await line in bytes.lines { body += line }
+            print("[LLMService] OpenAI stream error \(httpResponse.statusCode): \(body.prefix(300))")
             throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
         }
 
@@ -133,10 +182,6 @@ final class LLMService: @unchecked Sendable {
 
                 do {
                     for try await line in bytes.lines {
-                        // Use chunk-based parsing: append "\n\n" to each line so the
-                        // SSE parser immediately recognizes it as a complete event block.
-                        // This is more reliable than line-based parsing because some
-                        // providers/URLSession may not yield empty separator lines.
                         let events = sseParser.parse(chunk: line + "\n\n")
 
                         for event in events {
@@ -149,11 +194,9 @@ final class LLMService: @unchecked Sendable {
                                     if let reasoning = delta.reasoningContent {
                                         continuation.yield(.thinking(reasoning))
                                     }
-
                                     if let content = delta.content {
                                         continuation.yield(.content(content))
                                     }
-
                                     if let deltaToolCalls = delta.toolCalls {
                                         for dtc in deltaToolCalls {
                                             let idx = dtc.index
@@ -177,7 +220,6 @@ final class LLMService: @unchecked Sendable {
                                     }
                                 }
 
-                                // Emit tool calls on any finish reason that indicates tool usage
                                 if let reason = chunk.choices.first?.finishReason,
                                    isToolCallFinishReason(reason),
                                    !toolCallAccumulators.isEmpty {
@@ -185,7 +227,6 @@ final class LLMService: @unchecked Sendable {
                                 }
 
                             case .done:
-                                // Also emit any remaining tool calls on stream end
                                 if !toolCallAccumulators.isEmpty {
                                     emitToolCalls(&toolCallAccumulators, continuation: continuation)
                                 }
@@ -196,7 +237,6 @@ final class LLMService: @unchecked Sendable {
                         }
                     }
 
-                    // Stream ended without [DONE] — still emit remaining data
                     if !toolCallAccumulators.isEmpty {
                         emitToolCalls(&toolCallAccumulators, continuation: continuation)
                     }
@@ -210,7 +250,340 @@ final class LLMService: @unchecked Sendable {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Anthropic Implementation
+
+    private func anthropicChatCompletion(
+        messages: [LLMChatMessage],
+        tools: [LLMToolDefinition]?
+    ) async throws -> LLMChatResponse {
+        let anthropicReq = buildAnthropicBody(messages: messages, tools: tools, stream: false)
+        let urlRequest = try buildAnthropicURLRequest(body: anthropicReq)
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
+        }
+
+        let anthropicResp = try JSONDecoder().decode(AnthropicResponse.self, from: data)
+        return convertAnthropicResponse(anthropicResp)
+    }
+
+    private func anthropicChatCompletionStream(
+        messages: [LLMChatMessage],
+        tools: [LLMToolDefinition]?
+    ) async throws -> AsyncStream<StreamChunk> {
+        let anthropicReq = buildAnthropicBody(messages: messages, tools: tools, stream: true)
+        let urlRequest = try buildAnthropicURLRequest(body: anthropicReq)
+        let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            var body = ""
+            for try await line in bytes.lines { body += line }
+            print("[LLMService] Anthropic stream error \(httpResponse.statusCode): \(body.prefix(300))")
+            throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
+        }
+
+        return AsyncStream { continuation in
+            Task {
+                var sseParser = SSEParser()
+                var toolCallAccumulators: [Int: (id: String, name: String, arguments: String)] = [:]
+                var activeBlockTypes: [Int: String] = [:]
+
+                do {
+                    for try await line in bytes.lines {
+                        let events = sseParser.parse(chunk: line + "\n\n")
+
+                        for event in events {
+                            switch event {
+                            case .message(let data):
+                                guard let jsonData = data.data(using: .utf8),
+                                      let streamEvent = try? JSONDecoder().decode(AnthropicStreamEvent.self, from: jsonData)
+                                else { continue }
+
+                                switch streamEvent.type {
+                                case "content_block_start":
+                                    if let idx = streamEvent.index, let block = streamEvent.contentBlock {
+                                        activeBlockTypes[idx] = block.type
+                                        if block.type == "tool_use" {
+                                            toolCallAccumulators[idx] = (
+                                                id: block.id ?? "call_\(UUID().uuidString.prefix(8))",
+                                                name: block.name ?? "",
+                                                arguments: ""
+                                            )
+                                        }
+                                    }
+
+                                case "content_block_delta":
+                                    if let idx = streamEvent.index, let delta = streamEvent.delta {
+                                        let blockType = activeBlockTypes[idx] ?? delta.type
+                                        switch delta.type {
+                                        case "text_delta":
+                                            if blockType == "thinking" {
+                                                if let text = delta.text { continuation.yield(.thinking(text)) }
+                                            } else {
+                                                if let text = delta.text { continuation.yield(.content(text)) }
+                                            }
+                                        case "thinking_delta":
+                                            if let text = delta.thinking { continuation.yield(.thinking(text)) }
+                                        case "input_json_delta":
+                                            if let json = delta.partialJson {
+                                                toolCallAccumulators[idx]?.arguments += json
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
+
+                                case "content_block_stop":
+                                    break
+
+                                case "message_delta":
+                                    if let stopReason = streamEvent.delta?.stopReason,
+                                       (stopReason == "tool_use" || stopReason == "tool_calls"),
+                                       !toolCallAccumulators.isEmpty {
+                                        emitToolCalls(&toolCallAccumulators, continuation: continuation)
+                                    }
+
+                                case "message_stop":
+                                    if !toolCallAccumulators.isEmpty {
+                                        emitToolCalls(&toolCallAccumulators, continuation: continuation)
+                                    }
+                                    continuation.yield(.done)
+                                    continuation.finish()
+                                    return
+
+                                case "error":
+                                    let errMsg = data
+                                    continuation.yield(.error(errMsg))
+                                    continuation.finish()
+                                    return
+
+                                default:
+                                    break
+                                }
+
+                            case .done:
+                                if !toolCallAccumulators.isEmpty {
+                                    emitToolCalls(&toolCallAccumulators, continuation: continuation)
+                                }
+                                continuation.yield(.done)
+                                continuation.finish()
+                                return
+                            }
+                        }
+                    }
+
+                    if !toolCallAccumulators.isEmpty {
+                        emitToolCalls(&toolCallAccumulators, continuation: continuation)
+                    }
+                    continuation.yield(.done)
+                    continuation.finish()
+                } catch {
+                    continuation.yield(.error(error.localizedDescription))
+                    continuation.finish()
+                }
+            }
+        }
+    }
+
+    // MARK: - Anthropic Helpers
+
+    private func buildAnthropicBody(
+        messages: [LLMChatMessage],
+        tools: [LLMToolDefinition]?,
+        stream: Bool
+    ) -> AnthropicRequest {
+        let caps = effectiveCapabilities
+
+        var systemBlocks: [AnthropicSystemBlock] = []
+        var anthropicMessages: [AnthropicMessage] = []
+
+        for msg in messages {
+            switch msg.role {
+            case "system":
+                if let content = msg.content, !content.isEmpty {
+                    systemBlocks.append(AnthropicSystemBlock(type: "text", text: content))
+                }
+            case "user":
+                var blocks: [AnthropicContentBlock] = []
+                if let parts = msg.contentParts, !parts.isEmpty {
+                    for part in parts {
+                        switch part {
+                        case .text(let text):
+                            if !text.isEmpty { blocks.append(.text(text)) }
+                        case .imageURL(let url, _):
+                            if let parsed = parseBase64DataURI(url) {
+                                blocks.append(.image(mediaType: parsed.mediaType, data: parsed.data))
+                            }
+                        }
+                    }
+                } else if let content = msg.content, !content.isEmpty {
+                    blocks.append(.text(content))
+                }
+                if !blocks.isEmpty {
+                    anthropicMessages.append(AnthropicMessage(role: "user", content: blocks))
+                }
+            case "assistant":
+                var blocks: [AnthropicContentBlock] = []
+                if let content = msg.content, !content.isEmpty {
+                    blocks.append(.text(content))
+                }
+                if let toolCalls = msg.toolCalls {
+                    for tc in toolCalls {
+                        blocks.append(.toolUse(id: tc.id, name: tc.function.name, input: tc.function.arguments))
+                    }
+                }
+                if !blocks.isEmpty {
+                    anthropicMessages.append(AnthropicMessage(role: "assistant", content: blocks))
+                }
+            case "tool":
+                let toolUseId = msg.toolCallId ?? ""
+                let content = msg.content ?? ""
+                let block = AnthropicContentBlock.toolResult(toolUseId: toolUseId, content: content)
+                // Anthropic tool results must be in a "user" message
+                if let last = anthropicMessages.last, last.role == "user",
+                   last.content.allSatisfy({ if case .toolResult = $0 { return true }; return false }) {
+                    var merged = last.content
+                    merged.append(block)
+                    anthropicMessages[anthropicMessages.count - 1] = AnthropicMessage(role: "user", content: merged)
+                } else {
+                    anthropicMessages.append(AnthropicMessage(role: "user", content: [block]))
+                }
+            default:
+                break
+            }
+        }
+
+        // Merge consecutive same-role messages (Anthropic requires alternating roles)
+        anthropicMessages = mergeConsecutiveRoles(anthropicMessages)
+
+        var anthropicTools: [AnthropicTool]? = nil
+        if let tools = tools, !tools.isEmpty {
+            anthropicTools = tools.map {
+                AnthropicTool(name: $0.function.name, description: $0.function.description, inputSchema: $0.function.parameters)
+            }
+        }
+
+        var thinking: AnthropicThinking? = nil
+        if caps.supportsReasoning {
+            thinking = .enabled(budget: max(provider.maxTokens, 10000))
+        }
+
+        // Anthropic requires temperature to be exactly 1 when extended thinking is enabled
+        let temperature = thinking != nil ? 1.0 : provider.temperature
+
+        return AnthropicRequest(
+            model: model,
+            maxTokens: provider.maxTokens,
+            system: systemBlocks.isEmpty ? nil : systemBlocks,
+            messages: anthropicMessages,
+            tools: anthropicTools,
+            stream: stream,
+            temperature: temperature,
+            thinking: thinking
+        )
+    }
+
+    private func mergeConsecutiveRoles(_ messages: [AnthropicMessage]) -> [AnthropicMessage] {
+        var result: [AnthropicMessage] = []
+        for msg in messages {
+            if let last = result.last, last.role == msg.role {
+                var merged = last.content
+                merged.append(contentsOf: msg.content)
+                result[result.count - 1] = AnthropicMessage(role: msg.role, content: merged)
+            } else {
+                result.append(msg)
+            }
+        }
+        return result
+    }
+
+    private func parseBase64DataURI(_ uri: String) -> (mediaType: String, data: String)? {
+        // Parse "data:image/jpeg;base64,/9j/4AAQ..."
+        guard uri.hasPrefix("data:") else { return nil }
+        let withoutPrefix = String(uri.dropFirst(5))
+        guard let semicolonIdx = withoutPrefix.firstIndex(of: ";") else { return nil }
+        let mediaType = String(withoutPrefix[withoutPrefix.startIndex..<semicolonIdx])
+        let afterSemicolon = String(withoutPrefix[withoutPrefix.index(after: semicolonIdx)...])
+        guard afterSemicolon.hasPrefix("base64,") else { return nil }
+        let data = String(afterSemicolon.dropFirst(7))
+        return (mediaType, data)
+    }
+
+    private func convertAnthropicResponse(_ resp: AnthropicResponse) -> LLMChatResponse {
+        var content = ""
+        var toolCalls: [LLMToolCall] = []
+
+        for block in resp.content {
+            switch block.type {
+            case "text":
+                content += block.text ?? ""
+            case "tool_use":
+                let args = block.input?.jsonString ?? "{}"
+                toolCalls.append(LLMToolCall(
+                    id: block.id ?? "call_\(UUID().uuidString.prefix(8))",
+                    name: block.name ?? "",
+                    arguments: args
+                ))
+            default:
+                break
+            }
+        }
+
+        let message = LLMChatMessage(
+            role: "assistant",
+            content: content.isEmpty ? nil : content,
+            toolCalls: toolCalls.isEmpty ? nil : toolCalls
+        )
+        let choice = LLMChoice(index: 0, message: message, delta: nil, finishReason: resp.stopReason)
+        let usage = LLMUsage(
+            promptTokens: resp.usage?.inputTokens,
+            completionTokens: resp.usage?.outputTokens,
+            totalTokens: nil
+        )
+        return LLMChatResponse(id: resp.id, choices: [choice], usage: usage)
+    }
+
+    private func buildAnthropicURLRequest<T: Encodable>(body: T) throws -> URLRequest {
+        let messagesEndpoint = baseURL.hasSuffix("/")
+            ? baseURL + "messages"
+            : baseURL + "/messages"
+
+        guard let url = URL(string: messagesEndpoint) else {
+            throw LLMError.invalidURL(messagesEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("iClaw/1.0 (https://iclaw.shadow.mov)", forHTTPHeaderField: "User-Agent")
+
+        if !apiKey.isEmpty {
+            request.addValue(apiKey, forHTTPHeaderField: "x-api-key")
+        }
+        request.addValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+
+        let encoder = JSONEncoder()
+        let bodyData = try encoder.encode(body)
+        request.httpBody = bodyData
+
+        #if DEBUG
+        if let bodyStr = String(data: bodyData, encoding: .utf8) {
+            print("[LLMService] POST \(messagesEndpoint) body=\(bodyStr.prefix(500))...")
+        }
+        #endif
+
+        return request
+    }
+
+    // MARK: - OpenAI Helpers
 
     private func isToolCallFinishReason(_ reason: String) -> Bool {
         reason == "tool_calls" || reason == "tool_call" || reason == "function_call"
@@ -221,7 +594,6 @@ final class LLMService: @unchecked Sendable {
         continuation: AsyncStream<StreamChunk>.Continuation
     ) {
         for (_, acc) in accumulators.sorted(by: { $0.key < $1.key }) {
-            // Generate a fallback ID if the provider didn't send one
             let callId = acc.id.isEmpty ? "call_\(UUID().uuidString.prefix(8))" : acc.id
             let toolCall = LLMToolCall(
                 id: callId,
@@ -233,7 +605,7 @@ final class LLMService: @unchecked Sendable {
         accumulators.removeAll()
     }
 
-    private func buildRequest<T: Encodable>(body: T) throws -> URLRequest {
+    private func buildOpenAIRequest<T: Encodable>(body: T) throws -> URLRequest {
         let endpoint = baseURL.hasSuffix("/")
             ? baseURL + "chat/completions"
             : baseURL + "/chat/completions"
@@ -259,8 +631,7 @@ final class LLMService: @unchecked Sendable {
 
         #if DEBUG
         if let bodyStr = String(data: bodyData, encoding: .utf8) {
-            let preview = bodyStr.prefix(500)
-            print("[LLMService] POST \(endpoint) body=\(preview)...")
+            print("[LLMService] POST \(endpoint) body=\(bodyStr.prefix(500))...")
         }
         #endif
 
