@@ -88,7 +88,6 @@ struct LLMChatMessage: Codable {
         toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
         name = try container.decodeIfPresent(String.self, forKey: .name)
 
-        // content can be a string or an array of ContentPart
         var contentStr: String?
         if let str = try? container.decodeIfPresent(String.self, forKey: .content) {
             contentStr = str
@@ -334,7 +333,7 @@ struct LLMDelta: Codable {
     var toolCalls: [LLMDeltaToolCall]?
 
     enum CodingKeys: String, CodingKey {
-        case role, content, images
+        case role, content, images, reasoning
         case reasoningContent = "reasoning_content"
         case toolCalls = "tool_calls"
     }
@@ -350,8 +349,11 @@ struct LLMDelta: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         role = try container.decodeIfPresent(String.self, forKey: .role)
-        reasoningContent = try container.decodeIfPresent(String.self, forKey: .reasoningContent)
         toolCalls = try container.decodeIfPresent([LLMDeltaToolCall].self, forKey: .toolCalls)
+
+        // Parse reasoning from multiple possible fields
+        reasoningContent = try container.decodeIfPresent(String.self, forKey: .reasoningContent)
+            ?? container.decodeIfPresent(String.self, forKey: .reasoning)
 
         var contentStr: String?
         if let str = try? container.decodeIfPresent(String.self, forKey: .content) {
@@ -400,5 +402,249 @@ struct LLMUsage: Codable {
         case promptTokens = "prompt_tokens"
         case completionTokens = "completion_tokens"
         case totalTokens = "total_tokens"
+    }
+}
+
+// MARK: - Anthropic API types
+
+struct AnthropicRequest: Encodable {
+    let model: String
+    let maxTokens: Int
+    var system: [AnthropicSystemBlock]?
+    let messages: [AnthropicMessage]
+    var tools: [AnthropicTool]?
+    var stream: Bool?
+    var temperature: Double?
+    var thinking: AnthropicThinking?
+
+    enum CodingKeys: String, CodingKey {
+        case model, system, messages, tools, stream, temperature, thinking
+        case maxTokens = "max_tokens"
+    }
+}
+
+struct AnthropicSystemBlock: Encodable {
+    let type: String
+    let text: String
+}
+
+struct AnthropicThinking: Encodable {
+    let type: String
+    let budgetTokens: Int
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case budgetTokens = "budget_tokens"
+    }
+
+    static func enabled(budget: Int) -> AnthropicThinking {
+        AnthropicThinking(type: "enabled", budgetTokens: budget)
+    }
+}
+
+struct AnthropicMessage: Encodable {
+    let role: String
+    let content: [AnthropicContentBlock]
+}
+
+enum AnthropicContentBlock: Encodable {
+    case text(String)
+    case image(mediaType: String, data: String)
+    case toolUse(id: String, name: String, input: String)
+    case toolResult(toolUseId: String, content: String)
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .text(let text):
+            try container.encode("text", forKey: .type)
+            try container.encode(text, forKey: .text)
+        case .image(let mediaType, let data):
+            try container.encode("image", forKey: .type)
+            try container.encode(
+                ImageSource(type: "base64", mediaType: mediaType, data: data),
+                forKey: .source
+            )
+        case .toolUse(let id, let name, let input):
+            try container.encode("tool_use", forKey: .type)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            if let data = input.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) {
+                try container.encode(AnyCodable(obj), forKey: .input)
+            } else {
+                try container.encode([String: String](), forKey: .input)
+            }
+        case .toolResult(let toolUseId, let content):
+            try container.encode("tool_result", forKey: .type)
+            try container.encode(toolUseId, forKey: .toolUseId)
+            try container.encode(content, forKey: .content)
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type, text, source, id, name, input, content
+        case toolUseId = "tool_use_id"
+    }
+
+    struct ImageSource: Encodable {
+        let type: String
+        let mediaType: String
+        let data: String
+
+        enum CodingKeys: String, CodingKey {
+            case type, data
+            case mediaType = "media_type"
+        }
+    }
+}
+
+struct AnthropicTool: Encodable {
+    let name: String
+    let description: String
+    let inputSchema: JSONSchema
+
+    enum CodingKeys: String, CodingKey {
+        case name, description
+        case inputSchema = "input_schema"
+    }
+}
+
+/// Type-erased Codable wrapper for arbitrary JSON values.
+struct AnyCodable: Encodable {
+    let value: Any
+
+    init(_ value: Any) {
+        self.value = value
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        if let dict = value as? [String: Any] {
+            try container.encode(dict.mapValues { AnyCodable($0) })
+        } else if let array = value as? [Any] {
+            try container.encode(array.map { AnyCodable($0) })
+        } else if let str = value as? String {
+            try container.encode(str)
+        } else if let num = value as? Double {
+            try container.encode(num)
+        } else if let num = value as? Int {
+            try container.encode(num)
+        } else if let bool = value as? Bool {
+            try container.encode(bool)
+        } else if value is NSNull {
+            try container.encodeNil()
+        } else {
+            try container.encodeNil()
+        }
+    }
+}
+
+// MARK: - Anthropic stream response types
+
+struct AnthropicStreamEvent: Decodable {
+    let type: String
+    var message: AnthropicStreamMessage?
+    var index: Int?
+    var contentBlock: AnthropicStreamContentBlock?
+    var delta: AnthropicStreamDelta?
+    var usage: AnthropicUsage?
+
+    enum CodingKeys: String, CodingKey {
+        case type, message, index, delta, usage
+        case contentBlock = "content_block"
+    }
+}
+
+struct AnthropicStreamMessage: Decodable {
+    let id: String?
+    let role: String?
+    let model: String?
+}
+
+struct AnthropicStreamContentBlock: Decodable {
+    let type: String
+    var text: String?
+    var thinking: String?
+    var id: String?
+    var name: String?
+}
+
+struct AnthropicStreamDelta: Decodable {
+    let type: String
+    var text: String?
+    var thinking: String?
+    var partialJson: String?
+    var stopReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case type, text, thinking
+        case partialJson = "partial_json"
+        case stopReason = "stop_reason"
+    }
+}
+
+struct AnthropicUsage: Decodable {
+    var inputTokens: Int?
+    var outputTokens: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case inputTokens = "input_tokens"
+        case outputTokens = "output_tokens"
+    }
+}
+
+/// Non-streaming Anthropic response.
+struct AnthropicResponse: Decodable {
+    let id: String?
+    let type: String?
+    let role: String?
+    let content: [AnthropicResponseBlock]
+    let model: String?
+    let stopReason: String?
+    let usage: AnthropicUsage?
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, role, content, model, usage
+        case stopReason = "stop_reason"
+    }
+}
+
+struct AnthropicResponseBlock: Decodable {
+    let type: String
+    var text: String?
+    var thinking: String?
+    var id: String?
+    var name: String?
+    var input: AnyCodableDecoder?
+}
+
+/// Type-erased Decodable wrapper.
+struct AnyCodableDecoder: Decodable {
+    let value: Any
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let dict = try? container.decode([String: AnyCodableDecoder].self) {
+            value = dict.mapValues(\.value)
+        } else if let array = try? container.decode([AnyCodableDecoder].self) {
+            value = array.map(\.value)
+        } else if let str = try? container.decode(String.self) {
+            value = str
+        } else if let num = try? container.decode(Double.self) {
+            value = num
+        } else if let bool = try? container.decode(Bool.self) {
+            value = bool
+        } else {
+            value = NSNull()
+        }
+    }
+
+    var jsonString: String {
+        if let data = try? JSONSerialization.data(withJSONObject: value),
+           let str = String(data: data, encoding: .utf8) {
+            return str
+        }
+        return "{}"
     }
 }

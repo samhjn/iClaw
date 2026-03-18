@@ -292,6 +292,11 @@ enum L10n {
         static var supportsToolUseFooter: String { tr("provider.supportsToolUseFooter") }
         static var supportsImageGeneration: String { tr("provider.supportsImageGeneration") }
         static var supportsImageGenerationFooter: String { tr("provider.supportsImageGenerationFooter") }
+        static var supportsReasoning: String { tr("provider.supportsReasoning") }
+        static var supportsReasoningFooter: String { tr("provider.supportsReasoningFooter") }
+        static var apiStyle: String { tr("provider.apiStyle") }
+        static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
+        static var modelCapabilities: String { tr("provider.modelCapabilities") }
         static var presets: String { tr("provider.presets") }
     }
 

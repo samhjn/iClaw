@@ -228,13 +228,13 @@ final class ChatViewModel {
 
             guard !Task.isCancelled, !cancelled else { return }
 
-            let supportsVision = router.primarySupportsVision(for: agent)
+            let modelCaps = router.primaryModelCapabilities(for: agent)
 
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
             let contextMessages = contextManager.buildContextWindow(
                 session: session,
                 systemPrompt: systemPrompt,
-                supportsVision: supportsVision
+                capabilities: modelCaps
             )
 
             let toolDefs = ToolDefinitions.allTools

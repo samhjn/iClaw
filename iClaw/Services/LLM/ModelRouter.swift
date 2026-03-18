@@ -41,9 +41,12 @@ final class ModelRouter {
         resolveProviderChain(for: agent).first
     }
 
-    /// Whether the primary provider supports vision/image inputs.
-    func primarySupportsVision(for agent: Agent) -> Bool {
-        primaryProvider(for: agent)?.supportsVision ?? false
+    /// Resolve the model capabilities for the primary (first) provider+model pair.
+    func primaryModelCapabilities(for agent: Agent) -> ModelCapabilities {
+        let chain = resolveProviderChainWithModels(for: agent)
+        guard let first = chain.first else { return .default }
+        let effectiveModel = first.modelName ?? first.provider.modelName
+        return first.provider.capabilities(for: effectiveModel)
     }
 
     /// Returns the provider for sub-agent creation.
@@ -63,7 +66,7 @@ final class ModelRouter {
     /// Same provider can appear multiple times with different models.
     func resolveProviderChainWithModels(for agent: Agent) -> [(provider: LLMProvider, modelName: String?)] {
         var chain: [(provider: LLMProvider, modelName: String?)] = []
-        var seen = Set<String>() // "providerId:modelName" dedup key
+        var seen = Set<String>()
 
         func effectiveModel(provider: LLMProvider, override: String?) -> String {
             override ?? provider.modelName
@@ -106,7 +109,7 @@ final class ModelRouter {
         agent: Agent,
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
-    ) async throws -> (stream: AsyncStream<StreamChunk>, providerName: String, supportsVision: Bool) {
+    ) async throws -> (stream: AsyncStream<StreamChunk>, providerName: String, capabilities: ModelCapabilities) {
         let chain = resolveProviderChainWithModels(for: agent)
         guard !chain.isEmpty else { throw ChatError.noProviderConfigured }
 
@@ -114,13 +117,14 @@ final class ModelRouter {
 
         for (index, entry) in chain.enumerated() {
             do {
-                let effectiveTools = entry.provider.supportsToolUse ? tools : nil
+                let effectiveModel = entry.modelName ?? entry.provider.modelName
+                let caps = entry.provider.capabilities(for: effectiveModel)
+                let effectiveTools = caps.supportsToolUse ? tools : nil
                 let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
                 let stream = try await service.chatCompletionStream(messages: messages, tools: effectiveTools)
-                let effectiveModel = entry.modelName ?? entry.provider.modelName
                 lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
                 failoverOccurred = index > 0
-                return (stream, lastUsedProviderName!, entry.provider.supportsVision)
+                return (stream, lastUsedProviderName!, caps)
             } catch {
                 let isLast = index == chain.count - 1
                 if isLast { throw error }
@@ -144,10 +148,11 @@ final class ModelRouter {
 
         for (index, entry) in chain.enumerated() {
             do {
-                let effectiveTools = entry.provider.supportsToolUse ? tools : nil
+                let effectiveModel = entry.modelName ?? entry.provider.modelName
+                let caps = entry.provider.capabilities(for: effectiveModel)
+                let effectiveTools = caps.supportsToolUse ? tools : nil
                 let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
                 let response = try await service.chatCompletion(messages: messages, tools: effectiveTools)
-                let effectiveModel = entry.modelName ?? entry.provider.modelName
                 lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
                 failoverOccurred = index > 0
                 return (response, lastUsedProviderName!)

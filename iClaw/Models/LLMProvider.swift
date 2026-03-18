@@ -1,6 +1,29 @@
 import Foundation
 import SwiftData
 
+/// API communication style.
+enum APIStyle: String, Codable, CaseIterable {
+    case openAI = "openai"
+    case anthropic = "anthropic"
+
+    var displayName: String {
+        switch self {
+        case .openAI: return "OpenAI"
+        case .anthropic: return "Anthropic"
+        }
+    }
+}
+
+/// Per-model capability flags.
+struct ModelCapabilities: Codable, Equatable {
+    var supportsVision: Bool = false
+    var supportsToolUse: Bool = true
+    var supportsImageGeneration: Bool = false
+    var supportsReasoning: Bool = false
+
+    static let `default` = ModelCapabilities()
+}
+
 @Model
 final class LLMProvider {
     var id: UUID
@@ -24,16 +47,23 @@ final class LLMProvider {
     /// When the model list was last fetched.
     var cachedModelListDate: Date?
 
-    /// Whether this provider's default model supports image/vision inputs.
+    /// Legacy provider-level flags (kept for backward compatibility with existing data).
     var supportsVision: Bool = false
-
-    /// Whether this provider's default model supports tool/function calling.
     var supportsToolUse: Bool = true
-
-    /// Whether this provider's default model supports image generation output.
     var supportsImageGeneration: Bool = false
 
+    /// API communication style: "openai" or "anthropic".
+    var apiStyleRaw: String = "openai"
+
+    /// Per-model capabilities, stored as JSON: {"model-name": {...}}
+    var modelCapabilitiesJSON: String?
+
     // MARK: - Computed
+
+    var apiStyle: APIStyle {
+        get { APIStyle(rawValue: apiStyleRaw) ?? .openAI }
+        set { apiStyleRaw = newValue.rawValue }
+    }
 
     var enabledModels: [String] {
         get {
@@ -60,6 +90,56 @@ final class LLMProvider {
         }
     }
 
+    /// Per-model capabilities dictionary.
+    var allModelCapabilities: [String: ModelCapabilities] {
+        get {
+            guard let json = modelCapabilitiesJSON,
+                  let data = json.data(using: .utf8),
+                  let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data)
+            else { return [:] }
+            return dict
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue),
+                  let json = String(data: data, encoding: .utf8)
+            else { modelCapabilitiesJSON = nil; return }
+            modelCapabilitiesJSON = json
+        }
+    }
+
+    /// Get capabilities for a specific model, with provider-level fallback.
+    /// Reads directly from the raw JSON to avoid computed property issues with SwiftData.
+    func capabilities(for model: String) -> ModelCapabilities {
+        if let json = modelCapabilitiesJSON,
+           let data = json.data(using: .utf8),
+           let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data),
+           let caps = dict[model] {
+            return caps
+        }
+        return ModelCapabilities(
+            supportsVision: supportsVision,
+            supportsToolUse: supportsToolUse,
+            supportsImageGeneration: supportsImageGeneration,
+            supportsReasoning: false
+        )
+    }
+
+    /// Set capabilities for a specific model.
+    /// Writes directly to the raw JSON property for reliable SwiftData persistence.
+    func setCapabilities(_ caps: ModelCapabilities, for model: String) {
+        var dict: [String: ModelCapabilities] = [:]
+        if let json = modelCapabilitiesJSON,
+           let data = json.data(using: .utf8),
+           let existing = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data) {
+            dict = existing
+        }
+        dict[model] = caps
+        if let data = try? JSONEncoder().encode(dict),
+           let json = String(data: data, encoding: .utf8) {
+            modelCapabilitiesJSON = json
+        }
+    }
+
     init(
         name: String,
         endpoint: String = "https://api.openai.com/v1",
@@ -82,5 +162,7 @@ final class LLMProvider {
         self.cachedModelListRaw = nil
         self.cachedModelListDate = nil
         self.supportsVision = false
+        self.apiStyleRaw = "openai"
+        self.modelCapabilitiesJSON = nil
     }
 }

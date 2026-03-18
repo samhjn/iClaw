@@ -13,7 +13,7 @@ final class ContextManager {
     func buildContextWindow(
         session: Session,
         systemPrompt: String,
-        supportsVision: Bool = false
+        capabilities: ModelCapabilities = .default
     ) -> [LLMChatMessage] {
         var messages: [LLMChatMessage] = []
 
@@ -40,7 +40,7 @@ final class ContextManager {
         // task instruction) so the LLM never loses the user's initial intent.
         if hasCompressed {
             if let firstUserMsg = sorted.first(where: { $0.role == .user }) {
-                let anchor = convertToLLMMessage(firstUserMsg, supportsVision: supportsVision)
+                let anchor = convertToLLMMessage(firstUserMsg, capabilities: capabilities)
                 let anchorTokens = TokenEstimator.estimateMessage(firstUserMsg)
                 messages.append(anchor)
                 availableTokens -= anchorTokens
@@ -54,7 +54,7 @@ final class ContextManager {
         )
 
         for msg in recentMessages {
-            messages.append(convertToLLMMessage(msg, supportsVision: supportsVision))
+            messages.append(convertToLLMMessage(msg, capabilities: capabilities))
         }
 
         return messages
@@ -139,11 +139,11 @@ final class ContextManager {
         return result
     }
 
-    private func convertToLLMMessage(_ message: Message, supportsVision: Bool = false) -> LLMChatMessage {
+    private func convertToLLMMessage(_ message: Message, capabilities: ModelCapabilities = .default) -> LLMChatMessage {
         switch message.role {
         case .user:
             let text = message.content ?? ""
-            if supportsVision, let imgData = message.imageAttachmentsData,
+            if capabilities.supportsVision, let imgData = message.imageAttachmentsData,
                let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
                !images.isEmpty {
                 return .userWithImages(text, images: images)
@@ -196,8 +196,6 @@ enum TokenEstimator {
             } else if isEmoji(v) || v > 0xFFFF {
                 emojiCount += 1
             } else {
-                // Other multi-byte (Cyrillic, Arabic, Thai, extended Latin, etc.)
-                // ~2 characters per token on average
                 cjkCount += 1
             }
         }
@@ -223,7 +221,7 @@ enum TokenEstimator {
                 for call in calls {
                     total += estimate(call.function.name)
                     total += estimate(call.function.arguments)
-                    total += 8 // id, type, structural tokens
+                    total += 8
                 }
             }
         }
@@ -236,25 +234,15 @@ enum TokenEstimator {
     }
 
     private static func isCJK(_ v: UInt32) -> Bool {
-        // CJK Unified Ideographs
         (v >= 0x4E00 && v <= 0x9FFF) ||
-        // CJK Extension A
         (v >= 0x3400 && v <= 0x4DBF) ||
-        // CJK Extension B-F
         (v >= 0x20000 && v <= 0x2FA1F) ||
-        // CJK Compatibility Ideographs
         (v >= 0xF900 && v <= 0xFAFF) ||
-        // Hiragana
         (v >= 0x3040 && v <= 0x309F) ||
-        // Katakana
         (v >= 0x30A0 && v <= 0x30FF) ||
-        // Hangul Syllables
         (v >= 0xAC00 && v <= 0xD7AF) ||
-        // CJK Symbols and Punctuation
         (v >= 0x3000 && v <= 0x303F) ||
-        // Fullwidth Forms
         (v >= 0xFF00 && v <= 0xFFEF) ||
-        // Bopomofo
         (v >= 0x3100 && v <= 0x312F)
     }
 

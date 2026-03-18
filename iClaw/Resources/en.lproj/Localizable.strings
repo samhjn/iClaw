@@ -235,6 +235,11 @@
 "provider.supportsToolUseFooter" = "Disable if this model does not support function calling / tool use (some OpenRouter models)";
 "provider.supportsImageGeneration" = "Supports Image Generation";
 "provider.supportsImageGenerationFooter" = "Enable for models that can generate images (e.g. Gemini 2.5 Flash Image / Nano Banana). Sends modalities parameter to the API.";
+"provider.supportsReasoning" = "Supports Reasoning";
+"provider.supportsReasoningFooter" = "Enable for models with extended thinking / reasoning (e.g. Claude with extended thinking, DeepSeek R1, o1/o3). Thinking output will be captured and displayed.";
+"provider.apiStyle" = "API Style";
+"provider.apiStyleFooter" = "OpenAI: OpenAI-compatible chat/completions endpoint. Anthropic: Native Anthropic Messages API with extended thinking support.";
+"provider.modelCapabilities" = "Model Capabilities";
 "provider.presets" = "Presets";
 
 // MARK: - Skills

@@ -76,7 +76,8 @@ final class SettingsViewModel {
     func fetchRemoteModels(for provider: LLMProvider) async throws -> [String] {
         let models = try await LLMService.fetchModels(
             endpoint: provider.endpoint,
-            apiKey: provider.apiKey
+            apiKey: provider.apiKey,
+            apiStyle: provider.apiStyle
         )
         provider.cachedModelList = models
         provider.cachedModelListDate = Date()
