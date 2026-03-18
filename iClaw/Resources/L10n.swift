@@ -95,6 +95,10 @@ enum L10n {
         static var photoLibrary: String { tr("chat.photoLibrary") }
         static var camera: String { tr("chat.camera") }
         static var pasteFromClipboard: String { tr("chat.pasteFromClipboard") }
+        static var imagePlaceholder: String { tr("chat.imagePlaceholder") }
+        static var saveImageToPhotos: String { tr("chat.saveImageToPhotos") }
+        static var imageSaved: String { tr("chat.imageSaved") }
+        static var copyImage: String { tr("chat.copyImage") }
     }
 
     // MARK: - Agents

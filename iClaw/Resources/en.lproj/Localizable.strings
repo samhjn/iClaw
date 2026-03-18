@@ -62,6 +62,10 @@
 "chat.photoLibrary" = "Photo Library";
 "chat.camera" = "Camera";
 "chat.pasteFromClipboard" = "Paste from Clipboard";
+"chat.imagePlaceholder" = "[Image]";
+"chat.saveImageToPhotos" = "Save Image";
+"chat.imageSaved" = "Saved to Photos";
+"chat.copyImage" = "Copy Image";
 
 // MARK: - Agents
 "agents.title" = "Agents";

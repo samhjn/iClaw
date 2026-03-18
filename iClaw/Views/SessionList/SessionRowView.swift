@@ -2,21 +2,17 @@ import SwiftUI
 
 struct SessionRowView: View {
     let session: Session
-
-    private var previewContent: String? {
-        if session.isActive, let streaming = session.pendingStreamingContent, !streaming.isEmpty {
-            return streaming
-        }
-        if let lastMessage = session.sortedMessages.last, let content = lastMessage.content {
-            return content
-        }
-        return nil
-    }
+    var rowData: SessionRowData?
 
     var body: some View {
+        let isActive = session.isActive
+        let messageCount = rowData?.messageCount ?? 0
+        let previewContent = rowData?.previewContent
+        let isStreaming = rowData?.isStreaming ?? false
+
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                if session.isActive {
+                if isActive {
                     PulsingDot()
                 }
                 Text(session.title)
@@ -35,7 +31,7 @@ struct SessionRowView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if session.isActive {
+                if isActive {
                     Text(L10n.Common.active)
                         .font(.caption2)
                         .foregroundStyle(.white)
@@ -46,7 +42,7 @@ struct SessionRowView: View {
 
                 Spacer()
 
-                Text(L10n.Sessions.messagesCount(session.messages.count))
+                Text(L10n.Sessions.messagesCount(messageCount))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -54,7 +50,7 @@ struct SessionRowView: View {
             if let content = previewContent {
                 Text(content)
                     .font(.subheadline)
-                    .foregroundStyle(session.isActive && session.pendingStreamingContent != nil ? .primary : .secondary)
+                    .foregroundStyle(isStreaming ? .primary : .secondary)
                     .lineLimit(2)
             }
         }
