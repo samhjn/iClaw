@@ -30,6 +30,26 @@ struct ImageAttachment: Codable, Identifiable {
         )
     }
 
+    /// Create an ImageAttachment by decoding a `data:image/...;base64,...` URI.
+    static func from(base64DataURI uri: String) -> ImageAttachment? {
+        guard uri.hasPrefix("data:") else { return nil }
+        let withoutPrefix = String(uri.dropFirst(5))
+        guard let semicolonIdx = withoutPrefix.firstIndex(of: ";") else { return nil }
+        let mimeType = String(withoutPrefix[..<semicolonIdx])
+        let afterSemicolon = String(withoutPrefix[withoutPrefix.index(after: semicolonIdx)...])
+        guard afterSemicolon.hasPrefix("base64,") else { return nil }
+        let base64String = String(afterSemicolon.dropFirst(7))
+        guard let data = Data(base64Encoded: base64String, options: .ignoreUnknownCharacters) else { return nil }
+
+        var width = 512, height = 512
+        if let image = UIImage(data: data) {
+            width = Int(image.size.width * image.scale)
+            height = Int(image.size.height * image.scale)
+        }
+
+        return ImageAttachment(id: UUID(), imageData: data, mimeType: mimeType, width: width, height: height)
+    }
+
     private static func resize(image: UIImage, maxDimension: CGFloat) -> UIImage {
         let size = image.size
         guard max(size.width, size.height) > maxDimension else { return image }

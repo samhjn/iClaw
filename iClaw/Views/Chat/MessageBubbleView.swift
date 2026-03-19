@@ -35,6 +35,11 @@ struct MessageBubbleView: View {
         return (try? JSONDecoder().decode([ImageAttachment].self, from: data)) ?? []
     }
 
+    /// True when the rendered content already references images inline via `attachment:N`.
+    private var contentHasInlineImageRefs: Bool {
+        content.contains("attachment:")
+    }
+
     private static let imageMarkdownPattern = try! NSRegularExpression(
         pattern: "!\\[[^\\]]*\\]\\([^)]+\\)",
         options: []
@@ -128,13 +133,17 @@ struct MessageBubbleView: View {
                 }
 
                 if !content.isEmpty {
-                    MarkdownContentView(content, isUser: false)
+                    MarkdownContentView(content, isUser: false, imageAttachments: imageAttachments)
                         .padding(12)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color(.systemGray6))
                         )
                         .foregroundStyle(.primary)
+                }
+
+                if !imageAttachments.isEmpty && !contentHasInlineImageRefs {
+                    MessageImageGrid(images: imageAttachments)
                 }
             }
         }
@@ -148,13 +157,17 @@ struct MessageBubbleView: View {
             }
 
             if !content.isEmpty {
-                MarkdownContentView(content, isUser: false)
+                MarkdownContentView(content, isUser: false, imageAttachments: imageAttachments)
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(.systemGray6))
                     )
                     .foregroundStyle(.primary)
+            }
+
+            if !imageAttachments.isEmpty && !contentHasInlineImageRefs {
+                MessageImageGrid(images: imageAttachments)
             }
 
             ToolCallCardView(toolCalls: calls)
@@ -181,6 +194,10 @@ private struct MessageImageGrid: View {
                         .frame(maxWidth: images.count == 1 ? 240 : 140,
                                maxHeight: images.count == 1 ? 240 : 140)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            ImagePreviewCoordinator.shared.show(uiImage)
+                        }
                 }
             }
         }
