@@ -12,8 +12,7 @@ final class ContextManager {
 
     func buildContextWindow(
         session: Session,
-        systemPrompt: String,
-        capabilities: ModelCapabilities = .default
+        systemPrompt: String
     ) -> [LLMChatMessage] {
         var messages: [LLMChatMessage] = []
 
@@ -40,7 +39,7 @@ final class ContextManager {
         // task instruction) so the LLM never loses the user's initial intent.
         if hasCompressed {
             if let firstUserMsg = sorted.first(where: { $0.role == .user }) {
-                let anchor = convertToLLMMessage(firstUserMsg, capabilities: capabilities)
+                let anchor = convertToLLMMessage(firstUserMsg)
                 let anchorTokens = TokenEstimator.estimateMessage(firstUserMsg)
                 messages.append(anchor)
                 availableTokens -= anchorTokens
@@ -54,7 +53,7 @@ final class ContextManager {
         )
 
         for msg in recentMessages {
-            messages.append(convertToLLMMessage(msg, capabilities: capabilities))
+            messages.append(convertToLLMMessage(msg))
         }
 
         return messages
@@ -139,11 +138,11 @@ final class ContextManager {
         return result
     }
 
-    private func convertToLLMMessage(_ message: Message, capabilities: ModelCapabilities = .default) -> LLMChatMessage {
+    private func convertToLLMMessage(_ message: Message) -> LLMChatMessage {
         switch message.role {
         case .user:
-            let text = message.content ?? ""
-            if capabilities.supportsVision, let imgData = message.imageAttachmentsData,
+            let text = Self.stripImageRefsForContext(message.content ?? "")
+            if let imgData = message.imageAttachmentsData,
                let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
                !images.isEmpty {
                 return .userWithImages(text, images: images)
@@ -154,7 +153,8 @@ final class ContextManager {
             if let data = message.toolCallsData {
                 toolCalls = try? JSONDecoder().decode([LLMToolCall].self, from: data)
             }
-            return .assistant(message.content, toolCalls: toolCalls)
+            let content = message.content.map { Self.stripImageRefsForContext($0) }
+            return .assistant(content, toolCalls: toolCalls)
         case .tool:
             return .tool(
                 content: message.content ?? "",
@@ -164,6 +164,30 @@ final class ContextManager {
         case .system:
             return .system(message.content ?? "")
         }
+    }
+
+    /// Strip inline image references (base64 data URIs and attachment:N refs) from content.
+    /// Acts as a safety net so the LLM never sees raw base64 or internal attachment URLs.
+    private static func stripImageRefsForContext(_ content: String) -> String {
+        var result = content
+
+        if result.contains(";base64,") {
+            let base64Pattern = "!\\[[^\\]]*\\]\\(data:image/[^)]+\\)"
+            if let regex = try? NSRegularExpression(pattern: base64Pattern) {
+                let range = NSRange(result.startIndex..., in: result)
+                result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: L10n.Chat.imagePlaceholder)
+            }
+        }
+
+        if result.contains("attachment:") {
+            let attachPattern = "!\\[[^\\]]*\\]\\(attachment:\\d+\\)"
+            if let regex = try? NSRegularExpression(pattern: attachPattern) {
+                let range = NSRange(result.startIndex..., in: result)
+                result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: L10n.Chat.imagePlaceholder)
+            }
+        }
+
+        return result
     }
 }
 
@@ -207,13 +231,19 @@ enum TokenEstimator {
         return asciiTokens + cjkTokens + emojiTokens
     }
 
-    /// Estimate tokens for a Message, including content, tool calls, and overhead.
+    /// Estimate tokens for a Message, including content, tool calls, images, and overhead.
     static func estimateMessage(_ message: Message) -> Int {
         let overhead = 4
         var total = overhead
 
         if let content = message.content {
-            total += estimate(content)
+            if content.contains(";base64,") {
+                let (stripped, imageCount) = stripBase64ForEstimation(content)
+                total += estimate(stripped)
+                total += imageCount * estimateImageTokens(width: 512, height: 512)
+            } else {
+                total += estimate(content)
+            }
         }
 
         if let toolData = message.toolCallsData {
@@ -230,7 +260,37 @@ enum TokenEstimator {
             total += estimate(name) + 1
         }
 
+        if let imgData = message.imageAttachmentsData,
+           let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData) {
+            for img in images {
+                total += estimateImageTokens(width: img.width, height: img.height)
+            }
+        }
+
         return total
+    }
+
+    /// Strip base64 data-URI images from content for estimation purposes.
+    /// Returns the cleaned text and the number of images found.
+    static func stripBase64ForEstimation(_ content: String) -> (text: String, imageCount: Int) {
+        let pattern = "!\\[[^\\]]*\\]\\(data:image/[^)]+\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return (content, 0) }
+        let range = NSRange(content.startIndex..., in: content)
+        let matches = regex.matches(in: content, range: range)
+        guard !matches.isEmpty else { return (content, 0) }
+        let cleaned = regex.stringByReplacingMatches(in: content, range: range, withTemplate: L10n.Chat.imagePlaceholder)
+        return (cleaned, matches.count)
+    }
+
+    /// Estimate vision token cost for a single image based on tile-based pricing.
+    ///
+    /// Uses OpenAI's high-detail formula as a reasonable cross-provider estimate:
+    /// 85 base tokens + 170 per 512x512 tile.
+    static func estimateImageTokens(width: Int, height: Int) -> Int {
+        guard width > 0, height > 0 else { return 85 }
+        let tilesX = max(1, (width + 511) / 512)
+        let tilesY = max(1, (height + 511) / 512)
+        return 85 + tilesX * tilesY * 170
     }
 
     private static func isCJK(_ v: UInt32) -> Bool {

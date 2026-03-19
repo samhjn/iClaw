@@ -50,22 +50,98 @@ final class Message {
             self.tokenEstimate = Self.computeTokenEstimate(
                 content: content,
                 toolCallsData: toolCallsData,
-                name: name
+                name: name,
+                imageAttachmentsData: nil
             )
         }
     }
 
-    /// Compute a BPE-aware token estimate from the message payload.
+    /// Recompute and persist the token estimate (e.g. after adding image attachments).
+    func recalculateTokenEstimate() {
+        tokenEstimate = Self.computeTokenEstimate(
+            content: content,
+            toolCallsData: toolCallsData,
+            name: name,
+            imageAttachmentsData: imageAttachmentsData
+        )
+    }
+
+    // MARK: - Inline Image Extraction
+
+    /// Extract inline base64 data-URI images from `content` into `imageAttachmentsData`.
+    /// Content is updated with localized image placeholders. Returns true if any images were extracted.
+    @discardableResult
+    func extractAndStoreInlineImages() -> Bool {
+        guard let content, content.contains(";base64,") else { return false }
+        let existingCount = (imageAttachmentsData.flatMap {
+            try? JSONDecoder().decode([ImageAttachment].self, from: $0)
+        })?.count ?? 0
+        let (cleaned, images) = Self.extractInlineImages(from: content, startIndex: existingCount)
+        guard !images.isEmpty else { return false }
+
+        self.content = cleaned
+        let existing = (imageAttachmentsData.flatMap {
+            try? JSONDecoder().decode([ImageAttachment].self, from: $0)
+        }) ?? []
+        let all = existing + images
+        imageAttachmentsData = try? JSONEncoder().encode(all)
+        recalculateTokenEstimate()
+        return true
+    }
+
+    /// Parse markdown image syntax with base64 data URIs, returning cleaned text and extracted images.
+    /// Images are replaced with `![](attachment:N)` so the markdown renderer can display them inline.
+    static func extractInlineImages(from content: String, startIndex: Int = 0) -> (cleanedContent: String, images: [ImageAttachment]) {
+        let pattern = "!\\[[^\\]]*\\]\\((data:image/[^)]+)\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return (content, [])
+        }
+
+        let nsContent = content as NSString
+        let fullRange = NSRange(location: 0, length: nsContent.length)
+        let matches = regex.matches(in: content, range: fullRange)
+        guard !matches.isEmpty else { return (content, []) }
+
+        var images: [ImageAttachment] = []
+        var replacementRanges: [(NSRange, String)] = []
+        var imageIndex = startIndex
+
+        for match in matches {
+            let uri = nsContent.substring(with: match.range(at: 1))
+            if let attachment = ImageAttachment.from(base64DataURI: uri) {
+                images.append(attachment)
+                replacementRanges.append((match.range, "![](attachment:\(imageIndex))"))
+                imageIndex += 1
+            }
+        }
+
+        guard !images.isEmpty else { return (content, []) }
+
+        let result = NSMutableString(string: nsContent)
+        for (range, replacement) in replacementRanges.reversed() {
+            result.replaceCharacters(in: range, with: replacement)
+        }
+
+        return (result as String, images)
+    }
+
     private static func computeTokenEstimate(
         content: String?,
         toolCallsData: Data?,
-        name: String?
+        name: String?,
+        imageAttachmentsData: Data?
     ) -> Int {
         let overhead = 4
         var total = overhead
 
         if let content {
-            total += TokenEstimator.estimate(content)
+            if content.contains(";base64,") {
+                let (stripped, imageCount) = TokenEstimator.stripBase64ForEstimation(content)
+                total += TokenEstimator.estimate(stripped)
+                total += imageCount * TokenEstimator.estimateImageTokens(width: 512, height: 512)
+            } else {
+                total += TokenEstimator.estimate(content)
+            }
         }
 
         if let toolData = toolCallsData {
@@ -80,6 +156,13 @@ final class Message {
 
         if let name {
             total += TokenEstimator.estimate(name) + 1
+        }
+
+        if let imgData = imageAttachmentsData,
+           let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData) {
+            for img in images {
+                total += TokenEstimator.estimateImageTokens(width: img.width, height: img.height)
+            }
         }
 
         return total

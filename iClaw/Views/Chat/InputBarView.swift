@@ -77,22 +77,25 @@ struct InputBarView: View {
                 }
                 .disabled(isBusy)
 
-                TextField(L10n.Chat.messagePlaceholder, text: $text, axis: .vertical)
-                    .lineLimit(1...6)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(isBlocked ? Color.orange.opacity(0.08) : Color(.systemGray6))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(isFocused ? Color.accentColor.opacity(0.4) :
-                                    isBlocked ? Color.orange.opacity(0.3) : Color.clear,
-                                    lineWidth: 1)
-                    )
-                    .focused($isFocused)
+                PasteableTextInput(
+                    text: $text,
+                    placeholder: L10n.Chat.messagePlaceholder,
+                    isFocused: $isFocused,
+                    maxLines: 6,
+                    onPasteImage: { onAddImage?($0) }
+                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(isBlocked ? Color.orange.opacity(0.08) : Color(.systemGray6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isFocused ? Color.accentColor.opacity(0.4) :
+                                isBlocked ? Color.orange.opacity(0.3) : Color.clear,
+                                lineWidth: 1)
+                )
 
                 actionButton
             }
@@ -193,6 +196,113 @@ struct InputBarView: View {
             }
             .disabled(!canSendMessage)
             .transition(.scale.combined(with: .opacity))
+        }
+    }
+}
+
+// MARK: - Pasteable Text Input
+
+class ImagePasteTextView: UITextView {
+    var onPasteImage: ((UIImage) -> Void)?
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(paste(_:)) && UIPasteboard.general.hasImages {
+            return true
+        }
+        return super.canPerformAction(action, withSender: sender)
+    }
+
+    override func paste(_ sender: Any?) {
+        if let image = UIPasteboard.general.image {
+            onPasteImage?(image)
+        }
+        if UIPasteboard.general.hasStrings {
+            super.paste(sender)
+        }
+    }
+}
+
+struct PasteableTextInput: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    var isFocused: FocusState<Bool>.Binding
+    var maxLines: Int = 6
+    var onPasteImage: ((UIImage) -> Void)?
+
+    func makeUIView(context: Context) -> ImagePasteTextView {
+        let textView = ImagePasteTextView()
+        textView.font = .preferredFont(forTextStyle: .body)
+        textView.adjustsFontForContentSizeCategory = true
+        textView.backgroundColor = .clear
+        textView.isScrollEnabled = false
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textView.delegate = context.coordinator
+        textView.onPasteImage = onPasteImage
+        return textView
+    }
+
+    func updateUIView(_ uiView: ImagePasteTextView, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        uiView.onPasteImage = onPasteImage
+        context.coordinator.updatePlaceholder(uiView, text: text)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ImagePasteTextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIView.layoutFittingExpandedSize.width
+        let lineHeight = uiView.font?.lineHeight ?? 20
+        let maxHeight = lineHeight * CGFloat(maxLines)
+        let fittingSize = uiView.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+        let clampedHeight = min(max(fittingSize.height, lineHeight), maxHeight)
+        uiView.isScrollEnabled = fittingSize.height > maxHeight
+        return CGSize(width: width, height: clampedHeight)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
+        var parent: PasteableTextInput
+        private var placeholderLabel: UILabel?
+
+        init(_ parent: PasteableTextInput) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text
+            updatePlaceholder(textView, text: textView.text)
+            textView.invalidateIntrinsicContentSize()
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.isFocused.wrappedValue = true
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.isFocused.wrappedValue = false
+        }
+
+        func updatePlaceholder(_ textView: UITextView, text: String) {
+            if placeholderLabel == nil {
+                let label = UILabel()
+                label.text = parent.placeholder
+                label.font = textView.font
+                label.textColor = .placeholderText
+                label.translatesAutoresizingMaskIntoConstraints = false
+                textView.addSubview(label)
+                NSLayoutConstraint.activate([
+                    label.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
+                    label.topAnchor.constraint(equalTo: textView.topAnchor),
+                ])
+                placeholderLabel = label
+            }
+            placeholderLabel?.isHidden = !text.isEmpty
         }
     }
 }

@@ -7,10 +7,12 @@ import UIKit
 struct MarkdownContentView: View {
     let content: String
     let isUserMessage: Bool
+    var imageAttachments: [ImageAttachment]
 
-    init(_ content: String, isUser: Bool = false) {
+    init(_ content: String, isUser: Bool = false, imageAttachments: [ImageAttachment] = []) {
         self.content = content
         self.isUserMessage = isUser
+        self.imageAttachments = imageAttachments
     }
 
     var body: some View {
@@ -78,7 +80,7 @@ struct MarkdownContentView: View {
         case .table(let table):
             MarkdownTableView(table: table, isUserMessage: isUserMessage)
         case .image(let alt, let url):
-            MarkdownImageView(alt: alt, urlString: url, isUserMessage: isUserMessage)
+            MarkdownImageView(alt: alt, urlString: url, isUserMessage: isUserMessage, imageAttachments: imageAttachments)
         case .horizontalRule:
             Divider()
                 .padding(.vertical, 4)
@@ -720,14 +722,23 @@ private struct MarkdownImageView: View {
     let alt: String
     let urlString: String
     let isUserMessage: Bool
+    var imageAttachments: [ImageAttachment] = []
 
-    @State private var showPreview = false
     @State private var resolvedImage: UIImage?
 
     private var isDataURI: Bool { urlString.hasPrefix("data:image/") }
+    private var isAttachmentRef: Bool { urlString.hasPrefix("attachment:") }
 
-    private var dataURIImage: UIImage? {
-        guard isDataURI, let commaIdx = urlString.firstIndex(of: ",") else { return nil }
+    private var attachmentImage: UIImage? {
+        guard isAttachmentRef,
+              let idx = Int(urlString.dropFirst("attachment:".count)),
+              idx >= 0, idx < imageAttachments.count
+        else { return nil }
+        return imageAttachments[idx].uiImage
+    }
+
+    private static func decodeDataURI(_ urlString: String) -> UIImage? {
+        guard let commaIdx = urlString.firstIndex(of: ",") else { return nil }
         let base64 = String(urlString[urlString.index(after: commaIdx)...])
         guard let data = Data(base64Encoded: base64, options: .ignoreUnknownCharacters) else { return nil }
         return UIImage(data: data)
@@ -735,10 +746,16 @@ private struct MarkdownImageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if isDataURI {
-                if let uiImage = dataURIImage {
+            if isAttachmentRef {
+                if let uiImage = attachmentImage {
                     thumbnailImage(Image(uiImage: uiImage))
                         .onAppear { resolvedImage = uiImage }
+                } else {
+                    imageFailedView
+                }
+            } else if isDataURI {
+                if let uiImage = resolvedImage {
+                    thumbnailImage(Image(uiImage: uiImage))
                 } else {
                     imageFailedView
                 }
@@ -755,7 +772,6 @@ private struct MarkdownImageView: View {
                         .frame(height: 100)
                     case .success(let image):
                         thumbnailImage(image)
-                            .onAppear { resolvedImage = ImageRenderer(content: image).uiImage }
                     case .failure:
                         imageFailedView
                     @unknown default:
@@ -779,9 +795,11 @@ private struct MarkdownImageView: View {
                     .italic()
             }
         }
-        .fullScreenCover(isPresented: $showPreview) {
-            if let uiImage = resolvedImage {
-                ImagePreviewOverlay(image: uiImage, alt: alt)
+        .task {
+            if isDataURI {
+                resolvedImage = Self.decodeDataURI(urlString)
+            } else if !isAttachmentRef, let url = URL(string: urlString) {
+                resolvedImage = await Self.downloadImage(from: url)
             }
         }
     }
@@ -793,7 +811,11 @@ private struct MarkdownImageView: View {
             .frame(maxWidth: 400, maxHeight: 400)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .contentShape(Rectangle())
-            .onTapGesture { showPreview = true }
+            .onTapGesture {
+                if let resolvedImage {
+                    ImagePreviewCoordinator.shared.show(resolvedImage)
+                }
+            }
     }
 
     private var imageFailedView: some View {
@@ -810,133 +832,13 @@ private struct MarkdownImageView: View {
                 .fill(Color(.systemGray6))
         )
     }
-}
 
-// MARK: - Full-Screen Image Preview
-
-private struct ImagePreviewOverlay: View {
-    let image: UIImage
-    let alt: String
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var scale: CGFloat = 1
-    @State private var lastScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-    @State private var showToast = false
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .scaleEffect(scale)
-                .offset(offset)
-                .gesture(dragGesture)
-                .gesture(magnificationGesture)
-                .onTapGesture(count: 2) { toggleZoom() }
-                .onTapGesture { dismiss() }
-
-            VStack {
-                HStack {
-                    Spacer()
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, .white.opacity(0.3))
-                    }
-                    .padding()
-                }
-                Spacer()
-                HStack(spacing: 32) {
-                    Button {
-                        UIPasteboard.general.image = image
-                        flashToast()
-                    } label: {
-                        Label(L10n.Chat.copyImage, systemImage: "doc.on.doc")
-                            .font(.callout)
-                            .foregroundStyle(.white)
-                    }
-                    Button {
-                        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-                        flashToast()
-                    } label: {
-                        Label(L10n.Chat.saveImageToPhotos, systemImage: "square.and.arrow.down")
-                            .font(.callout)
-                            .foregroundStyle(.white)
-                    }
-                }
-                .padding(.bottom, 40)
-            }
-
-            if showToast {
-                VStack {
-                    Spacer()
-                    Text(L10n.Chat.imageSaved)
-                        .font(.callout)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Capsule().fill(.black.opacity(0.7)))
-                        .padding(.bottom, 100)
-                }
-                .transition(.opacity)
-            }
-        }
-        .statusBar(hidden: true)
-    }
-
-    private var magnificationGesture: some Gesture {
-        MagnifyGesture()
-            .onChanged { value in
-                scale = lastScale * value.magnification
-            }
-            .onEnded { _ in
-                withAnimation(.spring(duration: 0.3)) {
-                    scale = max(1, min(scale, 5))
-                    if scale == 1 { offset = .zero }
-                }
-                lastScale = scale
-                lastOffset = offset
-            }
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                if scale > 1 {
-                    offset = CGSize(
-                        width: lastOffset.width + value.translation.width,
-                        height: lastOffset.height + value.translation.height
-                    )
-                }
-            }
-            .onEnded { _ in
-                lastOffset = offset
-            }
-    }
-
-    private func toggleZoom() {
-        withAnimation(.spring(duration: 0.3)) {
-            if scale > 1 {
-                scale = 1
-                lastScale = 1
-                offset = .zero
-                lastOffset = .zero
-            } else {
-                scale = 3
-                lastScale = 3
-            }
-        }
-    }
-
-    private func flashToast() {
-        withAnimation { showToast = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation { showToast = false }
+    private static func downloadImage(from url: URL) async -> UIImage? {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return UIImage(data: data)
+        } catch {
+            return nil
         }
     }
 }

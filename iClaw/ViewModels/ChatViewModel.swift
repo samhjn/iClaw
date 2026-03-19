@@ -55,6 +55,21 @@ final class ChatViewModel {
 
     func loadMessages() {
         messages = session.sortedMessages
+        migrateInlineImages()
+    }
+
+    /// One-time migration: extract inline base64 images from existing assistant messages
+    /// into the unified `imageAttachmentsData` storage.
+    private func migrateInlineImages() {
+        var needsSave = false
+        for msg in messages where msg.role == .assistant {
+            if msg.extractAndStoreInlineImages() {
+                needsSave = true
+            }
+        }
+        if needsSave {
+            try? modelContext.save()
+        }
     }
 
     // MARK: - Scroll Position Tracking
@@ -157,6 +172,7 @@ final class ChatViewModel {
 
         let userMessage = Message(role: .user, content: text, session: session)
         userMessage.imageAttachmentsData = imageData
+        if imageData != nil { userMessage.recalculateTokenEstimate() }
         modelContext.insert(userMessage)
         session.messages.append(userMessage)
         session.updatedAt = Date()
@@ -228,13 +244,10 @@ final class ChatViewModel {
 
             guard !Task.isCancelled, !cancelled else { return }
 
-            let modelCaps = router.primaryModelCapabilities(for: agent)
-
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
             let contextMessages = contextManager.buildContextWindow(
                 session: session,
-                systemPrompt: systemPrompt,
-                capabilities: modelCaps
+                systemPrompt: systemPrompt
             )
 
             let toolDefs = ToolDefinitions.allTools
@@ -260,6 +273,7 @@ final class ChatViewModel {
                             content: fullContent + L10n.Chat.aborted,
                             session: session
                         )
+                        partialMsg.extractAndStoreInlineImages()
                         modelContext.insert(partialMsg)
                         session.messages.append(partialMsg)
                         session.updatedAt = Date()
@@ -303,6 +317,7 @@ final class ChatViewModel {
                         content: fullContent + L10n.Chat.aborted,
                         session: session
                     )
+                    partialMsg.extractAndStoreInlineImages()
                     modelContext.insert(partialMsg)
                     session.messages.append(partialMsg)
                     session.updatedAt = Date()
@@ -332,6 +347,7 @@ final class ChatViewModel {
                     session: session
                 )
                 assistantMsg.thinkingContent = combinedThinking
+                assistantMsg.extractAndStoreInlineImages()
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 try? modelContext.save()
@@ -341,6 +357,7 @@ final class ChatViewModel {
             } else if !finalContent.isEmpty || combinedThinking != nil {
                 let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent, session: session)
                 assistantMsg.thinkingContent = combinedThinking
+                assistantMsg.extractAndStoreInlineImages()
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
