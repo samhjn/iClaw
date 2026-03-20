@@ -113,11 +113,10 @@ final class ModelRouter {
         let whitelist = agent.allowedModelIds
         guard !whitelist.isEmpty else { return chain }
 
-        let filtered = chain.filter { entry in
+        return chain.filter { entry in
             let effectiveModel = entry.modelName ?? entry.provider.modelName
             return whitelist.contains("\(entry.provider.id.uuidString):\(effectiveModel)")
         }
-        return filtered.isEmpty ? chain : filtered
     }
 
     // MARK: - Streaming with failover
@@ -128,7 +127,7 @@ final class ModelRouter {
         tools: [LLMToolDefinition]?
     ) async throws -> (stream: AsyncStream<StreamChunk>, providerName: String, capabilities: ModelCapabilities) {
         let chain = resolveProviderChainWithModels(for: agent)
-        guard !chain.isEmpty else { throw ChatError.noProviderConfigured }
+        guard !chain.isEmpty else { throw emptyChainError(for: agent) }
 
         failoverOccurred = false
 
@@ -159,7 +158,7 @@ final class ModelRouter {
         tools: [LLMToolDefinition]?
     ) async throws -> (response: LLMChatResponse, providerName: String) {
         let chain = resolveProviderChainWithModels(for: agent)
-        guard !chain.isEmpty else { throw ChatError.noProviderConfigured }
+        guard !chain.isEmpty else { throw emptyChainError(for: agent) }
 
         failoverOccurred = false
 
@@ -226,5 +225,13 @@ final class ModelRouter {
         if let p = try? modelContext.fetch(descriptor).first { return p }
         let all = FetchDescriptor<LLMProvider>(sortBy: [SortDescriptor(\.createdAt)])
         return try? modelContext.fetch(all).first
+    }
+
+    /// Distinguishes between "no providers at all" and "whitelist filtered out everything".
+    private func emptyChainError(for agent: Agent) -> Error {
+        if !agent.allowedModelIds.isEmpty {
+            return ChatError.whitelistBlockedAllModels
+        }
+        return ChatError.noProviderConfigured
     }
 }

@@ -33,6 +33,19 @@ struct AgentModelConfigView: View {
         }
     }
 
+    private var hasWhitelist: Bool { !agent.allowedModelIds.isEmpty }
+    private var whitelistSet: Set<String> { Set(agent.allowedModelIds) }
+
+    private var isPrimaryBlockedByWhitelist: Bool {
+        guard hasWhitelist, let pmId = resolvePrimaryModelId() else { return false }
+        return !whitelistSet.contains(pmId)
+    }
+
+    private var isSubAgentBlockedByWhitelist: Bool {
+        guard hasWhitelist, let smId = resolveSubAgentModelId() else { return false }
+        return !whitelistSet.contains(smId)
+    }
+
     var body: some View {
         List {
             primarySection
@@ -56,6 +69,13 @@ struct AgentModelConfigView: View {
                 ForEach(allProviderModels) { pm in
                     Text(pm.displayName).tag(pm.id)
                 }
+            }
+            if isPrimaryBlockedByWhitelist {
+                whitelistWarningRow(
+                    icon: "exclamationmark.triangle.fill",
+                    color: .red,
+                    text: L10n.ModelConfig.whitelistMissingPrimary
+                )
             }
         } header: {
             Text(L10n.ModelConfig.primaryModel)
@@ -211,6 +231,13 @@ struct AgentModelConfigView: View {
                     Text(pm.displayName).tag(pm.id)
                 }
             }
+            if isSubAgentBlockedByWhitelist {
+                whitelistWarningRow(
+                    icon: "exclamationmark.triangle.fill",
+                    color: .orange,
+                    text: L10n.ModelConfig.whitelistMissingSubAgent
+                )
+            }
         } header: {
             Text(L10n.ModelConfig.subAgentDefault)
         } footer: {
@@ -273,6 +300,31 @@ struct AgentModelConfigView: View {
                 Text(L10n.ModelConfig.whitelistAllModels)
                     .foregroundStyle(.secondary)
             } else {
+                let staleCount = currentWhitelist.count - whitelistPMs.count
+                if staleCount > 0 {
+                    whitelistWarningRow(
+                        icon: "trash.circle.fill",
+                        color: .orange,
+                        text: L10n.ModelConfig.whitelistStaleWarning(staleCount)
+                    )
+                }
+
+                if isPrimaryBlockedByWhitelist {
+                    whitelistWarningRow(
+                        icon: "exclamationmark.triangle.fill",
+                        color: .red,
+                        text: L10n.ModelConfig.whitelistMissingPrimary
+                    )
+                }
+
+                if isSubAgentBlockedByWhitelist {
+                    whitelistWarningRow(
+                        icon: "exclamationmark.triangle.fill",
+                        color: .orange,
+                        text: L10n.ModelConfig.whitelistMissingSubAgent
+                    )
+                }
+
                 ForEach(whitelistPMs) { pm in
                     HStack {
                         VStack(alignment: .leading) {
@@ -317,6 +369,43 @@ struct AgentModelConfigView: View {
         } footer: {
             Text(L10n.ModelConfig.whitelistFooter)
         }
+    }
+
+    private func whitelistWarningRow(icon: String, color: Color, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+                .font(.body)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(color)
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// Returns the `providerId:modelName` key for the current primary model.
+    private func resolvePrimaryModelId() -> String? {
+        if let pid = agent.primaryProviderId,
+           let provider = allProviders.first(where: { $0.id == pid }) {
+            let model = agent.primaryModelNameOverride ?? provider.modelName
+            return "\(pid.uuidString):\(model)"
+        }
+        // Global default
+        if let globalDefault = allProviders.first(where: { $0.isDefault }) ?? allProviders.first {
+            return "\(globalDefault.id.uuidString):\(globalDefault.modelName)"
+        }
+        return nil
+    }
+
+    /// Returns the `providerId:modelName` key for the sub-agent default model.
+    private func resolveSubAgentModelId() -> String? {
+        if let sid = agent.subAgentProviderId,
+           let provider = allProviders.first(where: { $0.id == sid }) {
+            let model = agent.subAgentModelNameOverride ?? provider.modelName
+            return "\(sid.uuidString):\(model)"
+        }
+        // Inherits from primary
+        return resolvePrimaryModelId()
     }
 
     private func addToWhitelist(_ pm: ProviderModel) {
@@ -462,8 +551,13 @@ struct AgentModelConfigView: View {
             let chain = router.resolveProviderChainWithModels(for: agent)
 
             if chain.isEmpty {
-                Text(L10n.ModelConfig.noModels)
-                    .foregroundStyle(.red)
+                if !agent.allowedModelIds.isEmpty {
+                    Text(L10n.ChatError.whitelistBlocked)
+                        .foregroundStyle(.red)
+                } else {
+                    Text(L10n.ModelConfig.noModels)
+                        .foregroundStyle(.red)
+                }
             } else {
                 ForEach(Array(chain.enumerated()), id: \.offset) { index, entry in
                     let effectiveModel = entry.modelName ?? entry.provider.modelName
@@ -529,52 +623,61 @@ struct AgentModelConfigView: View {
             }
 
             // Sub-agent preview: resolve what a sub-agent would actually use
-            let subRouter = ModelRouter(modelContext: modelContext)
             let subProviderInfo: (provider: LLMProvider, modelName: String)? = {
                 if let subId = agent.subAgentProviderId,
-                   let p = subRouter.providerById(subId) {
+                   let p = allProviders.first(where: { $0.id == subId }) {
                     return (p, agent.subAgentModelNameOverride ?? p.modelName)
                 }
-                // "Inherit from primary" — use the parent's resolved primary
-                let resolved = subRouter.resolveProviderChainWithModels(for: agent)
-                if let primary = resolved.first {
+                // "Inherit from primary" — same as primary in the chain above
+                if let primary = chain.first {
                     return (primary.provider, primary.modelName ?? primary.provider.modelName)
                 }
                 return nil
             }()
+            let isSubAgentInWhitelist: Bool = {
+                guard hasWhitelist, let info = subProviderInfo else { return true }
+                return whitelistSet.contains("\(info.provider.id.uuidString):\(info.modelName)")
+            }()
             if let info = subProviderInfo {
                 let isInherited = agent.subAgentProviderId == nil
+                let blocked = !isSubAgentInWhitelist
                 Divider()
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()
-                            .fill(Color.orange.opacity(0.15))
+                            .fill(blocked ? Color.red.opacity(0.15) : Color.orange.opacity(0.15))
                             .frame(width: 28, height: 28)
-                        Image(systemName: "person.2")
+                        Image(systemName: blocked ? "xmark" : "person.2")
                             .font(.system(size: 11))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(blocked ? .red : .orange)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(info.modelName)
                             .font(.subheadline.bold())
+                            .foregroundStyle(blocked ? .red : .primary)
                         HStack(spacing: 4) {
                             Text("\(info.provider.name) · Sub-Agent")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            if isInherited {
+                            if isInherited && !blocked {
                                 Text("= Primary")
                                     .font(.caption2)
                                     .foregroundStyle(.blue.opacity(0.7))
                             }
                         }
+                        if blocked {
+                            Text(L10n.ModelConfig.whitelistMissingSubAgent)
+                                .font(.caption2)
+                                .foregroundStyle(.red)
+                        }
                     }
                     Spacer()
                     Text(L10n.ModelConfig.subAgent)
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(blocked ? .red : .orange)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Capsule().stroke(.orange.opacity(0.4)))
+                        .background(Capsule().stroke(blocked ? .red.opacity(0.4) : .orange.opacity(0.4)))
                 }
                 .padding(.vertical, 2)
             }

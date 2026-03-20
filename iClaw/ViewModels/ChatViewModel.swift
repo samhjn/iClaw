@@ -1028,6 +1028,7 @@ struct CompressionStats {
 enum ChatError: LocalizedError {
     case noProviderConfigured
     case noAgentAssociated
+    case whitelistBlockedAllModels
 
     var errorDescription: String? {
         switch self {
@@ -1035,6 +1036,8 @@ enum ChatError: LocalizedError {
             return L10n.ChatError.noProvider
         case .noAgentAssociated:
             return L10n.ChatError.noAgent
+        case .whitelistBlockedAllModels:
+            return L10n.ChatError.whitelistBlocked
         }
     }
 }

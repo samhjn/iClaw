@@ -136,6 +136,9 @@
 "modelConfig.addToWhitelist" = "Add to Whitelist";
 "modelConfig.clearWhitelist" = "Clear Whitelist";
 "modelConfig.whitelistFooter" = "Restrict which models sub-agents and tool calls can use. When empty, all available models are allowed.";
+"modelConfig.whitelistStaleWarning" = "%d whitelist entry(s) reference deleted providers/models";
+"modelConfig.whitelistMissingPrimary" = "Primary model is not in the whitelist — agent will fail to send messages";
+"modelConfig.whitelistMissingSubAgent" = "Sub-agent default model is not in the whitelist";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "Cron Jobs";
@@ -321,6 +324,7 @@
 // MARK: - Chat Errors
 "chatError.noProvider" = "No LLM provider configured. Please add one in Settings.";
 "chatError.noAgent" = "No agent associated with this session.";
+"chatError.whitelistBlocked" = "No available models — current model is not in the whitelist. Please check agent's model and whitelist settings.";
 
 // MARK: - Browser
 "tabs.browser" = "Browser";

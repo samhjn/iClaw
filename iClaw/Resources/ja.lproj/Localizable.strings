@@ -135,6 +135,9 @@
 "modelConfig.addToWhitelist" = "ホワイトリストに追加";
 "modelConfig.clearWhitelist" = "ホワイトリストをクリア";
 "modelConfig.whitelistFooter" = "サブエージェントやツール呼び出しで使用できるモデルを制限します。空の場合、すべての利用可能なモデルが許可されます。";
+"modelConfig.whitelistStaleWarning" = "%d 件のホワイトリストエントリが削除されたプロバイダー/モデルを参照しています";
+"modelConfig.whitelistMissingPrimary" = "プライマリモデルがホワイトリストにありません — メッセージ送信に失敗します";
+"modelConfig.whitelistMissingSubAgent" = "サブエージェントのデフォルトモデルがホワイトリストにありません";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定期タスク";
@@ -320,6 +323,7 @@
 // MARK: - Chat Errors
 "chatError.noProvider" = "LLMプロバイダーが設定されていません。設定で追加してください。";
 "chatError.noAgent" = "このセッションにエージェントが関連付けられていません。";
+"chatError.whitelistBlocked" = "利用可能なモデルがありません — 現在のモデルがホワイトリストにありません。エージェントのデフォルトモデルとホワイトリストの設定を確認してください。";
 
 // MARK: - Browser
 "tabs.browser" = "ブラウザ";

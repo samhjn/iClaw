@@ -177,6 +177,9 @@ enum L10n {
         static var addToWhitelist: String { tr("modelConfig.addToWhitelist") }
         static var clearWhitelist: String { tr("modelConfig.clearWhitelist") }
         static var whitelistFooter: String { tr("modelConfig.whitelistFooter") }
+        static func whitelistStaleWarning(_ count: Int) -> String { tr("modelConfig.whitelistStaleWarning", count) }
+        static var whitelistMissingPrimary: String { tr("modelConfig.whitelistMissingPrimary") }
+        static var whitelistMissingSubAgent: String { tr("modelConfig.whitelistMissingSubAgent") }
     }
 
     // MARK: - Cron Jobs
@@ -388,6 +391,7 @@ enum L10n {
     enum ChatError {
         static var noProvider: String { tr("chatError.noProvider") }
         static var noAgent: String { tr("chatError.noAgent") }
+        static var whitelistBlocked: String { tr("chatError.whitelistBlocked") }
     }
 
     // MARK: - Browser
