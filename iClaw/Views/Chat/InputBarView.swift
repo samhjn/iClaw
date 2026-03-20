@@ -7,11 +7,13 @@ struct InputBarView: View {
     var isCompressing: Bool = false
     var isBlocked: Bool = false
     var isCancelling: Bool = false
+    var canRetry: Bool = false
     var cancelFailureReason: String?
     var pendingImages: [ImageAttachment] = []
     let onSend: () -> Void
     var onStop: (() -> Void)?
     var onStopCompression: (() -> Void)?
+    var onRetry: (() -> Void)?
     var onDismissKeyboard: (() -> Void)?
     var onAddImage: ((UIImage) -> Void)?
     var onRemoveImage: ((UUID) -> Void)?
@@ -104,8 +106,10 @@ struct InputBarView: View {
         }
         .background(.ultraThinMaterial)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
+        .animation(.easeInOut(duration: 0.2), value: isLoading)
         .animation(.easeInOut(duration: 0.2), value: cancelFailureReason != nil)
         .animation(.easeInOut(duration: 0.2), value: pendingImages.count)
+        .animation(.easeInOut(duration: 0.2), value: canRetry)
         .confirmationDialog(L10n.Chat.addImage, isPresented: $showImageSourcePicker) {
             Button(L10n.Chat.photoLibrary) {
                 showPhotoPicker = true
@@ -179,6 +183,20 @@ struct InputBarView: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.orange)
                 }
+            }
+            .transition(.scale.combined(with: .opacity))
+        } else if canRetry && !canSendMessage, let onRetry {
+            Button {
+                onRetry()
+            } label: {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 36, height: 36)
+                    .overlay {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
             }
             .transition(.scale.combined(with: .opacity))
         } else {

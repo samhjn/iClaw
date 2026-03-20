@@ -38,6 +38,7 @@ struct AgentModelConfigView: View {
             primarySection
             fallbackSection
             subAgentSection
+            modelWhitelistSection
             compressionSection
             resolutionPreviewSection
         }
@@ -253,6 +254,89 @@ struct AgentModelConfigView: View {
         )
     }
 
+    // MARK: - Model Whitelist
+
+    @ViewBuilder
+    private var modelWhitelistSection: some View {
+        Section {
+            let currentWhitelist = agent.allowedModelIds
+            let whitelistPMs = currentWhitelist.compactMap { idStr -> ProviderModel? in
+                let parts = idStr.split(separator: ":", maxSplits: 1)
+                guard parts.count == 2,
+                      let uid = UUID(uuidString: String(parts[0])) else { return nil }
+                let modelName = String(parts[1])
+                guard let provider = allProviders.first(where: { $0.id == uid }) else { return nil }
+                return ProviderModel(provider: provider, modelName: modelName)
+            }
+
+            if currentWhitelist.isEmpty {
+                Text(L10n.ModelConfig.whitelistAllModels)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(whitelistPMs) { pm in
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(pm.provider.name).font(.body)
+                            Text(pm.modelName).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button(role: .destructive) {
+                            removeFromWhitelist(pm)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Menu {
+                let existingIds = Set(currentWhitelist)
+                let available = allProviderModels.filter { !existingIds.contains($0.id) }
+                ForEach(available) { pm in
+                    Button(pm.displayName) {
+                        addToWhitelist(pm)
+                    }
+                }
+            } label: {
+                Label(L10n.ModelConfig.addToWhitelist, systemImage: "plus.circle")
+            }
+
+            if !currentWhitelist.isEmpty {
+                Button(L10n.ModelConfig.clearWhitelist) {
+                    agent.allowedModelIds = []
+                    agent.updatedAt = Date()
+                    try? modelContext.save()
+                }
+                .font(.caption)
+                .foregroundStyle(.red)
+            }
+        } header: {
+            Text(L10n.ModelConfig.modelWhitelist)
+        } footer: {
+            Text(L10n.ModelConfig.whitelistFooter)
+        }
+    }
+
+    private func addToWhitelist(_ pm: ProviderModel) {
+        var list = agent.allowedModelIds
+        let entry = pm.id
+        guard !list.contains(entry) else { return }
+        list.append(entry)
+        agent.allowedModelIds = list
+        agent.updatedAt = Date()
+        try? modelContext.save()
+    }
+
+    private func removeFromWhitelist(_ pm: ProviderModel) {
+        var list = agent.allowedModelIds
+        list.removeAll { $0 == pm.id }
+        agent.allowedModelIds = list
+        agent.updatedAt = Date()
+        try? modelContext.save()
+    }
+
     // MARK: - Compression
 
     private static let thresholdPresets: [(label: String, value: Int)] = [
@@ -384,6 +468,7 @@ struct AgentModelConfigView: View {
                 ForEach(Array(chain.enumerated()), id: \.offset) { index, entry in
                     let effectiveModel = entry.modelName ?? entry.provider.modelName
                     let isOverride = entry.modelName != nil && entry.modelName != entry.provider.modelName
+                    let caps = entry.provider.capabilities(for: effectiveModel)
 
                     HStack(spacing: 10) {
                         ZStack {
@@ -413,6 +498,11 @@ struct AgentModelConfigView: View {
                                         .font(.caption2)
                                         .foregroundStyle(.orange)
                                 }
+                            }
+                            if !caps.supportsToolUse {
+                                Text(L10n.ModelConfig.noToolUse(effectiveModel))
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange)
                             }
                         }
 

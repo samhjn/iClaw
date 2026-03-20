@@ -24,12 +24,22 @@ struct SubAgentTools {
 
         let parentSessionId = agent.sessions.last?.id
 
+        // Validate requested model against the agent's whitelist
+        var effectiveProviderOverride = providerIdOverride
+        var effectiveModelOverride = modelNameOverride
+        if let pid = providerIdOverride, let mn = modelNameOverride {
+            if !agent.isModelAllowed(providerId: pid, modelName: mn) {
+                effectiveProviderOverride = nil
+                effectiveModelOverride = nil
+            }
+        }
+
         let (subAgent, _) = subAgentManager.createSubAgent(
             name: name,
             parentAgent: agent,
             initialContext: initialContext,
-            providerIdOverride: providerIdOverride,
-            modelNameOverride: modelNameOverride,
+            providerIdOverride: effectiveProviderOverride,
+            modelNameOverride: effectiveModelOverride,
             type: type,
             parentSessionId: parentSessionId
         )

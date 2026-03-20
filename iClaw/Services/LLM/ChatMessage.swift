@@ -179,12 +179,21 @@ struct LLMToolCall: Codable, Identifiable {
     }
 }
 
+struct LLMStreamOptions: Codable {
+    var includeUsage: Bool = true
+
+    enum CodingKeys: String, CodingKey {
+        case includeUsage = "include_usage"
+    }
+}
+
 struct LLMChatRequest: Codable {
     let model: String
     let messages: [LLMChatMessage]
     var tools: [LLMToolDefinition]?
     var toolChoice: LLMToolChoice?
     var stream: Bool?
+    var streamOptions: LLMStreamOptions?
     var maxTokens: Int?
     var temperature: Double?
     var modalities: [String]?
@@ -192,6 +201,7 @@ struct LLMChatRequest: Codable {
     enum CodingKeys: String, CodingKey {
         case model, messages, tools, stream, temperature, modalities
         case toolChoice = "tool_choice"
+        case streamOptions = "stream_options"
         case maxTokens = "max_tokens"
     }
 }
@@ -598,6 +608,7 @@ struct AnthropicStreamMessage: Decodable {
     let id: String?
     let role: String?
     let model: String?
+    let usage: AnthropicUsage?
 }
 
 struct AnthropicStreamContentBlock: Decodable {

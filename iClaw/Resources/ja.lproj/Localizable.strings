@@ -67,6 +67,9 @@
 "chat.imageSaved" = "写真に保存しました";
 "chat.copyImage" = "画像をコピー";
 "chat.modalityStripped" = "コンテキストから画像 %d 枚を一時的に除外しました — %@ はビジョンに対応していません";
+"chat.toolUseUnsupported" = "%@ はツール使用に対応していません — ブラウザ、サブエージェント、コード実行などの機能が利用できません。";
+"chat.retry" = "リトライ";
+"chat.retryHint" = "生成が停止されました。リトライするか、新しいメッセージを送信できます。";
 
 // MARK: - Agents
 "agents.title" = "エージェント";
@@ -119,6 +122,7 @@
 "modelConfig.resetDefault" = "デフォルトに戻す";
 "modelConfig.contextCompression" = "コンテキスト圧縮";
 "modelConfig.compressionFooter" = "セッションの累計トークンがこのしきい値を超えると、古いメッセージが自動的に要約に圧縮されます。値を上げるとより多くの元のコンテキストが保持されますが、APIコストが増加します。";
+"modelConfig.noToolUse" = "%@ — ツール使用非対応";
 "modelConfig.noModels" = "利用可能なモデルがありません — 設定でプロバイダーを構成してください";
 "modelConfig.override" = "（上書き）";
 "modelConfig.primary" = "プライマリ";
@@ -126,6 +130,11 @@
 "modelConfig.subAgent" = "サブエージェント";
 "modelConfig.resolutionOrder" = "解決順序";
 "modelConfig.resolutionFooter" = "モデルはこの順序で試行されます。同じプロバイダーが異なるモデルで複数回表示される場合があります。";
+"modelConfig.modelWhitelist" = "モデルホワイトリスト";
+"modelConfig.whitelistAllModels" = "すべての利用可能なモデルを許可";
+"modelConfig.addToWhitelist" = "ホワイトリストに追加";
+"modelConfig.clearWhitelist" = "ホワイトリストをクリア";
+"modelConfig.whitelistFooter" = "サブエージェントやツール呼び出しで使用できるモデルを制限します。空の場合、すべての利用可能なモデルが許可されます。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定期タスク";

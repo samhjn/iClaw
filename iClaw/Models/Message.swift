@@ -22,6 +22,11 @@ final class Message {
     var timestamp: Date
     var tokenEstimate: Int
 
+    /// API-reported prompt token count (nil if not available from vendor).
+    var apiPromptTokens: Int?
+    /// API-reported completion token count (nil if not available from vendor).
+    var apiCompletionTokens: Int?
+
     var role: MessageRole {
         get { MessageRole(rawValue: roleRaw) ?? .user }
         set { roleRaw = newValue.rawValue }
