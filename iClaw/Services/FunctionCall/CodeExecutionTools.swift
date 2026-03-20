@@ -5,7 +5,7 @@ struct CodeExecutionTools {
     let agent: Agent
     let modelContext: ModelContext
 
-    func executeJavaScript(arguments: [String: Any]) async -> String {
+    func executeJavaScript(arguments: [String: Any]) async throws -> String {
         guard let code = arguments["code"] as? String else {
             return "[Error] Missing required parameter: code"
         }
@@ -33,6 +33,8 @@ struct CodeExecutionTools {
                 output += repr
             }
             return output.isEmpty ? "(No output)" : output
+        } catch is CancellationError {
+            throw CancellationError()
         } catch CodeExecutorError.timeout {
             return "[Error] Execution timed out after \(Int(timeout))s"
         } catch CodeExecutorError.runtimeCrashed {

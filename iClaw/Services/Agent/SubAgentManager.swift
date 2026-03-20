@@ -109,7 +109,12 @@ final class SubAgentManager {
 
         defer {
             session.isActive = false
+            inflightTasks.removeValue(forKey: subAgentId)
             try? modelContext.save()
+        }
+
+        guard !Task.isCancelled else {
+            throw CancellationError()
         }
 
         let response = try await runAgentLoop(subAgent: subAgent, session: session)
@@ -136,6 +141,8 @@ final class SubAgentManager {
         let caps = router.primaryModelCapabilities(for: subAgent)
 
         for _ in 0..<maxRounds {
+            guard !Task.isCancelled else { throw CancellationError() }
+
             let systemPrompt = promptBuilder.buildSystemPrompt(for: subAgent, isSubAgent: true)
             var messages = contextManager.buildContextWindow(session: session, systemPrompt: systemPrompt)
             ChatViewModel.stripUnsupportedModalities(from: &messages, capabilities: caps)
@@ -145,6 +152,8 @@ final class SubAgentManager {
                 messages: messages,
                 tools: ToolDefinitions.allTools
             )
+
+            guard !Task.isCancelled else { throw CancellationError() }
 
             guard let choice = response.choices.first, let msg = choice.message else {
                 throw SubAgentError.emptyResponse
@@ -162,6 +171,7 @@ final class SubAgentManager {
                 session.messages.append(assistantMsg)
 
                 for tc in toolCalls {
+                    guard !Task.isCancelled else { throw CancellationError() }
                     let result = await fnRouter.execute(toolCall: tc)
                     let toolMsg = Message(
                         role: .tool,
