@@ -94,6 +94,11 @@
 "agentDetail.subAgentsTitle" = "서브 에이전트 (%d)";
 "agentDetail.noCodeSnippets" = "코드 스니펫 없음";
 "agentDetail.codeSnippetsDescription" = "코드 스니펫은 AI 에이전트에 의해 저장됩니다.";
+"agentDetail.snippetInfo" = "정보";
+"agentDetail.snippetName" = "이름";
+"agentDetail.snippetLanguage" = "언어";
+"agentDetail.snippetCode" = "코드";
+"agentDetail.newSnippet" = "새 스니펫";
 
 // MARK: - Model Config
 "modelConfig.title" = "모델 설정";
@@ -357,3 +362,5 @@
 "toolCard.browserJS" = "브라우저 JS";
 "toolCard.waitElement" = "요소 대기";
 "toolCard.scroll" = "스크롤";
+"toolCard.runSnippet" = "스니펫 실행";
+"toolCard.deleteCode" = "코드 삭제";

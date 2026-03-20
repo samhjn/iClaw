@@ -94,6 +94,11 @@
 "agentDetail.subAgentsTitle" = "子智能體（%d）";
 "agentDetail.noCodeSnippets" = "尚無程式碼片段";
 "agentDetail.codeSnippetsDescription" = "程式碼片段由 AI 智能體儲存。";
+"agentDetail.snippetInfo" = "資訊";
+"agentDetail.snippetName" = "名稱";
+"agentDetail.snippetLanguage" = "語言";
+"agentDetail.snippetCode" = "程式碼";
+"agentDetail.newSnippet" = "新建程式碼片段";
 
 // MARK: - Model Config
 "modelConfig.title" = "模型設定";
@@ -357,3 +362,5 @@
 "toolCard.browserJS" = "瀏覽器 JS";
 "toolCard.waitElement" = "等待元素";
 "toolCard.scroll" = "捲動";
+"toolCard.runSnippet" = "執行程式碼片段";
+"toolCard.deleteCode" = "刪除程式碼";

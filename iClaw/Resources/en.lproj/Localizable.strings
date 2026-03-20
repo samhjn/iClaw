@@ -94,6 +94,11 @@
 "agentDetail.subAgentsTitle" = "Sub-Agents (%d)";
 "agentDetail.noCodeSnippets" = "No Code Snippets";
 "agentDetail.codeSnippetsDescription" = "Code snippets are saved by the AI agent.";
+"agentDetail.snippetInfo" = "Info";
+"agentDetail.snippetName" = "Name";
+"agentDetail.snippetLanguage" = "Language";
+"agentDetail.snippetCode" = "Code";
+"agentDetail.newSnippet" = "New Snippet";
 
 // MARK: - Model Config
 "modelConfig.title" = "Model Config";
@@ -357,3 +362,5 @@
 "toolCard.browserJS" = "Browser JS";
 "toolCard.waitElement" = "Wait Element";
 "toolCard.scroll" = "Scroll";
+"toolCard.runSnippet" = "Run Snippet";
+"toolCard.deleteCode" = "Delete Code";

@@ -133,6 +133,11 @@ enum L10n {
         static func subAgentsTitle(_ count: Int) -> String { tr("agentDetail.subAgentsTitle", count) }
         static var noCodeSnippets: String { tr("agentDetail.noCodeSnippets") }
         static var codeSnippetsDescription: String { tr("agentDetail.codeSnippetsDescription") }
+        static var snippetInfo: String { tr("agentDetail.snippetInfo") }
+        static var snippetName: String { tr("agentDetail.snippetName") }
+        static var snippetLanguage: String { tr("agentDetail.snippetLanguage") }
+        static var snippetCode: String { tr("agentDetail.snippetCode") }
+        static var newSnippet: String { tr("agentDetail.newSnippet") }
     }
 
     // MARK: - Model Config
@@ -433,6 +438,8 @@ enum L10n {
         static var browserJS: String { tr("toolCard.browserJS") }
         static var waitElement: String { tr("toolCard.waitElement") }
         static var scroll: String { tr("toolCard.scroll") }
+        static var runSnippet: String { tr("toolCard.runSnippet") }
+        static var deleteCode: String { tr("toolCard.deleteCode") }
     }
 }
 

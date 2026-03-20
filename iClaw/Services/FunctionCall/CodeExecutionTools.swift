@@ -99,4 +99,44 @@ struct CodeExecutionTools {
         }
         return snippets.map { "- \($0.name) [\($0.language)] (\($0.code.count) chars)" }.joined(separator: "\n")
     }
+
+    func runSnippet(arguments: [String: Any]) async throws -> String {
+        guard let name = arguments["name"] as? String else {
+            return "[Error] Missing required parameter: name"
+        }
+
+        guard let snippet = agent.codeSnippets.first(where: { $0.name == name }) else {
+            let available = agent.codeSnippets.map { $0.name }.joined(separator: ", ")
+            return "[Error] Code snippet '\(name)' not found. Available: \(available.isEmpty ? "(none)" : available)"
+        }
+
+        guard snippet.language == "javascript" else {
+            return "[Error] Only JavaScript snippets can be executed. '\(name)' is \(snippet.language)."
+        }
+
+        var jsArgs: [String: Any] = ["code": snippet.code]
+        if let mode = arguments["mode"] as? String {
+            jsArgs["mode"] = mode
+        }
+        if let timeout = arguments["timeout"] {
+            jsArgs["timeout"] = timeout
+        }
+
+        return try await executeJavaScript(arguments: jsArgs)
+    }
+
+    func deleteCode(arguments: [String: Any]) -> String {
+        guard let name = arguments["name"] as? String else {
+            return "[Error] Missing required parameter: name"
+        }
+
+        guard let snippet = agent.codeSnippets.first(where: { $0.name == name }) else {
+            let available = agent.codeSnippets.map { $0.name }.joined(separator: ", ")
+            return "[Error] Code snippet '\(name)' not found. Available: \(available.isEmpty ? "(none)" : available)"
+        }
+
+        modelContext.delete(snippet)
+        try? modelContext.save()
+        return "Deleted code snippet '\(name)'"
+    }
 }

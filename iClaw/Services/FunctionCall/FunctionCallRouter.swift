@@ -116,6 +116,15 @@ final class FunctionCallRouter {
             return ToolCallResult(
                 CodeExecutionTools(agent: agent, modelContext: modelContext)
                     .listCode())
+        case "run_snippet":
+            return try await runAsyncThrowing {
+                try await CodeExecutionTools(agent: self.agent, modelContext: self.modelContext)
+                    .runSnippet(arguments: arguments)
+            }
+        case "delete_code":
+            return ToolCallResult(
+                CodeExecutionTools(agent: agent, modelContext: modelContext)
+                    .deleteCode(arguments: arguments))
 
         // --- Cron ---
         case "schedule_cron":
