@@ -1,6 +1,17 @@
 import Foundation
 import SwiftData
 
+/// Rich result from a tool call, carrying text and optional multimodal attachments.
+struct ToolCallResult {
+    let text: String
+    let imageAttachments: [ImageAttachment]?
+
+    init(_ text: String, imageAttachments: [ImageAttachment]? = nil) {
+        self.text = text
+        self.imageAttachments = imageAttachments
+    }
+}
+
 final class FunctionCallRouter {
     let agent: Agent
     let modelContext: ModelContext
@@ -16,10 +27,24 @@ final class FunctionCallRouter {
         self.subAgentManager = SubAgentManager(modelContext: modelContext)
     }
 
-    func execute(toolCall: LLMToolCall) async -> String {
+    func execute(toolCall: LLMToolCall) async -> ToolCallResult {
         let name = toolCall.function.name
         let arguments = parseArguments(toolCall.function.arguments)
 
+        switch name {
+        case "message_sub_agent":
+            return await subAgentTools.messageSubAgent(arguments: arguments)
+
+        case "collect_sub_agent_output":
+            return subAgentTools.collectSubAgentOutput(arguments: arguments)
+
+        default:
+            let text = await executeText(name: name, arguments: arguments)
+            return ToolCallResult(text)
+        }
+    }
+
+    private func executeText(name: String, arguments: [String: Any]) async -> String {
         switch name {
         case "read_config":
             return ConfigTools(agentService: agentService, agent: agent)
@@ -46,28 +71,16 @@ final class FunctionCallRouter {
                 .listCode()
 
         case "create_sub_agent":
-            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
-                .createSubAgent(arguments: arguments)
-
-        case "message_sub_agent":
-            return await SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
-                .messageSubAgent(arguments: arguments)
-
-        case "collect_sub_agent_output":
-            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
-                .collectSubAgentOutput(arguments: arguments)
+            return subAgentTools.createSubAgent(arguments: arguments)
 
         case "list_sub_agents":
-            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
-                .listSubAgents(arguments: arguments)
+            return subAgentTools.listSubAgents(arguments: arguments)
 
         case "stop_sub_agent":
-            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
-                .stopSubAgent(arguments: arguments)
+            return subAgentTools.stopSubAgent(arguments: arguments)
 
         case "delete_sub_agent":
-            return SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager)
-                .deleteSubAgent(arguments: arguments)
+            return subAgentTools.deleteSubAgent(arguments: arguments)
 
         case "schedule_cron":
             return CronTools(agent: agent, modelContext: modelContext)
@@ -147,6 +160,10 @@ final class FunctionCallRouter {
         default:
             return "[Error] Unknown tool: \(name)"
         }
+    }
+
+    private var subAgentTools: SubAgentTools {
+        SubAgentTools(agent: agent, modelContext: modelContext, subAgentManager: subAgentManager, parentSessionId: sessionId)
     }
 
     private var browserTools: BrowserTools {

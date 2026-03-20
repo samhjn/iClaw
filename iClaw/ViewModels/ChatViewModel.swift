@@ -23,6 +23,9 @@ final class ChatViewModel {
     /// If cancel fails or takes too long, explains why.
     var cancelFailureReason: String?
 
+    /// Shown when images or other modalities were stripped for the current model.
+    var modalityWarning: String?
+
     /// Whether a manual compression is running.
     var isCompressing: Bool = false
 
@@ -41,6 +44,9 @@ final class ChatViewModel {
     private var compressionMonitorTask: Task<Void, Never>?
     private var monitoringTask: Task<Void, Never>?
     private var cancelled = false
+    /// Images returned by tool calls (e.g. from sub-agents) to be attached
+    /// to the next final assistant message for display in the chat UI.
+    private var pendingToolImageAttachments: [ImageAttachment] = []
 
     init(session: Session, modelContext: ModelContext) {
         self.session = session
@@ -245,10 +251,22 @@ final class ChatViewModel {
             guard !Task.isCancelled, !cancelled else { return }
 
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
-            let contextMessages = contextManager.buildContextWindow(
+            var contextMessages = contextManager.buildContextWindow(
                 session: session,
                 systemPrompt: systemPrompt
             )
+
+            let chain = router.resolveProviderChainWithModels(for: agent)
+            if let primary = chain.first {
+                let caps = primary.provider.capabilities(for: primary.modelName ?? primary.provider.modelName)
+                let strippedCount = Self.stripUnsupportedModalities(from: &contextMessages, capabilities: caps)
+                if strippedCount > 0 {
+                    let modelName = primary.modelName ?? primary.provider.modelName
+                    modalityWarning = L10n.Chat.modalityStripped(strippedCount, modelName)
+                } else {
+                    modalityWarning = nil
+                }
+            }
 
             let toolDefs = ToolDefinitions.allTools
 
@@ -267,13 +285,14 @@ final class ChatViewModel {
 
             for await chunk in stream {
                 if Task.isCancelled || cancelled {
-                    if !fullContent.isEmpty {
+                    if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
                         let partialMsg = Message(
                             role: .assistant,
-                            content: fullContent + L10n.Chat.aborted,
+                            content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
                             session: session
                         )
                         partialMsg.extractAndStoreInlineImages()
+                        attachPendingToolImages(to: partialMsg)
                         modelContext.insert(partialMsg)
                         session.messages.append(partialMsg)
                         session.updatedAt = Date()
@@ -311,13 +330,14 @@ final class ChatViewModel {
             session.pendingStreamingContent = nil
 
             if Task.isCancelled || cancelled {
-                if !fullContent.isEmpty {
+                if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
                     let partialMsg = Message(
                         role: .assistant,
-                        content: fullContent + L10n.Chat.aborted,
+                        content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
                         session: session
                     )
                     partialMsg.extractAndStoreInlineImages()
+                    attachPendingToolImages(to: partialMsg)
                     modelContext.insert(partialMsg)
                     session.messages.append(partialMsg)
                     session.updatedAt = Date()
@@ -358,6 +378,16 @@ final class ChatViewModel {
                 let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent, session: session)
                 assistantMsg.thinkingContent = combinedThinking
                 assistantMsg.extractAndStoreInlineImages()
+                attachPendingToolImages(to: assistantMsg)
+                modelContext.insert(assistantMsg)
+                session.messages.append(assistantMsg)
+                session.updatedAt = Date()
+                try? modelContext.save()
+                loadMessages()
+            } else if !pendingToolImageAttachments.isEmpty {
+                // No text/thinking but there are sub-agent images to display
+                let assistantMsg = Message(role: .assistant, content: nil, session: session)
+                attachPendingToolImages(to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
@@ -368,6 +398,7 @@ final class ChatViewModel {
             if !Task.isCancelled && !cancelled {
                 errorMessage = error.localizedDescription
             }
+            pendingToolImageAttachments = []
         }
     }
 
@@ -410,11 +441,18 @@ final class ChatViewModel {
 
             let toolMsg = Message(
                 role: .tool,
-                content: result,
+                content: result.text,
                 toolCallId: toolCall.id,
                 name: toolCall.function.name,
                 session: session
             )
+            if let images = result.imageAttachments, !images.isEmpty {
+                if let data = try? JSONEncoder().encode(images) {
+                    toolMsg.imageAttachmentsData = data
+                    toolMsg.recalculateTokenEstimate()
+                }
+                pendingToolImageAttachments.append(contentsOf: images)
+            }
             modelContext.insert(toolMsg)
             session.messages.append(toolMsg)
         }
@@ -422,9 +460,25 @@ final class ChatViewModel {
         try? modelContext.save()
         loadMessages()
 
-        if Task.isCancelled || cancelled { return }
+        if Task.isCancelled || cancelled {
+            pendingToolImageAttachments = []
+            return
+        }
 
         await generateResponse()
+    }
+
+    /// Merge any images accumulated from tool calls into the given assistant message.
+    private func attachPendingToolImages(to message: Message) {
+        guard !pendingToolImageAttachments.isEmpty else { return }
+
+        let existing: [ImageAttachment] = message.imageAttachmentsData.flatMap {
+            try? JSONDecoder().decode([ImageAttachment].self, from: $0)
+        } ?? []
+        let all = existing + pendingToolImageAttachments
+        message.imageAttachmentsData = try? JSONEncoder().encode(all)
+        message.recalculateTokenEstimate()
+        pendingToolImageAttachments = []
     }
 
     /// Compress context if active tokens exceed the threshold.
@@ -774,6 +828,49 @@ final class ChatViewModel {
             compressedCount: compressedIdx,
             pendingCount: pendingCount
         )
+    }
+
+    // MARK: - Modality Stripping
+
+    /// Removes image content parts from context messages when the target model
+    /// lacks vision support. Returns the number of images that were stripped.
+    @discardableResult
+    static func stripUnsupportedModalities(
+        from messages: inout [LLMChatMessage],
+        capabilities: ModelCapabilities
+    ) -> Int {
+        guard !capabilities.supportsVision else { return 0 }
+
+        var strippedCount = 0
+        var indicesToRemove: [Int] = []
+        for i in messages.indices {
+            guard let parts = messages[i].contentParts else { continue }
+            let imageCount = parts.filter { if case .imageURL = $0 { return true }; return false }.count
+            guard imageCount > 0 else { continue }
+            strippedCount += imageCount
+
+            // Clear contentParts entirely so the encoder falls back to
+            // plain string `content`, which all APIs accept for any role.
+            let hasTextContent = messages[i].content != nil && !messages[i].content!.isEmpty
+            let hasToolCalls = messages[i].toolCalls != nil
+            if !hasTextContent && !hasToolCalls && messages[i].toolCallId == nil {
+                // Synthetic image-only message (e.g. flush from ContextManager) — remove entirely
+                indicesToRemove.append(i)
+            } else {
+                messages[i] = LLMChatMessage(
+                    role: messages[i].role,
+                    content: messages[i].content,
+                    contentParts: nil,
+                    toolCalls: messages[i].toolCalls,
+                    toolCallId: messages[i].toolCallId,
+                    name: messages[i].name
+                )
+            }
+        }
+        for i in indicesToRemove.reversed() {
+            messages.remove(at: i)
+        }
+        return strippedCount
     }
 }
 

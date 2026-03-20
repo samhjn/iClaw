@@ -371,70 +371,73 @@ struct ToolMeta {
     static func resolve(_ toolName: String) -> ToolMeta {
         switch toolName {
         case "execute_javascript":
-            return ToolMeta(displayName: "JavaScript", icon: "terminal.fill", color: .yellow)
+            return ToolMeta(displayName: L10n.ToolCard.javascript, icon: "terminal.fill", color: .yellow)
         case "read_config":
-            return ToolMeta(displayName: "Read Config", icon: "doc.text", color: .purple)
+            return ToolMeta(displayName: L10n.ToolCard.readConfig, icon: "doc.text", color: .purple)
         case "write_config":
-            return ToolMeta(displayName: "Write Config", icon: "square.and.pencil", color: .purple)
+            return ToolMeta(displayName: L10n.ToolCard.writeConfig, icon: "square.and.pencil", color: .purple)
         case "save_code":
-            return ToolMeta(displayName: "Save Code", icon: "square.and.arrow.down", color: .blue)
+            return ToolMeta(displayName: L10n.ToolCard.saveCode, icon: "square.and.arrow.down", color: .blue)
         case "load_code":
-            return ToolMeta(displayName: "Load Code", icon: "square.and.arrow.up", color: .blue)
+            return ToolMeta(displayName: L10n.ToolCard.loadCode, icon: "square.and.arrow.up", color: .blue)
         case "list_code":
-            return ToolMeta(displayName: "List Code", icon: "list.bullet", color: .blue)
+            return ToolMeta(displayName: L10n.ToolCard.listCode, icon: "list.bullet", color: .blue)
         case "create_sub_agent":
-            return ToolMeta(displayName: "Create Agent", icon: "person.badge.plus", color: .orange)
+            return ToolMeta(displayName: L10n.ToolCard.createAgent, icon: "person.badge.plus", color: .orange)
         case "message_sub_agent":
-            return ToolMeta(displayName: "Message Agent", icon: "bubble.left.and.bubble.right", color: .orange)
+            return ToolMeta(displayName: L10n.ToolCard.messageAgent, icon: "bubble.left.and.bubble.right", color: .orange)
         case "collect_sub_agent_output":
-            return ToolMeta(displayName: "Collect Output", icon: "tray.and.arrow.down", color: .orange)
+            return ToolMeta(displayName: L10n.ToolCard.collectOutput, icon: "tray.and.arrow.down", color: .orange)
         case "list_sub_agents":
-            return ToolMeta(displayName: "List Agents", icon: "person.3", color: .orange)
+            return ToolMeta(displayName: L10n.ToolCard.listAgents, icon: "person.3", color: .orange)
         case "stop_sub_agent":
-            return ToolMeta(displayName: "Stop Agent", icon: "stop.circle", color: .red)
+            return ToolMeta(displayName: L10n.ToolCard.stopAgent, icon: "stop.circle", color: .red)
         case "delete_sub_agent":
-            return ToolMeta(displayName: "Delete Agent", icon: "person.badge.minus", color: .red)
+            return ToolMeta(displayName: L10n.ToolCard.deleteAgent, icon: "person.badge.minus", color: .red)
         case "schedule_cron":
-            return ToolMeta(displayName: "Schedule Job", icon: "clock.badge.checkmark", color: .green)
+            return ToolMeta(displayName: L10n.ToolCard.scheduleJob, icon: "clock.badge.checkmark", color: .green)
         case "unschedule_cron":
-            return ToolMeta(displayName: "Remove Job", icon: "clock.badge.xmark", color: .red)
+            return ToolMeta(displayName: L10n.ToolCard.removeJob, icon: "clock.badge.xmark", color: .red)
         case "list_cron":
-            return ToolMeta(displayName: "List Jobs", icon: "clock", color: .green)
-        case "create_skill", "delete_skill", "install_skill", "uninstall_skill", "list_skills", "read_skill":
-            return ToolMeta(displayName: formatSkillToolName(toolName), icon: "sparkles", color: .indigo)
+            return ToolMeta(displayName: L10n.ToolCard.listJobs, icon: "clock", color: .green)
+        case "create_skill":
+            return ToolMeta(displayName: L10n.ToolCard.createSkill, icon: "sparkles", color: .indigo)
+        case "delete_skill":
+            return ToolMeta(displayName: L10n.ToolCard.deleteSkill, icon: "sparkles", color: .indigo)
+        case "install_skill":
+            return ToolMeta(displayName: L10n.ToolCard.installSkill, icon: "sparkles", color: .indigo)
+        case "uninstall_skill":
+            return ToolMeta(displayName: L10n.ToolCard.uninstallSkill, icon: "sparkles", color: .indigo)
+        case "list_skills":
+            return ToolMeta(displayName: L10n.ToolCard.listSkills, icon: "sparkles", color: .indigo)
+        case "read_skill":
+            return ToolMeta(displayName: L10n.ToolCard.readSkill, icon: "sparkles", color: .indigo)
         case "set_model":
-            return ToolMeta(displayName: "Set Model", icon: "cpu", color: .teal)
+            return ToolMeta(displayName: L10n.ToolCard.setModel, icon: "cpu", color: .teal)
         case "get_model":
-            return ToolMeta(displayName: "Get Model", icon: "cpu", color: .teal)
+            return ToolMeta(displayName: L10n.ToolCard.getModel, icon: "cpu", color: .teal)
         case "list_models":
-            return ToolMeta(displayName: "List Models", icon: "list.bullet.rectangle", color: .teal)
+            return ToolMeta(displayName: L10n.ToolCard.listModels, icon: "list.bullet.rectangle", color: .teal)
         case "browser_navigate":
-            return ToolMeta(displayName: "Browse", icon: "globe", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.browse, icon: "globe", color: .cyan)
         case "browser_get_page_info":
-            return ToolMeta(displayName: "Page Info", icon: "doc.text.magnifyingglass", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.pageInfo, icon: "doc.text.magnifyingglass", color: .cyan)
         case "browser_click":
-            return ToolMeta(displayName: "Click", icon: "cursorarrow.click", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.click, icon: "cursorarrow.click", color: .cyan)
         case "browser_input":
-            return ToolMeta(displayName: "Input", icon: "keyboard", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.input, icon: "keyboard", color: .cyan)
         case "browser_select":
-            return ToolMeta(displayName: "Select", icon: "checklist", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.select, icon: "checklist", color: .cyan)
         case "browser_extract":
-            return ToolMeta(displayName: "Extract", icon: "text.magnifyingglass", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.extract, icon: "text.magnifyingglass", color: .cyan)
         case "browser_execute_js":
-            return ToolMeta(displayName: "Browser JS", icon: "chevron.left.forwardslash.chevron.right", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.browserJS, icon: "chevron.left.forwardslash.chevron.right", color: .cyan)
         case "browser_wait":
-            return ToolMeta(displayName: "Wait Element", icon: "clock.arrow.circlepath", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.waitElement, icon: "clock.arrow.circlepath", color: .cyan)
         case "browser_scroll":
-            return ToolMeta(displayName: "Scroll", icon: "scroll", color: .cyan)
+            return ToolMeta(displayName: L10n.ToolCard.scroll, icon: "scroll", color: .cyan)
         default:
             return ToolMeta(displayName: toolName, icon: "wrench", color: .gray)
         }
-    }
-
-    private static func formatSkillToolName(_ name: String) -> String {
-        name.replacingOccurrences(of: "_", with: " ")
-            .split(separator: " ")
-            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
-            .joined(separator: " ")
     }
 }

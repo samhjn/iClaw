@@ -207,7 +207,14 @@ final class SessionCompressor {
         messages.compactMap { msg in
             let role = msg.role.rawValue.capitalized
             let content = msg.content ?? "(no content)"
-            return "[\(role)] \(content)"
+            var line = "[\(role)] \(content)"
+            if let imgData = msg.imageAttachmentsData,
+               let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
+               !images.isEmpty {
+                let dims = images.map { "\($0.width)×\($0.height)" }.joined(separator: ", ")
+                line += " [attached \(images.count) image(s): \(dims)]"
+            }
+            return line
         }.joined(separator: "\n\n")
     }
 }

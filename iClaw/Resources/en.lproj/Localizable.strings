@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "Save Image";
 "chat.imageSaved" = "Saved to Photos";
 "chat.copyImage" = "Copy Image";
+"chat.modalityStripped" = "%d image(s) temporarily excluded from context — %@ does not support vision.";
 
 // MARK: - Agents
 "agents.title" = "Agents";
@@ -321,3 +322,38 @@
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "Preview";
 "markdownEditor.edit" = "Edit";
+
+// MARK: - Tool Card Display Names
+"toolCard.javascript" = "JavaScript";
+"toolCard.readConfig" = "Read Config";
+"toolCard.writeConfig" = "Write Config";
+"toolCard.saveCode" = "Save Code";
+"toolCard.loadCode" = "Load Code";
+"toolCard.listCode" = "List Code";
+"toolCard.createAgent" = "Create Agent";
+"toolCard.messageAgent" = "Message Agent";
+"toolCard.collectOutput" = "Collect Output";
+"toolCard.listAgents" = "List Agents";
+"toolCard.stopAgent" = "Stop Agent";
+"toolCard.deleteAgent" = "Delete Agent";
+"toolCard.scheduleJob" = "Schedule Job";
+"toolCard.removeJob" = "Remove Job";
+"toolCard.listJobs" = "List Jobs";
+"toolCard.createSkill" = "Create Skill";
+"toolCard.deleteSkill" = "Delete Skill";
+"toolCard.installSkill" = "Install Skill";
+"toolCard.uninstallSkill" = "Uninstall Skill";
+"toolCard.listSkills" = "List Skills";
+"toolCard.readSkill" = "Read Skill";
+"toolCard.setModel" = "Set Model";
+"toolCard.getModel" = "Get Model";
+"toolCard.listModels" = "List Models";
+"toolCard.browse" = "Browse";
+"toolCard.pageInfo" = "Page Info";
+"toolCard.click" = "Click";
+"toolCard.input" = "Input";
+"toolCard.select" = "Select";
+"toolCard.extract" = "Extract";
+"toolCard.browserJS" = "Browser JS";
+"toolCard.waitElement" = "Wait Element";
+"toolCard.scroll" = "Scroll";

@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "이미지 저장";
 "chat.imageSaved" = "사진에 저장되었습니다";
 "chat.copyImage" = "이미지 복사";
+"chat.modalityStripped" = "컨텍스트에서 이미지 %d개 일시적으로 제외됨 — %@은(는) 비전을 지원하지 않습니다";
 
 // MARK: - Agents
 "agents.title" = "에이전트";
@@ -321,3 +322,38 @@
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "미리보기";
 "markdownEditor.edit" = "편집";
+
+// MARK: - Tool Card Display Names
+"toolCard.javascript" = "JavaScript";
+"toolCard.readConfig" = "설정 읽기";
+"toolCard.writeConfig" = "설정 쓰기";
+"toolCard.saveCode" = "코드 저장";
+"toolCard.loadCode" = "코드 불러오기";
+"toolCard.listCode" = "코드 목록";
+"toolCard.createAgent" = "에이전트 생성";
+"toolCard.messageAgent" = "메시지 전송";
+"toolCard.collectOutput" = "출력 수집";
+"toolCard.listAgents" = "에이전트 목록";
+"toolCard.stopAgent" = "에이전트 중지";
+"toolCard.deleteAgent" = "에이전트 삭제";
+"toolCard.scheduleJob" = "작업 예약";
+"toolCard.removeJob" = "작업 제거";
+"toolCard.listJobs" = "작업 목록";
+"toolCard.createSkill" = "스킬 생성";
+"toolCard.deleteSkill" = "스킬 삭제";
+"toolCard.installSkill" = "스킬 설치";
+"toolCard.uninstallSkill" = "스킬 제거";
+"toolCard.listSkills" = "스킬 목록";
+"toolCard.readSkill" = "스킬 읽기";
+"toolCard.setModel" = "모델 설정";
+"toolCard.getModel" = "모델 조회";
+"toolCard.listModels" = "모델 목록";
+"toolCard.browse" = "브라우즈";
+"toolCard.pageInfo" = "페이지 정보";
+"toolCard.click" = "클릭";
+"toolCard.input" = "입력";
+"toolCard.select" = "선택";
+"toolCard.extract" = "추출";
+"toolCard.browserJS" = "브라우저 JS";
+"toolCard.waitElement" = "요소 대기";
+"toolCard.scroll" = "스크롤";

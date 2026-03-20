@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "儲存圖片";
 "chat.imageSaved" = "已儲存至相簿";
 "chat.copyImage" = "拷貝圖片";
+"chat.modalityStripped" = "已暫時移除上下文中的 %d 張圖片 — %@ 不支援視覺能力";
 
 // MARK: - Agents
 "agents.title" = "智能體";
@@ -321,3 +322,38 @@
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "預覽";
 "markdownEditor.edit" = "編輯";
+
+// MARK: - Tool Card Display Names
+"toolCard.javascript" = "JavaScript";
+"toolCard.readConfig" = "讀取設定";
+"toolCard.writeConfig" = "寫入設定";
+"toolCard.saveCode" = "儲存程式碼";
+"toolCard.loadCode" = "載入程式碼";
+"toolCard.listCode" = "程式碼列表";
+"toolCard.createAgent" = "建立智能體";
+"toolCard.messageAgent" = "傳送訊息";
+"toolCard.collectOutput" = "收集輸出";
+"toolCard.listAgents" = "智能體列表";
+"toolCard.stopAgent" = "停止智能體";
+"toolCard.deleteAgent" = "刪除智能體";
+"toolCard.scheduleJob" = "建立排程任務";
+"toolCard.removeJob" = "移除排程任務";
+"toolCard.listJobs" = "任務列表";
+"toolCard.createSkill" = "建立技能";
+"toolCard.deleteSkill" = "刪除技能";
+"toolCard.installSkill" = "安裝技能";
+"toolCard.uninstallSkill" = "解除安裝技能";
+"toolCard.listSkills" = "技能列表";
+"toolCard.readSkill" = "讀取技能";
+"toolCard.setModel" = "設定模型";
+"toolCard.getModel" = "取得模型";
+"toolCard.listModels" = "模型列表";
+"toolCard.browse" = "瀏覽";
+"toolCard.pageInfo" = "頁面資訊";
+"toolCard.click" = "點擊";
+"toolCard.input" = "輸入";
+"toolCard.select" = "選擇";
+"toolCard.extract" = "擷取";
+"toolCard.browserJS" = "瀏覽器 JS";
+"toolCard.waitElement" = "等待元素";
+"toolCard.scroll" = "捲動";

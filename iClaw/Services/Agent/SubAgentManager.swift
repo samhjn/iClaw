@@ -24,6 +24,7 @@ final class SubAgentManager {
         parentAgent: Agent,
         initialContext: String?,
         providerIdOverride: UUID? = nil,
+        modelNameOverride: String? = nil,
         type: SubAgentType = .temp,
         parentSessionId: UUID? = nil
     ) -> (agent: Agent, session: Session) {
@@ -36,6 +37,7 @@ final class SubAgentManager {
 
         if let overrideId = providerIdOverride {
             subAgent.primaryProviderId = overrideId
+            subAgent.primaryModelNameOverride = modelNameOverride
         } else if let subDefault = parentAgent.subAgentProviderId {
             subAgent.primaryProviderId = subDefault
             subAgent.primaryModelNameOverride = parentAgent.subAgentModelNameOverride
@@ -78,17 +80,28 @@ final class SubAgentManager {
 
     // MARK: - Message (with tool call loop)
 
+    struct SubAgentResponse {
+        let text: String
+        let imageAttachments: [ImageAttachment]?
+    }
+
     @MainActor
     func sendMessage(
         to subAgentId: UUID,
-        content: String
-    ) async throws -> String {
+        content: String,
+        imageAttachments: [ImageAttachment]? = nil
+    ) async throws -> SubAgentResponse {
         guard let subAgent = agentService.fetchAgent(id: subAgentId),
               let session = activeSessions[subAgentId] ?? subAgent.sessions.last else {
             throw SubAgentError.agentNotFound
         }
 
         let userMsg = Message(role: .user, content: content, session: session)
+        if let images = imageAttachments, !images.isEmpty,
+           let data = try? JSONEncoder().encode(images) {
+            userMsg.imageAttachmentsData = data
+            userMsg.recalculateTokenEstimate()
+        }
         modelContext.insert(userMsg)
         session.messages.append(userMsg)
         session.isActive = true
@@ -101,7 +114,6 @@ final class SubAgentManager {
 
         let response = try await runAgentLoop(subAgent: subAgent, session: session)
 
-        // If temp agent, mark session content and clean up
         if subAgent.isTempSubAgent {
             scheduleCleanup(subAgent: subAgent)
         }
@@ -115,15 +127,18 @@ final class SubAgentManager {
         subAgent: Agent,
         session: Session,
         maxRounds: Int = 10
-    ) async throws -> String {
+    ) async throws -> SubAgentResponse {
         let router = ModelRouter(modelContext: modelContext)
         let promptBuilder = PromptBuilder()
         let contextManager = ContextManager()
         let fnRouter = FunctionCallRouter(agent: subAgent, modelContext: modelContext, sessionId: session.id)
 
+        let caps = router.primaryModelCapabilities(for: subAgent)
+
         for _ in 0..<maxRounds {
             let systemPrompt = promptBuilder.buildSystemPrompt(for: subAgent, isSubAgent: true)
-            let messages = contextManager.buildContextWindow(session: session, systemPrompt: systemPrompt)
+            var messages = contextManager.buildContextWindow(session: session, systemPrompt: systemPrompt)
+            ChatViewModel.stripUnsupportedModalities(from: &messages, capabilities: caps)
 
             let (response, _) = try await router.chatCompletionWithFailover(
                 agent: subAgent,
@@ -142,6 +157,7 @@ final class SubAgentManager {
                     toolCallsData: try? JSONEncoder().encode(toolCalls),
                     session: session
                 )
+                assistantMsg.extractAndStoreInlineImages()
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
 
@@ -149,11 +165,16 @@ final class SubAgentManager {
                     let result = await fnRouter.execute(toolCall: tc)
                     let toolMsg = Message(
                         role: .tool,
-                        content: result,
+                        content: result.text,
                         toolCallId: tc.id,
                         name: tc.function.name,
                         session: session
                     )
+                    if let images = result.imageAttachments,
+                       let data = try? JSONEncoder().encode(images) {
+                        toolMsg.imageAttachmentsData = data
+                        toolMsg.recalculateTokenEstimate()
+                    }
                     modelContext.insert(toolMsg)
                     session.messages.append(toolMsg)
                 }
@@ -163,11 +184,19 @@ final class SubAgentManager {
 
             if let content = msg.content, !content.isEmpty {
                 let assistantMsg = Message(role: .assistant, content: content, session: session)
+                assistantMsg.extractAndStoreInlineImages()
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
                 try? modelContext.save()
-                return content
+
+                let imageAttachments: [ImageAttachment]? = assistantMsg.imageAttachmentsData.flatMap {
+                    try? JSONDecoder().decode([ImageAttachment].self, from: $0)
+                }
+                return SubAgentResponse(
+                    text: assistantMsg.content ?? content,
+                    imageAttachments: imageAttachments
+                )
             }
 
             break
@@ -208,36 +237,68 @@ final class SubAgentManager {
 
     // MARK: - Content Relay
 
+    struct SessionCollectResult {
+        let text: String
+        let imageAttachments: [ImageAttachment]
+    }
+
     /// Generates a summary of the sub-agent session's output for the parent session.
-    func collectSessionSummary(subAgentId: UUID) -> String {
+    func collectSessionSummary(subAgentId: UUID) -> SessionCollectResult {
         guard let subAgent = agentService.fetchAgent(id: subAgentId),
               let session = activeSessions[subAgentId] ?? subAgent.sessions.last else {
-            return "[Error] Sub-agent session not found."
+            return SessionCollectResult(text: "[Error] Sub-agent session not found.", imageAttachments: [])
         }
 
-        let assistantMessages = session.sortedMessages
-            .filter { $0.role == .assistant }
-            .compactMap { $0.content }
+        let assistantMsgs = session.sortedMessages.filter { $0.role == .assistant }
 
-        if assistantMessages.isEmpty {
-            return "(No output from sub-agent)"
+        if assistantMsgs.isEmpty {
+            return SessionCollectResult(text: "(No output from sub-agent)", imageAttachments: [])
         }
 
-        return assistantMessages.joined(separator: "\n\n---\n\n")
+        var textParts: [String] = []
+        var allImages: [ImageAttachment] = []
+        for msg in assistantMsgs {
+            var segment = msg.content ?? ""
+            if let imgData = msg.imageAttachmentsData,
+               let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
+               !images.isEmpty {
+                segment += "\n[\(images.count) image(s) attached]"
+                allImages.append(contentsOf: images)
+            }
+            if !segment.isEmpty { textParts.append(segment) }
+        }
+
+        let text = textParts.isEmpty ? "(No output from sub-agent)" : textParts.joined(separator: "\n\n---\n\n")
+        return SessionCollectResult(text: text, imageAttachments: allImages)
     }
 
     /// Returns the full transcript of a sub-agent session for injection into parent context.
-    func collectFullTranscript(subAgentId: UUID) -> String {
+    func collectFullTranscript(subAgentId: UUID) -> SessionCollectResult {
         guard let subAgent = agentService.fetchAgent(id: subAgentId),
               let session = activeSessions[subAgentId] ?? subAgent.sessions.last else {
-            return "[Error] Sub-agent session not found."
+            return SessionCollectResult(text: "[Error] Sub-agent session not found.", imageAttachments: [])
         }
 
-        return session.sortedMessages.compactMap { msg in
+        var allImages: [ImageAttachment] = []
+        let lines = session.sortedMessages.compactMap { msg -> String? in
             let role = msg.role.rawValue.capitalized
-            guard let content = msg.content, !content.isEmpty else { return nil }
-            return "[\(role)] \(content)"
-        }.joined(separator: "\n\n")
+            var text = msg.content ?? ""
+            if let imgData = msg.imageAttachmentsData,
+               let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
+               !images.isEmpty {
+                text += " [+\(images.count) image(s)]"
+                if msg.role == .assistant {
+                    allImages.append(contentsOf: images)
+                }
+            }
+            guard !text.isEmpty else { return nil }
+            return "[\(role)] \(text)"
+        }
+
+        return SessionCollectResult(
+            text: lines.joined(separator: "\n\n"),
+            imageAttachments: allImages
+        )
     }
 
     // MARK: - Cleanup
