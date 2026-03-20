@@ -445,11 +445,36 @@ final class LLMService: @unchecked Sendable {
                 }
             case "tool":
                 let toolUseId = msg.toolCallId ?? ""
-                let content = msg.content ?? ""
-                let block = AnthropicContentBlock.toolResult(toolUseId: toolUseId, content: content)
+                let block: AnthropicContentBlock
+
+                if let parts = msg.contentParts,
+                   parts.contains(where: { if case .imageURL = $0 { return true }; return false }) {
+                    var blocks: [AnthropicToolResultBlock] = []
+                    for part in parts {
+                        switch part {
+                        case .text(let text):
+                            if !text.isEmpty { blocks.append(.text(text)) }
+                        case .imageURL(let url, _):
+                            if let parsed = parseBase64DataURI(url) {
+                                blocks.append(.image(mediaType: parsed.mediaType, data: parsed.data))
+                            }
+                        }
+                    }
+                    block = .toolResultRich(toolUseId: toolUseId, blocks: blocks)
+                } else {
+                    let content = msg.content ?? ""
+                    block = .toolResult(toolUseId: toolUseId, content: content)
+                }
+
                 // Anthropic tool results must be in a "user" message
+                let isToolResultBlock: (AnthropicContentBlock) -> Bool = {
+                    switch $0 {
+                    case .toolResult, .toolResultRich: return true
+                    default: return false
+                    }
+                }
                 if let last = anthropicMessages.last, last.role == "user",
-                   last.content.allSatisfy({ if case .toolResult = $0 { return true }; return false }) {
+                   last.content.allSatisfy(isToolResultBlock) {
                     var merged = last.content
                     merged.append(block)
                     anthropicMessages[anthropicMessages.count - 1] = AnthropicMessage(role: "user", content: merged)

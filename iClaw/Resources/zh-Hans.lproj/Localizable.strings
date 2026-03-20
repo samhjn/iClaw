@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "保存图片";
 "chat.imageSaved" = "已保存到相册";
 "chat.copyImage" = "拷贝图片";
+"chat.modalityStripped" = "已暂时移除上下文中的 %d 张图片 — %@ 不支持视觉能力";
 
 // MARK: - Agents
 "agents.title" = "智能体";
@@ -321,3 +322,38 @@
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "预览";
 "markdownEditor.edit" = "编辑";
+
+// MARK: - Tool Card Display Names
+"toolCard.javascript" = "JavaScript";
+"toolCard.readConfig" = "读取配置";
+"toolCard.writeConfig" = "写入配置";
+"toolCard.saveCode" = "保存代码";
+"toolCard.loadCode" = "加载代码";
+"toolCard.listCode" = "代码列表";
+"toolCard.createAgent" = "创建智能体";
+"toolCard.messageAgent" = "发送消息";
+"toolCard.collectOutput" = "收集输出";
+"toolCard.listAgents" = "智能体列表";
+"toolCard.stopAgent" = "停止智能体";
+"toolCard.deleteAgent" = "删除智能体";
+"toolCard.scheduleJob" = "创建定时任务";
+"toolCard.removeJob" = "移除定时任务";
+"toolCard.listJobs" = "任务列表";
+"toolCard.createSkill" = "创建技能";
+"toolCard.deleteSkill" = "删除技能";
+"toolCard.installSkill" = "安装技能";
+"toolCard.uninstallSkill" = "卸载技能";
+"toolCard.listSkills" = "技能列表";
+"toolCard.readSkill" = "读取技能";
+"toolCard.setModel" = "设置模型";
+"toolCard.getModel" = "获取模型";
+"toolCard.listModels" = "模型列表";
+"toolCard.browse" = "浏览";
+"toolCard.pageInfo" = "页面信息";
+"toolCard.click" = "点击";
+"toolCard.input" = "输入";
+"toolCard.select" = "选择";
+"toolCard.extract" = "提取";
+"toolCard.browserJS" = "浏览器 JS";
+"toolCard.waitElement" = "等待元素";
+"toolCard.scroll" = "滚动";

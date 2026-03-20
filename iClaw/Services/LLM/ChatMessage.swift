@@ -152,6 +152,14 @@ struct LLMChatMessage: Codable {
     static func tool(content: String, toolCallId: String, name: String? = nil) -> LLMChatMessage {
         LLMChatMessage(role: "tool", content: content, toolCallId: toolCallId, name: name)
     }
+
+    static func toolWithImages(content: String, images: [ImageAttachment], toolCallId: String, name: String? = nil) -> LLMChatMessage {
+        var parts: [ContentPart] = [.text(content)]
+        for img in images {
+            parts.append(.imageURL(url: img.base64DataURI, detail: "auto"))
+        }
+        return LLMChatMessage(role: "tool", content: content, contentParts: parts, toolCallId: toolCallId, name: name)
+    }
 }
 
 struct LLMToolCall: Codable, Identifiable {
@@ -452,6 +460,7 @@ enum AnthropicContentBlock: Encodable {
     case image(mediaType: String, data: String)
     case toolUse(id: String, name: String, input: String)
     case toolResult(toolUseId: String, content: String)
+    case toolResultRich(toolUseId: String, blocks: [AnthropicToolResultBlock])
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -479,6 +488,10 @@ enum AnthropicContentBlock: Encodable {
             try container.encode("tool_result", forKey: .type)
             try container.encode(toolUseId, forKey: .toolUseId)
             try container.encode(content, forKey: .content)
+        case .toolResultRich(let toolUseId, let blocks):
+            try container.encode("tool_result", forKey: .type)
+            try container.encode(toolUseId, forKey: .toolUseId)
+            try container.encode(blocks, forKey: .content)
         }
     }
 
@@ -496,6 +509,31 @@ enum AnthropicContentBlock: Encodable {
             case type, data
             case mediaType = "media_type"
         }
+    }
+}
+
+/// Content blocks inside an Anthropic `tool_result` (text or image).
+enum AnthropicToolResultBlock: Encodable {
+    case text(String)
+    case image(mediaType: String, data: String)
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .text(let text):
+            try container.encode("text", forKey: .type)
+            try container.encode(text, forKey: .text)
+        case .image(let mediaType, let data):
+            try container.encode("image", forKey: .type)
+            try container.encode(
+                AnthropicContentBlock.ImageSource(type: "base64", mediaType: mediaType, data: data),
+                forKey: .source
+            )
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type, text, source
     }
 }
 

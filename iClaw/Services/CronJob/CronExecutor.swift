@@ -68,10 +68,12 @@ final class CronExecutor {
         let promptBuilder = PromptBuilder()
         let contextManager = ContextManager()
         let fnRouter = FunctionCallRouter(agent: agent, modelContext: context, sessionId: session.id)
+        let caps = router.primaryModelCapabilities(for: agent)
 
         for _ in 0..<maxRounds {
             let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
-            let messages = contextManager.buildContextWindow(session: session, systemPrompt: systemPrompt)
+            var messages = contextManager.buildContextWindow(session: session, systemPrompt: systemPrompt)
+            ChatViewModel.stripUnsupportedModalities(from: &messages, capabilities: caps)
 
             do {
                 let (response, _) = try await router.chatCompletionWithFailover(
@@ -96,11 +98,16 @@ final class CronExecutor {
                         let result = await fnRouter.execute(toolCall: tc)
                         let toolMsg = Message(
                             role: .tool,
-                            content: result,
+                            content: result.text,
                             toolCallId: tc.id,
                             name: tc.function.name,
                             session: session
                         )
+                        if let images = result.imageAttachments,
+                           let data = try? JSONEncoder().encode(images) {
+                            toolMsg.imageAttachmentsData = data
+                            toolMsg.recalculateTokenEstimate()
+                        }
                         context.insert(toolMsg)
                         session.messages.append(toolMsg)
                     }

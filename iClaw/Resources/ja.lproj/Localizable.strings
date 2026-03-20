@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "画像を保存";
 "chat.imageSaved" = "写真に保存しました";
 "chat.copyImage" = "画像をコピー";
+"chat.modalityStripped" = "コンテキストから画像 %d 枚を一時的に除外しました — %@ はビジョンに対応していません";
 
 // MARK: - Agents
 "agents.title" = "エージェント";
@@ -321,3 +322,38 @@
 // MARK: - Markdown Editor
 "markdownEditor.preview" = "プレビュー";
 "markdownEditor.edit" = "編集";
+
+// MARK: - Tool Card Display Names
+"toolCard.javascript" = "JavaScript";
+"toolCard.readConfig" = "設定読取";
+"toolCard.writeConfig" = "設定書込";
+"toolCard.saveCode" = "コード保存";
+"toolCard.loadCode" = "コード読込";
+"toolCard.listCode" = "コード一覧";
+"toolCard.createAgent" = "エージェント作成";
+"toolCard.messageAgent" = "メッセージ送信";
+"toolCard.collectOutput" = "出力収集";
+"toolCard.listAgents" = "エージェント一覧";
+"toolCard.stopAgent" = "エージェント停止";
+"toolCard.deleteAgent" = "エージェント削除";
+"toolCard.scheduleJob" = "タスク作成";
+"toolCard.removeJob" = "タスク削除";
+"toolCard.listJobs" = "タスク一覧";
+"toolCard.createSkill" = "スキル作成";
+"toolCard.deleteSkill" = "スキル削除";
+"toolCard.installSkill" = "スキルインストール";
+"toolCard.uninstallSkill" = "スキルアンインストール";
+"toolCard.listSkills" = "スキル一覧";
+"toolCard.readSkill" = "スキル読取";
+"toolCard.setModel" = "モデル設定";
+"toolCard.getModel" = "モデル取得";
+"toolCard.listModels" = "モデル一覧";
+"toolCard.browse" = "ブラウズ";
+"toolCard.pageInfo" = "ページ情報";
+"toolCard.click" = "クリック";
+"toolCard.input" = "入力";
+"toolCard.select" = "選択";
+"toolCard.extract" = "抽出";
+"toolCard.browserJS" = "ブラウザ JS";
+"toolCard.waitElement" = "要素待機";
+"toolCard.scroll" = "スクロール";

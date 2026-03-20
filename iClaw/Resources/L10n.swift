@@ -99,6 +99,7 @@ enum L10n {
         static var saveImageToPhotos: String { tr("chat.saveImageToPhotos") }
         static var imageSaved: String { tr("chat.imageSaved") }
         static var copyImage: String { tr("chat.copyImage") }
+        static func modalityStripped(_ count: Int, _ model: String) -> String { tr("chat.modalityStripped", count, model) }
     }
 
     // MARK: - Agents
@@ -394,6 +395,44 @@ enum L10n {
     enum MarkdownEditor {
         static var preview: String { tr("markdownEditor.preview") }
         static var edit: String { tr("markdownEditor.edit") }
+    }
+
+    // MARK: - Tool Card Display Names
+
+    enum ToolCard {
+        static var javascript: String { tr("toolCard.javascript") }
+        static var readConfig: String { tr("toolCard.readConfig") }
+        static var writeConfig: String { tr("toolCard.writeConfig") }
+        static var saveCode: String { tr("toolCard.saveCode") }
+        static var loadCode: String { tr("toolCard.loadCode") }
+        static var listCode: String { tr("toolCard.listCode") }
+        static var createAgent: String { tr("toolCard.createAgent") }
+        static var messageAgent: String { tr("toolCard.messageAgent") }
+        static var collectOutput: String { tr("toolCard.collectOutput") }
+        static var listAgents: String { tr("toolCard.listAgents") }
+        static var stopAgent: String { tr("toolCard.stopAgent") }
+        static var deleteAgent: String { tr("toolCard.deleteAgent") }
+        static var scheduleJob: String { tr("toolCard.scheduleJob") }
+        static var removeJob: String { tr("toolCard.removeJob") }
+        static var listJobs: String { tr("toolCard.listJobs") }
+        static var createSkill: String { tr("toolCard.createSkill") }
+        static var deleteSkill: String { tr("toolCard.deleteSkill") }
+        static var installSkill: String { tr("toolCard.installSkill") }
+        static var uninstallSkill: String { tr("toolCard.uninstallSkill") }
+        static var listSkills: String { tr("toolCard.listSkills") }
+        static var readSkill: String { tr("toolCard.readSkill") }
+        static var setModel: String { tr("toolCard.setModel") }
+        static var getModel: String { tr("toolCard.getModel") }
+        static var listModels: String { tr("toolCard.listModels") }
+        static var browse: String { tr("toolCard.browse") }
+        static var pageInfo: String { tr("toolCard.pageInfo") }
+        static var click: String { tr("toolCard.click") }
+        static var input: String { tr("toolCard.input") }
+        static var select: String { tr("toolCard.select") }
+        static var extract: String { tr("toolCard.extract") }
+        static var browserJS: String { tr("toolCard.browserJS") }
+        static var waitElement: String { tr("toolCard.waitElement") }
+        static var scroll: String { tr("toolCard.scroll") }
     }
 }
 

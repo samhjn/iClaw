@@ -173,7 +173,14 @@ private struct ChatContentView: View {
                     Text(error)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(3)
                     Spacer()
+                    Button {
+                        UIPasteboard.general.string = error
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.caption)
+                    }
                     Button(L10n.Common.dismiss) {
                         vm.errorMessage = nil
                     }
@@ -182,6 +189,25 @@ private struct ChatContentView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .background(.ultraThinMaterial)
+            }
+
+            if let warning = vm.modalityWarning {
+                HStack(spacing: 6) {
+                    Image(systemName: "eye.slash.fill")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                    Text(warning)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(L10n.Common.dismiss) {
+                        vm.modalityWarning = nil
+                    }
+                    .font(.caption)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.yellow.opacity(0.08))
             }
 
             if let reason = vm.sendBlockedReason {

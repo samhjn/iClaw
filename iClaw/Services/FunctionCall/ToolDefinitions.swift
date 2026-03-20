@@ -103,6 +103,7 @@ enum ToolDefinitions {
             "name": ToolDefinitionBuilder.stringParam("A descriptive name for the sub-agent"),
             "initial_context": ToolDefinitionBuilder.stringParam("Context and instructions for the sub-agent's task"),
             "model_id": ToolDefinitionBuilder.stringParam("Optional: UUID of the LLM provider to use. Use list_models to see available."),
+            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name on the provider (e.g. 'gpt-4o'). Requires model_id. If omitted, uses the provider's default model."),
             "type": ToolDefinitionBuilder.enumParam("Agent lifecycle type", values: ["temp", "persistent"])
         ],
         required: ["name"]
@@ -110,10 +111,11 @@ enum ToolDefinitions {
 
     static let messageSubAgentTool = ToolDefinitionBuilder.build(
         name: "message_sub_agent",
-        description: "Send a message to a sub-agent and receive its full response (including tool call results). The sub-agent runs an autonomous loop until it produces a text reply.",
+        description: "Send a message to a sub-agent and receive its full response (including tool call results). The sub-agent runs an autonomous loop until it produces a text reply. Use forward_images to pass images from the current conversation to the sub-agent (e.g. for vision analysis).",
         properties: [
             "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent to message"),
-            "message": ToolDefinitionBuilder.stringParam("The message to send to the sub-agent")
+            "message": ToolDefinitionBuilder.stringParam("The message to send to the sub-agent"),
+            "forward_images": ToolDefinitionBuilder.enumParam("Forward images from the parent session to the sub-agent", values: ["none", "latest", "all"])
         ],
         required: ["agent_id", "message"]
     )
@@ -257,6 +259,7 @@ enum ToolDefinitions {
         properties: [
             "role": ToolDefinitionBuilder.enumParam("Which model slot to configure", values: ["primary", "fallback", "add_fallback", "sub_agent"]),
             "model_id": ToolDefinitionBuilder.stringParam("UUID of the LLM provider to set. Use list_models to see available providers."),
+            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name on the provider. If omitted, uses the provider's default model."),
             "model_ids": .init(type: "array", description: "Array of provider UUIDs (for 'fallback' role to set the entire chain)", items: .init(type: "string", description: nil))
         ],
         required: ["role"]

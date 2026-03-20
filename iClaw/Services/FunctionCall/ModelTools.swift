@@ -22,12 +22,15 @@ struct ModelTools {
             guard allProviders.contains(where: { $0.id == uuid }) else {
                 return "[Error] No provider found with id: \(modelId)"
             }
+            let modelName = arguments["model_name"] as? String
             agent.primaryProviderId = uuid
+            agent.primaryModelNameOverride = modelName
             agent.updatedAt = Date()
             try? modelContext.save()
 
             let p = router.providerById(uuid)
-            return "Primary model set to: \(p?.name ?? modelId) (\(p?.modelName ?? ""))"
+            let effectiveModel = modelName ?? p?.modelName ?? ""
+            return "Primary model set to: \(p?.name ?? modelId) (\(effectiveModel))"
 
         case "fallback":
             guard let modelIds = arguments["model_ids"] as? [String] else {
@@ -63,17 +66,21 @@ struct ModelTools {
 
         case "sub_agent":
             let modelId = arguments["model_id"] as? String
+            let modelName = arguments["model_name"] as? String
             if let modelId, let uuid = UUID(uuidString: modelId) {
                 guard allProviders.contains(where: { $0.id == uuid }) else {
                     return "[Error] No provider found with id: \(modelId)"
                 }
                 agent.subAgentProviderId = uuid
+                agent.subAgentModelNameOverride = modelName
                 agent.updatedAt = Date()
                 try? modelContext.save()
                 let p = router.providerById(uuid)
-                return "Sub-agent default model set to: \(p?.name ?? modelId) (\(p?.modelName ?? ""))"
+                let effectiveModel = modelName ?? p?.modelName ?? ""
+                return "Sub-agent default model set to: \(p?.name ?? modelId) (\(effectiveModel))"
             } else {
                 agent.subAgentProviderId = nil
+                agent.subAgentModelNameOverride = nil
                 agent.updatedAt = Date()
                 try? modelContext.save()
                 return "Sub-agent model cleared — sub-agents will inherit parent's primary model"

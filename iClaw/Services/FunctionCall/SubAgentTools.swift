@@ -5,6 +5,7 @@ struct SubAgentTools {
     let agent: Agent
     let modelContext: ModelContext
     let subAgentManager: SubAgentManager
+    let parentSessionId: UUID?
 
     func createSubAgent(arguments: [String: Any]) -> String {
         guard let name = arguments["name"] as? String else {
@@ -16,11 +17,11 @@ struct SubAgentTools {
         if let modelIdStr = arguments["model_id"] as? String {
             providerIdOverride = UUID(uuidString: modelIdStr)
         }
+        let modelNameOverride = arguments["model_name"] as? String
 
         let typeStr = arguments["type"] as? String ?? "temp"
         let type: SubAgentType = typeStr == "persistent" ? .persistent : .temp
 
-        // Find the current session to link as parent
         let parentSessionId = agent.sessions.last?.id
 
         let (subAgent, _) = subAgentManager.createSubAgent(
@@ -28,13 +29,19 @@ struct SubAgentTools {
             parentAgent: agent,
             initialContext: initialContext,
             providerIdOverride: providerIdOverride,
+            modelNameOverride: modelNameOverride,
             type: type,
             parentSessionId: parentSessionId
         )
 
         let router = ModelRouter(modelContext: modelContext)
-        let modelInfo = router.primaryProvider(for: subAgent)
-            .map { "\($0.name) (\($0.modelName))" } ?? "inherited"
+        let modelInfo: String
+        if let primary = router.resolveProviderChainWithModels(for: subAgent).first {
+            let effectiveModel = primary.modelName ?? primary.provider.modelName
+            modelInfo = "\(primary.provider.name) (\(effectiveModel))"
+        } else {
+            modelInfo = "inherited"
+        }
 
         let typeLabel = type == .persistent ? "persistent (long-lived)" : "temp (auto-destroy after task)"
 
@@ -52,43 +59,81 @@ struct SubAgentTools {
     }
 
     @MainActor
-    func messageSubAgent(arguments: [String: Any]) async -> String {
+    func messageSubAgent(arguments: [String: Any]) async -> ToolCallResult {
         guard let agentIdStr = arguments["agent_id"] as? String,
               let agentId = UUID(uuidString: agentIdStr) else {
-            return "[Error] Missing or invalid agent_id parameter"
+            return ToolCallResult("[Error] Missing or invalid agent_id parameter")
         }
         guard let message = arguments["message"] as? String else {
-            return "[Error] Missing required parameter: message"
+            return ToolCallResult("[Error] Missing required parameter: message")
         }
+
+        let forwardImages = arguments["forward_images"] as? String ?? "none"
+        let imagesToForward = resolveForwardImages(mode: forwardImages)
 
         do {
             let response = try await subAgentManager.sendMessage(
                 to: agentId,
-                content: message
+                content: message,
+                imageAttachments: imagesToForward.isEmpty ? nil : imagesToForward
             )
-            return response
+            return ToolCallResult(response.text, imageAttachments: response.imageAttachments)
         } catch {
-            return "[Error] \(error.localizedDescription)"
+            return ToolCallResult("[Error] \(error.localizedDescription)")
         }
     }
 
-    func collectSubAgentOutput(arguments: [String: Any]) -> String {
+    /// Collect images from the parent session based on the forward mode.
+    private func resolveForwardImages(mode: String) -> [ImageAttachment] {
+        guard mode != "none", let sessionId = parentSessionId else { return [] }
+
+        let descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.id == sessionId })
+        guard let session = try? modelContext.fetch(descriptor).first else { return [] }
+
+        let sorted = session.sortedMessages.filter { $0.role != .system }
+
+        switch mode {
+        case "latest":
+            // Find the most recent message (any role) that has images
+            if let msg = sorted.last(where: { $0.imageAttachmentsData != nil }),
+               let data = msg.imageAttachmentsData,
+               let images = try? JSONDecoder().decode([ImageAttachment].self, from: data),
+               !images.isEmpty {
+                return images
+            }
+            return []
+
+        case "all":
+            var allImages: [ImageAttachment] = []
+            for msg in sorted {
+                if let data = msg.imageAttachmentsData,
+                   let images = try? JSONDecoder().decode([ImageAttachment].self, from: data) {
+                    allImages.append(contentsOf: images)
+                }
+            }
+            return allImages
+
+        default:
+            return []
+        }
+    }
+
+    func collectSubAgentOutput(arguments: [String: Any]) -> ToolCallResult {
         guard let agentIdStr = arguments["agent_id"] as? String,
               let agentId = UUID(uuidString: agentIdStr) else {
-            return "[Error] Missing or invalid agent_id parameter"
+            return ToolCallResult("[Error] Missing or invalid agent_id parameter")
         }
 
         let mode = arguments["mode"] as? String ?? "summary"
         let autoDestroy = arguments["auto_destroy"] as? Bool ?? true
 
-        let output: String
+        let result: SubAgentManager.SessionCollectResult
         if mode == "full" {
-            output = subAgentManager.collectFullTranscript(subAgentId: agentId)
+            result = subAgentManager.collectFullTranscript(subAgentId: agentId)
         } else {
-            output = subAgentManager.collectSessionSummary(subAgentId: agentId)
+            result = subAgentManager.collectSessionSummary(subAgentId: agentId)
         }
 
-        // Auto-destroy temp agents after collecting output
         if autoDestroy {
             let agentService = AgentService(modelContext: modelContext)
             if let subAgent = agentService.fetchAgent(id: agentId), subAgent.isTempSubAgent {
@@ -96,7 +141,10 @@ struct SubAgentTools {
             }
         }
 
-        return output
+        return ToolCallResult(
+            result.text,
+            imageAttachments: result.imageAttachments.isEmpty ? nil : result.imageAttachments
+        )
     }
 
     func listSubAgents(arguments: [String: Any]) -> String {

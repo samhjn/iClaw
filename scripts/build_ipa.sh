@@ -102,7 +102,8 @@ check_environment() {
     fi
 
     local xcode_version
-    xcode_version=$(xcodebuild -version | head -1)
+    xcode_version=$(xcodebuild -version 2>&1) || true
+    xcode_version=$(echo "$xcode_version" | head -1)
     log_info "Xcode 版本: $xcode_version"
 
     if [[ "$SKIP_XCODEGEN" == false ]] && ! command -v xcodegen &>/dev/null; then
@@ -138,11 +139,17 @@ generate_project() {
 # ── 解析 SPM 依赖 ──
 resolve_dependencies() {
     log_info "解析 Swift Package Manager 依赖..."
-    xcodebuild -resolvePackageDependencies \
+    local resolve_output
+    resolve_output=$(xcodebuild -resolvePackageDependencies \
         -project "$PROJECT_ROOT/$PROJECT_NAME.xcodeproj" \
         -scheme "$SCHEME" \
         -clonedSourcePackagesDirPath "$BUILD_DIR/SourcePackages" \
-        2>&1 | tail -5
+        2>&1) || {
+        log_error "依赖解析失败:"
+        echo "$resolve_output" | tail -10
+        exit 1
+    }
+    echo "$resolve_output" | tail -5
     log_ok "依赖解析完成"
 }
 
@@ -150,11 +157,13 @@ resolve_dependencies() {
 clean_build() {
     if [[ "$CLEAN_BUILD" == true ]]; then
         log_info "清理构建目录..."
-        xcodebuild clean \
+        local clean_output
+        clean_output=$(xcodebuild clean \
             -project "$PROJECT_ROOT/$PROJECT_NAME.xcodeproj" \
             -scheme "$SCHEME" \
             -configuration "$CONFIGURATION" \
-            2>&1 | tail -3
+            2>&1) || true
+        echo "$clean_output" | tail -3
         rm -rf "$BUILD_DIR"
         log_ok "清理完成"
     fi
@@ -266,7 +275,11 @@ archive_project() {
         fi
     fi
 
-    xcodebuild "${archive_args[@]}" 2>&1 | while IFS= read -r line; do
+    local archive_output archive_rc=0
+    archive_output=$(xcodebuild "${archive_args[@]}" 2>&1) || archive_rc=$?
+
+    # Display filtered output
+    echo "$archive_output" | while IFS= read -r line; do
         if [[ "$line" == *"ARCHIVE SUCCEEDED"* ]]; then
             echo -e "${GREEN}$line${NC}"
         elif [[ "$line" == *"error:"* ]]; then
@@ -274,10 +287,11 @@ archive_project() {
         elif [[ "$line" == *"warning:"* ]]; then
             echo -e "${YELLOW}$line${NC}"
         fi
-    done
+    done || true
 
-    if [[ ! -d "$ARCHIVE_PATH" ]]; then
-        log_error "归档失败，未生成 .xcarchive"
+    if [[ $archive_rc -ne 0 ]] || [[ ! -d "$ARCHIVE_PATH" ]]; then
+        log_error "归档失败 (exit code: $archive_rc)"
+        echo "$archive_output" | grep -i "error:" | tail -5 || true
         exit 1
     fi
 
@@ -300,7 +314,7 @@ export_ipa_unsigned() {
     log_info "无签名模式: 从 xcarchive 手动打包 IPA..."
 
     local app_path
-    app_path=$(find "$ARCHIVE_PATH/Products/Applications" -name "*.app" -maxdepth 1 | head -1)
+    app_path=$(find "$ARCHIVE_PATH/Products/Applications" -name "*.app" -maxdepth 1 2>/dev/null | head -1) || true
 
     if [[ -z "$app_path" ]]; then
         log_error "未在 xcarchive 中找到 .app"
@@ -321,24 +335,28 @@ export_ipa_unsigned() {
 }
 
 export_ipa_signed() {
-    xcodebuild -exportArchive \
+    local export_output export_rc=0
+    export_output=$(xcodebuild -exportArchive \
         -archivePath "$ARCHIVE_PATH" \
         -exportPath "$OUTPUT_DIR" \
         -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
         -allowProvisioningUpdates \
-        2>&1 | while IFS= read -r line; do
-            if [[ "$line" == *"EXPORT SUCCEEDED"* ]]; then
-                echo -e "${GREEN}$line${NC}"
-            elif [[ "$line" == *"error:"* ]]; then
-                echo -e "${RED}$line${NC}"
-            fi
-        done
+        2>&1) || export_rc=$?
+
+    echo "$export_output" | while IFS= read -r line; do
+        if [[ "$line" == *"EXPORT SUCCEEDED"* ]]; then
+            echo -e "${GREEN}$line${NC}"
+        elif [[ "$line" == *"error:"* ]]; then
+            echo -e "${RED}$line${NC}"
+        fi
+    done || true
 
     local ipa_file
-    ipa_file=$(find "$OUTPUT_DIR" -name "*.ipa" -maxdepth 1 | head -1)
+    ipa_file=$(find "$OUTPUT_DIR" -name "*.ipa" -maxdepth 1 2>/dev/null | head -1) || true
 
     if [[ -z "$ipa_file" ]]; then
-        log_error "导出失败，未找到 IPA 文件"
+        log_error "导出失败 (exit code: $export_rc)"
+        echo "$export_output" | grep -i "error:" | tail -5 || true
         exit 1
     fi
 
@@ -349,7 +367,7 @@ print_result() {
     local ipa_file="$1"
     local method="$2"
     local ipa_size
-    ipa_size=$(du -h "$ipa_file" | cut -f1)
+    ipa_size=$(du -h "$ipa_file" | cut -f1) || true
 
     echo ""
     log_ok "════════════════════════════════════════"
