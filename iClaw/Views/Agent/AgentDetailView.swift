@@ -201,6 +201,8 @@ struct SubAgentListView: View {
 
 struct CodeSnippetListView: View {
     let agent: Agent
+    @Environment(\.modelContext) private var modelContext
+    @State private var showNewSnippet = false
 
     var body: some View {
         List {
@@ -211,26 +213,139 @@ struct CodeSnippetListView: View {
                     description: Text(L10n.AgentDetail.codeSnippetsDescription)
                 )
             } else {
-                ForEach(agent.codeSnippets, id: \.id) { snippet in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(snippet.name).font(.headline)
-                            Spacer()
-                            Text(snippet.language)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(.secondary.opacity(0.2)))
+                ForEach(agent.codeSnippets.sorted(by: { $0.updatedAt > $1.updatedAt }), id: \.id) { snippet in
+                    NavigationLink {
+                        CodeSnippetEditView(snippet: snippet)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(snippet.name).font(.headline)
+                                Spacer()
+                                Text(snippet.language)
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(.secondary.opacity(0.2)))
+                            }
+                            Text(snippet.code.prefix(120))
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
                         }
-                        Text(snippet.code.prefix(120))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            modelContext.delete(snippet)
+                            try? modelContext.save()
+                        } label: {
+                            Label(L10n.Common.delete, systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
         .navigationTitle(L10n.AgentDetail.codeSnippets)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showNewSnippet = true } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showNewSnippet) {
+            NavigationStack {
+                CodeSnippetEditView(agent: agent)
+            }
+        }
+    }
+}
+
+struct CodeSnippetEditView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    private let snippet: CodeSnippet?
+    private let agent: Agent?
+
+    @State private var name: String
+    @State private var language: String
+    @State private var code: String
+
+    private var isNewSnippet: Bool { snippet == nil }
+
+    init(snippet: CodeSnippet) {
+        self.snippet = snippet
+        self.agent = nil
+        _name = State(initialValue: snippet.name)
+        _language = State(initialValue: snippet.language)
+        _code = State(initialValue: snippet.code)
+    }
+
+    init(agent: Agent) {
+        self.snippet = nil
+        self.agent = agent
+        _name = State(initialValue: "")
+        _language = State(initialValue: "javascript")
+        _code = State(initialValue: "")
+    }
+
+    var body: some View {
+        Form {
+            Section(L10n.AgentDetail.snippetInfo) {
+                TextField(L10n.AgentDetail.snippetName, text: $name)
+                TextField(L10n.AgentDetail.snippetLanguage, text: $language)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+
+            Section(L10n.AgentDetail.snippetCode) {
+                TextEditor(text: $code)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 200)
+            }
+        }
+        .navigationTitle(isNewSnippet ? L10n.AgentDetail.newSnippet : name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isNewSnippet {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.Common.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.Common.create) {
+                        createSnippet()
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            } else {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.Common.save) {
+                        saveSnippet()
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func createSnippet() {
+        guard let agent else { return }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        let newSnippet = CodeSnippet(name: trimmedName, language: language, code: code, agent: agent)
+        modelContext.insert(newSnippet)
+        try? modelContext.save()
+    }
+
+    private func saveSnippet() {
+        guard let snippet else { return }
+        snippet.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        snippet.language = language
+        snippet.code = code
+        snippet.updatedAt = Date()
+        try? modelContext.save()
     }
 }

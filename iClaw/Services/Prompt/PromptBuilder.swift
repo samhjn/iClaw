@@ -87,6 +87,8 @@ final class PromptBuilder {
         - `save_code`: Save a code snippet for later reuse
         - `load_code`: Load a previously saved code snippet
         - `list_code`: List all saved code snippets
+        - `run_snippet`: Execute a saved code snippet by name — loads and runs it directly without needing to `load_code` + `execute_javascript` separately. Supports optional `mode` and `timeout` overrides.
+        - `delete_code`: Delete a saved code snippet by name
 
         ### Sub-Agent Management
         - `create_sub_agent`: Create a sub-agent. Two types:

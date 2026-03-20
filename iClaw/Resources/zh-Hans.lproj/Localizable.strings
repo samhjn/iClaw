@@ -94,6 +94,11 @@
 "agentDetail.subAgentsTitle" = "子智能体（%d）";
 "agentDetail.noCodeSnippets" = "暂无代码片段";
 "agentDetail.codeSnippetsDescription" = "代码片段由 AI 智能体保存。";
+"agentDetail.snippetInfo" = "信息";
+"agentDetail.snippetName" = "名称";
+"agentDetail.snippetLanguage" = "语言";
+"agentDetail.snippetCode" = "代码";
+"agentDetail.newSnippet" = "新建代码片段";
 
 // MARK: - Model Config
 "modelConfig.title" = "模型配置";
@@ -357,3 +362,5 @@
 "toolCard.browserJS" = "浏览器 JS";
 "toolCard.waitElement" = "等待元素";
 "toolCard.scroll" = "滚动";
+"toolCard.runSnippet" = "运行代码片段";
+"toolCard.deleteCode" = "删除代码";

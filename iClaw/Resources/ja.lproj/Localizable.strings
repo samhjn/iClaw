@@ -94,6 +94,11 @@
 "agentDetail.subAgentsTitle" = "サブエージェント（%d）";
 "agentDetail.noCodeSnippets" = "コードスニペットなし";
 "agentDetail.codeSnippetsDescription" = "コードスニペットはAIエージェントによって保存されます。";
+"agentDetail.snippetInfo" = "情報";
+"agentDetail.snippetName" = "名前";
+"agentDetail.snippetLanguage" = "言語";
+"agentDetail.snippetCode" = "コード";
+"agentDetail.newSnippet" = "新規スニペット";
 
 // MARK: - Model Config
 "modelConfig.title" = "モデル設定";
@@ -357,3 +362,5 @@
 "toolCard.browserJS" = "ブラウザ JS";
 "toolCard.waitElement" = "要素待機";
 "toolCard.scroll" = "スクロール";
+"toolCard.runSnippet" = "スニペット実行";
+"toolCard.deleteCode" = "コード削除";

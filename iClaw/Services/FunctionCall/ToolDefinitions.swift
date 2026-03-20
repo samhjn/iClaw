@@ -9,6 +9,8 @@ enum ToolDefinitions {
             saveCodeTool,
             loadCodeTool,
             listCodeTool,
+            runSnippetTool,
+            deleteCodeTool,
             createSubAgentTool,
             messageSubAgentTool,
             collectSubAgentOutputTool,
@@ -94,6 +96,26 @@ enum ToolDefinitions {
         description: "List all saved code snippets with their names and languages.",
         properties: [:],
         required: []
+    )
+
+    static let runSnippetTool = ToolDefinitionBuilder.build(
+        name: "run_snippet",
+        description: "Execute a saved code snippet by name. Loads the snippet and runs it directly in the appropriate runtime (currently JavaScript only). Supports optional argument overrides for mode and timeout.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The name of the saved code snippet to execute"),
+            "mode": ToolDefinitionBuilder.enumParam("Execution mode override", values: ["repr", "script"]),
+            "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60)")
+        ],
+        required: ["name"]
+    )
+
+    static let deleteCodeTool = ToolDefinitionBuilder.build(
+        name: "delete_code",
+        description: "Delete a saved code snippet by name.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The name of the code snippet to delete")
+        ],
+        required: ["name"]
     )
 
     static let createSubAgentTool = ToolDefinitionBuilder.build(

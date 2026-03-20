@@ -102,7 +102,7 @@ private struct SingleToolCallCard: View {
                 return String(id.prefix(8)) + "..."
             }
             return nil
-        case "save_code":
+        case "save_code", "run_snippet", "delete_code":
             return dict["name"] as? String
         case "install_skill", "uninstall_skill":
             return dict["name"] as? String
@@ -153,7 +153,7 @@ struct ToolResultCardView: View {
     }
 
     private var isCodeExecution: Bool {
-        toolName == "execute_javascript"
+        toolName == "execute_javascript" || toolName == "run_snippet"
     }
 
     var body: some View {
@@ -382,6 +382,10 @@ struct ToolMeta {
             return ToolMeta(displayName: L10n.ToolCard.loadCode, icon: "square.and.arrow.up", color: .blue)
         case "list_code":
             return ToolMeta(displayName: L10n.ToolCard.listCode, icon: "list.bullet", color: .blue)
+        case "run_snippet":
+            return ToolMeta(displayName: L10n.ToolCard.runSnippet, icon: "play.fill", color: .blue)
+        case "delete_code":
+            return ToolMeta(displayName: L10n.ToolCard.deleteCode, icon: "trash", color: .blue)
         case "create_sub_agent":
             return ToolMeta(displayName: L10n.ToolCard.createAgent, icon: "person.badge.plus", color: .orange)
         case "message_sub_agent":
