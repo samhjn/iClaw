@@ -307,13 +307,14 @@ final class BrowserService: NSObject {
 
     func waitForElement(selector: String, timeout: TimeInterval = 10) async -> Result<String, BrowserError> {
         let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
+        while Date() < deadline, !Task.isCancelled {
             let script = "document.querySelector(\(jsEscape(selector))) !== null"
             let result = await executeJavaScript(script)
             if case .success(let value) = result, value == "1" || value == "true" {
                 return .success("Element found: \(selector)")
             }
             try? await Task.sleep(for: .milliseconds(300))
+            if Task.isCancelled { break }
         }
         return .failure(.waitTimeout(selector, timeout))
     }
@@ -334,12 +335,21 @@ final class BrowserService: NSObject {
 
     private func waitForNavigation(timeout: TimeInterval) async -> Bool {
         if !webView.isLoading { return true }
-        return await withCheckedContinuation { continuation in
-            self.navigationContinuation = continuation
-            Task {
-                try? await Task.sleep(for: .seconds(timeout))
-                if let c = self.navigationContinuation {
-                    self.navigationContinuation = nil
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                self.navigationContinuation = continuation
+                Task {
+                    try? await Task.sleep(for: .seconds(timeout))
+                    if let c = self.navigationContinuation {
+                        self.navigationContinuation = nil
+                        c.resume(returning: false)
+                    }
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                if let c = self?.navigationContinuation {
+                    self?.navigationContinuation = nil
                     c.resume(returning: false)
                 }
             }

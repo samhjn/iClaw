@@ -59,7 +59,7 @@ struct SubAgentTools {
     }
 
     @MainActor
-    func messageSubAgent(arguments: [String: Any]) async -> ToolCallResult {
+    func messageSubAgent(arguments: [String: Any]) async throws -> ToolCallResult {
         guard let agentIdStr = arguments["agent_id"] as? String,
               let agentId = UUID(uuidString: agentIdStr) else {
             return ToolCallResult("[Error] Missing or invalid agent_id parameter")
@@ -78,6 +78,8 @@ struct SubAgentTools {
                 imageAttachments: imagesToForward.isEmpty ? nil : imagesToForward
             )
             return ToolCallResult(response.text, imageAttachments: response.imageAttachments)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             return ToolCallResult("[Error] \(error.localizedDescription)")
         }

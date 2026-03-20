@@ -74,35 +74,42 @@ final class WKWebViewJSRuntime: NSObject {
 
         let execId = UUID().uuidString
 
-        return try await withCheckedThrowingContinuation { continuation in
-            pendingContinuations[execId] = continuation
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                pendingContinuations[execId] = continuation
 
-            webView.evaluateJavaScript(script) { [weak self] result, error in
-                Task { @MainActor in
-                    guard let self, let cont = self.pendingContinuations.removeValue(forKey: execId) else { return }
-                    if let error {
-                        cont.resume(throwing: self.classify(error))
-                        return
-                    }
-                    if let dict = result as? [String: Any] {
-                        cont.resume(returning: dict)
-                    } else {
-                        cont.resume(returning: [
-                            "stdout": "",
-                            "stderr": "",
-                            "result": result as Any,
-                            "error": NSNull()
-                        ])
+                webView.evaluateJavaScript(script) { [weak self] result, error in
+                    Task { @MainActor in
+                        guard let self, let cont = self.pendingContinuations.removeValue(forKey: execId) else { return }
+                        if let error {
+                            cont.resume(throwing: self.classify(error))
+                            return
+                        }
+                        if let dict = result as? [String: Any] {
+                            cont.resume(returning: dict)
+                        } else {
+                            cont.resume(returning: [
+                                "stdout": "",
+                                "stderr": "",
+                                "result": result as Any,
+                                "error": NSNull()
+                            ])
+                        }
                     }
                 }
-            }
 
-            // Timeout watchdog
+                // Timeout watchdog
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .seconds(timeout))
+                    guard let self, let cont = self.pendingContinuations.removeValue(forKey: execId) else { return }
+                    cont.resume(throwing: CodeExecutorError.timeout)
+                    self.reloadPage()
+                }
+            }
+        } onCancel: {
             Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(timeout))
                 guard let self, let cont = self.pendingContinuations.removeValue(forKey: execId) else { return }
-                cont.resume(throwing: CodeExecutorError.timeout)
-                // Reload the page to kill any still-running script
+                cont.resume(throwing: CancellationError())
                 self.reloadPage()
             }
         }
