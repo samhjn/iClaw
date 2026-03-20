@@ -135,6 +135,9 @@
 "modelConfig.addToWhitelist" = "화이트리스트에 추가";
 "modelConfig.clearWhitelist" = "화이트리스트 비우기";
 "modelConfig.whitelistFooter" = "서브 에이전트와 도구 호출이 사용할 수 있는 모델을 제한합니다. 비어있으면 사용 가능한 모든 모델이 허용됩니다.";
+"modelConfig.whitelistStaleWarning" = "%d개의 화이트리스트 항목이 삭제된 제공자/모델을 참조합니다";
+"modelConfig.whitelistMissingPrimary" = "기본 모델이 화이트리스트에 없습니다 — 메시지 전송에 실패합니다";
+"modelConfig.whitelistMissingSubAgent" = "서브 에이전트 기본 모델이 화이트리스트에 없습니다";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "예약 작업";
@@ -320,6 +323,7 @@
 // MARK: - Chat Errors
 "chatError.noProvider" = "LLM 제공자가 설정되지 않았습니다. 설정에서 추가하세요.";
 "chatError.noAgent" = "이 세션에 연결된 에이전트가 없습니다.";
+"chatError.whitelistBlocked" = "사용 가능한 모델이 없습니다 — 현재 모델이 화이트리스트에 없습니다. 에이전트의 기본 모델과 화이트리스트 설정을 확인하세요.";
 
 // MARK: - Browser
 "tabs.browser" = "브라우저";

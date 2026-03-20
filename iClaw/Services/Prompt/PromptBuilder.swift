@@ -91,14 +91,20 @@ final class PromptBuilder {
         - `delete_code`: Delete a saved code snippet by name
 
         ### Sub-Agent Management
-        - `create_sub_agent`: Create a sub-agent. Two types:
-          - `temp` (default): Auto-destroyed after you collect its output. Ideal for one-off tasks.
-          - `persistent`: Long-lived, reusable across sessions. Must be explicitly deleted.
-        - `message_sub_agent`: Send a message to a sub-agent. It runs a full autonomous loop (including its own tool calls) until it produces a text response.
-        - `collect_sub_agent_output`: Retrieve a sub-agent's session content. Mode 'summary' returns assistant replies only; 'full' returns the complete transcript. Temp agents are auto-destroyed after collection.
-        - `list_sub_agents`: List all your sub-agents with their type, status, and message counts.
-        - `stop_sub_agent`: Force-stop an in-flight sub-agent session.
-        - `delete_sub_agent`: Permanently delete a sub-agent and its data.
+        Sub-agents are independent AI workers you create and communicate with via messages.
+
+        **Standard workflow:**
+        1. `create_sub_agent` → returns an `agent_id` (UUID string)
+        2. `message_sub_agent` with that `agent_id` + your `message` → returns the sub-agent's response
+        3. `collect_sub_agent_output` with the same `agent_id` → retrieves session content and cleans up
+
+        **Tools:**
+        - `create_sub_agent`: Create a sub-agent. Returns its `agent_id`. Types: `temp` (default, auto-destroyed after collection) or `persistent` (long-lived).
+        - `message_sub_agent`: Send a message to a sub-agent by `agent_id`. It runs autonomously (including tool calls) and returns a text response.
+        - `collect_sub_agent_output`: Retrieve session output. Mode `summary` (default) or `full`.
+        - `list_sub_agents`: List all sub-agents with status and message counts.
+        - `stop_sub_agent`: Force-stop a running sub-agent.
+        - `delete_sub_agent`: Permanently delete a sub-agent.
 
         ### Cron Job Scheduling
         - `schedule_cron`: Schedule a recurring job with a cron expression (e.g. `0 9 * * 1-5` for weekdays at 9am). Each trigger creates a new session and sends your job hint to the LLM automatically.
@@ -127,9 +133,7 @@ final class PromptBuilder {
         ### Important Guidelines
         - Update MEMORY.md with important facts and decisions you want to remember across sessions.
         - Use JavaScript execution when working with JSON-heavy data, web APIs, or when JS-specific features are needed.
-        - Create temp sub-agents for one-off tasks; use persistent sub-agents for ongoing specialized roles.
-        - After messaging a temp sub-agent, use `collect_sub_agent_output` to retrieve results and auto-clean up.
-        - You can monitor all sub-agents with `list_sub_agents` and force-stop any with `stop_sub_agent`.
+        - For sub-agents: always use the exact `agent_id` UUID string returned by `create_sub_agent` when calling `message_sub_agent` or `collect_sub_agent_output`.
         - Use cron jobs for recurring automated tasks like daily summaries, periodic checks, or scheduled reminders.
         - Create and install skills to give yourself or other agents specialized capabilities.
         - If a model call fails, the system will automatically try fallback models in order.

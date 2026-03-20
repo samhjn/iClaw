@@ -136,6 +136,9 @@
 "modelConfig.addToWhitelist" = "新增至白名單";
 "modelConfig.clearWhitelist" = "清空白名單";
 "modelConfig.whitelistFooter" = "限制子智能體和工具呼叫可使用的模型。為空時允許所有可用模型。";
+"modelConfig.whitelistStaleWarning" = "%d 條白名單條目引用了已刪除的服務商/模型";
+"modelConfig.whitelistMissingPrimary" = "主模型不在白名單中 - 智能體將無法傳送訊息";
+"modelConfig.whitelistMissingSubAgent" = "子智能體預設模型不在白名單中";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "排程任務";
@@ -321,6 +324,7 @@
 // MARK: - Chat Errors
 "chatError.noProvider" = "未設定 LLM 服務商。請在設定中新增。";
 "chatError.noAgent" = "此對話未關聯智能體。";
+"chatError.whitelistBlocked" = "沒有可用模型 — 目前模型不在白名單中。請檢查智能體的預設模型與白名單設定。";
 
 // MARK: - Browser
 "tabs.browser" = "瀏覽器";

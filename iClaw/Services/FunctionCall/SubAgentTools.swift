@@ -27,8 +27,10 @@ struct SubAgentTools {
         // Validate requested model against the agent's whitelist
         var effectiveProviderOverride = providerIdOverride
         var effectiveModelOverride = modelNameOverride
-        if let pid = providerIdOverride, let mn = modelNameOverride {
-            if !agent.isModelAllowed(providerId: pid, modelName: mn) {
+        if let pid = providerIdOverride {
+            let router = ModelRouter(modelContext: modelContext)
+            let effectiveModel = modelNameOverride ?? router.providerById(pid)?.modelName ?? ""
+            if !agent.isModelAllowed(providerId: pid, modelName: effectiveModel) {
                 effectiveProviderOverride = nil
                 effectiveModelOverride = nil
             }
@@ -56,15 +58,14 @@ struct SubAgentTools {
         let typeLabel = type == .persistent ? "persistent (long-lived)" : "temp (auto-destroy after task)"
 
         return """
-        Sub-agent created successfully.
-        - Name: \(subAgent.name)
-        - ID: \(subAgent.id.uuidString)
-        - Type: \(typeLabel)
-        - Model: \(modelInfo)
-        - Inherited SOUL from parent agent
-        - Use `message_sub_agent` with agent_id "\(subAgent.id.uuidString)" to communicate
-        - Use `collect_sub_agent_output` to retrieve its session content
-        \(type == .temp ? "- This agent will be auto-destroyed after you collect its output" : "- This agent persists and can be reused across sessions")
+        Sub-agent created.
+        agent_id: \(subAgent.id.uuidString)
+        name: \(subAgent.name)
+        type: \(typeLabel)
+        model: \(modelInfo)
+
+        Next step: call message_sub_agent with agent_id="\(subAgent.id.uuidString)" and your message.
+        After done, call collect_sub_agent_output with the same agent_id to retrieve results\(type == .temp ? " (temp agent auto-destroys after collection)" : "").
         """
     }
 

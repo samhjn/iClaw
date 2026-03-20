@@ -19,40 +19,69 @@ struct ModelTools {
                   let uuid = UUID(uuidString: modelId) else {
                 return "[Error] Missing or invalid model_id"
             }
-            guard allProviders.contains(where: { $0.id == uuid }) else {
+            guard let p = allProviders.first(where: { $0.id == uuid }) else {
                 return "[Error] No provider found with id: \(modelId)"
             }
             let modelName = arguments["model_name"] as? String
+            let effectiveModel = modelName ?? p.modelName
+            if !agent.isModelAllowed(providerId: uuid, modelName: effectiveModel) {
+                return "[Error] Model \(p.name) (\(effectiveModel)) is not in the allowed model whitelist"
+            }
             agent.primaryProviderId = uuid
             agent.primaryModelNameOverride = modelName
             agent.updatedAt = Date()
             try? modelContext.save()
-
-            let p = router.providerById(uuid)
-            let effectiveModel = modelName ?? p?.modelName ?? ""
-            return "Primary model set to: \(p?.name ?? modelId) (\(effectiveModel))"
+            return "Primary model set to: \(p.name) (\(effectiveModel))"
 
         case "fallback":
             guard let modelIds = arguments["model_ids"] as? [String] else {
                 return "[Error] Missing model_ids array for fallback role"
             }
+            let modelNames = arguments["model_names"] as? [String]
             let uuids = modelIds.compactMap { UUID(uuidString: $0) }
             let valid = uuids.filter { uid in allProviders.contains(where: { $0.id == uid }) }
-            agent.fallbackProviderIds = valid
+            var rejected: [String] = []
+            var accepted: [UUID] = []
+            var acceptedModelNames: [String] = []
+            for (i, uid) in valid.enumerated() {
+                guard let p = router.providerById(uid) else { continue }
+                let mn = (modelNames != nil && i < modelNames!.count && !modelNames![i].isEmpty) ? modelNames![i] : nil
+                let effectiveModel = mn ?? p.modelName
+                if agent.isModelAllowed(providerId: uid, modelName: effectiveModel) {
+                    accepted.append(uid)
+                    acceptedModelNames.append(mn ?? "")
+                } else {
+                    rejected.append("\(p.name) (\(effectiveModel))")
+                }
+            }
+            agent.fallbackProviderIds = accepted
+            agent.fallbackModelNames = acceptedModelNames
             agent.updatedAt = Date()
             try? modelContext.save()
 
-            let names = valid.compactMap { uid in router.providerById(uid) }
-                .map { "\($0.name) (\($0.modelName))" }
-            return "Fallback chain set to: \(names.joined(separator: " → "))"
+            let names = accepted.enumerated().compactMap { (i, uid) -> String? in
+                guard let p = router.providerById(uid) else { return nil }
+                let mn = i < acceptedModelNames.count && !acceptedModelNames[i].isEmpty ? acceptedModelNames[i] : p.modelName
+                return "\(p.name) (\(mn))"
+            }
+            var result = "Fallback chain set to: \(names.joined(separator: " → "))"
+            if !rejected.isEmpty {
+                result += "\n[Warning] Rejected by whitelist: \(rejected.joined(separator: ", "))"
+            }
+            return result
 
         case "add_fallback":
             guard let modelId = arguments["model_id"] as? String,
                   let uuid = UUID(uuidString: modelId) else {
                 return "[Error] Missing or invalid model_id"
             }
-            guard allProviders.contains(where: { $0.id == uuid }) else {
+            guard let p = allProviders.first(where: { $0.id == uuid }) else {
                 return "[Error] No provider found with id: \(modelId)"
+            }
+            let modelName = arguments["model_name"] as? String
+            let effectiveModel = modelName ?? p.modelName
+            if !agent.isModelAllowed(providerId: uuid, modelName: effectiveModel) {
+                return "[Error] Model \(p.name) (\(effectiveModel)) is not in the allowed model whitelist"
             }
             var current = agent.fallbackProviderIds
             if !current.contains(uuid) {
@@ -61,23 +90,24 @@ struct ModelTools {
                 agent.updatedAt = Date()
                 try? modelContext.save()
             }
-            let p = router.providerById(uuid)
-            return "Added \(p?.name ?? modelId) (\(p?.modelName ?? "")) to fallback chain (position \(current.count))"
+            return "Added \(p.name) (\(effectiveModel)) to fallback chain (position \(current.count))"
 
         case "sub_agent":
             let modelId = arguments["model_id"] as? String
             let modelName = arguments["model_name"] as? String
             if let modelId, let uuid = UUID(uuidString: modelId) {
-                guard allProviders.contains(where: { $0.id == uuid }) else {
+                guard let p = allProviders.first(where: { $0.id == uuid }) else {
                     return "[Error] No provider found with id: \(modelId)"
+                }
+                let effectiveModel = modelName ?? p.modelName
+                if !agent.isModelAllowed(providerId: uuid, modelName: effectiveModel) {
+                    return "[Error] Model \(p.name) (\(effectiveModel)) is not in the allowed model whitelist"
                 }
                 agent.subAgentProviderId = uuid
                 agent.subAgentModelNameOverride = modelName
                 agent.updatedAt = Date()
                 try? modelContext.save()
-                let p = router.providerById(uuid)
-                let effectiveModel = modelName ?? p?.modelName ?? ""
-                return "Sub-agent default model set to: \(p?.name ?? modelId) (\(effectiveModel))"
+                return "Sub-agent default model set to: \(p.name) (\(effectiveModel))"
             } else {
                 agent.subAgentProviderId = nil
                 agent.subAgentModelNameOverride = nil
@@ -134,14 +164,32 @@ struct ModelTools {
             return "No LLM providers configured. Add one in Settings."
         }
 
-        let totalModels = providers.reduce(0) { $0 + $1.enabledModels.count }
-        var lines: [String] = ["## Available Models (\(totalModels) models across \(providers.count) providers)"]
+        let whitelist = agent.allowedModelIds
+        let hasWhitelist = !whitelist.isEmpty
+
+        var lines: [String] = []
+        var totalModels = 0
+        var providerCount = 0
+
         for p in providers {
+            let models: [String]
+            if hasWhitelist {
+                models = p.enabledModels.filter { model in
+                    whitelist.contains("\(p.id.uuidString):\(model)")
+                }
+                guard !models.isEmpty else { continue }
+            } else {
+                models = p.enabledModels
+            }
+
+            providerCount += 1
+            totalModels += models.count
+
             let defaultTag = p.isDefault ? " ⭐ default" : ""
             lines.append("### \(p.name)\(defaultTag)")
             lines.append("  Endpoint: \(p.endpoint)")
             lines.append("  Provider ID: `\(p.id.uuidString)`")
-            for model in p.enabledModels {
+            for model in models {
                 let isDefault = model == p.modelName ? " (default)" : ""
                 let caps = p.capabilities(for: model)
                 var tags: [String] = []
@@ -153,6 +201,12 @@ struct ModelTools {
                 lines.append("  - `\(model)`\(isDefault) — capabilities: \(capsStr)")
             }
         }
+
+        let header = hasWhitelist
+            ? "## Available Models (\(totalModels) allowed models across \(providerCount) providers, filtered by whitelist)"
+            : "## Available Models (\(totalModels) models across \(providerCount) providers)"
+        lines.insert(header, at: 0)
+
         return lines.joined(separator: "\n")
     }
 }

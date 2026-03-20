@@ -120,12 +120,12 @@ enum ToolDefinitions {
 
     static let createSubAgentTool = ToolDefinitionBuilder.build(
         name: "create_sub_agent",
-        description: "Create a new sub-agent. Type 'temp' (default): auto-destroyed after collecting output, ideal for one-off tasks. Type 'persistent': long-lived, reusable across sessions, must be explicitly deleted.",
+        description: "Create a sub-agent that can work on tasks independently. Returns an agent_id (UUID) you must use with message_sub_agent to communicate. Type 'temp' (default) auto-destroys after output collection; 'persistent' lives across sessions.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("A descriptive name for the sub-agent"),
-            "initial_context": ToolDefinitionBuilder.stringParam("Context and instructions for the sub-agent's task"),
-            "model_id": ToolDefinitionBuilder.stringParam("Optional: UUID of the LLM provider to use. Use list_models to see available."),
-            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name on the provider (e.g. 'gpt-4o'). Requires model_id. If omitted, uses the provider's default model."),
+            "name": ToolDefinitionBuilder.stringParam("A short descriptive name for the sub-agent"),
+            "initial_context": ToolDefinitionBuilder.stringParam("Task description and background context for the sub-agent"),
+            "model_id": ToolDefinitionBuilder.stringParam("UUID of an LLM provider (from list_models). Optional."),
+            "model_name": ToolDefinitionBuilder.stringParam("Model name on the provider (e.g. 'gpt-4o'). Requires model_id. Optional."),
             "type": ToolDefinitionBuilder.enumParam("Agent lifecycle type", values: ["temp", "persistent"])
         ],
         required: ["name"]
@@ -133,21 +133,21 @@ enum ToolDefinitions {
 
     static let messageSubAgentTool = ToolDefinitionBuilder.build(
         name: "message_sub_agent",
-        description: "Send a message to a sub-agent and receive its full response (including tool call results). The sub-agent runs an autonomous loop until it produces a text reply. Use forward_images to pass images from the current conversation to the sub-agent (e.g. for vision analysis).",
+        description: "Send a message to an existing sub-agent and wait for its response. The sub-agent processes the message autonomously (including any tool calls) and returns a text reply. You must first create a sub-agent with create_sub_agent to obtain the agent_id.",
         properties: [
-            "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent to message"),
-            "message": ToolDefinitionBuilder.stringParam("The message to send to the sub-agent"),
-            "forward_images": ToolDefinitionBuilder.enumParam("Forward images from the parent session to the sub-agent", values: ["none", "latest", "all"])
+            "agent_id": ToolDefinitionBuilder.stringParam("The sub-agent's UUID string, exactly as returned by create_sub_agent (e.g. \"A1B2C3D4-E5F6-7890-ABCD-EF1234567890\")"),
+            "message": ToolDefinitionBuilder.stringParam("The text message or instruction to send to the sub-agent"),
+            "forward_images": ToolDefinitionBuilder.enumParam("Attach images from the current conversation. Default: none", values: ["none", "latest", "all"])
         ],
         required: ["agent_id", "message"]
     )
 
     static let collectSubAgentOutputTool = ToolDefinitionBuilder.build(
         name: "collect_sub_agent_output",
-        description: "Collect output from a sub-agent session. Mode 'summary' returns only assistant replies; 'full' returns the complete transcript. For temp agents, auto_destroy=true (default) will destroy the agent after collecting.",
+        description: "Retrieve a sub-agent's session output. Use after messaging a sub-agent. Mode 'summary' (default) returns assistant replies only; 'full' returns complete transcript. Temp agents are auto-destroyed after collection by default.",
         properties: [
-            "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent"),
-            "mode": ToolDefinitionBuilder.enumParam("Output mode", values: ["summary", "full"]),
+            "agent_id": ToolDefinitionBuilder.stringParam("The sub-agent's UUID string, exactly as returned by create_sub_agent"),
+            "mode": ToolDefinitionBuilder.enumParam("Output detail level", values: ["summary", "full"]),
             "auto_destroy": ToolDefinitionBuilder.boolParam("Auto-destroy temp agent after collecting (default: true)")
         ],
         required: ["agent_id"]
