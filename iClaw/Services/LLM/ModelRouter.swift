@@ -62,7 +62,8 @@ final class ModelRouter {
         fetchProvider(id: id)
     }
 
-    /// Returns the resolved chain with model name overrides.
+    /// Returns the resolved chain with model name overrides,
+    /// filtered by the agent's model whitelist if configured.
     /// Same provider can appear multiple times with different models.
     func resolveProviderChainWithModels(for agent: Agent) -> [(provider: LLMProvider, modelName: String?)] {
         var chain: [(provider: LLMProvider, modelName: String?)] = []
@@ -100,7 +101,23 @@ final class ModelRouter {
             }
         }
 
-        return chain
+        return applyModelWhitelist(chain, for: agent)
+    }
+
+    /// Filters a resolved provider chain through the agent's model whitelist.
+    /// If the whitelist is empty, all models pass through unchanged.
+    private func applyModelWhitelist(
+        _ chain: [(provider: LLMProvider, modelName: String?)],
+        for agent: Agent
+    ) -> [(provider: LLMProvider, modelName: String?)] {
+        let whitelist = agent.allowedModelIds
+        guard !whitelist.isEmpty else { return chain }
+
+        let filtered = chain.filter { entry in
+            let effectiveModel = entry.modelName ?? entry.provider.modelName
+            return whitelist.contains("\(entry.provider.id.uuidString):\(effectiveModel)")
+        }
+        return filtered.isEmpty ? chain : filtered
     }
 
     // MARK: - Streaming with failover

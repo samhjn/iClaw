@@ -43,6 +43,10 @@ final class Agent {
     /// Context compression threshold in tokens (0 = use system default 24000)
     var compressionThreshold: Int = 0
 
+    /// Model whitelist: `|||`-separated `providerId:modelName` pairs.
+    /// When non-empty, subagent and agent model selections are restricted to this list.
+    var allowedModelIdsRaw: String?
+
     var createdAt: Date
     var updatedAt: Date
 
@@ -82,6 +86,25 @@ final class Agent {
         set { subAgentProviderIdRaw = newValue?.uuidString }
     }
 
+    /// Parsed model whitelist as `["providerId:modelName", ...]`. Empty = allow all.
+    var allowedModelIds: [String] {
+        get {
+            guard let raw = allowedModelIdsRaw, !raw.isEmpty else { return [] }
+            return raw.components(separatedBy: "|||").filter { !$0.isEmpty }
+        }
+        set {
+            allowedModelIdsRaw = newValue.isEmpty ? nil : newValue.joined(separator: "|||")
+        }
+    }
+
+    /// Check whether a specific `providerId:modelName` pair is allowed.
+    /// Returns true if the whitelist is empty (allow-all) or the pair is in the list.
+    func isModelAllowed(providerId: UUID, modelName: String) -> Bool {
+        let list = allowedModelIds
+        guard !list.isEmpty else { return true }
+        return list.contains("\(providerId.uuidString):\(modelName)")
+    }
+
     init(
         name: String,
         soulMarkdown: String = "",
@@ -108,6 +131,7 @@ final class Agent {
         self.subAgentProviderIdRaw = nil
         self.subAgentModelNameOverride = nil
         self.subAgentType = nil
+        self.allowedModelIdsRaw = nil
         self.createdAt = Date()
         self.updatedAt = Date()
     }

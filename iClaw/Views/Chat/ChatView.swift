@@ -176,19 +176,73 @@ private struct ChatContentView: View {
                         .lineLimit(3)
                     Spacer()
                     Button {
+                        vm.retryGeneration()
+                    } label: {
+                        Label(L10n.Chat.retry, systemImage: "arrow.clockwise")
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                    }
+                    .tint(.accentColor)
+                    Button {
                         UIPasteboard.general.string = error
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
                     }
-                    Button(L10n.Common.dismiss) {
+                    Button {
                         vm.errorMessage = nil
+                        vm.canRetry = false
+                    } label: {
+                        Text(L10n.Common.dismiss)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
                     }
-                    .font(.caption)
                 }
                 .padding(.horizontal)
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
                 .background(.ultraThinMaterial)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if vm.canRetry && !vm.isLoading {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor)
+                    Text(L10n.Chat.retryHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        vm.retryGeneration()
+                    } label: {
+                        Text(L10n.Chat.retry)
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                    }
+                    .tint(.accentColor)
+                    Button {
+                        vm.canRetry = false
+                    } label: {
+                        Text(L10n.Common.dismiss)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 4)
+                .background(Color.accentColor.opacity(0.06))
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             if let warning = vm.modalityWarning {
@@ -208,6 +262,25 @@ private struct ChatContentView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .background(Color.yellow.opacity(0.08))
+            }
+
+            if let warning = vm.toolUseWarning {
+                HStack(spacing: 6) {
+                    Image(systemName: "wrench.trianglebadge.exclamationmark")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text(warning)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(L10n.Common.dismiss) {
+                        vm.toolUseWarning = nil
+                    }
+                    .font(.caption)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.08))
             }
 
             if let reason = vm.sendBlockedReason {
@@ -245,16 +318,21 @@ private struct ChatContentView: View {
                 isCompressing: vm.isCompressing && !vm.isLoading,
                 isBlocked: !vm.canSend,
                 isCancelling: vm.isCancelling,
+                canRetry: vm.canRetry,
                 cancelFailureReason: vm.cancelFailureReason,
                 pendingImages: vm.pendingImages,
                 onSend: { vm.sendMessage() },
                 onStop: { vm.cancelGeneration() },
                 onStopCompression: { vm.cancelCompression() },
+                onRetry: { vm.retryGeneration() },
                 onDismissKeyboard: {},
                 onAddImage: { vm.addImage($0) },
                 onRemoveImage: { vm.removeImage(id: $0) }
             )
         }
+        .animation(.easeInOut(duration: 0.25), value: vm.canRetry)
+        .animation(.easeInOut(duration: 0.25), value: vm.isLoading)
+        .animation(.easeInOut(duration: 0.25), value: vm.errorMessage)
     }
 }
 

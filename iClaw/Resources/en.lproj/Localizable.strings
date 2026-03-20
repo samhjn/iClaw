@@ -67,6 +67,9 @@
 "chat.imageSaved" = "Saved to Photos";
 "chat.copyImage" = "Copy Image";
 "chat.modalityStripped" = "%d image(s) temporarily excluded from context — %@ does not support vision.";
+"chat.toolUseUnsupported" = "%@ does not support tool use — features like browsing, sub-agents, and code execution will be unavailable.";
+"chat.retry" = "Retry";
+"chat.retryHint" = "Generation was stopped. You can retry or send a new message.";
 
 // MARK: - Agents
 "agents.title" = "Agents";
@@ -119,6 +122,8 @@
 "modelConfig.resetDefault" = "Reset to Default";
 "modelConfig.contextCompression" = "Context Compression";
 "modelConfig.compressionFooter" = "When a session's cumulative tokens exceed this threshold, old messages are automatically compressed into a summary. Increasing this preserves more original context but increases API costs.";
+"modelConfig.noToolUse" = "%@ — Tool Use not supported";
+"modelConfig.noToolUse" = "%@ — No Tool Use";
 "modelConfig.noModels" = "No models available — configure a provider in Settings";
 "modelConfig.override" = "(override)";
 "modelConfig.primary" = "Primary";
@@ -126,6 +131,11 @@
 "modelConfig.subAgent" = "Sub-Agent";
 "modelConfig.resolutionOrder" = "Resolution Order";
 "modelConfig.resolutionFooter" = "Models are tried in this order. Same provider can appear with different models.";
+"modelConfig.modelWhitelist" = "Model Whitelist";
+"modelConfig.whitelistAllModels" = "All available models allowed";
+"modelConfig.addToWhitelist" = "Add to Whitelist";
+"modelConfig.clearWhitelist" = "Clear Whitelist";
+"modelConfig.whitelistFooter" = "Restrict which models sub-agents and tool calls can use. When empty, all available models are allowed.";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "Cron Jobs";

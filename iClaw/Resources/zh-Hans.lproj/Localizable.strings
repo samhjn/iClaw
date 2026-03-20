@@ -67,6 +67,9 @@
 "chat.imageSaved" = "已保存到相册";
 "chat.copyImage" = "拷贝图片";
 "chat.modalityStripped" = "已暂时移除上下文中的 %d 张图片 — %@ 不支持视觉能力";
+"chat.toolUseUnsupported" = "%@ 不支持工具调用 — 浏览器、子智能体、代码执行等功能将不可用。";
+"chat.retry" = "重试";
+"chat.retryHint" = "生成已停止，可以重试或发送新消息。";
 
 // MARK: - Agents
 "agents.title" = "智能体";
@@ -119,6 +122,8 @@
 "modelConfig.resetDefault" = "恢复默认";
 "modelConfig.contextCompression" = "上下文压缩";
 "modelConfig.compressionFooter" = "当会话的累计 token 超过此阈值时，自动压缩旧消息为摘要。调高可保留更多原始上下文，但会增加 API 开销。";
+"modelConfig.noToolUse" = "%@ — 不支持工具调用";
+"modelConfig.noToolUse" = "%@ — 不支持工具调用";
 "modelConfig.noModels" = "没有可用模型 - 请在设置中配置服务商";
 "modelConfig.override" = "（覆盖）";
 "modelConfig.primary" = "主要";
@@ -126,6 +131,11 @@
 "modelConfig.subAgent" = "子智能体";
 "modelConfig.resolutionOrder" = "解析顺序";
 "modelConfig.resolutionFooter" = "模型将按此顺序尝试。同一服务商可以使用不同的模型出现多次。";
+"modelConfig.modelWhitelist" = "模型白名单";
+"modelConfig.whitelistAllModels" = "允许所有可用模型";
+"modelConfig.addToWhitelist" = "添加到白名单";
+"modelConfig.clearWhitelist" = "清空白名单";
+"modelConfig.whitelistFooter" = "限制子智能体和工具调用可使用的模型。为空时允许所有可用模型。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定时任务";

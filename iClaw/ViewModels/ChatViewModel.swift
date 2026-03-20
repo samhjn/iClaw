@@ -14,6 +14,10 @@ final class ChatViewModel {
     var errorMessage: String?
     var activeModelName: String?
 
+    /// True when the last generation ended with an error or was cancelled,
+    /// allowing the user to retry without typing a new message.
+    var canRetry: Bool = false
+
     /// If another session of the same agent is active, this holds the blocking reason.
     var sendBlockedReason: String?
 
@@ -25,6 +29,9 @@ final class ChatViewModel {
 
     /// Shown when images or other modalities were stripped for the current model.
     var modalityWarning: String?
+
+    /// Shown when the primary model does not support tool use (function calling).
+    var toolUseWarning: String?
 
     /// Whether a manual compression is running.
     var isCompressing: Bool = false
@@ -55,7 +62,9 @@ final class ChatViewModel {
         checkActiveSessionLock()
         recoverStaleActiveState()
         recoverCompressionState()
+        recoverRetryState()
         startMonitoringIfNeeded()
+        checkToolUseCapability()
         initialScrollTarget = session.lastViewedMessageId
     }
 
@@ -108,6 +117,28 @@ final class ChatViewModel {
         sendBlockedReason == nil
     }
 
+    // MARK: - Tool Use Capability Check
+
+    func checkToolUseCapability() {
+        guard let agent = session.agent else {
+            toolUseWarning = nil
+            return
+        }
+        let router = ModelRouter(modelContext: modelContext)
+        let chain = router.resolveProviderChainWithModels(for: agent)
+        guard let primary = chain.first else {
+            toolUseWarning = nil
+            return
+        }
+        let effectiveModel = primary.modelName ?? primary.provider.modelName
+        let caps = primary.provider.capabilities(for: effectiveModel)
+        if !caps.supportsToolUse {
+            toolUseWarning = L10n.Chat.toolUseUnsupported(effectiveModel)
+        } else {
+            toolUseWarning = nil
+        }
+    }
+
     // MARK: - Cancel Generation
 
     private var cancelWatchdog: Task<Void, Never>?
@@ -117,6 +148,7 @@ final class ChatViewModel {
         isCancelling = true
         cancelFailureReason = nil
         cancelled = true
+        canRetry = true
         generationTask?.cancel()
 
         cancelWatchdog?.cancel()
@@ -158,8 +190,56 @@ final class ChatViewModel {
         modelContext.insert(forceStopMsg)
         session.messages.append(forceStopMsg)
         session.updatedAt = Date()
+        canRetry = true
         try? modelContext.save()
         loadMessages()
+    }
+
+    // MARK: - Retry Generation
+
+    /// Retry the last generation attempt. Works after API errors or user-initiated cancellation.
+    func retryGeneration() {
+        guard !isLoading else { return }
+
+        checkActiveSessionLock()
+        guard canSend else { return }
+
+        errorMessage = nil
+        canRetry = false
+        cancelled = false
+
+        // Remove trailing aborted/force-stopped assistant messages so the LLM
+        // gets a clean context on retry.
+        removeTrailingAbortedMessages()
+
+        generationTask = Task {
+            await generateResponse()
+        }
+    }
+
+    /// Strips partial/aborted assistant messages from the tail of the session
+    /// so a retry doesn't feed broken context to the model.
+    private func removeTrailingAbortedMessages() {
+        let sorted = session.sortedMessages
+        var toRemove: [Message] = []
+        for msg in sorted.reversed() {
+            if msg.role == .user { break }
+            if msg.role == .assistant,
+               let content = msg.content,
+               (content.contains(L10n.Chat.aborted) || content.contains(L10n.Chat.forceStoppedContent)) {
+                toRemove.append(msg)
+            } else {
+                break
+            }
+        }
+        for msg in toRemove {
+            session.messages.removeAll { $0.id == msg.id }
+            modelContext.delete(msg)
+        }
+        if !toRemove.isEmpty {
+            try? modelContext.save()
+            loadMessages()
+        }
     }
 
     // MARK: - Send Message
@@ -172,6 +252,8 @@ final class ChatViewModel {
         guard canSend else { return }
 
         inputText = ""
+        canRetry = false
+        errorMessage = nil
 
         let imageData: Data? = pendingImages.isEmpty ? nil : try? JSONEncoder().encode(pendingImages)
         pendingImages = []
@@ -209,6 +291,7 @@ final class ChatViewModel {
             streamingContent = ""
             streamingThinking = ""
             errorMessage = nil
+            canRetry = false
             session.isActive = true
             try? modelContext.save()
         } else {
@@ -229,6 +312,9 @@ final class ChatViewModel {
                 session.isActive = false
                 session.pendingStreamingContent = nil
                 generationTask = nil
+                if cancelled || Task.isCancelled {
+                    canRetry = true
+                }
                 try? modelContext.save()
                 BrowserService.shared.releaseLock(sessionId: session.id)
             }
@@ -258,13 +344,18 @@ final class ChatViewModel {
 
             let chain = router.resolveProviderChainWithModels(for: agent)
             if let primary = chain.first {
-                let caps = primary.provider.capabilities(for: primary.modelName ?? primary.provider.modelName)
+                let effectiveModel = primary.modelName ?? primary.provider.modelName
+                let caps = primary.provider.capabilities(for: effectiveModel)
                 let strippedCount = Self.stripUnsupportedModalities(from: &contextMessages, capabilities: caps)
                 if strippedCount > 0 {
-                    let modelName = primary.modelName ?? primary.provider.modelName
-                    modalityWarning = L10n.Chat.modalityStripped(strippedCount, modelName)
+                    modalityWarning = L10n.Chat.modalityStripped(strippedCount, effectiveModel)
                 } else {
                     modalityWarning = nil
+                }
+                if !caps.supportsToolUse {
+                    toolUseWarning = L10n.Chat.toolUseUnsupported(effectiveModel)
+                } else {
+                    toolUseWarning = nil
                 }
             }
 
@@ -273,6 +364,7 @@ final class ChatViewModel {
             var fullContent = ""
             var fullThinking = ""
             var pendingToolCalls: [LLMToolCall] = []
+            var lastUsage: LLMUsage?
 
             let (stream, providerName, _) = try await router.chatCompletionStreamWithFailover(
                 agent: agent,
@@ -284,24 +376,25 @@ final class ChatViewModel {
             var lastPersistTime = Date()
 
             for await chunk in stream {
-                if Task.isCancelled || cancelled {
-                    if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
-                        let partialMsg = Message(
-                            role: .assistant,
-                            content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
-                            session: session
-                        )
-                        partialMsg.extractAndStoreInlineImages()
-                        attachPendingToolImages(to: partialMsg)
-                        modelContext.insert(partialMsg)
-                        session.messages.append(partialMsg)
-                        session.updatedAt = Date()
-                        session.pendingStreamingContent = nil
-                        try? modelContext.save()
-                        loadMessages()
-                    }
-                    return
+            if Task.isCancelled || cancelled {
+                if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
+                    let partialMsg = Message(
+                        role: .assistant,
+                        content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
+                        session: session
+                    )
+                    partialMsg.extractAndStoreInlineImages()
+                    attachPendingToolImages(to: partialMsg)
+                    modelContext.insert(partialMsg)
+                    session.messages.append(partialMsg)
+                    session.updatedAt = Date()
+                    session.pendingStreamingContent = nil
+                    try? modelContext.save()
+                    loadMessages()
                 }
+                canRetry = true
+                return
+            }
 
                 switch chunk {
                 case .thinking(let text):
@@ -319,10 +412,13 @@ final class ChatViewModel {
                     }
                 case .toolCall(let toolCall):
                     pendingToolCalls.append(toolCall)
+                case .usage(let usage):
+                    lastUsage = usage
                 case .done:
                     break
                 case .error(let error):
                     errorMessage = error
+                    canRetry = true
                     return
                 }
             }
@@ -344,6 +440,7 @@ final class ChatViewModel {
                     try? modelContext.save()
                     loadMessages()
                 }
+                canRetry = true
                 return
             }
 
@@ -368,6 +465,7 @@ final class ChatViewModel {
                 )
                 assistantMsg.thinkingContent = combinedThinking
                 assistantMsg.extractAndStoreInlineImages()
+                Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 try? modelContext.save()
@@ -379,15 +477,16 @@ final class ChatViewModel {
                 assistantMsg.thinkingContent = combinedThinking
                 assistantMsg.extractAndStoreInlineImages()
                 attachPendingToolImages(to: assistantMsg)
+                Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
                 try? modelContext.save()
                 loadMessages()
             } else if !pendingToolImageAttachments.isEmpty {
-                // No text/thinking but there are sub-agent images to display
                 let assistantMsg = Message(role: .assistant, content: nil, session: session)
                 attachPendingToolImages(to: assistantMsg)
+                Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
@@ -397,6 +496,9 @@ final class ChatViewModel {
         } catch {
             if !Task.isCancelled && !cancelled {
                 errorMessage = error.localizedDescription
+                canRetry = true
+            } else {
+                canRetry = true
             }
             pendingToolImageAttachments = []
         }
@@ -616,7 +718,22 @@ final class ChatViewModel {
             isLoading = false
             streamingContent = ""
         }
+        recoverRetryState()
         startMonitoringIfNeeded()
+        checkToolUseCapability()
+    }
+
+    private func recoverRetryState() {
+        guard !isLoading, !canRetry, generationTask == nil else { return }
+        guard let last = session.sortedMessages.last else { return }
+
+        if last.role == .user {
+            canRetry = true
+        } else if last.role == .assistant,
+                  let content = last.content,
+                  content.contains(L10n.Chat.aborted) || content.contains(L10n.Chat.forceStoppedContent) {
+            canRetry = true
+        }
     }
 
     func onViewDisappear() {
@@ -806,6 +923,19 @@ final class ChatViewModel {
         let cleaned = regex.stringByReplacingMatches(in: content, range: range, withTemplate: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (cleaned, thinkingParts.joined(separator: "\n\n"))
+    }
+
+    // MARK: - API Usage
+
+    /// Store vendor-reported token counts on the message and update the token
+    /// estimate to the API-reported completion tokens when available.
+    private static func applyAPIUsage(_ usage: LLMUsage?, to message: Message) {
+        guard let usage else { return }
+        message.apiPromptTokens = usage.promptTokens
+        message.apiCompletionTokens = usage.completionTokens
+        if let completionTokens = usage.completionTokens, completionTokens > 0 {
+            message.tokenEstimate = completionTokens
+        }
     }
 
     // MARK: - Info

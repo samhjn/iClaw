@@ -100,6 +100,9 @@ enum L10n {
         static var imageSaved: String { tr("chat.imageSaved") }
         static var copyImage: String { tr("chat.copyImage") }
         static func modalityStripped(_ count: Int, _ model: String) -> String { tr("chat.modalityStripped", count, model) }
+        static func toolUseUnsupported(_ model: String) -> String { tr("chat.toolUseUnsupported", model) }
+        static var retry: String { tr("chat.retry") }
+        static var retryHint: String { tr("chat.retryHint") }
     }
 
     // MARK: - Agents
@@ -161,6 +164,7 @@ enum L10n {
         static var resetDefault: String { tr("modelConfig.resetDefault") }
         static var contextCompression: String { tr("modelConfig.contextCompression") }
         static var compressionFooter: String { tr("modelConfig.compressionFooter") }
+        static func noToolUse(_ model: String) -> String { tr("modelConfig.noToolUse", model) }
         static var noModels: String { tr("modelConfig.noModels") }
         static var override: String { tr("modelConfig.override") }
         static var primary: String { tr("modelConfig.primary") }
@@ -168,6 +172,11 @@ enum L10n {
         static var subAgent: String { tr("modelConfig.subAgent") }
         static var resolutionOrder: String { tr("modelConfig.resolutionOrder") }
         static var resolutionFooter: String { tr("modelConfig.resolutionFooter") }
+        static var modelWhitelist: String { tr("modelConfig.modelWhitelist") }
+        static var whitelistAllModels: String { tr("modelConfig.whitelistAllModels") }
+        static var addToWhitelist: String { tr("modelConfig.addToWhitelist") }
+        static var clearWhitelist: String { tr("modelConfig.clearWhitelist") }
+        static var whitelistFooter: String { tr("modelConfig.whitelistFooter") }
     }
 
     // MARK: - Cron Jobs

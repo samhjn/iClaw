@@ -4,6 +4,7 @@ enum StreamChunk {
     case content(String)
     case thinking(String)
     case toolCall(LLMToolCall)
+    case usage(LLMUsage)
     case done
     case error(String)
 }
@@ -157,6 +158,7 @@ final class LLMService: @unchecked Sendable {
             tools: tools?.isEmpty == true ? nil : tools,
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: true,
+            streamOptions: LLMStreamOptions(includeUsage: true),
             maxTokens: provider.maxTokens,
             temperature: provider.temperature,
             modalities: modalities
@@ -218,6 +220,11 @@ final class LLMService: @unchecked Sendable {
                                             }
                                         }
                                     }
+                                }
+
+                                if let usage = chunk.usage,
+                                   (usage.promptTokens != nil || usage.completionTokens != nil || usage.totalTokens != nil) {
+                                    continuation.yield(.usage(usage))
                                 }
 
                                 if let reason = chunk.choices.first?.finishReason,
@@ -308,6 +315,16 @@ final class LLMService: @unchecked Sendable {
                                 else { continue }
 
                                 switch streamEvent.type {
+                                case "message_start":
+                                    if let msgUsage = streamEvent.message?.usage,
+                                       (msgUsage.inputTokens != nil || msgUsage.outputTokens != nil) {
+                                        continuation.yield(.usage(LLMUsage(
+                                            promptTokens: msgUsage.inputTokens,
+                                            completionTokens: msgUsage.outputTokens,
+                                            totalTokens: nil
+                                        )))
+                                    }
+
                                 case "content_block_start":
                                     if let idx = streamEvent.index, let block = streamEvent.contentBlock {
                                         activeBlockTypes[idx] = block.type
@@ -345,6 +362,14 @@ final class LLMService: @unchecked Sendable {
                                     break
 
                                 case "message_delta":
+                                    if let usage = streamEvent.usage,
+                                       (usage.inputTokens != nil || usage.outputTokens != nil) {
+                                        continuation.yield(.usage(LLMUsage(
+                                            promptTokens: usage.inputTokens,
+                                            completionTokens: usage.outputTokens,
+                                            totalTokens: nil
+                                        )))
+                                    }
                                     if let stopReason = streamEvent.delta?.stopReason,
                                        (stopReason == "tool_use" || stopReason == "tool_calls"),
                                        !toolCallAccumulators.isEmpty {

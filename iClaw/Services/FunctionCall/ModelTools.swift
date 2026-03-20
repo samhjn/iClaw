@@ -143,7 +143,14 @@ struct ModelTools {
             lines.append("  Provider ID: `\(p.id.uuidString)`")
             for model in p.enabledModels {
                 let isDefault = model == p.modelName ? " (default)" : ""
-                lines.append("  - `\(model)`\(isDefault)")
+                let caps = p.capabilities(for: model)
+                var tags: [String] = []
+                if caps.supportsVision { tags.append("vision") }
+                if caps.supportsToolUse { tags.append("tool_use") }
+                if caps.supportsImageGeneration { tags.append("image_gen") }
+                if caps.supportsReasoning { tags.append("reasoning") }
+                let capsStr = tags.isEmpty ? "none" : tags.joined(separator: ", ")
+                lines.append("  - `\(model)`\(isDefault) — capabilities: \(capsStr)")
             }
         }
         return lines.joined(separator: "\n")

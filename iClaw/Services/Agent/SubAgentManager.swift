@@ -66,6 +66,9 @@ final class SubAgentManager {
             subAgent.fallbackModelNamesRaw = parentAgent.fallbackModelNamesRaw
         }
 
+        // Inherit model whitelist from parent
+        subAgent.allowedModelIdsRaw = parentAgent.allowedModelIdsRaw
+
         try? modelContext.save()
 
         let session = Session(title: "Sub: \(name)", agent: subAgent)
