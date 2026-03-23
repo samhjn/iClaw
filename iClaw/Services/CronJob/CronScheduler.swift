@@ -10,7 +10,10 @@ final class CronScheduler {
 
     private(set) var isRunning = false
     private(set) var lastCheckDate: Date?
+    /// Jobs currently executing (prevents duplicate scheduling).
     private(set) var runningJobIds: Set<UUID> = []
+    /// At most one cron execution per agent at a time (separate jobs queue until the prior run finishes).
+    private var runningAgentIds: Set<UUID> = []
 
     private let modelContainer: ModelContainer
     private var timer: Timer?
@@ -30,12 +33,12 @@ final class CronScheduler {
             repeats: true
         ) { [weak self] _ in
             Task { @MainActor in
-                await self?.tick()
+                await self?.drainDueJobs()
             }
         }
         timer?.tolerance = 5
 
-        Task { await tick() }
+        Task { await drainDueJobs() }
     }
 
     func stop() {
@@ -46,6 +49,24 @@ final class CronScheduler {
 
     func rescheduleAll() {
         Task { await updateNextRunDates() }
+    }
+
+    /// Runs all cron jobs that are due now (used by deep link `iclaw://cron/run-due`).
+    func runDueJobsNow() async {
+        await drainDueJobs()
+    }
+
+    /// Runs one job by id if enabled (used by `iclaw://cron/trigger/{id}`); respects the per-agent mutex.
+    func runManualJob(jobId: UUID) async {
+        let snapshot = ModelContext(modelContainer)
+        let descriptor = FetchDescriptor<CronJob>(
+            predicate: #Predicate<CronJob> { $0.id == jobId }
+        )
+        guard let job = try? snapshot.fetch(descriptor).first,
+              let agent = job.agent,
+              job.isEnabled else { return }
+
+        scheduleExecution(jobId: job.id, agentId: agent.id)
     }
 
     // MARK: - Background Task
@@ -59,48 +80,77 @@ final class CronScheduler {
     nonisolated func handleBackgroundTask(_ task: BGAppRefreshTask) {
         scheduleBackgroundTask()
 
-        let context = ModelContext(modelContainer)
-        let bgExecutor = CronExecutor(modelContainer: modelContainer)
-
         task.expirationHandler = {
             task.setTaskCompleted(success: false)
         }
 
-        Task {
-            let jobs = Self.fetchDueJobs(context: context, now: Date())
-
-            for job in jobs {
-                guard let agent = job.agent else { continue }
-                await bgExecutor.executeJob(job, agent: agent, context: context)
+        Task { @MainActor [weak self] in
+            guard let self else {
+                task.setTaskCompleted(success: false)
+                return
             }
-
+            await self.drainDueJobs()
             task.setTaskCompleted(success: true)
         }
     }
 
     // MARK: - Core Loop
 
-    private func tick() async {
+    /// Fetches due jobs and starts execution tasks (each with its own `ModelContext`).
+    private func drainDueJobs() async {
         let now = Date()
         lastCheckDate = now
 
         let context = ModelContext(modelContainer)
         let dueJobs = Self.fetchDueJobs(context: context, now: now)
+            .sorted {
+                ($0.nextRunAt ?? .distantPast) < ($1.nextRunAt ?? .distantPast)
+            }
 
         for job in dueJobs {
-            guard !runningJobIds.contains(job.id) else { continue }
             guard let agent = job.agent else { continue }
+            scheduleExecution(jobId: job.id, agentId: agent.id)
+        }
+    }
 
-            runningJobIds.insert(job.id)
+    /// Acquires locks and spawns an isolated execution task. Skips if the job or agent is already running.
+    private func scheduleExecution(jobId: UUID, agentId: UUID) {
+        guard !runningJobIds.contains(jobId) else { return }
+        guard !runningAgentIds.contains(agentId) else { return }
 
-            let jobId = job.id
-            Task {
-                await executor.executeJob(job, agent: agent, context: context)
-                await MainActor.run { [self] in
-                    _ = runningJobIds.remove(jobId)
+        runningJobIds.insert(jobId)
+        runningAgentIds.insert(agentId)
+
+        let executor = self.executor
+        let container = self.modelContainer
+        Task {
+            let ctx = ModelContext(container)
+            let descriptor = FetchDescriptor<CronJob>(
+                predicate: #Predicate<CronJob> { $0.id == jobId }
+            )
+            guard let job = try? ctx.fetch(descriptor).first,
+                  let agent = job.agent else {
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.releaseLocks(jobId: jobId, agentId: agentId)
+                    await self.drainDueJobs()
                 }
+                return
+            }
+
+            await executor.executeJob(job, agent: agent, context: ctx)
+
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.releaseLocks(jobId: jobId, agentId: agentId)
+                await self.drainDueJobs()
             }
         }
+    }
+
+    private func releaseLocks(jobId: UUID, agentId: UUID) {
+        runningJobIds.remove(jobId)
+        runningAgentIds.remove(agentId)
     }
 
     private func updateNextRunDates() async {

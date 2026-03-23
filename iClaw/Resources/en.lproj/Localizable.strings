@@ -79,6 +79,7 @@
 "agents.noAgents" = "No Agents";
 "agents.createAgentDescription" = "Create an AI agent to get started.";
 "agents.enterName" = "Enter a name for the new agent.";
+"agents.renameAgent" = "Rename Agent";
 
 // MARK: - Agent Detail
 "agentDetail.config" = "Config";

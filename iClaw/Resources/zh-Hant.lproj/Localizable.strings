@@ -79,6 +79,7 @@
 "agents.noAgents" = "尚無智能體";
 "agents.createAgentDescription" = "建立一個 AI 智能體以開始使用。";
 "agents.enterName" = "請輸入新智能體的名稱。";
+"agents.renameAgent" = "重新命名智能體";
 
 // MARK: - Agent Detail
 "agentDetail.config" = "設定";
