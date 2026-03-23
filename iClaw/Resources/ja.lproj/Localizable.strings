@@ -79,6 +79,7 @@
 "agents.noAgents" = "エージェントなし";
 "agents.createAgentDescription" = "AIエージェントを作成して始めましょう。";
 "agents.enterName" = "新しいエージェントの名前を入力してください。";
+"agents.renameAgent" = "エージェント名を変更";
 
 // MARK: - Agent Detail
 "agentDetail.config" = "設定";

@@ -115,6 +115,7 @@ enum L10n {
         static var noAgents: String { tr("agents.noAgents") }
         static var createAgentDescription: String { tr("agents.createAgentDescription") }
         static var enterName: String { tr("agents.enterName") }
+        static var renameAgent: String { tr("agents.renameAgent") }
     }
 
     // MARK: - Agent Detail

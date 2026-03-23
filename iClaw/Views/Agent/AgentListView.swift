@@ -6,6 +6,8 @@ struct AgentListView: View {
     @State private var viewModel: AgentViewModel?
     @State private var showCreateSheet = false
     @State private var newAgentName = ""
+    @State private var renamingAgent: Agent?
+    @State private var renamingText = ""
 
     var body: some View {
         NavigationStack {
@@ -87,6 +89,12 @@ struct AgentListView: View {
                     .padding(.vertical, 4)
                 }
                 .contextMenu {
+                    Button {
+                        renamingText = agent.name
+                        renamingAgent = agent
+                    } label: {
+                        Label(L10n.Agents.renameAgent, systemImage: "pencil")
+                    }
                     Button(role: .destructive) {
                         vm.agentToDelete = agent
                     } label: {
@@ -100,6 +108,24 @@ struct AgentListView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .alert(L10n.Agents.renameAgent, isPresented: Binding(
+            get: { renamingAgent != nil },
+            set: { if !$0 { renamingAgent = nil } }
+        )) {
+            TextField(L10n.Common.name, text: $renamingText)
+            Button(L10n.Common.save) {
+                if let agent = renamingAgent {
+                    let trimmed = renamingText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        vm.renameAgent(agent, to: trimmed)
+                    }
+                }
+                renamingAgent = nil
+            }
+            Button(L10n.Common.cancel, role: .cancel) {
+                renamingAgent = nil
+            }
+        }
         .alert(L10n.Chat.deleteAgentTitle, isPresented: Binding(
             get: { vm.agentToDelete != nil },
             set: { if !$0 { vm.agentToDelete = nil } }

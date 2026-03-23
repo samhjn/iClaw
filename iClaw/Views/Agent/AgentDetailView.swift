@@ -4,6 +4,8 @@ struct AgentDetailView: View {
     @Bindable var agent: Agent
     let viewModel: AgentViewModel
     @State private var selectedConfig: ConfigType = .soul
+    @State private var showRename = false
+    @State private var editingName = ""
 
     enum ConfigType: String, CaseIterable {
         case soul = "SOUL"
@@ -31,6 +33,12 @@ struct AgentDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    Button {
+                        editingName = agent.name
+                        showRename = true
+                    } label: {
+                        Label(L10n.Agents.renameAgent, systemImage: "pencil")
+                    }
                     NavigationLink(L10n.AgentDetail.modelConfig) {
                         AgentModelConfigView(agent: agent)
                     }
@@ -53,6 +61,16 @@ struct AgentDetailView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .alert(L10n.Agents.renameAgent, isPresented: $showRename) {
+            TextField(L10n.Common.name, text: $editingName)
+            Button(L10n.Common.save) {
+                let trimmed = editingName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    viewModel.renameAgent(agent, to: trimmed)
+                }
+            }
+            Button(L10n.Common.cancel, role: .cancel) {}
         }
         .onChange(of: agent.soulMarkdown) { _, _ in viewModel.updateAgent(agent) }
         .onChange(of: agent.memoryMarkdown) { _, _ in viewModel.updateAgent(agent) }
@@ -128,6 +146,8 @@ struct CustomConfigsView: View {
 struct SubAgentListView: View {
     let parentAgent: Agent
     @Environment(\.modelContext) private var modelContext
+    @State private var renamingSubAgent: Agent?
+    @State private var subAgentRenameText = ""
 
     var body: some View {
         List {
@@ -185,6 +205,12 @@ struct SubAgentListView: View {
                         }
                     }
                     .contextMenu {
+                        Button {
+                            subAgentRenameText = sub.name
+                            renamingSubAgent = sub
+                        } label: {
+                            Label(L10n.Agents.renameAgent, systemImage: "pencil")
+                        }
                         Button(role: .destructive) {
                             modelContext.delete(sub)
                             try? modelContext.save()
@@ -196,6 +222,26 @@ struct SubAgentListView: View {
             }
         }
         .navigationTitle(L10n.AgentDetail.subAgentsTitle(parentAgent.subAgents.count))
+        .alert(L10n.Agents.renameAgent, isPresented: Binding(
+            get: { renamingSubAgent != nil },
+            set: { if !$0 { renamingSubAgent = nil } }
+        )) {
+            TextField(L10n.Common.name, text: $subAgentRenameText)
+            Button(L10n.Common.save) {
+                if let sub = renamingSubAgent {
+                    let trimmed = subAgentRenameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        sub.name = trimmed
+                        sub.updatedAt = Date()
+                        try? modelContext.save()
+                    }
+                }
+                renamingSubAgent = nil
+            }
+            Button(L10n.Common.cancel, role: .cancel) {
+                renamingSubAgent = nil
+            }
+        }
     }
 }
 

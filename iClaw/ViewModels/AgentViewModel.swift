@@ -45,6 +45,13 @@ final class AgentViewModel {
         fetchAgents()
     }
 
+    func renameAgent(_ agent: Agent, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        agent.name = trimmed
+        updateAgent(agent)
+    }
+
     func updateAgent(_ agent: Agent) {
         agent.updatedAt = Date()
         try? modelContext.save()

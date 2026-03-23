@@ -114,29 +114,13 @@ struct iClawApp: App {
 
     private func triggerCronJob(id: UUID) {
         Task { @MainActor in
-            let context = ModelContext(modelContainer)
-            let descriptor = FetchDescriptor<CronJob>(
-                predicate: #Predicate { $0.id == id }
-            )
-            guard let job = try? context.fetch(descriptor).first,
-                  let agent = job.agent,
-                  job.isEnabled else { return }
-
-            let executor = CronExecutor(modelContainer: modelContainer)
-            await executor.executeJob(job, agent: agent, context: context)
+            await cronScheduler?.runManualJob(jobId: id)
         }
     }
 
     private func triggerAllDueJobs() {
         Task { @MainActor in
-            let context = ModelContext(modelContainer)
-            let dueJobs = CronScheduler.fetchDueJobs(context: context, now: Date())
-
-            let executor = CronExecutor(modelContainer: modelContainer)
-            for job in dueJobs {
-                guard let agent = job.agent else { continue }
-                await executor.executeJob(job, agent: agent, context: context)
-            }
+            await cronScheduler?.runDueJobsNow()
         }
     }
 }

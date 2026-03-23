@@ -79,6 +79,7 @@
 "agents.noAgents" = "에이전트 없음";
 "agents.createAgentDescription" = "AI 에이전트를 생성하여 시작하세요.";
 "agents.enterName" = "새 에이전트의 이름을 입력하세요.";
+"agents.renameAgent" = "에이전트 이름 바꾸기";
 
 // MARK: - Agent Detail
 "agentDetail.config" = "설정";
