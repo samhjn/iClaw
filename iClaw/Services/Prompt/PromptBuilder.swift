@@ -98,9 +98,11 @@ final class PromptBuilder {
         2. `message_sub_agent` with that `agent_id` + your `message` → returns the sub-agent's response
         3. `collect_sub_agent_output` with the same `agent_id` → retrieves session content and cleans up
 
+        **Parallel execution:** When you issue multiple `message_sub_agent` tool calls in the same response, they execute **concurrently**. This is the recommended pattern for fan-out tasks — create several sub-agents, then send messages to all of them in a single turn. Their LLM calls and tool loops run in parallel, significantly reducing total wait time.
+
         **Tools:**
         - `create_sub_agent`: Create a sub-agent. Returns its `agent_id`. Types: `temp` (default, auto-destroyed after collection) or `persistent` (long-lived).
-        - `message_sub_agent`: Send a message to a sub-agent by `agent_id`. It runs autonomously (including tool calls) and returns a text response.
+        - `message_sub_agent`: Send a message to a sub-agent by `agent_id`. It runs autonomously (including tool calls) and returns a text response. Multiple calls in the same turn run in parallel.
         - `collect_sub_agent_output`: Retrieve session output. Mode `summary` (default) or `full`.
         - `list_sub_agents`: List all sub-agents with status and message counts.
         - `stop_sub_agent`: Force-stop a running sub-agent.
@@ -133,7 +135,7 @@ final class PromptBuilder {
         ### Important Guidelines
         - Update MEMORY.md with important facts and decisions you want to remember across sessions.
         - Use JavaScript execution when working with JSON-heavy data, web APIs, or when JS-specific features are needed.
-        - For sub-agents: always use the exact `agent_id` UUID string returned by `create_sub_agent` when calling `message_sub_agent` or `collect_sub_agent_output`.
+        - For sub-agents: always use the exact `agent_id` UUID string returned by `create_sub_agent` when calling `message_sub_agent` or `collect_sub_agent_output`. When parallelizing work, batch multiple `message_sub_agent` calls in a single response for concurrent execution.
         - Use cron jobs for recurring automated tasks like daily summaries, periodic checks, or scheduled reminders.
         - Create and install skills to give yourself or other agents specialized capabilities.
         - If a model call fails, the system will automatically try fallback models in order.

@@ -512,7 +512,59 @@ final class ChatViewModel {
     ) async {
         let fnRouter = FunctionCallRouter(agent: agent, modelContext: modelContext, sessionId: session.id)
 
-        for toolCall in toolCalls {
+        if Task.isCancelled || cancelled {
+            let cancelMsg = Message(
+                role: .assistant,
+                content: L10n.Chat.toolCallAborted,
+                session: session
+            )
+            modelContext.insert(cancelMsg)
+            session.messages.append(cancelMsg)
+            try? modelContext.save()
+            loadMessages()
+            return
+        }
+
+        // Safety rule:
+        // - Only `message_sub_agent` is allowed to run in parallel.
+        // - All other tools (including `create_sub_agent`) stay sequential to avoid
+        //   concurrent SwiftData writes and ordering issues.
+        var results: [(Int, LLMToolCall, ToolCallResult)] = []
+        var index = 0
+        while index < toolCalls.count {
+            let current = toolCalls[index]
+            if current.function.name == "message_sub_agent" {
+                var parallelBatch: [(Int, LLMToolCall)] = []
+                var cursor = index
+                while cursor < toolCalls.count, toolCalls[cursor].function.name == "message_sub_agent" {
+                    parallelBatch.append((cursor, toolCalls[cursor]))
+                    cursor += 1
+                }
+
+                if parallelBatch.count == 1, let only = parallelBatch.first {
+                    let result = await fnRouter.execute(toolCall: only.1)
+                    results.append((only.0, only.1, result))
+                } else {
+                    await withTaskGroup(of: (Int, LLMToolCall, ToolCallResult).self) { group in
+                        for (batchIndex, toolCall) in parallelBatch {
+                            group.addTask { @MainActor in
+                                let result = await fnRouter.execute(toolCall: toolCall)
+                                return (batchIndex, toolCall, result)
+                            }
+                        }
+                        for await item in group {
+                            results.append(item)
+                        }
+                    }
+                }
+
+                index = cursor
+            } else {
+                let result = await fnRouter.execute(toolCall: current)
+                results.append((index, current, result))
+                index += 1
+            }
+
             if Task.isCancelled || cancelled {
                 let cancelMsg = Message(
                     role: .assistant,
@@ -525,22 +577,24 @@ final class ChatViewModel {
                 loadMessages()
                 return
             }
+        }
 
-            let result = await fnRouter.execute(toolCall: toolCall)
+        results.sort { $0.0 < $1.0 }
 
-            if Task.isCancelled || cancelled {
-                let cancelMsg = Message(
-                    role: .assistant,
-                    content: L10n.Chat.toolCallAborted,
-                    session: session
-                )
-                modelContext.insert(cancelMsg)
-                session.messages.append(cancelMsg)
-                try? modelContext.save()
-                loadMessages()
-                return
-            }
+        if Task.isCancelled || cancelled {
+            let cancelMsg = Message(
+                role: .assistant,
+                content: L10n.Chat.toolCallAborted,
+                session: session
+            )
+            modelContext.insert(cancelMsg)
+            session.messages.append(cancelMsg)
+            try? modelContext.save()
+            loadMessages()
+            return
+        }
 
+        for (_, toolCall, result) in results {
             let toolMsg = Message(
                 role: .tool,
                 content: result.text,
