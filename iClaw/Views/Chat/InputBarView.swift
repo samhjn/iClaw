@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct InputBarView: View {
     @Binding var text: String
@@ -18,7 +19,7 @@ struct InputBarView: View {
     var onAddImage: ((UIImage) -> Void)?
     var onRemoveImage: ((UUID) -> Void)?
 
-    @FocusState private var isFocused: Bool
+    @State private var isInputFocused = false
     @State private var showImageSourcePicker = false
     @State private var showPhotoPicker = false
     @State private var showCamera = false
@@ -55,10 +56,14 @@ struct InputBarView: View {
             }
 
             HStack(alignment: .bottom, spacing: 8) {
-                if isFocused {
+                if isInputFocused {
                     Button {
                         onDismissKeyboard?()
-                        isFocused = false
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil, from: nil, for: nil
+                        )
+                        isInputFocused = false
                     } label: {
                         Image(systemName: "keyboard.chevron.compact.down")
                             .font(.system(size: 16, weight: .medium))
@@ -82,7 +87,6 @@ struct InputBarView: View {
                 PasteableTextInput(
                     text: $text,
                     placeholder: L10n.Chat.messagePlaceholder,
-                    isFocused: $isFocused,
                     maxLines: 6,
                     onPasteImage: { onAddImage?($0) }
                 )
@@ -94,7 +98,7 @@ struct InputBarView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(isFocused ? Color.accentColor.opacity(0.4) :
+                        .stroke(isInputFocused ? Color.accentColor.opacity(0.4) :
                                 isBlocked ? Color.orange.opacity(0.3) : Color.clear,
                                 lineWidth: 1)
                 )
@@ -105,7 +109,7 @@ struct InputBarView: View {
             .padding(.vertical, 8)
         }
         .background(.ultraThinMaterial)
-        .animation(.easeInOut(duration: 0.2), value: isFocused)
+        .animation(.easeInOut(duration: 0.2), value: isInputFocused)
         .animation(.easeInOut(duration: 0.2), value: isLoading)
         .animation(.easeInOut(duration: 0.2), value: cancelFailureReason != nil)
         .animation(.easeInOut(duration: 0.2), value: pendingImages.count)
@@ -144,6 +148,12 @@ struct InputBarView: View {
                 onAddImage?(image)
             }
             .ignoresSafeArea()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isInputFocused = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isInputFocused = false
         }
     }
 
@@ -243,7 +253,6 @@ class ImagePasteTextView: UITextView {
 struct PasteableTextInput: UIViewRepresentable {
     @Binding var text: String
     let placeholder: String
-    var isFocused: FocusState<Bool>.Binding
     var maxLines: Int = 6
     var onPasteImage: ((UIImage) -> Void)?
 
@@ -263,6 +272,7 @@ struct PasteableTextInput: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: ImagePasteTextView, context: Context) {
+        context.coordinator.parent = self
         if uiView.text != text {
             uiView.text = text
         }
@@ -296,14 +306,6 @@ struct PasteableTextInput: UIViewRepresentable {
             parent.text = textView.text
             updatePlaceholder(textView, text: textView.text)
             textView.invalidateIntrinsicContentSize()
-        }
-
-        func textViewDidBeginEditing(_ textView: UITextView) {
-            parent.isFocused.wrappedValue = true
-        }
-
-        func textViewDidEndEditing(_ textView: UITextView) {
-            parent.isFocused.wrappedValue = false
         }
 
         func updatePlaceholder(_ textView: UITextView, text: String) {

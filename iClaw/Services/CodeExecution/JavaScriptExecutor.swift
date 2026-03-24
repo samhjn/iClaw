@@ -51,6 +51,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
         case .repr:
             userCode = """
             var __val = eval(\(escapeForJS(code)));
+            if (__val && typeof __val.then === 'function') __val = await __val;
             var __repr = __formatJSValue(__val);
             return {stdout: __stdout, stderr: __stderr, result: __repr, error: null};
             """
@@ -62,15 +63,14 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
         }
 
         return """
-        (function() {
-            \(runtimeScript)
-            try {
-                \(userCode)
-            } catch(__e) {
-                __appendErr(String(__e) + '\\n');
-                return {stdout: __stdout, stderr: __stderr, result: null, error: String(__e)};
-            }
-        })()
+        \(runtimeScript)
+        \(AppleEcosystemBridge.jsPreamble)
+        try {
+            \(userCode)
+        } catch(__e) {
+            __appendErr(String(__e) + '\\n');
+            return {stdout: __stdout, stderr: __stderr, result: null, error: String(__e)};
+        }
         """
     }
 

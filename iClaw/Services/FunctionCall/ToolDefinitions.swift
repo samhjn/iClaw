@@ -38,6 +38,55 @@ enum ToolDefinitions {
             browserExecuteJSTool,
             browserWaitTool,
             browserScrollTool,
+
+            // Apple Ecosystem — Calendar
+            calendarListCalendarsTool,
+            calendarCreateEventTool,
+            calendarSearchEventsTool,
+            calendarUpdateEventTool,
+            calendarDeleteEventTool,
+
+            // Apple Ecosystem — Reminders
+            reminderListTool,
+            reminderListsTool,
+            reminderCreateTool,
+            reminderCompleteTool,
+            reminderDeleteTool,
+
+            // Apple Ecosystem — Contacts
+            contactsSearchTool,
+            contactsGetDetailTool,
+
+            // Apple Ecosystem — Clipboard
+            clipboardReadTool,
+            clipboardWriteTool,
+
+            // Apple Ecosystem — Notifications
+            notificationScheduleTool,
+            notificationCancelTool,
+            notificationListTool,
+
+            // Apple Ecosystem — Location
+            locationGetCurrentTool,
+            locationGeocodeTool,
+            locationReverseGeocodeTool,
+
+            // Apple Ecosystem — Map
+            mapSearchPlacesTool,
+            mapGetDirectionsTool,
+
+            // Apple Ecosystem — Health
+            healthReadStepsTool,
+            healthReadHeartRateTool,
+            healthReadSleepTool,
+            healthReadBodyMassTool,
+            healthWriteDietaryEnergyTool,
+            healthWriteBodyMassTool,
+            healthWriteDietaryWaterTool,
+            healthWriteDietaryCarbohydratesTool,
+            healthWriteDietaryProteinTool,
+            healthWriteDietaryFatTool,
+            healthWriteWorkoutTool,
         ]
     }
 
@@ -62,7 +111,7 @@ enum ToolDefinitions {
 
     static let executeJavaScriptTool = ToolDefinitionBuilder.build(
         name: "execute_javascript",
-        description: "Execute JavaScript code in a WKWebView sandbox. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). Default timeout 60s (max 300s).",
+        description: "Execute JavaScript code in a WKWebView sandbox. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — all return Promises, use `await` in script mode (e.g. `let events = await apple.calendar.searchEvents({})`). Default timeout 60s (max 300s).",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The JavaScript code to execute"),
             "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
@@ -390,5 +439,368 @@ enum ToolDefinitions {
             "pixels": ToolDefinitionBuilder.intParam("Number of pixels to scroll (default: 500)")
         ],
         required: []
+    )
+
+    // MARK: - Apple Calendar Tools
+
+    static let calendarListCalendarsTool = ToolDefinitionBuilder.build(
+        name: "calendar_list_calendars",
+        description: "List all available calendars on the device (iCloud, Google, Exchange, etc.).",
+        properties: [:],
+        required: []
+    )
+
+    static let calendarCreateEventTool = ToolDefinitionBuilder.build(
+        name: "calendar_create_event",
+        description: "Create a new calendar event. Requires title and start_date. Dates use ISO 8601 format (e.g. '2025-03-24T14:00:00') or 'yyyy-MM-dd HH:mm'.",
+        properties: [
+            "title": ToolDefinitionBuilder.stringParam("Event title"),
+            "start_date": ToolDefinitionBuilder.stringParam("Start date/time (ISO 8601 or 'yyyy-MM-dd HH:mm')"),
+            "end_date": ToolDefinitionBuilder.stringParam("End date/time (defaults to 1 hour after start)"),
+            "all_day": ToolDefinitionBuilder.boolParam("Whether this is an all-day event"),
+            "location": ToolDefinitionBuilder.stringParam("Event location"),
+            "notes": ToolDefinitionBuilder.stringParam("Event notes/description"),
+            "url": ToolDefinitionBuilder.stringParam("URL associated with the event"),
+            "calendar_id": ToolDefinitionBuilder.stringParam("Calendar identifier (from calendar_list_calendars). Uses default calendar if omitted."),
+            "alert_minutes": ToolDefinitionBuilder.numberParam("Minutes before event to trigger an alert (e.g. 15 for 15-minute reminder)")
+        ],
+        required: ["title", "start_date"]
+    )
+
+    static let calendarSearchEventsTool = ToolDefinitionBuilder.build(
+        name: "calendar_search_events",
+        description: "Search calendar events within a date range. Defaults to the next 7 days from today.",
+        properties: [
+            "start_date": ToolDefinitionBuilder.stringParam("Start of search range (defaults to today)"),
+            "end_date": ToolDefinitionBuilder.stringParam("End of search range (defaults to 7 days from start)"),
+            "keyword": ToolDefinitionBuilder.stringParam("Filter events by keyword in title or location"),
+            "calendar_id": ToolDefinitionBuilder.stringParam("Only search in this calendar")
+        ],
+        required: []
+    )
+
+    static let calendarUpdateEventTool = ToolDefinitionBuilder.build(
+        name: "calendar_update_event",
+        description: "Update an existing calendar event. Only provided fields will be changed.",
+        properties: [
+            "event_id": ToolDefinitionBuilder.stringParam("The event identifier (from calendar_search_events)"),
+            "title": ToolDefinitionBuilder.stringParam("New title"),
+            "start_date": ToolDefinitionBuilder.stringParam("New start date/time"),
+            "end_date": ToolDefinitionBuilder.stringParam("New end date/time"),
+            "location": ToolDefinitionBuilder.stringParam("New location"),
+            "notes": ToolDefinitionBuilder.stringParam("New notes")
+        ],
+        required: ["event_id"]
+    )
+
+    static let calendarDeleteEventTool = ToolDefinitionBuilder.build(
+        name: "calendar_delete_event",
+        description: "Delete a calendar event by its identifier.",
+        properties: [
+            "event_id": ToolDefinitionBuilder.stringParam("The event identifier to delete")
+        ],
+        required: ["event_id"]
+    )
+
+    // MARK: - Apple Reminder Tools
+
+    static let reminderListTool = ToolDefinitionBuilder.build(
+        name: "reminder_list",
+        description: "List reminders. By default shows incomplete reminders only. Optionally filter by list name.",
+        properties: [
+            "list_name": ToolDefinitionBuilder.stringParam("Only show reminders from this list"),
+            "include_completed": ToolDefinitionBuilder.boolParam("Include completed reminders (default: false)")
+        ],
+        required: []
+    )
+
+    static let reminderListsTool = ToolDefinitionBuilder.build(
+        name: "reminder_lists",
+        description: "List all reminder lists (e.g. 'Personal', 'Work', 'Shopping').",
+        properties: [:],
+        required: []
+    )
+
+    static let reminderCreateTool = ToolDefinitionBuilder.build(
+        name: "reminder_create",
+        description: "Create a new reminder with optional due date, priority, and list assignment.",
+        properties: [
+            "title": ToolDefinitionBuilder.stringParam("Reminder title"),
+            "notes": ToolDefinitionBuilder.stringParam("Additional notes"),
+            "due_date": ToolDefinitionBuilder.stringParam("Due date (ISO 8601 or 'yyyy-MM-dd HH:mm' or 'yyyy-MM-dd')"),
+            "priority": ToolDefinitionBuilder.enumParam("Priority level", values: ["high", "medium", "low"]),
+            "list_name": ToolDefinitionBuilder.stringParam("Reminder list to add to (uses default if omitted)"),
+            "alert_minutes": ToolDefinitionBuilder.numberParam("Minutes before due date to trigger alert")
+        ],
+        required: ["title"]
+    )
+
+    static let reminderCompleteTool = ToolDefinitionBuilder.build(
+        name: "reminder_complete",
+        description: "Mark a reminder as completed or incomplete.",
+        properties: [
+            "reminder_id": ToolDefinitionBuilder.stringParam("The reminder identifier (from reminder_list)"),
+            "completed": ToolDefinitionBuilder.boolParam("Set to true to complete, false to uncomplete (default: true)")
+        ],
+        required: ["reminder_id"]
+    )
+
+    static let reminderDeleteTool = ToolDefinitionBuilder.build(
+        name: "reminder_delete",
+        description: "Delete a reminder by its identifier.",
+        properties: [
+            "reminder_id": ToolDefinitionBuilder.stringParam("The reminder identifier to delete")
+        ],
+        required: ["reminder_id"]
+    )
+
+    // MARK: - Apple Contacts Tools
+
+    static let contactsSearchTool = ToolDefinitionBuilder.build(
+        name: "contacts_search",
+        description: "Search contacts by name or phone number. Returns matching contacts with basic info (name, phone, email). Read-only.",
+        properties: [
+            "query": ToolDefinitionBuilder.stringParam("Name or phone number to search for")
+        ],
+        required: ["query"]
+    )
+
+    static let contactsGetDetailTool = ToolDefinitionBuilder.build(
+        name: "contacts_get_detail",
+        description: "Get detailed information about a specific contact by ID (phones, emails, addresses, birthday, job, etc.). Read-only.",
+        properties: [
+            "contact_id": ToolDefinitionBuilder.stringParam("Contact identifier (from contacts_search)")
+        ],
+        required: ["contact_id"]
+    )
+
+    // MARK: - Apple Clipboard Tools
+
+    static let clipboardReadTool = ToolDefinitionBuilder.build(
+        name: "clipboard_read",
+        description: "Read the current content of the system clipboard (text, URL, or image indicator).",
+        properties: [:],
+        required: []
+    )
+
+    static let clipboardWriteTool = ToolDefinitionBuilder.build(
+        name: "clipboard_write",
+        description: "Write text to the system clipboard.",
+        properties: [
+            "text": ToolDefinitionBuilder.stringParam("The text to copy to clipboard")
+        ],
+        required: ["text"]
+    )
+
+    // MARK: - Apple Notification Tools
+
+    static let notificationScheduleTool = ToolDefinitionBuilder.build(
+        name: "notification_schedule",
+        description: "Schedule a local notification. Can fire at a specific date/time or after a delay in seconds.",
+        properties: [
+            "title": ToolDefinitionBuilder.stringParam("Notification title"),
+            "body": ToolDefinitionBuilder.stringParam("Notification body text"),
+            "subtitle": ToolDefinitionBuilder.stringParam("Optional subtitle"),
+            "id": ToolDefinitionBuilder.stringParam("Custom notification identifier (auto-generated if omitted)"),
+            "date": ToolDefinitionBuilder.stringParam("Fire at this date/time (ISO 8601 or 'yyyy-MM-dd HH:mm')"),
+            "delay_seconds": ToolDefinitionBuilder.numberParam("Fire after this many seconds (used if date is not set)")
+        ],
+        required: ["title"]
+    )
+
+    static let notificationCancelTool = ToolDefinitionBuilder.build(
+        name: "notification_cancel",
+        description: "Cancel a pending notification by its identifier, or cancel all pending notifications.",
+        properties: [
+            "id": ToolDefinitionBuilder.stringParam("Notification identifier to cancel"),
+            "cancel_all": ToolDefinitionBuilder.boolParam("Cancel all pending notifications (default: false)")
+        ],
+        required: []
+    )
+
+    static let notificationListTool = ToolDefinitionBuilder.build(
+        name: "notification_list",
+        description: "List all pending (scheduled but not yet delivered) notifications.",
+        properties: [:],
+        required: []
+    )
+
+    // MARK: - Apple Location Tools
+
+    static let locationGetCurrentTool = ToolDefinitionBuilder.build(
+        name: "location_get_current",
+        description: "Get the device's current GPS location (latitude, longitude, altitude, accuracy) with optional reverse-geocoded address.",
+        properties: [
+            "include_address": ToolDefinitionBuilder.boolParam("Include reverse-geocoded address (default: true)")
+        ],
+        required: []
+    )
+
+    static let locationGeocodeTool = ToolDefinitionBuilder.build(
+        name: "location_geocode",
+        description: "Convert an address string to geographic coordinates (latitude/longitude).",
+        properties: [
+            "address": ToolDefinitionBuilder.stringParam("The address to geocode (e.g. '1 Apple Park Way, Cupertino')")
+        ],
+        required: ["address"]
+    )
+
+    static let locationReverseGeocodeTool = ToolDefinitionBuilder.build(
+        name: "location_reverse_geocode",
+        description: "Convert geographic coordinates to a human-readable address.",
+        properties: [
+            "latitude": ToolDefinitionBuilder.numberParam("Latitude"),
+            "longitude": ToolDefinitionBuilder.numberParam("Longitude")
+        ],
+        required: ["latitude", "longitude"]
+    )
+
+    // MARK: - Apple Map Tools
+
+    static let mapSearchPlacesTool = ToolDefinitionBuilder.build(
+        name: "map_search_places",
+        description: "Search for places, businesses, and points of interest using Apple Maps. Optionally search near specific coordinates or the user's current location.",
+        properties: [
+            "query": ToolDefinitionBuilder.stringParam("Search query (e.g. 'coffee shop', 'gas station', 'Apple Store')"),
+            "latitude": ToolDefinitionBuilder.numberParam("Center latitude for nearby search"),
+            "longitude": ToolDefinitionBuilder.numberParam("Center longitude for nearby search"),
+            "near_me": ToolDefinitionBuilder.boolParam("Search near the user's current location (default: false)"),
+            "radius": ToolDefinitionBuilder.numberParam("Search radius in meters (default: 5000)")
+        ],
+        required: ["query"]
+    )
+
+    static let mapGetDirectionsTool = ToolDefinitionBuilder.build(
+        name: "map_get_directions",
+        description: "Get directions between two locations. Supports driving, walking, and transit. Returns distance, estimated time, and step-by-step directions.",
+        properties: [
+            "from_address": ToolDefinitionBuilder.stringParam("Starting address (uses current location if omitted)"),
+            "from_latitude": ToolDefinitionBuilder.numberParam("Starting latitude (alternative to from_address)"),
+            "from_longitude": ToolDefinitionBuilder.numberParam("Starting longitude"),
+            "to_address": ToolDefinitionBuilder.stringParam("Destination address"),
+            "to_latitude": ToolDefinitionBuilder.numberParam("Destination latitude (alternative to to_address)"),
+            "to_longitude": ToolDefinitionBuilder.numberParam("Destination longitude"),
+            "transport": ToolDefinitionBuilder.enumParam("Transport type", values: ["driving", "walking", "transit"])
+        ],
+        required: []
+    )
+
+    // MARK: - Apple Health Tools
+
+    static let healthReadStepsTool = ToolDefinitionBuilder.build(
+        name: "health_read_steps",
+        description: "Read step count from Apple Health in a date range (defaults to last 7 days).",
+        properties: [
+            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)")
+        ],
+        required: []
+    )
+
+    static let healthReadHeartRateTool = ToolDefinitionBuilder.build(
+        name: "health_read_heart_rate",
+        description: "Read heart-rate summary (avg/min/max bpm) from Apple Health in a date range (defaults to last 24h).",
+        properties: [
+            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)")
+        ],
+        required: []
+    )
+
+    static let healthReadSleepTool = ToolDefinitionBuilder.build(
+        name: "health_read_sleep",
+        description: "Read sleep summary from Apple Health (asleep and in-bed durations) in a date range (defaults to last 7 days).",
+        properties: [
+            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)")
+        ],
+        required: []
+    )
+
+    static let healthReadBodyMassTool = ToolDefinitionBuilder.build(
+        name: "health_read_body_mass",
+        description: "Read body-mass samples from Apple Health in a date range (defaults to last 30 days).",
+        properties: [
+            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "unit": ToolDefinitionBuilder.enumParam("Display unit", values: ["kg", "lb"])
+        ],
+        required: []
+    )
+
+    static let healthWriteDietaryEnergyTool = ToolDefinitionBuilder.build(
+        name: "health_write_dietary_energy",
+        description: "Write dietary energy consumed (kcal) to Apple Health. Useful for calorie logging (e.g. photo-based calorie estimation).",
+        properties: [
+            "kcal": ToolDefinitionBuilder.numberParam("Calories in kilocalories"),
+            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now."),
+            "meal": ToolDefinitionBuilder.stringParam("Optional meal description/category"),
+            "note": ToolDefinitionBuilder.stringParam("Optional note")
+        ],
+        required: ["kcal"]
+    )
+
+    static let healthWriteBodyMassTool = ToolDefinitionBuilder.build(
+        name: "health_write_body_mass",
+        description: "Write body mass to Apple Health.",
+        properties: [
+            "value": ToolDefinitionBuilder.numberParam("Body mass value"),
+            "unit": ToolDefinitionBuilder.enumParam("Unit for value", values: ["kg", "lb"]),
+            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
+        ],
+        required: ["value"]
+    )
+
+    static let healthWriteDietaryWaterTool = ToolDefinitionBuilder.build(
+        name: "health_write_dietary_water",
+        description: "Write dietary water intake to Apple Health.",
+        properties: [
+            "ml": ToolDefinitionBuilder.numberParam("Water amount in milliliters"),
+            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
+        ],
+        required: ["ml"]
+    )
+
+    static let healthWriteDietaryCarbohydratesTool = ToolDefinitionBuilder.build(
+        name: "health_write_dietary_carbohydrates",
+        description: "Write dietary carbohydrates (grams) to Apple Health.",
+        properties: [
+            "grams": ToolDefinitionBuilder.numberParam("Carbohydrates in grams"),
+            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
+        ],
+        required: ["grams"]
+    )
+
+    static let healthWriteDietaryProteinTool = ToolDefinitionBuilder.build(
+        name: "health_write_dietary_protein",
+        description: "Write dietary protein (grams) to Apple Health.",
+        properties: [
+            "grams": ToolDefinitionBuilder.numberParam("Protein in grams"),
+            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
+        ],
+        required: ["grams"]
+    )
+
+    static let healthWriteDietaryFatTool = ToolDefinitionBuilder.build(
+        name: "health_write_dietary_fat",
+        description: "Write dietary fat (grams) to Apple Health.",
+        properties: [
+            "grams": ToolDefinitionBuilder.numberParam("Fat in grams"),
+            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
+        ],
+        required: ["grams"]
+    )
+
+    static let healthWriteWorkoutTool = ToolDefinitionBuilder.build(
+        name: "health_write_workout",
+        description: "Write a workout session to Apple Health with activity type, start/end time, and optional energy/distance.",
+        properties: [
+            "activity_type": ToolDefinitionBuilder.stringParam("Workout activity type, e.g. running, walking, cycling, swimming, yoga, strength"),
+            "start_date": ToolDefinitionBuilder.stringParam("Workout start time (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "end_date": ToolDefinitionBuilder.stringParam("Workout end time (ISO 8601 or yyyy-MM-dd HH:mm)"),
+            "energy_kcal": ToolDefinitionBuilder.numberParam("Optional active energy burned in kcal"),
+            "distance_km": ToolDefinitionBuilder.numberParam("Optional distance in kilometers")
+        ],
+        required: ["start_date", "end_date"]
     )
 }
