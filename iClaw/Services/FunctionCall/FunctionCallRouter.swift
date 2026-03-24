@@ -200,6 +200,88 @@ final class FunctionCallRouter {
         case "browser_scroll":
             return try await runAsync { await self.browserTools.scroll(arguments: arguments) }
 
+        // --- Apple Calendar ---
+        case "calendar_list_calendars":
+            return try await runAsync { await AppleCalendarTools().listCalendars(arguments: arguments) }
+        case "calendar_create_event":
+            return try await runAsync { await AppleCalendarTools().createEvent(arguments: arguments) }
+        case "calendar_search_events":
+            return try await runAsync { await AppleCalendarTools().searchEvents(arguments: arguments) }
+        case "calendar_update_event":
+            return try await runAsync { await AppleCalendarTools().updateEvent(arguments: arguments) }
+        case "calendar_delete_event":
+            return try await runAsync { await AppleCalendarTools().deleteEvent(arguments: arguments) }
+
+        // --- Apple Reminders ---
+        case "reminder_list":
+            return try await runAsync { await AppleReminderTools().listReminders(arguments: arguments) }
+        case "reminder_lists":
+            return try await runAsync { await AppleReminderTools().listReminderLists(arguments: arguments) }
+        case "reminder_create":
+            return try await runAsync { await AppleReminderTools().createReminder(arguments: arguments) }
+        case "reminder_complete":
+            return try await runAsync { await AppleReminderTools().completeReminder(arguments: arguments) }
+        case "reminder_delete":
+            return try await runAsync { await AppleReminderTools().deleteReminder(arguments: arguments) }
+
+        // --- Apple Contacts ---
+        case "contacts_search":
+            return try await runAsync { await AppleContactsTools().searchContacts(arguments: arguments) }
+        case "contacts_get_detail":
+            return try await runAsync { await AppleContactsTools().getContactDetail(arguments: arguments) }
+
+        // --- Apple Clipboard ---
+        case "clipboard_read":
+            return try await runAsync { await AppleClipboardTools().readClipboard(arguments: arguments) }
+        case "clipboard_write":
+            return try await runAsync { await AppleClipboardTools().writeClipboard(arguments: arguments) }
+
+        // --- Apple Notifications ---
+        case "notification_schedule":
+            return try await runAsync { await AppleNotificationTools().scheduleNotification(arguments: arguments) }
+        case "notification_cancel":
+            return try await runAsync { await AppleNotificationTools().cancelNotification(arguments: arguments) }
+        case "notification_list":
+            return try await runAsync { await AppleNotificationTools().listNotifications(arguments: arguments) }
+
+        // --- Apple Location ---
+        case "location_get_current":
+            return try await runAsync { await AppleLocationTools().getCurrentLocation(arguments: arguments) }
+        case "location_geocode":
+            return try await runAsync { await AppleLocationTools().geocode(arguments: arguments) }
+        case "location_reverse_geocode":
+            return try await runAsync { await AppleLocationTools().reverseGeocode(arguments: arguments) }
+
+        // --- Apple Map ---
+        case "map_search_places":
+            return try await runAsync { await AppleMapTools().searchPlaces(arguments: arguments) }
+        case "map_get_directions":
+            return try await runAsync { await AppleMapTools().getDirections(arguments: arguments) }
+
+        // --- Apple Health ---
+        case "health_read_steps":
+            return try await runAsync { await AppleHealthTools().readSteps(arguments: arguments) }
+        case "health_read_heart_rate":
+            return try await runAsync { await AppleHealthTools().readHeartRate(arguments: arguments) }
+        case "health_read_sleep":
+            return try await runAsync { await AppleHealthTools().readSleep(arguments: arguments) }
+        case "health_read_body_mass":
+            return try await runAsync { await AppleHealthTools().readBodyMass(arguments: arguments) }
+        case "health_write_dietary_energy":
+            return try await runAsync { await AppleHealthTools().writeDietaryEnergy(arguments: arguments) }
+        case "health_write_body_mass":
+            return try await runAsync { await AppleHealthTools().writeBodyMass(arguments: arguments) }
+        case "health_write_dietary_water":
+            return try await runAsync { await AppleHealthTools().writeDietaryWater(arguments: arguments) }
+        case "health_write_dietary_carbohydrates":
+            return try await runAsync { await AppleHealthTools().writeDietaryCarbohydrates(arguments: arguments) }
+        case "health_write_dietary_protein":
+            return try await runAsync { await AppleHealthTools().writeDietaryProtein(arguments: arguments) }
+        case "health_write_dietary_fat":
+            return try await runAsync { await AppleHealthTools().writeDietaryFat(arguments: arguments) }
+        case "health_write_workout":
+            return try await runAsync { await AppleHealthTools().writeWorkout(arguments: arguments) }
+
         default:
             return ToolCallResult("[Error] Unknown tool: \(name)")
         }

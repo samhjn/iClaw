@@ -37,6 +37,7 @@ final class WKWebViewJSRuntime: NSObject {
     private func buildWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
+        AppleEcosystemBridge.shared.install(on: config)
         webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
         webView.navigationDelegate = self
         isPageLoaded = false
@@ -78,22 +79,23 @@ final class WKWebViewJSRuntime: NSObject {
             try await withCheckedThrowingContinuation { continuation in
                 pendingContinuations[execId] = continuation
 
-                webView.evaluateJavaScript(script) { [weak self] result, error in
+                webView.callAsyncJavaScript(script, arguments: [:], in: nil, in: .page) { [weak self] result in
                     Task { @MainActor in
                         guard let self, let cont = self.pendingContinuations.removeValue(forKey: execId) else { return }
-                        if let error {
+                        switch result {
+                        case .success(let value):
+                            if let dict = value as? [String: Any] {
+                                cont.resume(returning: dict)
+                            } else {
+                                cont.resume(returning: [
+                                    "stdout": "",
+                                    "stderr": "",
+                                    "result": value as Any,
+                                    "error": NSNull()
+                                ])
+                            }
+                        case .failure(let error):
                             cont.resume(throwing: self.classify(error))
-                            return
-                        }
-                        if let dict = result as? [String: Any] {
-                            cont.resume(returning: dict)
-                        } else {
-                            cont.resume(returning: [
-                                "stdout": "",
-                                "stderr": "",
-                                "result": result as Any,
-                                "error": NSNull()
-                            ])
                         }
                     }
                 }

@@ -454,6 +454,46 @@ enum L10n {
         static var scroll: String { tr("toolCard.scroll") }
         static var runSnippet: String { tr("toolCard.runSnippet") }
         static var deleteCode: String { tr("toolCard.deleteCode") }
+        static var calendarListCalendars: String { tr("toolCard.calendarListCalendars") }
+        static var calendarCreateEvent: String { tr("toolCard.calendarCreateEvent") }
+        static var calendarSearchEvents: String { tr("toolCard.calendarSearchEvents") }
+        static var calendarUpdateEvent: String { tr("toolCard.calendarUpdateEvent") }
+        static var calendarDeleteEvent: String { tr("toolCard.calendarDeleteEvent") }
+        static var reminderLists: String { tr("toolCard.reminderLists") }
+        static var reminderList: String { tr("toolCard.reminderList") }
+        static var reminderCreate: String { tr("toolCard.reminderCreate") }
+        static var reminderComplete: String { tr("toolCard.reminderComplete") }
+        static var reminderDelete: String { tr("toolCard.reminderDelete") }
+        static var contactsSearch: String { tr("toolCard.contactsSearch") }
+        static var contactsGetDetail: String { tr("toolCard.contactsGetDetail") }
+        static var clipboardRead: String { tr("toolCard.clipboardRead") }
+        static var clipboardWrite: String { tr("toolCard.clipboardWrite") }
+        static var notificationSchedule: String { tr("toolCard.notificationSchedule") }
+        static var notificationCancel: String { tr("toolCard.notificationCancel") }
+        static var notificationList: String { tr("toolCard.notificationList") }
+        static var locationGetCurrent: String { tr("toolCard.locationGetCurrent") }
+        static var locationGeocode: String { tr("toolCard.locationGeocode") }
+        static var locationReverseGeocode: String { tr("toolCard.locationReverseGeocode") }
+        static var mapSearchPlaces: String { tr("toolCard.mapSearchPlaces") }
+        static var mapGetDirections: String { tr("toolCard.mapGetDirections") }
+        static var healthReadSteps: String { tr("toolCard.healthReadSteps") }
+        static var healthReadHeartRate: String { tr("toolCard.healthReadHeartRate") }
+        static var healthReadSleep: String { tr("toolCard.healthReadSleep") }
+        static var healthReadBodyMass: String { tr("toolCard.healthReadBodyMass") }
+        static var healthWriteDietaryEnergy: String { tr("toolCard.healthWriteDietaryEnergy") }
+        static var healthWriteBodyMass: String { tr("toolCard.healthWriteBodyMass") }
+        static var healthWriteDietaryWater: String { tr("toolCard.healthWriteDietaryWater") }
+        static var healthWriteDietaryCarbohydrates: String { tr("toolCard.healthWriteDietaryCarbohydrates") }
+        static var healthWriteDietaryProtein: String { tr("toolCard.healthWriteDietaryProtein") }
+        static var healthWriteDietaryFat: String { tr("toolCard.healthWriteDietaryFat") }
+        static var healthWriteWorkout: String { tr("toolCard.healthWriteWorkout") }
+    }
+
+    // MARK: - Tool Result
+
+    enum ToolResult {
+        static var stdout: String { tr("toolResult.stdout") }
+        static var stderr: String { tr("toolResult.stderr") }
     }
 }
 

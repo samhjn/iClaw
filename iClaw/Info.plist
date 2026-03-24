@@ -40,6 +40,22 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>iClaw needs access to your calendars so the AI agent can create, read, and manage calendar events on your behalf.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>iClaw needs camera access to capture photos for use in conversations with the AI agent.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>iClaw needs access to your contacts so the AI agent can look up contact information when you ask.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>iClaw needs read access to your Health data so the AI agent can analyze trends such as steps, sleep, heart rate, and body metrics.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>iClaw needs write access to your Health data so the AI agent can log entries such as calorie intake and body metrics.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>iClaw needs your location to provide location-aware responses, nearby place searches, and directions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>iClaw needs photo library access to attach images to conversations with the AI agent.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>iClaw needs access to your reminders so the AI agent can create, complete, and manage reminders on your behalf.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

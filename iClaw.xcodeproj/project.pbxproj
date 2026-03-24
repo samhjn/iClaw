@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		065A5E0E2C10D89A0DD3B2C6 /* AppleHealthTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3B2152CACD350B80DDEEBE /* AppleHealthTools.swift */; };
 		076B61C851641A6F8F6FA78E /* MarkdownEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F83422956DC29BF68C138F /* MarkdownEditorView.swift */; };
 		07DB6EDE202EDEFCA724940D /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */; };
 		09324DBCB8B51199B96545F5 /* JavaScriptExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */; };
@@ -14,16 +15,20 @@
 		0B76B6A987EB3B0682EB0AD7 /* ShortcutsGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */; };
 		1122B3E2F538F3C12BE77183 /* SubAgentTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F041EB3237F760F5B79BCD5 /* SubAgentTools.swift */; };
 		11600490FE4FA35DD634AAE2 /* CodeSnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 990101E729F85D3AF5936B8A /* CodeSnippet.swift */; };
+		12DEC1482E3F3F1582243280 /* AppleMapTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7056519AF941DA3556616C /* AppleMapTools.swift */; };
 		12F52693136A5646AC1768E5 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC3F5719A1A4CAF3BB8FE5F /* Session.swift */; };
 		1F2E1BD4CEC62F1C85EF84D6 /* SkillDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E053BCA6983DC80249C37C8D /* SkillDetailView.swift */; };
 		2169B10C839DD01993DED765 /* MockExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A3EDB1A5F8D62CFCB38DB57 /* MockExecutor.swift */; };
+		21F58823CDD6C4305A477A95 /* AppleReminderTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8000A49E30379E483282ABA /* AppleReminderTools.swift */; };
 		246AB3197E7462B3E68F001C /* CronJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE286E760B594C5694F1A16 /* CronJob.swift */; };
 		261E583DCD29AB3EAA06AD92 /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949EA8CFA50E16335110B086 /* InputBarView.swift */; };
+		3278F89F144A3D6ACBF2ED2A /* AppleContactsTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */; };
 		33372511181318FED8272C00 /* CronJobListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092DD5EE7670CFD435BCE570 /* CronJobListView.swift */; };
 		3710DF57660ED815E3028EC3 /* AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6357B86866613D68EAD23432 /* AgentViewModel.swift */; };
 		38B308C948E433835FB544E0 /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F496B3111784052330E0EA05 /* SSEParser.swift */; };
 		3D7FB68BE84A307A19972099 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC545410D5D1BAA582EB8A2 /* SettingsViewModel.swift */; };
 		3EE5FF4DF54625C27D58BA9F /* CronParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51CAED27BDB36858F25DB10 /* CronParser.swift */; };
+		3F093E8992A7EB269CC377BD /* AppleEcosystemBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDB978A05165780B0B397DD /* AppleEcosystemBridge.swift */; };
 		41A2798E6743E6DA521FBDC2 /* DefaultSOUL.md in Resources */ = {isa = PBXBuildFile; fileRef = 31321BA5D5DDEED322500D1D /* DefaultSOUL.md */; };
 		46F9CD76D76B782C53F8F275 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7413410EB1221E98EB56E6 /* ContentView.swift */; };
 		49927AE4E041938DB7CBB8B6 /* SessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204B12CACEB21513C30E68E9 /* SessionListView.swift */; };
@@ -40,6 +45,7 @@
 		6DA4A08DC1D5A92B9DA2F71C /* FunctionCallRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C739D21301D859C4813C401 /* FunctionCallRouter.swift */; };
 		7233CD62A03AF9B1557B2534 /* CodeExecutionTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */; };
 		728A3FDAD5084D7C4D2749F6 /* SkillTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4383D71D07DF723A7E50B296 /* SkillTools.swift */; };
+		7537245CECAF0A6A7B21A8BD /* AppleClipboardTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38750A0E646A18947EA26072 /* AppleClipboardTools.swift */; };
 		7A671684A118FB4A6680AA21 /* ThinkingBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2916FDF1095FACD6720D86C /* ThinkingBubbleView.swift */; };
 		7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C079B073E715BB0CB659334 /* SessionService.swift */; };
 		8030E44584B6E3B97613AFAC /* SubAgentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 380F4D6FD89A274BEE1F4FB9 /* SubAgentManager.swift */; };
@@ -59,6 +65,7 @@
 		A7DD04E2F0744B35E6BF550E /* MarkdownContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03610DC93526E131FBCC084A /* MarkdownContentView.swift */; };
 		AA3DCBB0CB5A94D9CC210864 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1337C2E999915147B1255ADA /* AgentService.swift */; };
 		AD5A22D950319EEC2E97F7DC /* ConfigTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91869063A2B5015A3963744B /* ConfigTools.swift */; };
+		AE4F90E96A056A361EA2CE9B /* AppleLocationTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7EC3C4478D8B7E4852726ED /* AppleLocationTools.swift */; };
 		AE8EEFD3405DDCA48F4EAD37 /* PromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85FE8763DF3E5DE9B582CC65 /* PromptBuilder.swift */; };
 		AF5B2C7EA9437645FC81C988 /* LLMProviderEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBA652DA47A238C04345F10E /* LLMProviderEditView.swift */; };
 		B29982B0DD59DDD1DBE2C581 /* DefaultPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB3598A06716F40B5130BCB4 /* DefaultPrompts.swift */; };
@@ -73,7 +80,10 @@
 		CC5D59D1B27CADB6006441D5 /* ModelTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B709006A2FC069835A82BC7E /* ModelTools.swift */; };
 		CD59601FF55900226A267275 /* Skill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F951651FB3C7B10CA174E9 /* Skill.swift */; };
 		D12E7F7251CCA6A0BA029853 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B8A1848220654A02FA3394 /* ChatMessage.swift */; };
+		D6D23667A339D40BF1464089 /* AppleNotificationTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F59DF61B14F535FAD6E530 /* AppleNotificationTools.swift */; };
 		D95A7F4E1090F577942F538C /* iClawApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F1929975852A2927B4D6333 /* iClawApp.swift */; };
+		DC6F2E40FC06AA472A734930 /* ApplePermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A32C1B7041B45CCF0816290 /* ApplePermissionManager.swift */; };
+		DE4798F26F86068672DB4D35 /* AppleCalendarTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFF629C9604BDCDCB5B6608 /* AppleCalendarTools.swift */; };
 		E0C9AA11D18FE2CB04D3ECAC /* FunctionCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */; };
 		E2C10B1CA83F4B3DD0B8FCCE /* InstalledSkill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08103E26BB6C4174073E23F8 /* InstalledSkill.swift */; };
 		E5C85FBCE012B13DC8A68D3A /* ToolDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E711EB00274324F1C757A1F /* ToolDefinitions.swift */; };
@@ -98,6 +108,7 @@
 		1337C2E999915147B1255ADA /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		1B7413410EB1221E98EB56E6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		204B12CACEB21513C30E68E9 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
+		20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleContactsTools.swift; sourceTree = "<group>"; };
 		23CF1A68532A315C891FBCE5 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
 		253B9F4D995EB706EA719B48 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSkillsView.swift; sourceTree = "<group>"; };
@@ -108,14 +119,17 @@
 		36E25850C697EF01F57455B5 /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
 		380F4D6FD89A274BEE1F4FB9 /* SubAgentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManager.swift; sourceTree = "<group>"; };
 		3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionCallView.swift; sourceTree = "<group>"; };
+		38750A0E646A18947EA26072 /* AppleClipboardTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleClipboardTools.swift; sourceTree = "<group>"; };
 		39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeExecutionTools.swift; sourceTree = "<group>"; };
 		3B26121A2FB261E908D450F5 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
 		3D8B499E2C3FA4B27CE66753 /* iClaw.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = iClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentModelConfigView.swift; sourceTree = "<group>"; };
+		41306CB0B101F9685DA89F4F /* iClaw.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClaw.entitlements; sourceTree = "<group>"; };
 		4383D71D07DF723A7E50B296 /* SkillTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTools.swift; sourceTree = "<group>"; };
 		44C27A1F530B94A24FC9AC99 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		4ABE3E70DACD1E8D7587DCE5 /* iClaw-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iClaw-Bridging-Header.h"; sourceTree = "<group>"; };
 		4E2439DF137FBF58FA5CBF10 /* FunctionDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionDefinition.swift; sourceTree = "<group>"; };
+		4EFF629C9604BDCDCB5B6608 /* AppleCalendarTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleCalendarTools.swift; sourceTree = "<group>"; };
 		524D8355B70966DE2A252940 /* ImagePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePreview.swift; sourceTree = "<group>"; };
 		54A34EF3177F40E30A5C39FB /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		55554A279D2B534D4EA94DCD /* AgentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentListView.swift; sourceTree = "<group>"; };
@@ -136,11 +150,15 @@
 		7C739D21301D859C4813C401 /* FunctionCallRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionCallRouter.swift; sourceTree = "<group>"; };
 		8354042E2D98C05EE37868DF /* CodeBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeBlockView.swift; sourceTree = "<group>"; };
 		85FE8763DF3E5DE9B582CC65 /* PromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptBuilder.swift; sourceTree = "<group>"; };
+		8A32C1B7041B45CCF0816290 /* ApplePermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplePermissionManager.swift; sourceTree = "<group>"; };
 		8C69D8A243470ECD39BB4C19 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		90B8A1848220654A02FA3394 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
+		90F59DF61B14F535FAD6E530 /* AppleNotificationTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleNotificationTools.swift; sourceTree = "<group>"; };
 		91869063A2B5015A3963744B /* ConfigTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigTools.swift; sourceTree = "<group>"; };
 		949EA8CFA50E16335110B086 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
 		990101E729F85D3AF5936B8A /* CodeSnippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeSnippet.swift; sourceTree = "<group>"; };
+		9C3B2152CACD350B80DDEEBE /* AppleHealthTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleHealthTools.swift; sourceTree = "<group>"; };
+		9D7056519AF941DA3556616C /* AppleMapTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapTools.swift; sourceTree = "<group>"; };
 		9DE4015AC9EBAA287458CF47 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		9E711EB00274324F1C757A1F /* ToolDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDefinitions.swift; sourceTree = "<group>"; };
 		A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptExecutor.swift; sourceTree = "<group>"; };
@@ -153,7 +171,9 @@
 		B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompressor.swift; sourceTree = "<group>"; };
 		B8CBF480620107766CD59D04 /* CronScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronScheduler.swift; sourceTree = "<group>"; };
 		BBC545410D5D1BAA582EB8A2 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		BDDB978A05165780B0B397DD /* AppleEcosystemBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleEcosystemBridge.swift; sourceTree = "<group>"; };
 		C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
+		C8000A49E30379E483282ABA /* AppleReminderTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleReminderTools.swift; sourceTree = "<group>"; };
 		CF142E825A15CFC6EC137150 /* ExecutionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionResult.swift; sourceTree = "<group>"; };
 		D07AF5898D7488DC64851298 /* DefaultUSER.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultUSER.md; sourceTree = "<group>"; };
 		D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillLibraryView.swift; sourceTree = "<group>"; };
@@ -161,6 +181,7 @@
 		DBD59C7ED6E02691214A8AEB /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		E053BCA6983DC80249C37C8D /* SkillDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillDetailView.swift; sourceTree = "<group>"; };
 		E6591935F1E60250635E6F3E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		E7EC3C4478D8B7E4852726ED /* AppleLocationTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleLocationTools.swift; sourceTree = "<group>"; };
 		EBA652DA47A238C04345F10E /* LLMProviderEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderEditView.swift; sourceTree = "<group>"; };
 		EC2451AAD7AD253EDA6298F2 /* Agent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Agent.swift; sourceTree = "<group>"; };
 		ED8DC98AAD8ABF3516E03C90 /* CronExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronExecutor.swift; sourceTree = "<group>"; };
@@ -216,6 +237,14 @@
 				85FE8763DF3E5DE9B582CC65 /* PromptBuilder.swift */,
 			);
 			path = Prompt;
+			sourceTree = "<group>";
+		};
+		1FA913651B1EA30ED67AF600 /* Apple */ = {
+			isa = PBXGroup;
+			children = (
+				8A32C1B7041B45CCF0816290 /* ApplePermissionManager.swift */,
+			);
+			path = Apple;
 			sourceTree = "<group>";
 		};
 		22F8DD8B7B52008BC1A7088C /* LLM */ = {
@@ -341,6 +370,7 @@
 			isa = PBXGroup;
 			children = (
 				4ABE3E70DACD1E8D7587DCE5 /* iClaw-Bridging-Header.h */,
+				41306CB0B101F9685DA89F4F /* iClaw.entitlements */,
 				0F42FED94FABD5522B7E666A /* App */,
 				4EF65B30D873C7BBB9EB58BE /* Models */,
 				C33203BF54F859263CACEEC9 /* Resources */,
@@ -374,6 +404,14 @@
 		CD0DF702F2EF0DC59F4DB8D6 /* FunctionCall */ = {
 			isa = PBXGroup;
 			children = (
+				4EFF629C9604BDCDCB5B6608 /* AppleCalendarTools.swift */,
+				38750A0E646A18947EA26072 /* AppleClipboardTools.swift */,
+				20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */,
+				9C3B2152CACD350B80DDEEBE /* AppleHealthTools.swift */,
+				E7EC3C4478D8B7E4852726ED /* AppleLocationTools.swift */,
+				9D7056519AF941DA3556616C /* AppleMapTools.swift */,
+				90F59DF61B14F535FAD6E530 /* AppleNotificationTools.swift */,
+				C8000A49E30379E483282ABA /* AppleReminderTools.swift */,
 				0CE0AD803ABD394A47164B27 /* BrowserTools.swift */,
 				39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */,
 				91869063A2B5015A3963744B /* ConfigTools.swift */,
@@ -391,6 +429,7 @@
 			isa = PBXGroup;
 			children = (
 				F85A3A7A23B4E591C1C5851D /* Agent */,
+				1FA913651B1EA30ED67AF600 /* Apple */,
 				48001E696A398A597CA97A31 /* Browser */,
 				D9F094E3EB9EE607FD1BA3D6 /* CodeExecution */,
 				0D6E15AED54B5A09A80E49C8 /* CronJob */,
@@ -406,6 +445,7 @@
 		D9F094E3EB9EE607FD1BA3D6 /* CodeExecution */ = {
 			isa = PBXGroup;
 			children = (
+				BDDB978A05165780B0B397DD /* AppleEcosystemBridge.swift */,
 				B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */,
 				CF142E825A15CFC6EC137150 /* ExecutionResult.swift */,
 				A2689EC4D1A9A410DD3F6E8C /* JavaScriptExecutor.swift */,
@@ -537,6 +577,16 @@
 				AA3DCBB0CB5A94D9CC210864 /* AgentService.swift in Sources */,
 				839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */,
 				3710DF57660ED815E3028EC3 /* AgentViewModel.swift in Sources */,
+				DE4798F26F86068672DB4D35 /* AppleCalendarTools.swift in Sources */,
+				7537245CECAF0A6A7B21A8BD /* AppleClipboardTools.swift in Sources */,
+				3278F89F144A3D6ACBF2ED2A /* AppleContactsTools.swift in Sources */,
+				3F093E8992A7EB269CC377BD /* AppleEcosystemBridge.swift in Sources */,
+				065A5E0E2C10D89A0DD3B2C6 /* AppleHealthTools.swift in Sources */,
+				AE4F90E96A056A361EA2CE9B /* AppleLocationTools.swift in Sources */,
+				12DEC1482E3F3F1582243280 /* AppleMapTools.swift in Sources */,
+				D6D23667A339D40BF1464089 /* AppleNotificationTools.swift in Sources */,
+				DC6F2E40FC06AA472A734930 /* ApplePermissionManager.swift in Sources */,
+				21F58823CDD6C4305A477A95 /* AppleReminderTools.swift in Sources */,
 				61421AF6F0FB7E917E95E6A9 /* BrowserService.swift in Sources */,
 				A02716DCD05F261E7A482932 /* BrowserTools.swift in Sources */,
 				6D4BF00B528847FCAA2BCB0C /* BrowserView.swift in Sources */,
@@ -627,6 +677,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CODE_SIGN_ENTITLEMENTS = iClaw/iClaw.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -653,6 +704,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CODE_SIGN_ENTITLEMENTS = iClaw/iClaw.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

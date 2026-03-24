@@ -115,6 +115,67 @@ private struct SingleToolCallCard: View {
             return dict["selector"] as? String
         case "browser_scroll":
             return dict["direction"] as? String ?? "down"
+        case "calendar_create_event":
+            return dict["title"] as? String
+        case "calendar_search_events":
+            return dict["keyword"] as? String ?? dict["start_date"] as? String
+        case "calendar_update_event", "calendar_delete_event":
+            return dict["event_id"] as? String
+        case "reminder_create":
+            return dict["title"] as? String
+        case "reminder_complete", "reminder_delete":
+            return dict["reminder_id"] as? String
+        case "reminder_list":
+            return dict["list_name"] as? String
+        case "contacts_search":
+            return dict["query"] as? String
+        case "contacts_get_detail":
+            return dict["contact_id"] as? String
+        case "clipboard_write":
+            if let text = dict["text"] as? String {
+                return text.count > 20 ? String(text.prefix(20)) + "..." : text
+            }
+            return nil
+        case "notification_schedule":
+            return dict["title"] as? String
+        case "notification_cancel":
+            return dict["id"] as? String
+        case "location_geocode":
+            return dict["address"] as? String
+        case "location_reverse_geocode":
+            if let lat = dict["latitude"] as? Double, let lon = dict["longitude"] as? Double {
+                return String(format: "%.4f, %.4f", lat, lon)
+            }
+            return nil
+        case "map_search_places":
+            return dict["query"] as? String
+        case "map_get_directions":
+            return dict["to_address"] as? String
+        case "health_write_dietary_energy":
+            if let kcal = dict["kcal"] as? Double {
+                return String(format: "%.0f kcal", kcal)
+            }
+            return nil
+        case "health_write_dietary_water":
+            if let ml = dict["ml"] as? Double {
+                return String(format: "%.0f ml", ml)
+            }
+            return nil
+        case "health_write_dietary_carbohydrates", "health_write_dietary_protein", "health_write_dietary_fat":
+            if let grams = dict["grams"] as? Double {
+                return String(format: "%.1f g", grams)
+            }
+            return nil
+        case "health_write_body_mass":
+            if let value = dict["value"] as? Double {
+                let unit = (dict["unit"] as? String) ?? "kg"
+                return String(format: "%.2f %@", value, unit)
+            }
+            return nil
+        case "health_write_workout":
+            return dict["activity_type"] as? String
+        case "health_read_steps", "health_read_heart_rate", "health_read_sleep", "health_read_body_mass":
+            return dict["start_date"] as? String
         default:
             return nil
         }
@@ -235,7 +296,7 @@ struct ToolResultCardView: View {
 
             if let stdout = parts.stdout, !stdout.isEmpty {
                 HStack {
-                    Text("stdout")
+                    Text(L10n.ToolResult.stdout)
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -257,7 +318,7 @@ struct ToolResultCardView: View {
             if let stderr = parts.stderr, !stderr.isEmpty {
                 Divider().padding(.horizontal, 10)
                 HStack {
-                    Text("stderr")
+                    Text(L10n.ToolResult.stderr)
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(.red.opacity(0.7))
                     Spacer()
@@ -440,6 +501,72 @@ struct ToolMeta {
             return ToolMeta(displayName: L10n.ToolCard.waitElement, icon: "clock.arrow.circlepath", color: .cyan)
         case "browser_scroll":
             return ToolMeta(displayName: L10n.ToolCard.scroll, icon: "scroll", color: .cyan)
+        case "calendar_list_calendars":
+            return ToolMeta(displayName: L10n.ToolCard.calendarListCalendars, icon: "calendar", color: .mint)
+        case "calendar_create_event":
+            return ToolMeta(displayName: L10n.ToolCard.calendarCreateEvent, icon: "calendar.badge.plus", color: .mint)
+        case "calendar_search_events":
+            return ToolMeta(displayName: L10n.ToolCard.calendarSearchEvents, icon: "calendar.badge.clock", color: .mint)
+        case "calendar_update_event":
+            return ToolMeta(displayName: L10n.ToolCard.calendarUpdateEvent, icon: "calendar.badge.exclamationmark", color: .mint)
+        case "calendar_delete_event":
+            return ToolMeta(displayName: L10n.ToolCard.calendarDeleteEvent, icon: "calendar.badge.minus", color: .red)
+        case "reminder_lists":
+            return ToolMeta(displayName: L10n.ToolCard.reminderLists, icon: "list.bullet.clipboard", color: .green)
+        case "reminder_list":
+            return ToolMeta(displayName: L10n.ToolCard.reminderList, icon: "checklist", color: .green)
+        case "reminder_create":
+            return ToolMeta(displayName: L10n.ToolCard.reminderCreate, icon: "checklist.checked", color: .green)
+        case "reminder_complete":
+            return ToolMeta(displayName: L10n.ToolCard.reminderComplete, icon: "checkmark.circle", color: .green)
+        case "reminder_delete":
+            return ToolMeta(displayName: L10n.ToolCard.reminderDelete, icon: "trash.circle", color: .red)
+        case "contacts_search":
+            return ToolMeta(displayName: L10n.ToolCard.contactsSearch, icon: "person.crop.circle.badge.magnifyingglass", color: .indigo)
+        case "contacts_get_detail":
+            return ToolMeta(displayName: L10n.ToolCard.contactsGetDetail, icon: "person.text.rectangle", color: .indigo)
+        case "clipboard_read":
+            return ToolMeta(displayName: L10n.ToolCard.clipboardRead, icon: "doc.on.clipboard", color: .brown)
+        case "clipboard_write":
+            return ToolMeta(displayName: L10n.ToolCard.clipboardWrite, icon: "clipboard", color: .brown)
+        case "notification_schedule":
+            return ToolMeta(displayName: L10n.ToolCard.notificationSchedule, icon: "bell.badge", color: .orange)
+        case "notification_cancel":
+            return ToolMeta(displayName: L10n.ToolCard.notificationCancel, icon: "bell.slash", color: .red)
+        case "notification_list":
+            return ToolMeta(displayName: L10n.ToolCard.notificationList, icon: "bell", color: .orange)
+        case "location_get_current":
+            return ToolMeta(displayName: L10n.ToolCard.locationGetCurrent, icon: "location.fill", color: .teal)
+        case "location_geocode":
+            return ToolMeta(displayName: L10n.ToolCard.locationGeocode, icon: "mappin.and.ellipse", color: .teal)
+        case "location_reverse_geocode":
+            return ToolMeta(displayName: L10n.ToolCard.locationReverseGeocode, icon: "map", color: .teal)
+        case "map_search_places":
+            return ToolMeta(displayName: L10n.ToolCard.mapSearchPlaces, icon: "magnifyingglass.circle", color: .blue)
+        case "map_get_directions":
+            return ToolMeta(displayName: L10n.ToolCard.mapGetDirections, icon: "point.topleft.down.curvedto.point.bottomright.up", color: .blue)
+        case "health_read_steps":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadSteps, icon: "figure.walk", color: .pink)
+        case "health_read_heart_rate":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadHeartRate, icon: "heart.text.square", color: .pink)
+        case "health_read_sleep":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadSleep, icon: "bed.double", color: .pink)
+        case "health_read_body_mass":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadBodyMass, icon: "scalemass", color: .pink)
+        case "health_write_dietary_energy":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryEnergy, icon: "fork.knife.circle", color: .red)
+        case "health_write_body_mass":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteBodyMass, icon: "square.and.pencil.circle", color: .red)
+        case "health_write_dietary_water":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryWater, icon: "drop.circle", color: .blue)
+        case "health_write_dietary_carbohydrates":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryCarbohydrates, icon: "leaf.circle", color: .orange)
+        case "health_write_dietary_protein":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryProtein, icon: "bolt.heart", color: .orange)
+        case "health_write_dietary_fat":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryFat, icon: "flame.circle", color: .orange)
+        case "health_write_workout":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteWorkout, icon: "figure.run.circle", color: .red)
         default:
             return ToolMeta(displayName: toolName, icon: "wrench", color: .gray)
         }
