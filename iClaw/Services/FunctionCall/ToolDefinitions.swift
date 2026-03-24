@@ -133,7 +133,7 @@ enum ToolDefinitions {
 
     static let messageSubAgentTool = ToolDefinitionBuilder.build(
         name: "message_sub_agent",
-        description: "Send a message to an existing sub-agent and wait for its response. The sub-agent processes the message autonomously (including any tool calls) and returns a text reply. You must first create a sub-agent with create_sub_agent to obtain the agent_id.",
+        description: "Send a message to an existing sub-agent and wait for its response. The sub-agent processes the message autonomously (including any tool calls) and returns a text reply. Multiple message_sub_agent calls in the same response execute in PARALLEL — use this for concurrent fan-out tasks. You must first create a sub-agent with create_sub_agent to obtain the agent_id.",
         properties: [
             "agent_id": ToolDefinitionBuilder.stringParam("The sub-agent's UUID string, exactly as returned by create_sub_agent (e.g. \"A1B2C3D4-E5F6-7890-ABCD-EF1234567890\")"),
             "message": ToolDefinitionBuilder.stringParam("The text message or instruction to send to the sub-agent"),
