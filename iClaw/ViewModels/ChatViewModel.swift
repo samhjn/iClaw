@@ -359,7 +359,7 @@ final class ChatViewModel {
                 }
             }
 
-            let toolDefs = ToolDefinitions.allTools
+            let toolDefs = ToolDefinitions.tools(for: agent)
 
             var fullContent = ""
             var fullThinking = ""

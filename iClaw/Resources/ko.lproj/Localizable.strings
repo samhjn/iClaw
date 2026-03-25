@@ -103,6 +103,30 @@
 "agentDetail.snippetLanguage" = "언어";
 "agentDetail.snippetCode" = "코드";
 "agentDetail.newSnippet" = "새 스니펫";
+"agentDetail.applePermissions" = "Apple 권한";
+
+// MARK: - Apple Permissions
+"applePermissions.title" = "Apple 권한";
+"applePermissions.description" = "이 에이전트가 접근할 수 있는 Apple 시스템 기능을 설정합니다. 읽기는 데이터 조회를 허용하고, 쓰기는 데이터 생성·수정·삭제를 허용합니다.";
+"applePermissions.readWrite" = "읽기 및 쓰기";
+"applePermissions.readOnly" = "읽기 전용";
+"applePermissions.writeOnly" = "쓰기 전용";
+"applePermissions.disabled" = "비활성화";
+"applePermissions.enableAll" = "모두 활성화 (읽기 및 쓰기)";
+"applePermissions.readOnlyAll" = "모두 읽기 전용으로 설정";
+"applePermissions.disableAll" = "모두 비활성화";
+"applePermissions.calendar" = "캘린더";
+"applePermissions.reminders" = "미리 알림";
+"applePermissions.contacts" = "연락처";
+"applePermissions.clipboard" = "클립보드";
+"applePermissions.notifications" = "알림";
+"applePermissions.location" = "위치";
+"applePermissions.map" = "지도";
+"applePermissions.health" = "건강";
+"applePermissions.summaryReadWrite" = "%d개의 도구 활성화됨";
+"applePermissions.summaryReadOnly" = "%d개의 읽기 도구 활성화됨";
+"applePermissions.summaryWriteOnly" = "%d개의 쓰기 도구 활성화됨";
+"applePermissions.summaryDisabled" = "모든 도구 비활성화됨";
 
 // MARK: - Model Config
 "modelConfig.title" = "모델 설정";

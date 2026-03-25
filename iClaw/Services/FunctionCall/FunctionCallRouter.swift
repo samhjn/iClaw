@@ -70,6 +70,11 @@ final class FunctionCallRouter {
 
     private func dispatchTool(toolCall: LLMToolCall) async throws -> ToolCallResult {
         let name = toolCall.function.name
+
+        if AppleToolCategory.allAppleToolNames.contains(name) && !agent.isAppleToolAllowed(name) {
+            return ToolCallResult("[Error] Tool '\(name)' is not permitted for this agent. Check Apple Permissions in agent settings.")
+        }
+
         let arguments = parseArguments(toolCall.function.arguments)
 
         switch name {

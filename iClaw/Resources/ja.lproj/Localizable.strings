@@ -103,6 +103,30 @@
 "agentDetail.snippetLanguage" = "言語";
 "agentDetail.snippetCode" = "コード";
 "agentDetail.newSnippet" = "新規スニペット";
+"agentDetail.applePermissions" = "Apple 権限";
+
+// MARK: - Apple Permissions
+"applePermissions.title" = "Apple 権限";
+"applePermissions.description" = "このエージェントがアクセスできる Apple システム機能を設定します。読み取りはデータの照会を許可し、書き込みはデータの作成・変更・削除を許可します。";
+"applePermissions.readWrite" = "読み書き";
+"applePermissions.readOnly" = "読み取りのみ";
+"applePermissions.writeOnly" = "書き込みのみ";
+"applePermissions.disabled" = "無効";
+"applePermissions.enableAll" = "すべて有効（読み書き）";
+"applePermissions.readOnlyAll" = "すべて読み取りのみに設定";
+"applePermissions.disableAll" = "すべて無効";
+"applePermissions.calendar" = "カレンダー";
+"applePermissions.reminders" = "リマインダー";
+"applePermissions.contacts" = "連絡先";
+"applePermissions.clipboard" = "クリップボード";
+"applePermissions.notifications" = "通知";
+"applePermissions.location" = "位置情報";
+"applePermissions.map" = "マップ";
+"applePermissions.health" = "ヘルスケア";
+"applePermissions.summaryReadWrite" = "%d 個のツールが有効";
+"applePermissions.summaryReadOnly" = "%d 個の読み取りツールが有効";
+"applePermissions.summaryWriteOnly" = "%d 個の書き込みツールが有効";
+"applePermissions.summaryDisabled" = "すべてのツールが無効";
 
 // MARK: - Model Config
 "modelConfig.title" = "モデル設定";
