@@ -404,12 +404,23 @@
 "toolCard.healthReadHeartRate" = "심박수 조회";
 "toolCard.healthReadSleep" = "수면 조회";
 "toolCard.healthReadBodyMass" = "체중 조회";
+"toolCard.healthReadBloodPressure" = "혈압 조회";
+"toolCard.healthReadBloodGlucose" = "혈당 조회";
+"toolCard.healthReadBloodOxygen" = "혈중 산소 조회";
+"toolCard.healthReadBodyTemperature" = "체온 조회";
 "toolCard.healthWriteDietaryEnergy" = "칼로리 기록";
 "toolCard.healthWriteBodyMass" = "체중 기록";
 "toolCard.healthWriteDietaryWater" = "수분 섭취 기록";
 "toolCard.healthWriteDietaryCarbohydrates" = "탄수화물 기록";
 "toolCard.healthWriteDietaryProtein" = "단백질 기록";
 "toolCard.healthWriteDietaryFat" = "지방 기록";
+"toolCard.healthWriteBloodPressure" = "혈압 기록";
+"toolCard.healthWriteBodyFat" = "체지방 기록";
+"toolCard.healthWriteHeight" = "신장 기록";
+"toolCard.healthWriteBloodGlucose" = "혈당 기록";
+"toolCard.healthWriteBloodOxygen" = "혈중 산소 기록";
+"toolCard.healthWriteBodyTemperature" = "체온 기록";
+"toolCard.healthWriteHeartRate" = "심박수 기록";
 "toolCard.healthWriteWorkout" = "운동 기록";
 
 // MARK: - Tool Result

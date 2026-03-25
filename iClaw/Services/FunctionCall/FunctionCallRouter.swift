@@ -258,7 +258,7 @@ final class FunctionCallRouter {
         case "map_get_directions":
             return try await runAsync { await AppleMapTools().getDirections(arguments: arguments) }
 
-        // --- Apple Health ---
+        // --- Apple Health (Read) ---
         case "health_read_steps":
             return try await runAsync { await AppleHealthTools().readSteps(arguments: arguments) }
         case "health_read_heart_rate":
@@ -267,6 +267,15 @@ final class FunctionCallRouter {
             return try await runAsync { await AppleHealthTools().readSleep(arguments: arguments) }
         case "health_read_body_mass":
             return try await runAsync { await AppleHealthTools().readBodyMass(arguments: arguments) }
+        case "health_read_blood_pressure":
+            return try await runAsync { await AppleHealthTools().readBloodPressure(arguments: arguments) }
+        case "health_read_blood_glucose":
+            return try await runAsync { await AppleHealthTools().readBloodGlucose(arguments: arguments) }
+        case "health_read_blood_oxygen":
+            return try await runAsync { await AppleHealthTools().readBloodOxygen(arguments: arguments) }
+        case "health_read_body_temperature":
+            return try await runAsync { await AppleHealthTools().readBodyTemperature(arguments: arguments) }
+        // --- Apple Health (Write) ---
         case "health_write_dietary_energy":
             return try await runAsync { await AppleHealthTools().writeDietaryEnergy(arguments: arguments) }
         case "health_write_body_mass":
@@ -279,6 +288,20 @@ final class FunctionCallRouter {
             return try await runAsync { await AppleHealthTools().writeDietaryProtein(arguments: arguments) }
         case "health_write_dietary_fat":
             return try await runAsync { await AppleHealthTools().writeDietaryFat(arguments: arguments) }
+        case "health_write_blood_pressure":
+            return try await runAsync { await AppleHealthTools().writeBloodPressure(arguments: arguments) }
+        case "health_write_body_fat":
+            return try await runAsync { await AppleHealthTools().writeBodyFat(arguments: arguments) }
+        case "health_write_height":
+            return try await runAsync { await AppleHealthTools().writeHeight(arguments: arguments) }
+        case "health_write_blood_glucose":
+            return try await runAsync { await AppleHealthTools().writeBloodGlucose(arguments: arguments) }
+        case "health_write_blood_oxygen":
+            return try await runAsync { await AppleHealthTools().writeBloodOxygen(arguments: arguments) }
+        case "health_write_body_temperature":
+            return try await runAsync { await AppleHealthTools().writeBodyTemperature(arguments: arguments) }
+        case "health_write_heart_rate":
+            return try await runAsync { await AppleHealthTools().writeHeartRate(arguments: arguments) }
         case "health_write_workout":
             return try await runAsync { await AppleHealthTools().writeWorkout(arguments: arguments) }
 

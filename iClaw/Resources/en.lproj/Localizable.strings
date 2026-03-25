@@ -405,12 +405,23 @@
 "toolCard.healthReadHeartRate" = "Read Heart Rate";
 "toolCard.healthReadSleep" = "Read Sleep";
 "toolCard.healthReadBodyMass" = "Read Body Mass";
+"toolCard.healthReadBloodPressure" = "Read Blood Pressure";
+"toolCard.healthReadBloodGlucose" = "Read Blood Glucose";
+"toolCard.healthReadBloodOxygen" = "Read Blood Oxygen";
+"toolCard.healthReadBodyTemperature" = "Read Body Temperature";
 "toolCard.healthWriteDietaryEnergy" = "Write Calories";
 "toolCard.healthWriteBodyMass" = "Write Body Mass";
 "toolCard.healthWriteDietaryWater" = "Write Water Intake";
 "toolCard.healthWriteDietaryCarbohydrates" = "Write Carbohydrates";
 "toolCard.healthWriteDietaryProtein" = "Write Protein";
 "toolCard.healthWriteDietaryFat" = "Write Fat";
+"toolCard.healthWriteBloodPressure" = "Write Blood Pressure";
+"toolCard.healthWriteBodyFat" = "Write Body Fat";
+"toolCard.healthWriteHeight" = "Write Height";
+"toolCard.healthWriteBloodGlucose" = "Write Blood Glucose";
+"toolCard.healthWriteBloodOxygen" = "Write Blood Oxygen";
+"toolCard.healthWriteBodyTemperature" = "Write Body Temperature";
+"toolCard.healthWriteHeartRate" = "Write Heart Rate";
 "toolCard.healthWriteWorkout" = "Write Workout";
 
 // MARK: - Tool Result

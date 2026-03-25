@@ -3,6 +3,19 @@ import HealthKit
 
 struct AppleHealthTools {
     private var store: HKHealthStore { ApplePermissionManager.shared.healthStore }
+    private var pm: ApplePermissionManager { ApplePermissionManager.shared }
+
+    private func ensureAccess() async -> String? { await pm.ensureHealthAccess() }
+
+    private func checkWriteAuth(_ id: HKQuantityTypeIdentifier) -> String? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: id) else {
+            return "[Error] This health data type is unavailable on this device."
+        }
+        if !pm.isHealthSharingAuthorized(for: type) {
+            return "[Error] Write access denied for this data type. Please enable it in Settings > Health > Data Access & Devices > iClaw."
+        }
+        return nil
+    }
 
     // MARK: - Read
 
@@ -10,7 +23,7 @@ struct AppleHealthTools {
         guard let quantityType = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
             return "[Error] Step count type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [quantityType], write: []) { return err }
+        if let err = await ensureAccess() { return err }
 
         let (start, end) = resolveDateRange(arguments: arguments, defaultDays: 7)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
@@ -40,7 +53,7 @@ struct AppleHealthTools {
         guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
             return "[Error] Heart rate type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [type], write: []) { return err }
+        if let err = await ensureAccess() { return err }
 
         let (start, end) = resolveDateRange(arguments: arguments, defaultDays: 1)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
@@ -74,7 +87,7 @@ struct AppleHealthTools {
         guard let type = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
             return "[Error] Sleep analysis type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [type], write: []) { return err }
+        if let err = await ensureAccess() { return err }
 
         let (start, end) = resolveDateRange(arguments: arguments, defaultDays: 7)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
@@ -113,7 +126,7 @@ struct AppleHealthTools {
         guard let type = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
             return "[Error] Body mass type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [type], write: []) { return err }
+        if let err = await ensureAccess() { return err }
 
         let (start, end) = resolveDateRange(arguments: arguments, defaultDays: 30)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
@@ -143,20 +156,76 @@ struct AppleHealthTools {
         }
     }
 
+    func readBloodPressure(arguments: [String: Any]) async -> String {
+        guard let sysType = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic),
+              let diaType = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic),
+              let corrType = HKCorrelationType.correlationType(forIdentifier: .bloodPressure) else {
+            return "[Error] Blood pressure type is unavailable on this device."
+        }
+        if let err = await ensureAccess() { return err }
+
+        let (start, end) = resolveDateRange(arguments: arguments, defaultDays: 30)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+
+        do {
+            let correlations = try await fetchCorrelationSamples(type: corrType, predicate: predicate, limit: 50)
+            if correlations.isEmpty {
+                return "(No blood pressure samples found between \(formatDate(start)) and \(formatDate(end)))"
+            }
+
+            let mmHg = HKUnit.millimeterOfMercury()
+            let rows = correlations.prefix(20).map { corr -> String in
+                let sys = corr.objects(for: sysType).first as? HKQuantitySample
+                let dia = corr.objects(for: diaType).first as? HKQuantitySample
+                let sVal = sys.map { Int($0.quantity.doubleValue(for: mmHg)) } ?? 0
+                let dVal = dia.map { Int($0.quantity.doubleValue(for: mmHg)) } ?? 0
+                return "- \(formatDate(corr.endDate)): \(sVal)/\(dVal) mmHg"
+            }.joined(separator: "\n")
+
+            return """
+            Blood pressure samples:
+            - Range: \(formatDate(start)) to \(formatDate(end))
+            - Count: \(correlations.count)
+            \(rows)
+            """
+        } catch {
+            return "[Error] Failed to read blood pressure: \(error.localizedDescription)"
+        }
+    }
+
+    func readBloodGlucose(arguments: [String: Any]) async -> String {
+        await readSimpleQuantity(arguments: arguments, id: .bloodGlucose,
+                                 unit: HKUnit.moleUnit(with: .milli, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter()),
+                                 unitLabel: "mmol/L", label: "Blood glucose", defaultDays: 30)
+    }
+
+    func readBloodOxygen(arguments: [String: Any]) async -> String {
+        await readSimpleQuantity(arguments: arguments, id: .oxygenSaturation,
+                                 unit: .percent(), unitLabel: "%", label: "Blood oxygen (SpO₂)", defaultDays: 7,
+                                 valueTransform: { $0 * 100.0 }, valueFormat: "%.1f")
+    }
+
+    func readBodyTemperature(arguments: [String: Any]) async -> String {
+        let useFahrenheit = (arguments["unit"] as? String)?.lowercased() == "f"
+        let unit: HKUnit = useFahrenheit ? .degreeFahrenheit() : .degreeCelsius()
+        let uLabel = useFahrenheit ? "°F" : "°C"
+        return await readSimpleQuantity(arguments: arguments, id: .bodyTemperature,
+                                         unit: unit, unitLabel: uLabel, label: "Body temperature", defaultDays: 30)
+    }
+
     // MARK: - Write
 
     func writeDietaryEnergy(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.dietaryEnergyConsumed) { return err }
         guard let type = HKQuantityType.quantityType(forIdentifier: .dietaryEnergyConsumed) else {
             return "[Error] Dietary energy type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [], write: [type]) { return err }
 
         guard let kcal = (arguments["kcal"] as? Double) ?? (arguments["energy_kcal"] as? Double) else {
             return "[Error] Missing required parameter: kcal"
         }
-        if kcal <= 0 {
-            return "[Error] kcal must be a positive number."
-        }
+        if kcal <= 0 { return "[Error] kcal must be a positive number." }
 
         let when = parseDate(arguments["date"] as? String) ?? Date()
         let end = when
@@ -164,86 +233,62 @@ struct AppleHealthTools {
         let quantity = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
 
         var metadata: [String: Any] = [:]
-        if let meal = arguments["meal"] as? String, !meal.isEmpty {
-            metadata[HKMetadataKeyFoodType] = meal
-        }
-        if let note = arguments["note"] as? String, !note.isEmpty {
-            metadata["iClawNote"] = note
-        }
+        if let meal = arguments["meal"] as? String, !meal.isEmpty { metadata[HKMetadataKeyFoodType] = meal }
+        if let note = arguments["note"] as? String, !note.isEmpty { metadata["iClawNote"] = note }
 
         let sample = HKQuantitySample(type: type, quantity: quantity, start: start, end: end, metadata: metadata.isEmpty ? nil : metadata)
 
         do {
             try await saveSample(sample)
-            return """
-            Dietary energy written successfully.
-            - Energy: \(String(format: "%.1f", kcal)) kcal
-            - Date: \(formatDate(end))
-            - Source: iClaw
-            """
+            return "Dietary energy written successfully.\n- Energy: \(String(format: "%.1f", kcal)) kcal\n- Date: \(formatDate(end))"
         } catch {
             return "[Error] Failed to write dietary energy: \(error.localizedDescription)"
         }
     }
 
     func writeBodyMass(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.bodyMass) { return err }
         guard let type = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
             return "[Error] Body mass type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [], write: [type]) { return err }
 
-        guard let value = arguments["value"] as? Double else {
-            return "[Error] Missing required parameter: value"
-        }
-        if value <= 0 {
-            return "[Error] value must be a positive number."
+        guard let value = arguments["value"] as? Double, value > 0 else {
+            return "[Error] Missing or invalid parameter: value (must be positive)"
         }
 
         let unitLabel = (arguments["unit"] as? String)?.lowercased() ?? "kg"
         let unit: HKUnit = (unitLabel == "lb" || unitLabel == "lbs") ? .pound() : .gramUnit(with: .kilo)
+        let displayUnit = (unitLabel == "lb" || unitLabel == "lbs") ? "lb" : "kg"
 
         let when = parseDate(arguments["date"] as? String) ?? Date()
-        let quantity = HKQuantity(unit: unit, doubleValue: value)
-        let sample = HKQuantitySample(type: type, quantity: quantity, start: when, end: when)
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: unit, doubleValue: value), start: when, end: when)
 
         do {
             try await saveSample(sample)
-            return """
-            Body mass written successfully.
-            - Value: \(String(format: "%.2f", value)) \(unitLabel == "lb" || unitLabel == "lbs" ? "lb" : "kg")
-            - Date: \(formatDate(when))
-            - Source: iClaw
-            """
+            return "Body mass written successfully.\n- Value: \(String(format: "%.2f", value)) \(displayUnit)\n- Date: \(formatDate(when))"
         } catch {
             return "[Error] Failed to write body mass: \(error.localizedDescription)"
         }
     }
 
     func writeDietaryWater(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.dietaryWater) { return err }
         guard let type = HKQuantityType.quantityType(forIdentifier: .dietaryWater) else {
             return "[Error] Dietary water type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [], write: [type]) { return err }
 
-        guard let ml = (arguments["ml"] as? Double) ?? (arguments["value"] as? Double) else {
-            return "[Error] Missing required parameter: ml"
-        }
-        if ml <= 0 {
-            return "[Error] ml must be a positive number."
+        guard let ml = (arguments["ml"] as? Double) ?? (arguments["value"] as? Double), ml > 0 else {
+            return "[Error] Missing or invalid parameter: ml (must be positive)"
         }
 
         let when = parseDate(arguments["date"] as? String) ?? Date()
-        let quantity = HKQuantity(unit: .literUnit(with: .milli), doubleValue: ml)
-        let sample = HKQuantitySample(type: type, quantity: quantity, start: when, end: when)
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: .literUnit(with: .milli), doubleValue: ml), start: when, end: when)
 
         do {
             try await saveSample(sample)
-            return """
-            Dietary water written successfully.
-            - Water: \(String(format: "%.0f", ml)) ml
-            - Date: \(formatDate(when))
-            - Source: iClaw
-            """
+            return "Dietary water written successfully.\n- Water: \(String(format: "%.0f", ml)) ml\n- Date: \(formatDate(when))"
         } catch {
             return "[Error] Failed to write dietary water: \(error.localizedDescription)"
         }
@@ -261,17 +306,201 @@ struct AppleHealthTools {
         await writeNutrient(arguments: arguments, id: .dietaryFatTotal, gramsKey: "grams", defaultLabel: "fat")
     }
 
+    func writeBloodPressure(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.bloodPressureSystolic) { return err }
+        guard let sysType = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic),
+              let diaType = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic),
+              let corrType = HKCorrelationType.correlationType(forIdentifier: .bloodPressure) else {
+            return "[Error] Blood pressure type is unavailable on this device."
+        }
+
+        guard let systolic = (arguments["systolic"] as? Double) ?? (arguments["sys"] as? Double),
+              let diastolic = (arguments["diastolic"] as? Double) ?? (arguments["dia"] as? Double) else {
+            return "[Error] Missing required parameters: systolic and diastolic"
+        }
+        if systolic <= 0 || diastolic <= 0 { return "[Error] Values must be positive." }
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let mmHg = HKUnit.millimeterOfMercury()
+        let sysSample = HKQuantitySample(type: sysType, quantity: HKQuantity(unit: mmHg, doubleValue: systolic), start: when, end: when)
+        let diaSample = HKQuantitySample(type: diaType, quantity: HKQuantity(unit: mmHg, doubleValue: diastolic), start: when, end: when)
+        let correlation = HKCorrelation(type: corrType, start: when, end: when, objects: [sysSample, diaSample])
+
+        do {
+            try await saveSample(correlation)
+            return "Blood pressure written successfully.\n- Value: \(Int(systolic))/\(Int(diastolic)) mmHg\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write blood pressure: \(error.localizedDescription)"
+        }
+    }
+
+    func writeBodyFat(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.bodyFatPercentage) { return err }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage) else {
+            return "[Error] Body fat percentage type is unavailable on this device."
+        }
+
+        guard let pct = (arguments["percentage"] as? Double) ?? (arguments["value"] as? Double), pct > 0 else {
+            return "[Error] Missing or invalid parameter: percentage (must be positive)"
+        }
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: .percent(), doubleValue: pct / 100.0), start: when, end: when)
+
+        do {
+            try await saveSample(sample)
+            return "Body fat percentage written successfully.\n- Value: \(String(format: "%.1f", pct))%\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write body fat: \(error.localizedDescription)"
+        }
+    }
+
+    func writeHeight(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.height) { return err }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .height) else {
+            return "[Error] Height type is unavailable on this device."
+        }
+
+        guard let value = arguments["value"] as? Double, value > 0 else {
+            return "[Error] Missing or invalid parameter: value (must be positive)"
+        }
+
+        let unitLabel = (arguments["unit"] as? String)?.lowercased() ?? "cm"
+        let unit: HKUnit
+        let displayUnit: String
+        switch unitLabel {
+        case "m": unit = .meter(); displayUnit = "m"
+        case "in", "inch": unit = .inch(); displayUnit = "in"
+        case "ft", "foot": unit = .foot(); displayUnit = "ft"
+        default: unit = .meterUnit(with: .centi); displayUnit = "cm"
+        }
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: unit, doubleValue: value), start: when, end: when)
+
+        do {
+            try await saveSample(sample)
+            return "Height written successfully.\n- Value: \(String(format: "%.1f", value)) \(displayUnit)\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write height: \(error.localizedDescription)"
+        }
+    }
+
+    func writeBloodGlucose(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.bloodGlucose) { return err }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else {
+            return "[Error] Blood glucose type is unavailable on this device."
+        }
+
+        guard let value = arguments["value"] as? Double, value > 0 else {
+            return "[Error] Missing or invalid parameter: value (must be positive)"
+        }
+
+        let unitLabel = (arguments["unit"] as? String)?.lowercased() ?? "mmol/l"
+        let unit: HKUnit
+        let displayUnit: String
+        if unitLabel == "mg/dl" || unitLabel == "mg" {
+            unit = HKUnit.gramUnit(with: .milli).unitDivided(by: .literUnit(with: .deci))
+            displayUnit = "mg/dL"
+        } else {
+            unit = HKUnit.moleUnit(with: .milli, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter())
+            displayUnit = "mmol/L"
+        }
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: unit, doubleValue: value), start: when, end: when)
+
+        do {
+            try await saveSample(sample)
+            return "Blood glucose written successfully.\n- Value: \(String(format: "%.2f", value)) \(displayUnit)\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write blood glucose: \(error.localizedDescription)"
+        }
+    }
+
+    func writeBloodOxygen(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.oxygenSaturation) { return err }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .oxygenSaturation) else {
+            return "[Error] Blood oxygen type is unavailable on this device."
+        }
+
+        guard let pct = (arguments["percentage"] as? Double) ?? (arguments["value"] as? Double), pct > 0 else {
+            return "[Error] Missing or invalid parameter: percentage (must be positive, e.g. 98)"
+        }
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: .percent(), doubleValue: pct / 100.0), start: when, end: when)
+
+        do {
+            try await saveSample(sample)
+            return "Blood oxygen written successfully.\n- SpO₂: \(String(format: "%.1f", pct))%\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write blood oxygen: \(error.localizedDescription)"
+        }
+    }
+
+    func writeBodyTemperature(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.bodyTemperature) { return err }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .bodyTemperature) else {
+            return "[Error] Body temperature type is unavailable on this device."
+        }
+
+        guard let value = arguments["value"] as? Double, value > 0 else {
+            return "[Error] Missing or invalid parameter: value (must be positive)"
+        }
+
+        let unitLabel = (arguments["unit"] as? String)?.lowercased() ?? "c"
+        let unit: HKUnit = (unitLabel == "f" || unitLabel == "fahrenheit") ? .degreeFahrenheit() : .degreeCelsius()
+        let displayUnit = (unitLabel == "f" || unitLabel == "fahrenheit") ? "°F" : "°C"
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: unit, doubleValue: value), start: when, end: when)
+
+        do {
+            try await saveSample(sample)
+            return "Body temperature written successfully.\n- Value: \(String(format: "%.1f", value)) \(displayUnit)\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write body temperature: \(error.localizedDescription)"
+        }
+    }
+
+    func writeHeartRate(arguments: [String: Any]) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(.heartRate) { return err }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
+            return "[Error] Heart rate type is unavailable on this device."
+        }
+
+        guard let bpm = (arguments["bpm"] as? Double) ?? (arguments["value"] as? Double), bpm > 0 else {
+            return "[Error] Missing or invalid parameter: bpm (must be positive)"
+        }
+
+        let when = parseDate(arguments["date"] as? String) ?? Date()
+        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: bpmUnit, doubleValue: bpm), start: when, end: when)
+
+        do {
+            try await saveSample(sample)
+            return "Heart rate written successfully.\n- Value: \(Int(bpm)) bpm\n- Date: \(formatDate(when))"
+        } catch {
+            return "[Error] Failed to write heart rate: \(error.localizedDescription)"
+        }
+    }
+
     func writeWorkout(arguments: [String: Any]) async -> String {
-        let workoutType = HKObjectType.workoutType()
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [], write: [workoutType]) { return err }
+        if let err = await ensureAccess() { return err }
 
         guard let start = parseDate(arguments["start_date"] as? String) else {
             return "[Error] Missing or invalid start_date. Use ISO 8601 or yyyy-MM-dd HH:mm."
         }
         let end = parseDate(arguments["end_date"] as? String) ?? Date()
-        if end <= start {
-            return "[Error] end_date must be later than start_date."
-        }
+        if end <= start { return "[Error] end_date must be later than start_date." }
 
         let activity = parseWorkoutActivity(arguments["activity_type"] as? String)
         let kcal = arguments["energy_kcal"] as? Double
@@ -288,13 +517,11 @@ struct AppleHealthTools {
             var samples: [HKSample] = []
             if let kcal,
                let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
-                let quantity = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
-                samples.append(HKQuantitySample(type: energyType, quantity: quantity, start: start, end: end))
+                samples.append(HKQuantitySample(type: energyType, quantity: HKQuantity(unit: .kilocalorie(), doubleValue: kcal), start: start, end: end))
             }
             if let distanceKm,
                let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
-                let quantity = HKQuantity(unit: .meter(), doubleValue: distanceKm * 1000.0)
-                samples.append(HKQuantitySample(type: distanceType, quantity: quantity, start: start, end: end))
+                samples.append(HKQuantitySample(type: distanceType, quantity: HKQuantity(unit: .meter(), doubleValue: distanceKm * 1000.0), start: start, end: end))
             }
             if !samples.isEmpty {
                 try await addSamples(samples, to: builder)
@@ -311,14 +538,70 @@ struct AppleHealthTools {
             ]
             if let kcal { lines.append("- Energy: \(String(format: "%.1f", kcal)) kcal") }
             if let distanceKm { lines.append("- Distance: \(String(format: "%.2f", distanceKm)) km") }
-            lines.append("- Source: iClaw")
             return lines.joined(separator: "\n")
         } catch {
             return "[Error] Failed to write workout: \(error.localizedDescription)"
         }
     }
 
+    // MARK: - Generic Read Helper
+
+    private func readSimpleQuantity(
+        arguments: [String: Any],
+        id: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        unitLabel: String,
+        label: String,
+        defaultDays: Int,
+        valueTransform: ((Double) -> Double)? = nil,
+        valueFormat: String = "%.2f"
+    ) async -> String {
+        guard let type = HKQuantityType.quantityType(forIdentifier: id) else {
+            return "[Error] \(label) type is unavailable on this device."
+        }
+        if let err = await ensureAccess() { return err }
+
+        let (start, end) = resolveDateRange(arguments: arguments, defaultDays: defaultDays)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+
+        do {
+            let samples = try await fetchQuantitySamples(type: type, predicate: predicate, limit: 50)
+            if samples.isEmpty {
+                return "(No \(label.lowercased()) samples found between \(formatDate(start)) and \(formatDate(end)))"
+            }
+
+            let rows = samples.prefix(20).map { sample in
+                var v = sample.quantity.doubleValue(for: unit)
+                if let t = valueTransform { v = t(v) }
+                return "- \(formatDate(sample.endDate)): \(String(format: valueFormat, v)) \(unitLabel)"
+            }.joined(separator: "\n")
+
+            return """
+            \(label) samples:
+            - Range: \(formatDate(start)) to \(formatDate(end))
+            - Count: \(samples.count)
+            \(rows)
+            """
+        } catch {
+            return "[Error] Failed to read \(label.lowercased()): \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Helpers
+
+    private func fetchCorrelationSamples(type: HKCorrelationType, predicate: NSPredicate?, limit: Int) async throws -> [HKCorrelation] {
+        try await withCheckedThrowingContinuation { continuation in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: limit, sortDescriptors: [sort]) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: (samples as? [HKCorrelation]) ?? [])
+            }
+            store.execute(query)
+        }
+    }
 
     private func fetchQuantitySamples(type: HKQuantityType, predicate: NSPredicate?, limit: Int) async throws -> [HKQuantitySample] {
         try await withCheckedThrowingContinuation { continuation in
@@ -444,30 +727,22 @@ struct AppleHealthTools {
         gramsKey: String,
         defaultLabel: String
     ) async -> String {
+        if let err = await ensureAccess() { return err }
+        if let err = checkWriteAuth(id) { return err }
         guard let type = HKQuantityType.quantityType(forIdentifier: id) else {
             return "[Error] \(defaultLabel.capitalized) type is unavailable on this device."
         }
-        if let err = await ApplePermissionManager.shared.ensureHealthAccess(read: [], write: [type]) { return err }
 
-        guard let grams = (arguments[gramsKey] as? Double) ?? (arguments["value"] as? Double) else {
-            return "[Error] Missing required parameter: \(gramsKey)"
-        }
-        if grams <= 0 {
-            return "[Error] \(gramsKey) must be a positive number."
+        guard let grams = (arguments[gramsKey] as? Double) ?? (arguments["value"] as? Double), grams > 0 else {
+            return "[Error] Missing or invalid parameter: \(gramsKey) (must be positive)"
         }
 
         let when = parseDate(arguments["date"] as? String) ?? Date()
-        let quantity = HKQuantity(unit: .gram(), doubleValue: grams)
-        let sample = HKQuantitySample(type: type, quantity: quantity, start: when, end: when)
+        let sample = HKQuantitySample(type: type, quantity: HKQuantity(unit: .gram(), doubleValue: grams), start: when, end: when)
 
         do {
             try await saveSample(sample)
-            return """
-            Dietary \(defaultLabel) written successfully.
-            - \(defaultLabel.capitalized): \(String(format: "%.1f", grams)) g
-            - Date: \(formatDate(when))
-            - Source: iClaw
-            """
+            return "Dietary \(defaultLabel) written successfully.\n- \(defaultLabel.capitalized): \(String(format: "%.1f", grams)) g\n- Date: \(formatDate(when))"
         } catch {
             return "[Error] Failed to write dietary \(defaultLabel): \(error.localizedDescription)"
         }

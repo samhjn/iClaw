@@ -117,7 +117,7 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         case "maps.getDirections":
             return await AppleMapTools().getDirections(arguments: args)
 
-        // --- Health ---
+        // --- Health (Read) ---
         case "health.readSteps":
             return await AppleHealthTools().readSteps(arguments: args)
         case "health.readHeartRate":
@@ -126,6 +126,15 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             return await AppleHealthTools().readSleep(arguments: args)
         case "health.readBodyMass":
             return await AppleHealthTools().readBodyMass(arguments: args)
+        case "health.readBloodPressure":
+            return await AppleHealthTools().readBloodPressure(arguments: args)
+        case "health.readBloodGlucose":
+            return await AppleHealthTools().readBloodGlucose(arguments: args)
+        case "health.readBloodOxygen":
+            return await AppleHealthTools().readBloodOxygen(arguments: args)
+        case "health.readBodyTemperature":
+            return await AppleHealthTools().readBodyTemperature(arguments: args)
+        // --- Health (Write) ---
         case "health.writeDietaryEnergy":
             return await AppleHealthTools().writeDietaryEnergy(arguments: args)
         case "health.writeBodyMass":
@@ -138,6 +147,20 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             return await AppleHealthTools().writeDietaryProtein(arguments: args)
         case "health.writeDietaryFat":
             return await AppleHealthTools().writeDietaryFat(arguments: args)
+        case "health.writeBloodPressure":
+            return await AppleHealthTools().writeBloodPressure(arguments: args)
+        case "health.writeBodyFat":
+            return await AppleHealthTools().writeBodyFat(arguments: args)
+        case "health.writeHeight":
+            return await AppleHealthTools().writeHeight(arguments: args)
+        case "health.writeBloodGlucose":
+            return await AppleHealthTools().writeBloodGlucose(arguments: args)
+        case "health.writeBloodOxygen":
+            return await AppleHealthTools().writeBloodOxygen(arguments: args)
+        case "health.writeBodyTemperature":
+            return await AppleHealthTools().writeBodyTemperature(arguments: args)
+        case "health.writeHeartRate":
+            return await AppleHealthTools().writeHeartRate(arguments: args)
         case "health.writeWorkout":
             return await AppleHealthTools().writeWorkout(arguments: args)
 
@@ -214,12 +237,23 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
                 readHeartRate: function(opts) { return call('health.readHeartRate', opts || {}); },
                 readSleep: function(opts) { return call('health.readSleep', opts || {}); },
                 readBodyMass: function(opts) { return call('health.readBodyMass', opts || {}); },
+                readBloodPressure: function(opts) { return call('health.readBloodPressure', opts || {}); },
+                readBloodGlucose: function(opts) { return call('health.readBloodGlucose', opts || {}); },
+                readBloodOxygen: function(opts) { return call('health.readBloodOxygen', opts || {}); },
+                readBodyTemperature: function(opts) { return call('health.readBodyTemperature', opts || {}); },
                 writeDietaryEnergy: function(opts) { return call('health.writeDietaryEnergy', opts || {}); },
                 writeBodyMass: function(opts) { return call('health.writeBodyMass', opts || {}); },
                 writeDietaryWater: function(opts) { return call('health.writeDietaryWater', opts || {}); },
                 writeDietaryCarbohydrates: function(opts) { return call('health.writeDietaryCarbohydrates', opts || {}); },
                 writeDietaryProtein: function(opts) { return call('health.writeDietaryProtein', opts || {}); },
                 writeDietaryFat: function(opts) { return call('health.writeDietaryFat', opts || {}); },
+                writeBloodPressure: function(opts) { return call('health.writeBloodPressure', opts || {}); },
+                writeBodyFat: function(opts) { return call('health.writeBodyFat', opts || {}); },
+                writeHeight: function(opts) { return call('health.writeHeight', opts || {}); },
+                writeBloodGlucose: function(opts) { return call('health.writeBloodGlucose', opts || {}); },
+                writeBloodOxygen: function(opts) { return call('health.writeBloodOxygen', opts || {}); },
+                writeBodyTemperature: function(opts) { return call('health.writeBodyTemperature', opts || {}); },
+                writeHeartRate: function(opts) { return call('health.writeHeartRate', opts || {}); },
                 writeWorkout: function(opts) { return call('health.writeWorkout', opts || {}); }
             }
         };

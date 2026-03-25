@@ -405,12 +405,23 @@
 "toolCard.healthReadHeartRate" = "读取心率";
 "toolCard.healthReadSleep" = "读取睡眠";
 "toolCard.healthReadBodyMass" = "读取体重";
+"toolCard.healthReadBloodPressure" = "读取血压";
+"toolCard.healthReadBloodGlucose" = "读取血糖";
+"toolCard.healthReadBloodOxygen" = "读取血氧";
+"toolCard.healthReadBodyTemperature" = "读取体温";
 "toolCard.healthWriteDietaryEnergy" = "写入卡路里";
 "toolCard.healthWriteBodyMass" = "写入体重";
 "toolCard.healthWriteDietaryWater" = "写入饮水";
 "toolCard.healthWriteDietaryCarbohydrates" = "写入碳水";
 "toolCard.healthWriteDietaryProtein" = "写入蛋白";
 "toolCard.healthWriteDietaryFat" = "写入脂肪";
+"toolCard.healthWriteBloodPressure" = "写入血压";
+"toolCard.healthWriteBodyFat" = "写入体脂";
+"toolCard.healthWriteHeight" = "写入身高";
+"toolCard.healthWriteBloodGlucose" = "写入血糖";
+"toolCard.healthWriteBloodOxygen" = "写入血氧";
+"toolCard.healthWriteBodyTemperature" = "写入体温";
+"toolCard.healthWriteHeartRate" = "写入心率";
 "toolCard.healthWriteWorkout" = "写入运动";
 
 // MARK: - Tool Result
