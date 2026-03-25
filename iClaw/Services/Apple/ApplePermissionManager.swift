@@ -181,17 +181,74 @@ final class ApplePermissionManager {
 
     // MARK: - HealthKit
 
-    func ensureHealthAccess(read: Set<HKObjectType>, write: Set<HKSampleType>) async -> String? {
+    private var healthAuthRequested = false
+
+    /// All HealthKit types the app may read/write – requested once upfront.
+    static let allHealthReadTypes: Set<HKObjectType> = {
+        var types: Set<HKObjectType> = []
+        let qIds: [HKQuantityTypeIdentifier] = [
+            .stepCount, .heartRate, .bodyMass, .bodyFatPercentage, .height,
+            .bloodPressureSystolic, .bloodPressureDiastolic,
+            .bloodGlucose, .oxygenSaturation, .bodyTemperature,
+            .dietaryEnergyConsumed, .dietaryWater,
+            .dietaryCarbohydrates, .dietaryProtein, .dietaryFatTotal,
+            .activeEnergyBurned, .distanceWalkingRunning,
+        ]
+        for id in qIds {
+            if let t = HKQuantityType.quantityType(forIdentifier: id) { types.insert(t) }
+        }
+        if let sleep = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
+        types.insert(HKObjectType.workoutType())
+        // Note: HKCorrelationType.bloodPressure cannot be in read set either —
+        // request the individual quantity types (systolic/diastolic) instead.
+        return types
+    }()
+
+    static let allHealthWriteTypes: Set<HKSampleType> = {
+        var types: Set<HKSampleType> = []
+        let qIds: [HKQuantityTypeIdentifier] = [
+            .bodyMass, .bodyFatPercentage, .height,
+            .heartRate, .bloodPressureSystolic, .bloodPressureDiastolic,
+            .bloodGlucose, .oxygenSaturation, .bodyTemperature,
+            .dietaryEnergyConsumed, .dietaryWater,
+            .dietaryCarbohydrates, .dietaryProtein, .dietaryFatTotal,
+            .activeEnergyBurned, .distanceWalkingRunning,
+        ]
+        for id in qIds {
+            if let t = HKQuantityType.quantityType(forIdentifier: id) { types.insert(t) }
+        }
+        types.insert(HKObjectType.workoutType())
+        // Note: HKCorrelationType.bloodPressure must NOT be in toShare —
+        // only the individual quantity types (systolic/diastolic) are shareable.
+        return types
+    }()
+
+    /// Request all HealthKit permissions once. Subsequent calls are no-ops.
+    func ensureHealthAccess() async -> String? {
         guard HKHealthStore.isHealthDataAvailable() else {
             return "[Error] Health data is not available on this device."
         }
-
+        if healthAuthRequested { return nil }
         do {
-            try await healthStore.requestAuthorization(toShare: write, read: read)
+            try await healthStore.requestAuthorization(
+                toShare: Self.allHealthWriteTypes,
+                read: Self.allHealthReadTypes
+            )
+            healthAuthRequested = true
             return nil
         } catch {
             return "[Error] Failed to request HealthKit access: \(error.localizedDescription)"
         }
+    }
+
+    /// Legacy per-type entry point – still requests everything in batch.
+    func ensureHealthAccess(read: Set<HKObjectType>, write: Set<HKSampleType>) async -> String? {
+        await ensureHealthAccess()
+    }
+
+    /// Check if sharing (write) is authorized for a specific sample type.
+    func isHealthSharingAuthorized(for type: HKObjectType) -> Bool {
+        healthStore.authorizationStatus(for: type) == .sharingAuthorized
     }
 
     private func describeEKStatus(_ s: EKAuthorizationStatus) -> String {

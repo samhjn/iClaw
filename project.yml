@@ -42,4 +42,8 @@ targets:
         ENABLE_USER_SCRIPT_SANDBOXING: "YES"
         ENABLE_PREVIEWS: "YES"
         SWIFT_OBJC_BRIDGING_HEADER: ""
-        CODE_SIGN_ENTITLEMENTS: iClaw/iClaw.entitlements
+    entitlements:
+      path: iClaw/iClaw.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []

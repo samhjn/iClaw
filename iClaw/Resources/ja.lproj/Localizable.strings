@@ -404,12 +404,23 @@
 "toolCard.healthReadHeartRate" = "心拍数取得";
 "toolCard.healthReadSleep" = "睡眠取得";
 "toolCard.healthReadBodyMass" = "体重取得";
+"toolCard.healthReadBloodPressure" = "血圧取得";
+"toolCard.healthReadBloodGlucose" = "血糖値取得";
+"toolCard.healthReadBloodOxygen" = "血中酸素取得";
+"toolCard.healthReadBodyTemperature" = "体温取得";
 "toolCard.healthWriteDietaryEnergy" = "カロリー記録";
 "toolCard.healthWriteBodyMass" = "体重記録";
 "toolCard.healthWriteDietaryWater" = "水分摂取記録";
 "toolCard.healthWriteDietaryCarbohydrates" = "炭水化物記録";
 "toolCard.healthWriteDietaryProtein" = "たんぱく質記録";
 "toolCard.healthWriteDietaryFat" = "脂質記録";
+"toolCard.healthWriteBloodPressure" = "血圧記録";
+"toolCard.healthWriteBodyFat" = "体脂肪記録";
+"toolCard.healthWriteHeight" = "身長記録";
+"toolCard.healthWriteBloodGlucose" = "血糖値記録";
+"toolCard.healthWriteBloodOxygen" = "血中酸素記録";
+"toolCard.healthWriteBodyTemperature" = "体温記録";
+"toolCard.healthWriteHeartRate" = "心拍数記録";
 "toolCard.healthWriteWorkout" = "ワークアウト記録";
 
 // MARK: - Tool Result

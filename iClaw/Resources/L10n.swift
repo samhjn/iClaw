@@ -480,12 +480,23 @@ enum L10n {
         static var healthReadHeartRate: String { tr("toolCard.healthReadHeartRate") }
         static var healthReadSleep: String { tr("toolCard.healthReadSleep") }
         static var healthReadBodyMass: String { tr("toolCard.healthReadBodyMass") }
+        static var healthReadBloodPressure: String { tr("toolCard.healthReadBloodPressure") }
+        static var healthReadBloodGlucose: String { tr("toolCard.healthReadBloodGlucose") }
+        static var healthReadBloodOxygen: String { tr("toolCard.healthReadBloodOxygen") }
+        static var healthReadBodyTemperature: String { tr("toolCard.healthReadBodyTemperature") }
         static var healthWriteDietaryEnergy: String { tr("toolCard.healthWriteDietaryEnergy") }
         static var healthWriteBodyMass: String { tr("toolCard.healthWriteBodyMass") }
         static var healthWriteDietaryWater: String { tr("toolCard.healthWriteDietaryWater") }
         static var healthWriteDietaryCarbohydrates: String { tr("toolCard.healthWriteDietaryCarbohydrates") }
         static var healthWriteDietaryProtein: String { tr("toolCard.healthWriteDietaryProtein") }
         static var healthWriteDietaryFat: String { tr("toolCard.healthWriteDietaryFat") }
+        static var healthWriteBloodPressure: String { tr("toolCard.healthWriteBloodPressure") }
+        static var healthWriteBodyFat: String { tr("toolCard.healthWriteBodyFat") }
+        static var healthWriteHeight: String { tr("toolCard.healthWriteHeight") }
+        static var healthWriteBloodGlucose: String { tr("toolCard.healthWriteBloodGlucose") }
+        static var healthWriteBloodOxygen: String { tr("toolCard.healthWriteBloodOxygen") }
+        static var healthWriteBodyTemperature: String { tr("toolCard.healthWriteBodyTemperature") }
+        static var healthWriteHeartRate: String { tr("toolCard.healthWriteHeartRate") }
         static var healthWriteWorkout: String { tr("toolCard.healthWriteWorkout") }
     }
 

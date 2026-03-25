@@ -152,19 +152,13 @@ private struct SingleToolCallCard: View {
         case "map_get_directions":
             return dict["to_address"] as? String
         case "health_write_dietary_energy":
-            if let kcal = dict["kcal"] as? Double {
-                return String(format: "%.0f kcal", kcal)
-            }
+            if let kcal = dict["kcal"] as? Double { return String(format: "%.0f kcal", kcal) }
             return nil
         case "health_write_dietary_water":
-            if let ml = dict["ml"] as? Double {
-                return String(format: "%.0f ml", ml)
-            }
+            if let ml = dict["ml"] as? Double { return String(format: "%.0f ml", ml) }
             return nil
         case "health_write_dietary_carbohydrates", "health_write_dietary_protein", "health_write_dietary_fat":
-            if let grams = dict["grams"] as? Double {
-                return String(format: "%.1f g", grams)
-            }
+            if let grams = dict["grams"] as? Double { return String(format: "%.1f g", grams) }
             return nil
         case "health_write_body_mass":
             if let value = dict["value"] as? Double {
@@ -172,9 +166,41 @@ private struct SingleToolCallCard: View {
                 return String(format: "%.2f %@", value, unit)
             }
             return nil
+        case "health_write_blood_pressure":
+            if let sys = dict["systolic"] as? Double, let dia = dict["diastolic"] as? Double {
+                return "\(Int(sys))/\(Int(dia)) mmHg"
+            }
+            return nil
+        case "health_write_body_fat":
+            if let pct = dict["percentage"] as? Double { return String(format: "%.1f%%", pct) }
+            return nil
+        case "health_write_height":
+            if let v = dict["value"] as? Double {
+                let unit = (dict["unit"] as? String) ?? "cm"
+                return String(format: "%.1f %@", v, unit)
+            }
+            return nil
+        case "health_write_blood_glucose":
+            if let v = dict["value"] as? Double {
+                let unit = (dict["unit"] as? String) ?? "mmol/L"
+                return String(format: "%.2f %@", v, unit)
+            }
+            return nil
+        case "health_write_blood_oxygen":
+            if let pct = dict["percentage"] as? Double { return String(format: "%.1f%%", pct) }
+            return nil
+        case "health_write_body_temperature":
+            if let v = dict["value"] as? Double {
+                let unit = (dict["unit"] as? String)?.lowercased() == "f" ? "°F" : "°C"
+                return String(format: "%.1f %@", v, unit)
+            }
+            return nil
+        case "health_write_heart_rate":
+            if let bpm = dict["bpm"] as? Double { return "\(Int(bpm)) bpm" }
+            return nil
         case "health_write_workout":
             return dict["activity_type"] as? String
-        case "health_read_steps", "health_read_heart_rate", "health_read_sleep", "health_read_body_mass":
+        case let name where name.hasPrefix("health_read_"):
             return dict["start_date"] as? String
         default:
             return nil
@@ -553,6 +579,14 @@ struct ToolMeta {
             return ToolMeta(displayName: L10n.ToolCard.healthReadSleep, icon: "bed.double", color: .pink)
         case "health_read_body_mass":
             return ToolMeta(displayName: L10n.ToolCard.healthReadBodyMass, icon: "scalemass", color: .pink)
+        case "health_read_blood_pressure":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadBloodPressure, icon: "heart.circle", color: .pink)
+        case "health_read_blood_glucose":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadBloodGlucose, icon: "drop.triangle", color: .pink)
+        case "health_read_blood_oxygen":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadBloodOxygen, icon: "lungs", color: .pink)
+        case "health_read_body_temperature":
+            return ToolMeta(displayName: L10n.ToolCard.healthReadBodyTemperature, icon: "thermometer.medium", color: .pink)
         case "health_write_dietary_energy":
             return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryEnergy, icon: "fork.knife.circle", color: .red)
         case "health_write_body_mass":
@@ -565,6 +599,20 @@ struct ToolMeta {
             return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryProtein, icon: "bolt.heart", color: .orange)
         case "health_write_dietary_fat":
             return ToolMeta(displayName: L10n.ToolCard.healthWriteDietaryFat, icon: "flame.circle", color: .orange)
+        case "health_write_blood_pressure":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteBloodPressure, icon: "heart.circle.fill", color: .red)
+        case "health_write_body_fat":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteBodyFat, icon: "percent", color: .red)
+        case "health_write_height":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteHeight, icon: "ruler", color: .red)
+        case "health_write_blood_glucose":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteBloodGlucose, icon: "drop.triangle.fill", color: .red)
+        case "health_write_blood_oxygen":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteBloodOxygen, icon: "lungs.fill", color: .red)
+        case "health_write_body_temperature":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteBodyTemperature, icon: "thermometer.medium", color: .red)
+        case "health_write_heart_rate":
+            return ToolMeta(displayName: L10n.ToolCard.healthWriteHeartRate, icon: "heart.fill", color: .red)
         case "health_write_workout":
             return ToolMeta(displayName: L10n.ToolCard.healthWriteWorkout, icon: "figure.run.circle", color: .red)
         default:
