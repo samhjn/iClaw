@@ -11,9 +11,41 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     let isAvailable = true
 
     func execute(code: String, mode: ExecutionMode, timeout: TimeInterval) async throws -> ExecutionResult {
+        try await execute(code: code, mode: mode, timeout: timeout, blockedBridgeActions: [], execId: nil)
+    }
+
+    /// Execute JS with per-agent Apple bridge permission enforcement.
+    ///
+    /// - Parameters:
+    ///   - blockedBridgeActions: Bridge actions blocked for this agent (from `AppleToolCategory.blockedBridgeActions(for:)`).
+    ///   - execId: Unique ID for this execution context, used for native-layer permission verification.
+    func execute(
+        code: String,
+        mode: ExecutionMode,
+        timeout: TimeInterval,
+        blockedBridgeActions: Set<String>,
+        execId: String?
+    ) async throws -> ExecutionResult {
         os_log(.info, log: jsLog, "[JS] execute called, mode=%{public}@, timeout=%{public}f", mode.rawValue, timeout)
 
-        let script = Self.buildScript(code: code, mode: mode)
+        let effectiveExecId = execId ?? UUID().uuidString
+        let script = Self.buildScript(code: code, mode: mode, blockedBridgeActions: blockedBridgeActions, execId: effectiveExecId)
+
+        // Register native-layer permission checker if we have blocked actions
+        let needsPermissionRegistration = !blockedBridgeActions.isEmpty
+        if needsPermissionRegistration {
+            await AppleEcosystemBridge.shared.registerPermissions(execId: effectiveExecId) { action in
+                !blockedBridgeActions.contains(action)
+            }
+        }
+
+        defer {
+            if needsPermissionRegistration {
+                Task { @MainActor in
+                    AppleEcosystemBridge.shared.unregisterPermissions(execId: effectiveExecId)
+                }
+            }
+        }
 
         // If the WebContent process crashes (OOM, etc.), the runtime auto-recreates.
         // Retry once so transient crashes are transparent to the caller.
@@ -45,7 +77,12 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
 
     // MARK: - Script Builder
 
-    private static func buildScript(code: String, mode: ExecutionMode) -> String {
+    private static func buildScript(
+        code: String,
+        mode: ExecutionMode,
+        blockedBridgeActions: Set<String>,
+        execId: String
+    ) -> String {
         let userCode: String
         switch mode {
         case .repr:
@@ -62,9 +99,11 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
             """
         }
 
+        let preamble = AppleEcosystemBridge.jsPreamble(blockedActions: blockedBridgeActions, execId: execId)
+
         return """
         \(runtimeScript)
-        \(AppleEcosystemBridge.jsPreamble)
+        \(preamble)
         try {
             \(userCode)
         } catch(__e) {

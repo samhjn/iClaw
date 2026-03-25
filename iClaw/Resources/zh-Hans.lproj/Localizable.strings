@@ -103,6 +103,30 @@
 "agentDetail.snippetLanguage" = "语言";
 "agentDetail.snippetCode" = "代码";
 "agentDetail.newSnippet" = "新建代码片段";
+"agentDetail.applePermissions" = "Apple 权限";
+
+// MARK: - Apple Permissions
+"applePermissions.title" = "Apple 权限";
+"applePermissions.description" = "配置此智能体可以访问哪些 Apple 系统功能。读取允许查询数据；写入允许创建、修改或删除数据。";
+"applePermissions.readWrite" = "读写";
+"applePermissions.readOnly" = "仅读取";
+"applePermissions.writeOnly" = "仅写入";
+"applePermissions.disabled" = "禁用";
+"applePermissions.enableAll" = "全部启用（读写）";
+"applePermissions.readOnlyAll" = "全部设为仅读取";
+"applePermissions.disableAll" = "全部禁用";
+"applePermissions.calendar" = "日历";
+"applePermissions.reminders" = "提醒事项";
+"applePermissions.contacts" = "通讯录";
+"applePermissions.clipboard" = "剪贴板";
+"applePermissions.notifications" = "通知";
+"applePermissions.location" = "位置";
+"applePermissions.map" = "地图";
+"applePermissions.health" = "健康";
+"applePermissions.summaryReadWrite" = "%d 个工具已启用";
+"applePermissions.summaryReadOnly" = "%d 个读取工具已启用";
+"applePermissions.summaryWriteOnly" = "%d 个写入工具已启用";
+"applePermissions.summaryDisabled" = "所有工具已禁用";
 
 // MARK: - Model Config
 "modelConfig.title" = "模型配置";

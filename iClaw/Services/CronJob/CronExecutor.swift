@@ -79,7 +79,7 @@ final class CronExecutor {
                 let (response, _) = try await router.chatCompletionWithFailover(
                     agent: agent,
                     messages: messages,
-                    tools: ToolDefinitions.allTools
+                    tools: ToolDefinitions.tools(for: agent)
                 )
 
                 guard let choice = response.choices.first, let msg = choice.message else { break }

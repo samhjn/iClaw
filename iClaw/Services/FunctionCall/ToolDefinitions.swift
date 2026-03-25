@@ -1,6 +1,17 @@
 import Foundation
 
 enum ToolDefinitions {
+
+    /// Returns tools filtered by the agent's Apple tool permission settings.
+    /// Non-Apple tools are always included; Apple tools are filtered per category read/write permissions.
+    static func tools(for agent: Agent) -> [LLMToolDefinition] {
+        allTools.filter { tool in
+            let name = tool.function.name
+            guard AppleToolCategory.allAppleToolNames.contains(name) else { return true }
+            return agent.isAppleToolAllowed(name)
+        }
+    }
+
     static var allTools: [LLMToolDefinition] {
         [
             readConfigTool,

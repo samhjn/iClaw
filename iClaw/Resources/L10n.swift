@@ -142,6 +142,33 @@ enum L10n {
         static var snippetLanguage: String { tr("agentDetail.snippetLanguage") }
         static var snippetCode: String { tr("agentDetail.snippetCode") }
         static var newSnippet: String { tr("agentDetail.newSnippet") }
+        static var applePermissions: String { tr("agentDetail.applePermissions") }
+    }
+
+    // MARK: - Apple Permissions
+
+    enum ApplePermissions {
+        static var title: String { tr("applePermissions.title") }
+        static var description: String { tr("applePermissions.description") }
+        static var readWrite: String { tr("applePermissions.readWrite") }
+        static var readOnly: String { tr("applePermissions.readOnly") }
+        static var writeOnly: String { tr("applePermissions.writeOnly") }
+        static var disabled: String { tr("applePermissions.disabled") }
+        static var enableAll: String { tr("applePermissions.enableAll") }
+        static var readOnlyAll: String { tr("applePermissions.readOnlyAll") }
+        static var disableAll: String { tr("applePermissions.disableAll") }
+        static var calendar: String { tr("applePermissions.calendar") }
+        static var reminders: String { tr("applePermissions.reminders") }
+        static var contacts: String { tr("applePermissions.contacts") }
+        static var clipboard: String { tr("applePermissions.clipboard") }
+        static var notifications: String { tr("applePermissions.notifications") }
+        static var location: String { tr("applePermissions.location") }
+        static var map: String { tr("applePermissions.map") }
+        static var health: String { tr("applePermissions.health") }
+        static func summaryReadWrite(_ count: Int) -> String { tr("applePermissions.summaryReadWrite", count) }
+        static func summaryReadOnly(_ count: Int) -> String { tr("applePermissions.summaryReadOnly", count) }
+        static func summaryWriteOnly(_ count: Int) -> String { tr("applePermissions.summaryWriteOnly", count) }
+        static var summaryDisabled: String { tr("applePermissions.summaryDisabled") }
     }
 
     // MARK: - Model Config

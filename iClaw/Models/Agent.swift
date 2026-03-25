@@ -47,6 +47,10 @@ final class Agent {
     /// When non-empty, subagent and agent model selections are restricted to this list.
     var allowedModelIdsRaw: String?
 
+    /// Per-agent Apple tool permissions stored as JSON: `{"calendar":"rw","health":"r",...}`.
+    /// nil = all tools enabled (backward compatible default).
+    var appleToolPermissionsRaw: String?
+
     var createdAt: Date
     var updatedAt: Date
 
@@ -105,6 +109,52 @@ final class Agent {
         return list.contains("\(providerId.uuidString):\(modelName)")
     }
 
+    // MARK: - Apple Tool Permissions
+
+    /// Decoded permission map. Empty dict = all enabled (default).
+    var appleToolPermissions: [String: AppleToolPermissionLevel] {
+        get {
+            guard let raw = appleToolPermissionsRaw,
+                  let data = raw.data(using: .utf8),
+                  let dict = try? JSONDecoder().decode([String: AppleToolPermissionLevel].self, from: data)
+            else { return [:] }
+            return dict
+        }
+        set {
+            if newValue.isEmpty {
+                appleToolPermissionsRaw = nil
+            } else {
+                appleToolPermissionsRaw = (try? String(data: JSONEncoder().encode(newValue), encoding: .utf8)) ?? nil
+            }
+        }
+    }
+
+    /// Get the permission level for a specific category. Returns `.readWrite` when not configured.
+    func permissionLevel(for category: AppleToolCategory) -> AppleToolPermissionLevel {
+        appleToolPermissions[category.rawValue] ?? .readWrite
+    }
+
+    /// Set the permission level for a category. `.readWrite` removes the key (default).
+    func setPermissionLevel(_ level: AppleToolPermissionLevel, for category: AppleToolCategory) {
+        var perms = appleToolPermissions
+        if level == .readWrite {
+            perms.removeValue(forKey: category.rawValue)
+        } else {
+            perms[category.rawValue] = level
+        }
+        appleToolPermissions = perms
+    }
+
+    /// Check if a specific Apple tool is allowed for this agent.
+    func isAppleToolAllowed(_ toolName: String) -> Bool {
+        guard let category = AppleToolCategory.category(for: toolName) else { return true }
+        let level = permissionLevel(for: category)
+        if AppleToolCategory.isWriteTool(toolName) {
+            return level.allowsWrite
+        }
+        return level.allowsRead
+    }
+
     init(
         name: String,
         soulMarkdown: String = "",
@@ -132,6 +182,7 @@ final class Agent {
         self.subAgentModelNameOverride = nil
         self.subAgentType = nil
         self.allowedModelIdsRaw = nil
+        self.appleToolPermissionsRaw = nil
         self.createdAt = Date()
         self.updatedAt = Date()
     }

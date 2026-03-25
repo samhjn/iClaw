@@ -103,6 +103,30 @@
 "agentDetail.snippetLanguage" = "Language";
 "agentDetail.snippetCode" = "Code";
 "agentDetail.newSnippet" = "New Snippet";
+"agentDetail.applePermissions" = "Apple Permissions";
+
+// MARK: - Apple Permissions
+"applePermissions.title" = "Apple Permissions";
+"applePermissions.description" = "Configure which Apple system features this agent can access. Read allows querying data; Write allows creating, modifying, or deleting data.";
+"applePermissions.readWrite" = "Read & Write";
+"applePermissions.readOnly" = "Read Only";
+"applePermissions.writeOnly" = "Write Only";
+"applePermissions.disabled" = "Disabled";
+"applePermissions.enableAll" = "Enable All (Read & Write)";
+"applePermissions.readOnlyAll" = "Set All to Read Only";
+"applePermissions.disableAll" = "Disable All";
+"applePermissions.calendar" = "Calendar";
+"applePermissions.reminders" = "Reminders";
+"applePermissions.contacts" = "Contacts";
+"applePermissions.clipboard" = "Clipboard";
+"applePermissions.notifications" = "Notifications";
+"applePermissions.location" = "Location";
+"applePermissions.map" = "Maps";
+"applePermissions.health" = "Health";
+"applePermissions.summaryReadWrite" = "%d tools enabled";
+"applePermissions.summaryReadOnly" = "%d read tools enabled";
+"applePermissions.summaryWriteOnly" = "%d write tools enabled";
+"applePermissions.summaryDisabled" = "All tools disabled";
 
 // MARK: - Model Config
 "modelConfig.title" = "Model Config";

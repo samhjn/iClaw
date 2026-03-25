@@ -52,6 +52,7 @@
 		839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */; };
 		85FBE9AFDE5E62822E010632 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6FA049A05520F6A61F7763D0 /* Assets.xcassets */; };
 		8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */; };
+		8E37C7C63D4C7978E41595EB /* AppleToolCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DE7A5CCA4949CA46722257 /* AppleToolCategory.swift */; };
 		91FC43248B875B7599B0AFE4 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4845603F169879185B9CAF /* ContextManager.swift */; };
 		976B43C21F7B924DD339DE33 /* SessionCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */; };
 		981820D7F144AD9C634AC068 /* Agent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2451AAD7AD253EDA6298F2 /* Agent.swift */; };
@@ -90,6 +91,7 @@
 		E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */; };
 		EE8A5D3C8795060CE1E9A02C /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0936D9E098400AFDB6A01F16 /* LLMService.swift */; };
 		F16E98A9D4FD1121B92A9C65 /* SkillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000F0AF0F62F231F3435001 /* SkillService.swift */; };
+		F189691DC04FD19ECC4B4416 /* AgentApplePermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 213EED516B7FD4BBF761C817 /* AgentApplePermissionsView.swift */; };
 		FDDE9D65862C12B78CA29B7A /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053D417C1955A1DA746C1ECC /* L10n.swift */; };
 		FF140850C540F0F7738C5541 /* AgentModelConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */; };
 		FFBFC17FDBADDACBBF100EEE /* CodeExecutorProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */; };
@@ -109,8 +111,10 @@
 		1B7413410EB1221E98EB56E6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		204B12CACEB21513C30E68E9 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleContactsTools.swift; sourceTree = "<group>"; };
+		213EED516B7FD4BBF761C817 /* AgentApplePermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentApplePermissionsView.swift; sourceTree = "<group>"; };
 		23CF1A68532A315C891FBCE5 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
 		253B9F4D995EB706EA719B48 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		25DE7A5CCA4949CA46722257 /* AppleToolCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleToolCategory.swift; sourceTree = "<group>"; };
 		2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSkillsView.swift; sourceTree = "<group>"; };
 		2DD5519FE730658F3156E05A /* SessionListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListViewModel.swift; sourceTree = "<group>"; };
 		31321BA5D5DDEED322500D1D /* DefaultSOUL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultSOUL.md; sourceTree = "<group>"; };
@@ -304,6 +308,7 @@
 		45FA8A3C852518E5235C4A47 /* Agent */ = {
 			isa = PBXGroup;
 			children = (
+				213EED516B7FD4BBF761C817 /* AgentApplePermissionsView.swift */,
 				3B26121A2FB261E908D450F5 /* AgentDetailView.swift */,
 				55554A279D2B534D4EA94DCD /* AgentListView.swift */,
 				3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */,
@@ -412,6 +417,7 @@
 				9D7056519AF941DA3556616C /* AppleMapTools.swift */,
 				90F59DF61B14F535FAD6E530 /* AppleNotificationTools.swift */,
 				C8000A49E30379E483282ABA /* AppleReminderTools.swift */,
+				25DE7A5CCA4949CA46722257 /* AppleToolCategory.swift */,
 				0CE0AD803ABD394A47164B27 /* BrowserTools.swift */,
 				39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */,
 				91869063A2B5015A3963744B /* ConfigTools.swift */,
@@ -570,6 +576,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				981820D7F144AD9C634AC068 /* Agent.swift in Sources */,
+				F189691DC04FD19ECC4B4416 /* AgentApplePermissionsView.swift in Sources */,
 				60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */,
 				4996B0A463A1588C606A425A /* AgentDetailView.swift in Sources */,
 				9C6424BD77481B23C3E5530F /* AgentListView.swift in Sources */,
@@ -587,6 +594,7 @@
 				D6D23667A339D40BF1464089 /* AppleNotificationTools.swift in Sources */,
 				DC6F2E40FC06AA472A734930 /* ApplePermissionManager.swift in Sources */,
 				21F58823CDD6C4305A477A95 /* AppleReminderTools.swift in Sources */,
+				8E37C7C63D4C7978E41595EB /* AppleToolCategory.swift in Sources */,
 				61421AF6F0FB7E917E95E6A9 /* BrowserService.swift in Sources */,
 				A02716DCD05F261E7A482932 /* BrowserTools.swift in Sources */,
 				6D4BF00B528847FCAA2BCB0C /* BrowserView.swift in Sources */,

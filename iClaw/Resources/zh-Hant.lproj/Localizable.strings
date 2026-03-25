@@ -103,6 +103,30 @@
 "agentDetail.snippetLanguage" = "語言";
 "agentDetail.snippetCode" = "程式碼";
 "agentDetail.newSnippet" = "新建程式碼片段";
+"agentDetail.applePermissions" = "Apple 權限";
+
+// MARK: - Apple Permissions
+"applePermissions.title" = "Apple 權限";
+"applePermissions.description" = "設定此智能體可存取的 Apple 系統功能。讀取允許查詢資料；寫入允許建立、修改或刪除資料。";
+"applePermissions.readWrite" = "讀寫";
+"applePermissions.readOnly" = "僅讀取";
+"applePermissions.writeOnly" = "僅寫入";
+"applePermissions.disabled" = "停用";
+"applePermissions.enableAll" = "全部啟用（讀寫）";
+"applePermissions.readOnlyAll" = "全部設為僅讀取";
+"applePermissions.disableAll" = "全部停用";
+"applePermissions.calendar" = "日曆";
+"applePermissions.reminders" = "提醒事項";
+"applePermissions.contacts" = "聯絡資訊";
+"applePermissions.clipboard" = "剪貼簿";
+"applePermissions.notifications" = "通知";
+"applePermissions.location" = "位置";
+"applePermissions.map" = "地圖";
+"applePermissions.health" = "健康";
+"applePermissions.summaryReadWrite" = "%d 個工具已啟用";
+"applePermissions.summaryReadOnly" = "%d 個讀取工具已啟用";
+"applePermissions.summaryWriteOnly" = "%d 個寫入工具已啟用";
+"applePermissions.summaryDisabled" = "所有工具已停用";
 
 // MARK: - Model Config
 "modelConfig.title" = "模型設定";

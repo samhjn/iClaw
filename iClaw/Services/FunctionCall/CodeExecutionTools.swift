@@ -14,12 +14,21 @@ struct CodeExecutionTools {
         let mode: ExecutionMode = modeStr == "repr" ? .repr : .script
         let timeout = resolveJSTimeout(arguments: arguments)
 
-        guard let jsExecutor = CodeExecutorRegistry.shared.executor(for: "javascript") else {
+        guard let jsExecutor = CodeExecutorRegistry.shared.executor(for: "javascript") as? JavaScriptExecutor else {
             return "[Error] JavaScript executor is not available"
         }
 
+        let blockedActions = AppleToolCategory.blockedBridgeActions(for: agent)
+        let execId = UUID().uuidString
+
         do {
-            let result = try await jsExecutor.execute(code: code, mode: mode, timeout: timeout)
+            let result = try await jsExecutor.execute(
+                code: code,
+                mode: mode,
+                timeout: timeout,
+                blockedBridgeActions: blockedActions,
+                execId: execId
+            )
             var output = ""
             if !result.stdout.isEmpty {
                 output += result.stdout
