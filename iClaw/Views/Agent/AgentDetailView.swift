@@ -42,8 +42,8 @@ struct AgentDetailView: View {
                     NavigationLink(L10n.AgentDetail.modelConfig) {
                         AgentModelConfigView(agent: agent)
                     }
-                    NavigationLink(L10n.AgentDetail.applePermissions) {
-                        AgentApplePermissionsView(agent: agent)
+                    NavigationLink(L10n.AgentDetail.toolPermissions) {
+                        AgentToolPermissionsView(agent: agent)
                     }
                     NavigationLink(L10n.AgentDetail.skills) {
                         AgentSkillsView(agent: agent)

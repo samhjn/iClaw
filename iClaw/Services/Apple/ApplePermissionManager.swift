@@ -35,13 +35,13 @@ final class ApplePermissionManager {
             return nil
         case .notDetermined:
             let granted = await requestCalendarAccess()
-            return granted ? nil : "[Error] Calendar access denied by user."
+            return granted ? nil : L10n.PermissionError.calendarDeniedByUser
         case .denied, .restricted:
-            return "[Error] Calendar access denied. Please enable in Settings > Privacy > Calendars."
+            return L10n.PermissionError.calendarDenied
         case .writeOnly:
-            return "[Error] Only write access granted. Full access is required. Please update in Settings > Privacy > Calendars."
+            return L10n.PermissionError.calendarWriteOnly
         @unknown default:
-            return "[Error] Unknown calendar authorization status."
+            return L10n.PermissionError.calendarUnknown
         }
     }
 
@@ -65,11 +65,11 @@ final class ApplePermissionManager {
             return nil
         case .notDetermined:
             let granted = await requestRemindersAccess()
-            return granted ? nil : "[Error] Reminders access denied by user."
+            return granted ? nil : L10n.PermissionError.remindersDeniedByUser
         case .denied, .restricted:
-            return "[Error] Reminders access denied. Please enable in Settings > Privacy > Reminders."
+            return L10n.PermissionError.remindersDenied
         default:
-            return "[Error] Unknown reminders authorization status."
+            return L10n.PermissionError.remindersUnknown
         }
     }
 
@@ -93,13 +93,13 @@ final class ApplePermissionManager {
             return nil
         case .notDetermined:
             let granted = await requestContactsAccess()
-            return granted ? nil : "[Error] Contacts access denied by user."
+            return granted ? nil : L10n.PermissionError.contactsDeniedByUser
         case .denied, .restricted:
-            return "[Error] Contacts access denied. Please enable in Settings > Privacy > Contacts."
+            return L10n.PermissionError.contactsDenied
         case .limited:
             return nil
         @unknown default:
-            return "[Error] Unknown contacts authorization status."
+            return L10n.PermissionError.contactsUnknown
         }
     }
 
@@ -121,11 +121,11 @@ final class ApplePermissionManager {
             return nil
         case .notDetermined:
             let granted = await requestNotificationAccess()
-            return granted ? nil : "[Error] Notification access denied by user."
+            return granted ? nil : L10n.PermissionError.notificationDeniedByUser
         case .denied:
-            return "[Error] Notification access denied. Please enable in Settings > Notifications."
+            return L10n.PermissionError.notificationDenied
         @unknown default:
-            return "[Error] Unknown notification authorization status."
+            return L10n.PermissionError.notificationUnknown
         }
     }
 
@@ -146,7 +146,7 @@ final class ApplePermissionManager {
                     case .authorizedWhenInUse, .authorizedAlways:
                         continuation.resume(returning: nil)
                     default:
-                        continuation.resume(returning: "[Error] Location access denied by user.")
+                        continuation.resume(returning: L10n.PermissionError.locationDeniedByUser)
                     }
                 }
                 self.locationManagerDelegate = delegate
@@ -154,9 +154,9 @@ final class ApplePermissionManager {
                 manager.requestWhenInUseAuthorization()
             }
         case .denied, .restricted:
-            return "[Error] Location access denied. Please enable in Settings > Privacy > Location Services."
+            return L10n.PermissionError.locationDenied
         @unknown default:
-            return "[Error] Unknown location authorization status."
+            return L10n.PermissionError.locationUnknown
         }
     }
 
@@ -226,7 +226,7 @@ final class ApplePermissionManager {
     /// Request all HealthKit permissions once. Subsequent calls are no-ops.
     func ensureHealthAccess() async -> String? {
         guard HKHealthStore.isHealthDataAvailable() else {
-            return "[Error] Health data is not available on this device."
+            return L10n.PermissionError.healthUnavailable
         }
         if healthAuthRequested { return nil }
         do {
@@ -237,7 +237,7 @@ final class ApplePermissionManager {
             healthAuthRequested = true
             return nil
         } catch {
-            return "[Error] Failed to request HealthKit access: \(error.localizedDescription)"
+            return L10n.PermissionError.healthFailed(error.localizedDescription)
         }
     }
 

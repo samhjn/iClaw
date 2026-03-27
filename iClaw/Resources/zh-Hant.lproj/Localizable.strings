@@ -451,3 +451,38 @@
 // MARK: - Tool Result
 "toolResult.stdout" = "標準輸出";
 "toolResult.stderr" = "錯誤輸出";
+
+// MARK: - Tool Permissions
+"toolPermissions.title" = "功能權限";
+"toolPermissions.description" = "設定此智能體可以使用哪些工具和能力。讀取允許查詢資料；寫入允許建立、修改或刪除資料。";
+"toolPermissions.browser" = "瀏覽器";
+"toolPermissions.codeExecution" = "程式碼執行";
+"toolPermissions.subAgents" = "子智能體";
+"toolPermissions.cron" = "排程任務";
+"toolPermissions.skills" = "技能";
+"toolPermissions.config" = "設定";
+"toolPermissions.model" = "模型";
+"toolPermissions.appleSection" = "Apple 生態";
+"toolPermissions.agentSection" = "智能體能力";
+"agentDetail.toolPermissions" = "功能權限";
+
+// MARK: - Permission Errors
+"permError.calendarDenied" = "[錯誤] 日曆存取被拒絕。請在「設定 > 隱私 > 日曆」中啟用。";
+"permError.calendarDeniedByUser" = "[錯誤] 使用者拒絕了日曆存取權限。";
+"permError.calendarWriteOnly" = "[錯誤] 僅授予了寫入權限。需要完整存取權限。請在「設定 > 隱私 > 日曆」中更新。";
+"permError.calendarUnknown" = "[錯誤] 未知的日曆授權狀態。";
+"permError.remindersDenied" = "[錯誤] 提醒事項存取被拒絕。請在「設定 > 隱私 > 提醒事項」中啟用。";
+"permError.remindersDeniedByUser" = "[錯誤] 使用者拒絕了提醒事項存取權限。";
+"permError.remindersUnknown" = "[錯誤] 未知的提醒事項授權狀態。";
+"permError.contactsDenied" = "[錯誤] 聯絡資訊存取被拒絕。請在「設定 > 隱私 > 聯絡資訊」中啟用。";
+"permError.contactsDeniedByUser" = "[錯誤] 使用者拒絕了聯絡資訊存取權限。";
+"permError.contactsUnknown" = "[錯誤] 未知的聯絡資訊授權狀態。";
+"permError.notificationDenied" = "[錯誤] 通知權限被拒絕。請在「設定 > 通知」中啟用。";
+"permError.notificationDeniedByUser" = "[錯誤] 使用者拒絕了通知權限。";
+"permError.notificationUnknown" = "[錯誤] 未知的通知授權狀態。";
+"permError.locationDenied" = "[錯誤] 位置存取被拒絕。請在「設定 > 隱私 > 定位服務」中啟用。";
+"permError.locationDeniedByUser" = "[錯誤] 使用者拒絕了位置存取權限。";
+"permError.locationUnknown" = "[錯誤] 未知的位置授權狀態。";
+"permError.healthUnavailable" = "[錯誤] 此裝置不支援健康資料。";
+"permError.healthFailed" = "[錯誤] 請求 HealthKit 存取權限失敗：%@";
+"permError.toolNotPermitted" = "[錯誤] 工具 '%@'（%@）未獲此智能體授權。請在智能體設定中檢查工具權限。";

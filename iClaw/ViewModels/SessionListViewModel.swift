@@ -81,7 +81,7 @@ final class SessionListViewModel {
             while !Task.isCancelled {
                 guard let self, !Task.isCancelled else { return }
                 let hasActive = self.sessions.contains { $0.isActive }
-                try? await Task.sleep(for: .seconds(hasActive ? 3 : 10))
+                try? await Task.sleep(for: .seconds(hasActive ? 2 : 4))
                 guard !Task.isCancelled else { return }
                 self.fetchSessions()
             }

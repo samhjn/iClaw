@@ -451,3 +451,38 @@
 // MARK: - Tool Result
 "toolResult.stdout" = "标准输出";
 "toolResult.stderr" = "错误输出";
+
+// MARK: - Tool Permissions
+"toolPermissions.title" = "功能权限";
+"toolPermissions.description" = "配置此智能体可以使用哪些工具和能力。读取允许查询数据；写入允许创建、修改或删除数据。";
+"toolPermissions.browser" = "浏览器";
+"toolPermissions.codeExecution" = "代码执行";
+"toolPermissions.subAgents" = "子智能体";
+"toolPermissions.cron" = "定时任务";
+"toolPermissions.skills" = "技能";
+"toolPermissions.config" = "配置";
+"toolPermissions.model" = "模型";
+"toolPermissions.appleSection" = "Apple 生态";
+"toolPermissions.agentSection" = "智能体能力";
+"agentDetail.toolPermissions" = "功能权限";
+
+// MARK: - Permission Errors
+"permError.calendarDenied" = "[错误] 日历访问被拒绝。请在「设置 > 隐私 > 日历」中启用。";
+"permError.calendarDeniedByUser" = "[错误] 用户拒绝了日历访问权限。";
+"permError.calendarWriteOnly" = "[错误] 仅授予了写入权限。需要完整访问权限。请在「设置 > 隐私 > 日历」中更新。";
+"permError.calendarUnknown" = "[错误] 未知的日历授权状态。";
+"permError.remindersDenied" = "[错误] 提醒事项访问被拒绝。请在「设置 > 隐私 > 提醒事项」中启用。";
+"permError.remindersDeniedByUser" = "[错误] 用户拒绝了提醒事项访问权限。";
+"permError.remindersUnknown" = "[错误] 未知的提醒事项授权状态。";
+"permError.contactsDenied" = "[错误] 通讯录访问被拒绝。请在「设置 > 隐私 > 通讯录」中启用。";
+"permError.contactsDeniedByUser" = "[错误] 用户拒绝了通讯录访问权限。";
+"permError.contactsUnknown" = "[错误] 未知的通讯录授权状态。";
+"permError.notificationDenied" = "[错误] 通知权限被拒绝。请在「设置 > 通知」中启用。";
+"permError.notificationDeniedByUser" = "[错误] 用户拒绝了通知权限。";
+"permError.notificationUnknown" = "[错误] 未知的通知授权状态。";
+"permError.locationDenied" = "[错误] 位置访问被拒绝。请在「设置 > 隐私 > 定位服务」中启用。";
+"permError.locationDeniedByUser" = "[错误] 用户拒绝了位置访问权限。";
+"permError.locationUnknown" = "[错误] 未知的位置授权状态。";
+"permError.healthUnavailable" = "[错误] 此设备不支持健康数据。";
+"permError.healthFailed" = "[错误] 请求 HealthKit 访问权限失败：%@";
+"permError.toolNotPermitted" = "[错误] 工具 '%@'（%@）未获此智能体授权。请在智能体设置中检查工具权限。";

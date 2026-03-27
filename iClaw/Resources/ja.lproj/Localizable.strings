@@ -450,3 +450,38 @@
 // MARK: - Tool Result
 "toolResult.stdout" = "標準出力";
 "toolResult.stderr" = "標準エラー";
+
+// MARK: - Tool Permissions
+"toolPermissions.title" = "ツール権限";
+"toolPermissions.description" = "このエージェントが使用できるツールと機能を設定します。読み取りはデータの照会を許可し、書き込みはデータの作成・変更・削除を許可します。";
+"toolPermissions.browser" = "ブラウザ";
+"toolPermissions.codeExecution" = "コード実行";
+"toolPermissions.subAgents" = "サブエージェント";
+"toolPermissions.cron" = "定期タスク";
+"toolPermissions.skills" = "スキル";
+"toolPermissions.config" = "設定";
+"toolPermissions.model" = "モデル";
+"toolPermissions.appleSection" = "Apple エコシステム";
+"toolPermissions.agentSection" = "エージェント機能";
+"agentDetail.toolPermissions" = "ツール権限";
+
+// MARK: - Permission Errors
+"permError.calendarDenied" = "[エラー] カレンダーへのアクセスが拒否されました。「設定 > プライバシー > カレンダー」で有効にしてください。";
+"permError.calendarDeniedByUser" = "[エラー] ユーザーがカレンダーへのアクセスを拒否しました。";
+"permError.calendarWriteOnly" = "[エラー] 書き込みアクセスのみ付与されています。フルアクセスが必要です。「設定 > プライバシー > カレンダー」で更新してください。";
+"permError.calendarUnknown" = "[エラー] 不明なカレンダー認証状態です。";
+"permError.remindersDenied" = "[エラー] リマインダーへのアクセスが拒否されました。「設定 > プライバシー > リマインダー」で有効にしてください。";
+"permError.remindersDeniedByUser" = "[エラー] ユーザーがリマインダーへのアクセスを拒否しました。";
+"permError.remindersUnknown" = "[エラー] 不明なリマインダー認証状態です。";
+"permError.contactsDenied" = "[エラー] 連絡先へのアクセスが拒否されました。「設定 > プライバシー > 連絡先」で有効にしてください。";
+"permError.contactsDeniedByUser" = "[エラー] ユーザーが連絡先へのアクセスを拒否しました。";
+"permError.contactsUnknown" = "[エラー] 不明な連絡先認証状態です。";
+"permError.notificationDenied" = "[エラー] 通知の権限が拒否されました。「設定 > 通知」で有効にしてください。";
+"permError.notificationDeniedByUser" = "[エラー] ユーザーが通知の権限を拒否しました。";
+"permError.notificationUnknown" = "[エラー] 不明な通知認証状態です。";
+"permError.locationDenied" = "[エラー] 位置情報へのアクセスが拒否されました。「設定 > プライバシー > 位置情報サービス」で有効にしてください。";
+"permError.locationDeniedByUser" = "[エラー] ユーザーが位置情報へのアクセスを拒否しました。";
+"permError.locationUnknown" = "[エラー] 不明な位置情報認証状態です。";
+"permError.healthUnavailable" = "[エラー] このデバイスではヘルスデータを利用できません。";
+"permError.healthFailed" = "[エラー] HealthKitのアクセス権限のリクエストに失敗しました：%@";
+"permError.toolNotPermitted" = "[エラー] ツール '%@'（%@）はこのエージェントに許可されていません。エージェント設定でツール権限を確認してください。";

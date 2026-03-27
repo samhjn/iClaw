@@ -8,14 +8,16 @@ struct ChatView: View {
     @State private var showTitleEditor = false
     @State private var editingTitle = ""
 
+    private func ensureViewModel() -> ChatViewModel {
+        if let vm = viewModel { return vm }
+        let vm = ChatViewModel(session: session, modelContext: modelContext)
+        viewModel = vm
+        return vm
+    }
+
     var body: some View {
-        Group {
-            if let vm = viewModel {
-                ChatContentView(vm: vm)
-            } else {
-                ProgressView()
-            }
-        }
+        let vm = ensureViewModel()
+        ChatContentView(vm: vm)
         .navigationTitle(session.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -28,29 +30,27 @@ struct ChatView: View {
                         Label(L10n.Chat.rename, systemImage: "pencil")
                     }
 
-                    if let vm = viewModel {
-                        let stats = vm.compressionStats
+                    let stats = vm.compressionStats
 
-                        Section {
-                            Button {
-                                vm.manualCompress()
-                            } label: {
-                                Label(L10n.Chat.compressContext, systemImage: "arrow.down.right.and.arrow.up.left")
-                            }
-                            .disabled(vm.isCompressing || vm.isLoading)
+                    Section {
+                        Button {
+                            vm.manualCompress()
+                        } label: {
+                            Label(L10n.Chat.compressContext, systemImage: "arrow.down.right.and.arrow.up.left")
                         }
+                        .disabled(vm.isCompressing || vm.isLoading)
+                    }
 
-                        Section {
-                            Label {
-                                Text(L10n.Chat.tokenUsage(active: stats.activeFormatted, threshold: stats.thresholdFormatted))
-                            } icon: {
-                                Image(systemName: "gauge.medium")
-                            }
-                            Label {
-                                Text(L10n.Chat.messageStats(total: stats.totalMessages, compressed: stats.compressedCount))
-                            } icon: {
-                                Image(systemName: "doc.text")
-                            }
+                    Section {
+                        Label {
+                            Text(L10n.Chat.tokenUsage(active: stats.activeFormatted, threshold: stats.thresholdFormatted))
+                        } icon: {
+                            Image(systemName: "gauge.medium")
+                        }
+                        Label {
+                            Text(L10n.Chat.messageStats(total: stats.totalMessages, compressed: stats.compressedCount))
+                        } icon: {
+                            Image(systemName: "doc.text")
                         }
                     }
                 } label: {
@@ -70,11 +70,7 @@ struct ChatView: View {
             Button(L10n.Common.cancel, role: .cancel) {}
         }
         .onAppear {
-            if viewModel == nil {
-                viewModel = ChatViewModel(session: session, modelContext: modelContext)
-            } else {
-                viewModel?.onViewAppear()
-            }
+            viewModel?.onViewAppear()
         }
         .onDisappear {
             viewModel?.onViewDisappear()

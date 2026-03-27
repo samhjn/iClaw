@@ -143,6 +143,7 @@ enum L10n {
         static var snippetCode: String { tr("agentDetail.snippetCode") }
         static var newSnippet: String { tr("agentDetail.newSnippet") }
         static var applePermissions: String { tr("agentDetail.applePermissions") }
+        static var toolPermissions: String { tr("agentDetail.toolPermissions") }
     }
 
     // MARK: - Apple Permissions
@@ -169,6 +170,46 @@ enum L10n {
         static func summaryReadOnly(_ count: Int) -> String { tr("applePermissions.summaryReadOnly", count) }
         static func summaryWriteOnly(_ count: Int) -> String { tr("applePermissions.summaryWriteOnly", count) }
         static var summaryDisabled: String { tr("applePermissions.summaryDisabled") }
+    }
+
+    // MARK: - Tool Permissions
+
+    enum ToolPermissions {
+        static var title: String { tr("toolPermissions.title") }
+        static var description: String { tr("toolPermissions.description") }
+        static var browser: String { tr("toolPermissions.browser") }
+        static var codeExecution: String { tr("toolPermissions.codeExecution") }
+        static var subAgents: String { tr("toolPermissions.subAgents") }
+        static var cron: String { tr("toolPermissions.cron") }
+        static var skills: String { tr("toolPermissions.skills") }
+        static var config: String { tr("toolPermissions.config") }
+        static var model: String { tr("toolPermissions.model") }
+        static var appleSection: String { tr("toolPermissions.appleSection") }
+        static var agentSection: String { tr("toolPermissions.agentSection") }
+    }
+
+    // MARK: - Permission Errors
+
+    enum PermissionError {
+        static var calendarDenied: String { tr("permError.calendarDenied") }
+        static var calendarDeniedByUser: String { tr("permError.calendarDeniedByUser") }
+        static var calendarWriteOnly: String { tr("permError.calendarWriteOnly") }
+        static var calendarUnknown: String { tr("permError.calendarUnknown") }
+        static var remindersDenied: String { tr("permError.remindersDenied") }
+        static var remindersDeniedByUser: String { tr("permError.remindersDeniedByUser") }
+        static var remindersUnknown: String { tr("permError.remindersUnknown") }
+        static var contactsDenied: String { tr("permError.contactsDenied") }
+        static var contactsDeniedByUser: String { tr("permError.contactsDeniedByUser") }
+        static var contactsUnknown: String { tr("permError.contactsUnknown") }
+        static var notificationDenied: String { tr("permError.notificationDenied") }
+        static var notificationDeniedByUser: String { tr("permError.notificationDeniedByUser") }
+        static var notificationUnknown: String { tr("permError.notificationUnknown") }
+        static var locationDenied: String { tr("permError.locationDenied") }
+        static var locationDeniedByUser: String { tr("permError.locationDeniedByUser") }
+        static var locationUnknown: String { tr("permError.locationUnknown") }
+        static var healthUnavailable: String { tr("permError.healthUnavailable") }
+        static func healthFailed(_ error: String) -> String { tr("permError.healthFailed", error) }
+        static func toolNotPermitted(_ toolName: String, _ categoryName: String) -> String { tr("permError.toolNotPermitted", toolName, categoryName) }
     }
 
     // MARK: - Model Config

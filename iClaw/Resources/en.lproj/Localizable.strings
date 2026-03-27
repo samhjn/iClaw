@@ -451,3 +451,38 @@
 // MARK: - Tool Result
 "toolResult.stdout" = "stdout";
 "toolResult.stderr" = "stderr";
+
+// MARK: - Tool Permissions
+"toolPermissions.title" = "Tool Permissions";
+"toolPermissions.description" = "Configure which tools and capabilities this agent can use. Read allows querying data; Write allows creating, modifying, or deleting data.";
+"toolPermissions.browser" = "Browser";
+"toolPermissions.codeExecution" = "Code Execution";
+"toolPermissions.subAgents" = "Sub-Agents";
+"toolPermissions.cron" = "Cron Jobs";
+"toolPermissions.skills" = "Skills";
+"toolPermissions.config" = "Config";
+"toolPermissions.model" = "Model";
+"toolPermissions.appleSection" = "Apple Ecosystem";
+"toolPermissions.agentSection" = "Agent Capabilities";
+"agentDetail.toolPermissions" = "Tool Permissions";
+
+// MARK: - Permission Errors
+"permError.calendarDenied" = "[Error] Calendar access denied. Please enable in Settings > Privacy > Calendars.";
+"permError.calendarDeniedByUser" = "[Error] Calendar access denied by user.";
+"permError.calendarWriteOnly" = "[Error] Only write access granted. Full access is required. Please update in Settings > Privacy > Calendars.";
+"permError.calendarUnknown" = "[Error] Unknown calendar authorization status.";
+"permError.remindersDenied" = "[Error] Reminders access denied. Please enable in Settings > Privacy > Reminders.";
+"permError.remindersDeniedByUser" = "[Error] Reminders access denied by user.";
+"permError.remindersUnknown" = "[Error] Unknown reminders authorization status.";
+"permError.contactsDenied" = "[Error] Contacts access denied. Please enable in Settings > Privacy > Contacts.";
+"permError.contactsDeniedByUser" = "[Error] Contacts access denied by user.";
+"permError.contactsUnknown" = "[Error] Unknown contacts authorization status.";
+"permError.notificationDenied" = "[Error] Notification access denied. Please enable in Settings > Notifications.";
+"permError.notificationDeniedByUser" = "[Error] Notification access denied by user.";
+"permError.notificationUnknown" = "[Error] Unknown notification authorization status.";
+"permError.locationDenied" = "[Error] Location access denied. Please enable in Settings > Privacy > Location Services.";
+"permError.locationDeniedByUser" = "[Error] Location access denied by user.";
+"permError.locationUnknown" = "[Error] Unknown location authorization status.";
+"permError.healthUnavailable" = "[Error] Health data is not available on this device.";
+"permError.healthFailed" = "[Error] Failed to request HealthKit access: %@";
+"permError.toolNotPermitted" = "[Error] Tool '%@' (%@) is not permitted for this agent. Check Tool Permissions in agent settings.";

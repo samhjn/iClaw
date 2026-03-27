@@ -17,7 +17,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     /// Execute JS with per-agent Apple bridge permission enforcement.
     ///
     /// - Parameters:
-    ///   - blockedBridgeActions: Bridge actions blocked for this agent (from `AppleToolCategory.blockedBridgeActions(for:)`).
+    ///   - blockedBridgeActions: Bridge actions blocked for this agent (from `ToolCategory.blockedBridgeActions(for:)`).
     ///   - execId: Unique ID for this execution context, used for native-layer permission verification.
     func execute(
         code: String,
