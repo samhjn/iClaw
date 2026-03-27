@@ -18,7 +18,7 @@ struct CodeExecutionTools {
             return "[Error] JavaScript executor is not available"
         }
 
-        let blockedActions = AppleToolCategory.blockedBridgeActions(for: agent)
+        let blockedActions = ToolCategory.blockedBridgeActions(for: agent)
         let execId = UUID().uuidString
 
         do {

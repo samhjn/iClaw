@@ -1,7 +1,7 @@
 import Foundation
 
-/// Permission level for an Apple tool category on a specific agent.
-enum AppleToolPermissionLevel: String, Codable, CaseIterable {
+/// Permission level for a tool category on a specific agent.
+enum ToolPermissionLevel: String, Codable, CaseIterable {
     case readWrite = "rw"
     case readOnly = "r"
     case writeOnly = "w"
@@ -38,8 +38,9 @@ enum AppleToolPermissionLevel: String, Codable, CaseIterable {
     }
 }
 
-/// Defines an Apple ecosystem tool category with its associated read & write tool names.
-enum AppleToolCategory: String, CaseIterable, Identifiable {
+/// Defines a tool permission category with associated read & write tool names.
+enum ToolCategory: String, CaseIterable, Identifiable {
+    // Apple Ecosystem
     case calendar
     case reminders
     case contacts
@@ -49,7 +50,20 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
     case map
     case health
 
+    // Agent Capabilities
+    case browser
+    case codeExecution
+    case subAgents
+    case cron
+    case skills
+    case config
+    case model
+
     var id: String { rawValue }
+
+    var isAppleCategory: Bool {
+        Self.appleCategories.contains(self)
+    }
 
     var displayName: String {
         switch self {
@@ -61,6 +75,13 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
         case .location:      return L10n.ApplePermissions.location
         case .map:           return L10n.ApplePermissions.map
         case .health:        return L10n.ApplePermissions.health
+        case .browser:       return L10n.ToolPermissions.browser
+        case .codeExecution: return L10n.ToolPermissions.codeExecution
+        case .subAgents:     return L10n.ToolPermissions.subAgents
+        case .cron:          return L10n.ToolPermissions.cron
+        case .skills:        return L10n.ToolPermissions.skills
+        case .config:        return L10n.ToolPermissions.config
+        case .model:         return L10n.ToolPermissions.model
         }
     }
 
@@ -74,6 +95,13 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
         case .location:      return "location"
         case .map:           return "map"
         case .health:        return "heart.text.square"
+        case .browser:       return "safari"
+        case .codeExecution: return "curlybraces"
+        case .subAgents:     return "person.2.fill"
+        case .cron:          return "clock.arrow.circlepath"
+        case .skills:        return "book.pages"
+        case .config:        return "slider.horizontal.3"
+        case .model:         return "cpu"
         }
     }
 
@@ -101,6 +129,20 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
                 "health_read_body_mass", "health_read_blood_pressure", "health_read_blood_glucose",
                 "health_read_blood_oxygen", "health_read_body_temperature",
             ]
+        case .browser:
+            return ["browser_get_page_info", "browser_extract"]
+        case .codeExecution:
+            return ["list_code", "load_code"]
+        case .subAgents:
+            return ["list_sub_agents", "collect_sub_agent_output"]
+        case .cron:
+            return ["list_cron"]
+        case .skills:
+            return ["list_skills", "read_skill"]
+        case .config:
+            return ["read_config"]
+        case .model:
+            return ["get_model", "list_models"]
         }
     }
 
@@ -128,17 +170,33 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
                 "health_write_height", "health_write_blood_glucose", "health_write_blood_oxygen",
                 "health_write_body_temperature", "health_write_heart_rate", "health_write_workout",
             ]
+        case .browser:
+            return [
+                "browser_navigate", "browser_click", "browser_input", "browser_select",
+                "browser_execute_js", "browser_wait", "browser_scroll",
+            ]
+        case .codeExecution:
+            return ["execute_javascript", "save_code", "run_snippet", "delete_code"]
+        case .subAgents:
+            return ["create_sub_agent", "message_sub_agent", "stop_sub_agent", "delete_sub_agent"]
+        case .cron:
+            return ["schedule_cron", "unschedule_cron"]
+        case .skills:
+            return ["create_skill", "delete_skill", "install_skill", "uninstall_skill"]
+        case .config:
+            return ["write_config"]
+        case .model:
+            return ["set_model"]
         }
     }
 
     var allToolNames: [String] { readToolNames + writeToolNames }
 
-    /// Available permission levels for this category.
-    var availableLevels: [AppleToolPermissionLevel] {
+    var availableLevels: [ToolPermissionLevel] {
         if writeToolNames.isEmpty {
             return [.readWrite, .disabled]
         }
-        return AppleToolPermissionLevel.allCases
+        return ToolPermissionLevel.allCases
     }
 
     // MARK: - Bridge action names (used by JS apple.* API)
@@ -158,6 +216,8 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
                 "health.readBodyMass", "health.readBloodPressure", "health.readBloodGlucose",
                 "health.readBloodOxygen", "health.readBodyTemperature",
             ]
+        case .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model:
+            return []
         }
     }
 
@@ -178,6 +238,8 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
                 "health.writeHeight", "health.writeBloodGlucose", "health.writeBloodOxygen",
                 "health.writeBodyTemperature", "health.writeHeartRate", "health.writeWorkout",
             ]
+        case .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model:
+            return []
         }
     }
 
@@ -185,60 +247,72 @@ enum AppleToolCategory: String, CaseIterable, Identifiable {
 
     // MARK: - Static helpers
 
-    /// All Apple tool names across every category.
-    static let allAppleToolNames: Set<String> = {
+    static let appleCategories: [ToolCategory] = [
+        .calendar, .reminders, .contacts, .clipboard, .notifications,
+        .location, .map, .health,
+    ]
+
+    static let agentCategories: [ToolCategory] = [
+        .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model,
+    ]
+
+    /// Every function-call tool name across all categories.
+    static let allRegisteredToolNames: Set<String> = {
         var names = Set<String>()
-        for cat in AppleToolCategory.allCases {
+        for cat in ToolCategory.allCases {
             names.formUnion(cat.allToolNames)
         }
         return names
     }()
 
-    /// Look up the category for a given tool name.
-    static func category(for toolName: String) -> AppleToolCategory? {
-        for cat in AppleToolCategory.allCases {
+    /// Apple tool names only (backward compat).
+    static let allAppleToolNames: Set<String> = {
+        var names = Set<String>()
+        for cat in appleCategories {
+            names.formUnion(cat.allToolNames)
+        }
+        return names
+    }()
+
+    static func category(for toolName: String) -> ToolCategory? {
+        for cat in ToolCategory.allCases {
             if cat.allToolNames.contains(toolName) { return cat }
         }
         return nil
     }
 
-    /// Whether the tool name is a write operation in its category.
     static func isWriteTool(_ toolName: String) -> Bool {
-        for cat in AppleToolCategory.allCases {
+        for cat in ToolCategory.allCases {
             if cat.writeToolNames.contains(toolName) { return true }
         }
         return false
     }
 
-    /// All bridge action names across every category.
     static let allBridgeActionNames: Set<String> = {
         var names = Set<String>()
-        for cat in AppleToolCategory.allCases {
+        for cat in ToolCategory.allCases {
             names.formUnion(cat.allBridgeActions)
         }
         return names
     }()
 
-    /// Look up the category for a bridge action name (e.g. "calendar.searchEvents").
-    static func category(forBridgeAction action: String) -> AppleToolCategory? {
-        for cat in AppleToolCategory.allCases {
+    static func category(forBridgeAction action: String) -> ToolCategory? {
+        for cat in ToolCategory.allCases {
             if cat.allBridgeActions.contains(action) { return cat }
         }
         return nil
     }
 
-    /// Whether the bridge action is a write operation.
     static func isBridgeWriteAction(_ action: String) -> Bool {
-        for cat in AppleToolCategory.allCases {
+        for cat in ToolCategory.allCases {
             if cat.bridgeWriteActions.contains(action) { return true }
         }
         return false
     }
 
-    /// Compute the set of blocked bridge actions for a given agent.
     static func blockedBridgeActions(for agent: Agent) -> Set<String> {
         var blocked = Set<String>()
-        for cat in AppleToolCategory.allCases {
+        for cat in ToolCategory.allCases {
             let level = agent.permissionLevel(for: cat)
             if !level.allowsRead {
                 blocked.formUnion(cat.bridgeReadActions)

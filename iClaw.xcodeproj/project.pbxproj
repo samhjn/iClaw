@@ -34,6 +34,7 @@
 		49927AE4E041938DB7CBB8B6 /* SessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204B12CACEB21513C30E68E9 /* SessionListView.swift */; };
 		4996B0A463A1588C606A425A /* AgentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B26121A2FB261E908D450F5 /* AgentDetailView.swift */; };
 		4A5A293020E0E4D215FF3F32 /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E25850C697EF01F57455B5 /* SessionRowView.swift */; };
+		4C155837463E695FD7C5E4D7 /* AgentToolPermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FEA65E12C57817A268AF61D /* AgentToolPermissionsView.swift */; };
 		4F4123F3E9E723C649F2CB84 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0A84BDBA6BF872B7DBFDA /* ChatView.swift */; };
 		60895C4A0FF0A3ADED9FCEC7 /* SkillLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */; };
 		60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */; };
@@ -52,7 +53,6 @@
 		839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */; };
 		85FBE9AFDE5E62822E010632 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6FA049A05520F6A61F7763D0 /* Assets.xcassets */; };
 		8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */; };
-		8E37C7C63D4C7978E41595EB /* AppleToolCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DE7A5CCA4949CA46722257 /* AppleToolCategory.swift */; };
 		91FC43248B875B7599B0AFE4 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4845603F169879185B9CAF /* ContextManager.swift */; };
 		976B43C21F7B924DD339DE33 /* SessionCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */; };
 		981820D7F144AD9C634AC068 /* Agent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2451AAD7AD253EDA6298F2 /* Agent.swift */; };
@@ -81,6 +81,7 @@
 		CC5D59D1B27CADB6006441D5 /* ModelTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B709006A2FC069835A82BC7E /* ModelTools.swift */; };
 		CD59601FF55900226A267275 /* Skill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F951651FB3C7B10CA174E9 /* Skill.swift */; };
 		D12E7F7251CCA6A0BA029853 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B8A1848220654A02FA3394 /* ChatMessage.swift */; };
+		D48F628500A1ABEB4E0496ED /* ToolCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDCDBED624DF84E9BC19628E /* ToolCategory.swift */; };
 		D6D23667A339D40BF1464089 /* AppleNotificationTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F59DF61B14F535FAD6E530 /* AppleNotificationTools.swift */; };
 		D95A7F4E1090F577942F538C /* iClawApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F1929975852A2927B4D6333 /* iClawApp.swift */; };
 		DC6F2E40FC06AA472A734930 /* ApplePermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A32C1B7041B45CCF0816290 /* ApplePermissionManager.swift */; };
@@ -91,7 +92,6 @@
 		E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */; };
 		EE8A5D3C8795060CE1E9A02C /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0936D9E098400AFDB6A01F16 /* LLMService.swift */; };
 		F16E98A9D4FD1121B92A9C65 /* SkillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000F0AF0F62F231F3435001 /* SkillService.swift */; };
-		F189691DC04FD19ECC4B4416 /* AgentApplePermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 213EED516B7FD4BBF761C817 /* AgentApplePermissionsView.swift */; };
 		FDDE9D65862C12B78CA29B7A /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053D417C1955A1DA746C1ECC /* L10n.swift */; };
 		FF140850C540F0F7738C5541 /* AgentModelConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */; };
 		FFBFC17FDBADDACBBF100EEE /* CodeExecutorProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */; };
@@ -106,15 +106,14 @@
 		092DD5EE7670CFD435BCE570 /* CronJobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronJobListView.swift; sourceTree = "<group>"; };
 		0936D9E098400AFDB6A01F16 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		0CE0AD803ABD394A47164B27 /* BrowserTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTools.swift; sourceTree = "<group>"; };
+		0FEA65E12C57817A268AF61D /* AgentToolPermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentToolPermissionsView.swift; sourceTree = "<group>"; };
 		124D5FCA5AE888BFD29F9B04 /* ImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachment.swift; sourceTree = "<group>"; };
 		1337C2E999915147B1255ADA /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		1B7413410EB1221E98EB56E6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		204B12CACEB21513C30E68E9 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleContactsTools.swift; sourceTree = "<group>"; };
-		213EED516B7FD4BBF761C817 /* AgentApplePermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentApplePermissionsView.swift; sourceTree = "<group>"; };
 		23CF1A68532A315C891FBCE5 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
 		253B9F4D995EB706EA719B48 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
-		25DE7A5CCA4949CA46722257 /* AppleToolCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleToolCategory.swift; sourceTree = "<group>"; };
 		2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSkillsView.swift; sourceTree = "<group>"; };
 		2DD5519FE730658F3156E05A /* SessionListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListViewModel.swift; sourceTree = "<group>"; };
 		31321BA5D5DDEED322500D1D /* DefaultSOUL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultSOUL.md; sourceTree = "<group>"; };
@@ -175,6 +174,7 @@
 		B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompressor.swift; sourceTree = "<group>"; };
 		B8CBF480620107766CD59D04 /* CronScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronScheduler.swift; sourceTree = "<group>"; };
 		BBC545410D5D1BAA582EB8A2 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		BDCDBED624DF84E9BC19628E /* ToolCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCategory.swift; sourceTree = "<group>"; };
 		BDDB978A05165780B0B397DD /* AppleEcosystemBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleEcosystemBridge.swift; sourceTree = "<group>"; };
 		C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		C8000A49E30379E483282ABA /* AppleReminderTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleReminderTools.swift; sourceTree = "<group>"; };
@@ -308,10 +308,10 @@
 		45FA8A3C852518E5235C4A47 /* Agent */ = {
 			isa = PBXGroup;
 			children = (
-				213EED516B7FD4BBF761C817 /* AgentApplePermissionsView.swift */,
 				3B26121A2FB261E908D450F5 /* AgentDetailView.swift */,
 				55554A279D2B534D4EA94DCD /* AgentListView.swift */,
 				3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */,
+				0FEA65E12C57817A268AF61D /* AgentToolPermissionsView.swift */,
 				092DD5EE7670CFD435BCE570 /* CronJobListView.swift */,
 				F3F83422956DC29BF68C138F /* MarkdownEditorView.swift */,
 				6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */,
@@ -417,7 +417,6 @@
 				9D7056519AF941DA3556616C /* AppleMapTools.swift */,
 				90F59DF61B14F535FAD6E530 /* AppleNotificationTools.swift */,
 				C8000A49E30379E483282ABA /* AppleReminderTools.swift */,
-				25DE7A5CCA4949CA46722257 /* AppleToolCategory.swift */,
 				0CE0AD803ABD394A47164B27 /* BrowserTools.swift */,
 				39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */,
 				91869063A2B5015A3963744B /* ConfigTools.swift */,
@@ -426,6 +425,7 @@
 				B709006A2FC069835A82BC7E /* ModelTools.swift */,
 				4383D71D07DF723A7E50B296 /* SkillTools.swift */,
 				6F041EB3237F760F5B79BCD5 /* SubAgentTools.swift */,
+				BDCDBED624DF84E9BC19628E /* ToolCategory.swift */,
 				9E711EB00274324F1C757A1F /* ToolDefinitions.swift */,
 			);
 			path = FunctionCall;
@@ -576,13 +576,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				981820D7F144AD9C634AC068 /* Agent.swift in Sources */,
-				F189691DC04FD19ECC4B4416 /* AgentApplePermissionsView.swift in Sources */,
 				60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */,
 				4996B0A463A1588C606A425A /* AgentDetailView.swift in Sources */,
 				9C6424BD77481B23C3E5530F /* AgentListView.swift in Sources */,
 				FF140850C540F0F7738C5541 /* AgentModelConfigView.swift in Sources */,
 				AA3DCBB0CB5A94D9CC210864 /* AgentService.swift in Sources */,
 				839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */,
+				4C155837463E695FD7C5E4D7 /* AgentToolPermissionsView.swift in Sources */,
 				3710DF57660ED815E3028EC3 /* AgentViewModel.swift in Sources */,
 				DE4798F26F86068672DB4D35 /* AppleCalendarTools.swift in Sources */,
 				7537245CECAF0A6A7B21A8BD /* AppleClipboardTools.swift in Sources */,
@@ -594,7 +594,6 @@
 				D6D23667A339D40BF1464089 /* AppleNotificationTools.swift in Sources */,
 				DC6F2E40FC06AA472A734930 /* ApplePermissionManager.swift in Sources */,
 				21F58823CDD6C4305A477A95 /* AppleReminderTools.swift in Sources */,
-				8E37C7C63D4C7978E41595EB /* AppleToolCategory.swift in Sources */,
 				61421AF6F0FB7E917E95E6A9 /* BrowserService.swift in Sources */,
 				A02716DCD05F261E7A482932 /* BrowserTools.swift in Sources */,
 				6D4BF00B528847FCAA2BCB0C /* BrowserView.swift in Sources */,
@@ -656,6 +655,7 @@
 				1122B3E2F538F3C12BE77183 /* SubAgentTools.swift in Sources */,
 				7A671684A118FB4A6680AA21 /* ThinkingBubbleView.swift in Sources */,
 				E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */,
+				D48F628500A1ABEB4E0496ED /* ToolCategory.swift in Sources */,
 				E5C85FBCE012B13DC8A68D3A /* ToolDefinitions.swift in Sources */,
 				BB961A9FD25DD4BDFD6FD2D0 /* WKWebViewJSRuntime.swift in Sources */,
 				D95A7F4E1090F577942F538C /* iClawApp.swift in Sources */,

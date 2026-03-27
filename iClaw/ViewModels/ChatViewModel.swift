@@ -373,7 +373,7 @@ final class ChatViewModel {
             )
             activeModelName = providerName
 
-            var lastPersistTime = Date()
+            var lastPersistTime = Date.distantPast
 
             for await chunk in stream {
             if Task.isCancelled || cancelled {
@@ -404,7 +404,8 @@ final class ChatViewModel {
                     fullContent += text
                     streamingContent = fullContent
                     let now = Date()
-                    if now.timeIntervalSince(lastPersistTime) >= 1.0 {
+                    let isFirstChunk = lastPersistTime == Date.distantPast
+                    if isFirstChunk || now.timeIntervalSince(lastPersistTime) >= 1.0 {
                         session.pendingStreamingContent = fullContent
                         session.updatedAt = now
                         try? modelContext.save()
@@ -892,11 +893,13 @@ final class ChatViewModel {
             defer {
                 self?.isLoading = false
                 self?.streamingContent = ""
+                self?.canRetry = false
                 if let self, !self.session.isCompressingContext {
                     self.isCompressing = false
                 }
                 self?.loadMessages()
                 self?.checkActiveSessionLock()
+                self?.recoverRetryState()
                 self?.monitoringTask = nil
             }
 
