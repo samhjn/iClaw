@@ -147,7 +147,7 @@
 		38750A0E646A18947EA26072 /* AppleClipboardTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleClipboardTools.swift; sourceTree = "<group>"; };
 		39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeExecutionTools.swift; sourceTree = "<group>"; };
 		3B26121A2FB261E908D450F5 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
-		3D8B499E2C3FA4B27CE66753 /* iClaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D8B499E2C3FA4B27CE66753 /* iClaw.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = iClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentModelConfigView.swift; sourceTree = "<group>"; };
 		41306CB0B101F9685DA89F4F /* iClaw.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClaw.entitlements; sourceTree = "<group>"; };
 		4383D71D07DF723A7E50B296 /* SkillTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTools.swift; sourceTree = "<group>"; };
@@ -592,6 +592,7 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					800D64E66822D598F1BB9413 = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -778,7 +779,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 938YYDD5ZL;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = iClaw/Info.plist;
@@ -845,7 +846,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 938YYDD5ZL;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = iClaw/Info.plist;
@@ -916,6 +917,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -979,6 +981,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
