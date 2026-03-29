@@ -18,6 +18,7 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    VERSIONING_SYSTEM: apple-generic
 
 targets:
   iClaw:
@@ -64,3 +65,21 @@ targets:
         CODE_SIGN_IDENTITY: ""
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGNING_ALLOWED: "NO"
+
+schemes:
+  iClaw:
+    build:
+      targets:
+        iClaw: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - iClawTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
