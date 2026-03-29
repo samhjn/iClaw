@@ -47,10 +47,10 @@ targets:
       - script: |
           COMMIT=$(git -C "${SRCROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
           DIRTY=false
-          if ! git -C "${SRCROOT}" diff --quiet HEAD 2>/dev/null; then
+          if ! git -C "${SRCROOT}" diff --quiet HEAD -- ':!iClaw/Generated/GitInfo.generated.swift' 2>/dev/null; then
             DIRTY=true
           fi
-          if ! git -C "${SRCROOT}" diff --cached --quiet HEAD 2>/dev/null; then
+          if ! git -C "${SRCROOT}" diff --cached --quiet HEAD -- ':!iClaw/Generated/GitInfo.generated.swift' 2>/dev/null; then
             DIRTY=true
           fi
           OUTPUT_FILE="${SRCROOT}/iClaw/Generated/GitInfo.generated.swift"
