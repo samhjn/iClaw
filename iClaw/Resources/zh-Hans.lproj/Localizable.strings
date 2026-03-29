@@ -252,6 +252,7 @@
 "settings.addProvider" = "添加服务商";
 "settings.about" = "关于";
 "settings.version" = "版本";
+"settings.build" = "构建";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "编辑服务商";

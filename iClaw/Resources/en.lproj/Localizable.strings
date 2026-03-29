@@ -252,6 +252,7 @@
 "settings.addProvider" = "Add Provider";
 "settings.about" = "About";
 "settings.version" = "Version";
+"settings.build" = "Build";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "Edit Provider";

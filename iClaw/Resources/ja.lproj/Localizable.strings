@@ -251,6 +251,7 @@
 "settings.addProvider" = "プロバイダーを追加";
 "settings.about" = "このアプリについて";
 "settings.version" = "バージョン";
+"settings.build" = "ビルド";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "プロバイダーを編集";

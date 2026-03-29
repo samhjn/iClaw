@@ -349,6 +349,7 @@ enum L10n {
         static var addProvider: String { tr("settings.addProvider") }
         static var about: String { tr("settings.about") }
         static var version: String { tr("settings.version") }
+        static var build: String { tr("settings.build") }
     }
 
     // MARK: - LLM Provider
