@@ -22,10 +22,12 @@
 		21F58823CDD6C4305A477A95 /* AppleReminderTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8000A49E30379E483282ABA /* AppleReminderTools.swift */; };
 		246AB3197E7462B3E68F001C /* CronJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE286E760B594C5694F1A16 /* CronJob.swift */; };
 		261E583DCD29AB3EAA06AD92 /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949EA8CFA50E16335110B086 /* InputBarView.swift */; };
+		26E54F437FA509C088931ED9 /* CodeExecutorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E61FB342DF74E70655961BA /* CodeExecutorTests.swift */; };
 		3278F89F144A3D6ACBF2ED2A /* AppleContactsTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */; };
 		33372511181318FED8272C00 /* CronJobListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092DD5EE7670CFD435BCE570 /* CronJobListView.swift */; };
 		3710DF57660ED815E3028EC3 /* AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6357B86866613D68EAD23432 /* AgentViewModel.swift */; };
 		38B308C948E433835FB544E0 /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F496B3111784052330E0EA05 /* SSEParser.swift */; };
+		39549DA7C8671A97194EDCDA /* ToolDefinitionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CEA69ECFE0EBB381587BE37 /* ToolDefinitionsTests.swift */; };
 		3D7FB68BE84A307A19972099 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC545410D5D1BAA582EB8A2 /* SettingsViewModel.swift */; };
 		3EE5FF4DF54625C27D58BA9F /* CronParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51CAED27BDB36858F25DB10 /* CronParser.swift */; };
 		3F093E8992A7EB269CC377BD /* AppleEcosystemBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDB978A05165780B0B397DD /* AppleEcosystemBridge.swift */; };
@@ -35,7 +37,9 @@
 		4996B0A463A1588C606A425A /* AgentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B26121A2FB261E908D450F5 /* AgentDetailView.swift */; };
 		4A5A293020E0E4D215FF3F32 /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E25850C697EF01F57455B5 /* SessionRowView.swift */; };
 		4C155837463E695FD7C5E4D7 /* AgentToolPermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FEA65E12C57817A268AF61D /* AgentToolPermissionsView.swift */; };
+		4EE9A73CDC15265EB9B03E05 /* ToolCategoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEC1F17290AEC4EF4027176 /* ToolCategoryTests.swift */; };
 		4F4123F3E9E723C649F2CB84 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0A84BDBA6BF872B7DBFDA /* ChatView.swift */; };
+		4F784024F2EF5B97CA5543D3 /* SSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D137B1FBCA97EEA884CE0C94 /* SSEParserTests.swift */; };
 		60895C4A0FF0A3ADED9FCEC7 /* SkillLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */; };
 		60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */; };
 		61421AF6F0FB7E917E95E6A9 /* BrowserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55F9A5CBD3F3B003E8A86C4 /* BrowserService.swift */; };
@@ -46,6 +50,7 @@
 		6DA4A08DC1D5A92B9DA2F71C /* FunctionCallRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C739D21301D859C4813C401 /* FunctionCallRouter.swift */; };
 		7233CD62A03AF9B1557B2534 /* CodeExecutionTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */; };
 		728A3FDAD5084D7C4D2749F6 /* SkillTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4383D71D07DF723A7E50B296 /* SkillTools.swift */; };
+		72CE2127283A5D11F1F07F73 /* BrowserServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB4D74B81DB6C5AD8E4CD36 /* BrowserServiceTests.swift */; };
 		7537245CECAF0A6A7B21A8BD /* AppleClipboardTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38750A0E646A18947EA26072 /* AppleClipboardTools.swift */; };
 		7A671684A118FB4A6680AA21 /* ThinkingBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2916FDF1095FACD6720D86C /* ThinkingBubbleView.swift */; };
 		7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C079B073E715BB0CB659334 /* SessionService.swift */; };
@@ -63,6 +68,7 @@
 		A03938ED720D44B40D0C0A02 /* DefaultMEMORY.md in Resources */ = {isa = PBXBuildFile; fileRef = F936E9D09A4316FA53587CAE /* DefaultMEMORY.md */; };
 		A378555AADE705CCD13132D8 /* CronScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8CBF480620107766CD59D04 /* CronScheduler.swift */; };
 		A3FB87453E5298CA25424BE9 /* ModelRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318E344ABF631CB93195C099 /* ModelRouter.swift */; };
+		A4B5A12EC7C2422A5F8DC91D /* LLMProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC04A027BB37BF3885597623 /* LLMProviderTests.swift */; };
 		A7DD04E2F0744B35E6BF550E /* MarkdownContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03610DC93526E131FBCC084A /* MarkdownContentView.swift */; };
 		AA3DCBB0CB5A94D9CC210864 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1337C2E999915147B1255ADA /* AgentService.swift */; };
 		AD5A22D950319EEC2E97F7DC /* ConfigTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91869063A2B5015A3963744B /* ConfigTools.swift */; };
@@ -92,11 +98,24 @@
 		E5E39695B5F42BFB8FF84258 /* ToolCallCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */; };
 		EE8A5D3C8795060CE1E9A02C /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0936D9E098400AFDB6A01F16 /* LLMService.swift */; };
 		F16E98A9D4FD1121B92A9C65 /* SkillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000F0AF0F62F231F3435001 /* SkillService.swift */; };
+		FBECFB283E57D01C5CD863E7 /* AgentPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECA5AF506B076EB6BB45A96 /* AgentPermissionTests.swift */; };
+		FCC5539F5EA629335C43A1D2 /* ChatMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2214316EFEFE9CB4A15A572E /* ChatMessageTests.swift */; };
 		FDDE9D65862C12B78CA29B7A /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053D417C1955A1DA746C1ECC /* L10n.swift */; };
+		FDF63EF8094E45DF4BDB83E4 /* CronParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70154CA9283A95EE0DF8661 /* CronParserTests.swift */; };
 		FF140850C540F0F7738C5541 /* AgentModelConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */; };
 		FFBFC17FDBADDACBBF100EEE /* CodeExecutorProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */; };
 		FFCC6CE88E20DC424CBBD97C /* ImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124D5FCA5AE888BFD29F9B04 /* ImageAttachment.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D9A815018C3158D2E5E78721 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C8CE9654D29065754B2B0076 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 800D64E66822D598F1BB9413;
+			remoteInfo = iClaw;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0000F0AF0F62F231F3435001 /* SkillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillService.swift; sourceTree = "<group>"; };
@@ -106,12 +125,15 @@
 		092DD5EE7670CFD435BCE570 /* CronJobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronJobListView.swift; sourceTree = "<group>"; };
 		0936D9E098400AFDB6A01F16 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		0CE0AD803ABD394A47164B27 /* BrowserTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTools.swift; sourceTree = "<group>"; };
+		0CEA69ECFE0EBB381587BE37 /* ToolDefinitionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDefinitionsTests.swift; sourceTree = "<group>"; };
 		0FEA65E12C57817A268AF61D /* AgentToolPermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentToolPermissionsView.swift; sourceTree = "<group>"; };
 		124D5FCA5AE888BFD29F9B04 /* ImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachment.swift; sourceTree = "<group>"; };
 		1337C2E999915147B1255ADA /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
+		19714679979E3E33EBAB9F79 /* iClawTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = iClawTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1B7413410EB1221E98EB56E6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		204B12CACEB21513C30E68E9 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleContactsTools.swift; sourceTree = "<group>"; };
+		2214316EFEFE9CB4A15A572E /* ChatMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageTests.swift; sourceTree = "<group>"; };
 		23CF1A68532A315C891FBCE5 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
 		253B9F4D995EB706EA719B48 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSkillsView.swift; sourceTree = "<group>"; };
@@ -125,18 +147,21 @@
 		38750A0E646A18947EA26072 /* AppleClipboardTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleClipboardTools.swift; sourceTree = "<group>"; };
 		39E9DB2006DF591C5EC14CD7 /* CodeExecutionTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeExecutionTools.swift; sourceTree = "<group>"; };
 		3B26121A2FB261E908D450F5 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
-		3D8B499E2C3FA4B27CE66753 /* iClaw.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = iClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D8B499E2C3FA4B27CE66753 /* iClaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F98B32143A5D041C68D2819 /* AgentModelConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentModelConfigView.swift; sourceTree = "<group>"; };
 		41306CB0B101F9685DA89F4F /* iClaw.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClaw.entitlements; sourceTree = "<group>"; };
 		4383D71D07DF723A7E50B296 /* SkillTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTools.swift; sourceTree = "<group>"; };
 		44C27A1F530B94A24FC9AC99 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		4ABE3E70DACD1E8D7587DCE5 /* iClaw-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iClaw-Bridging-Header.h"; sourceTree = "<group>"; };
 		4E2439DF137FBF58FA5CBF10 /* FunctionDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionDefinition.swift; sourceTree = "<group>"; };
+		4E61FB342DF74E70655961BA /* CodeExecutorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeExecutorTests.swift; sourceTree = "<group>"; };
+		4ECA5AF506B076EB6BB45A96 /* AgentPermissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPermissionTests.swift; sourceTree = "<group>"; };
 		4EFF629C9604BDCDCB5B6608 /* AppleCalendarTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleCalendarTools.swift; sourceTree = "<group>"; };
 		524D8355B70966DE2A252940 /* ImagePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePreview.swift; sourceTree = "<group>"; };
 		54A34EF3177F40E30A5C39FB /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		55554A279D2B534D4EA94DCD /* AgentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentListView.swift; sourceTree = "<group>"; };
 		59407F56C082212A159847D3 /* CronTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronTools.swift; sourceTree = "<group>"; };
+		5DB4D74B81DB6C5AD8E4CD36 /* BrowserServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserServiceTests.swift; sourceTree = "<group>"; };
 		5F1929975852A2927B4D6333 /* iClawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClawApp.swift; sourceTree = "<group>"; };
 		60474D86762EE55CA8F081A5 /* ImageAttachmentBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentBar.swift; sourceTree = "<group>"; };
 		6357B86866613D68EAD23432 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentViewModel.swift; sourceTree = "<group>"; };
@@ -160,6 +185,7 @@
 		91869063A2B5015A3963744B /* ConfigTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigTools.swift; sourceTree = "<group>"; };
 		949EA8CFA50E16335110B086 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
 		990101E729F85D3AF5936B8A /* CodeSnippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeSnippet.swift; sourceTree = "<group>"; };
+		9BEC1F17290AEC4EF4027176 /* ToolCategoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCategoryTests.swift; sourceTree = "<group>"; };
 		9C3B2152CACD350B80DDEEBE /* AppleHealthTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleHealthTools.swift; sourceTree = "<group>"; };
 		9D7056519AF941DA3556616C /* AppleMapTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapTools.swift; sourceTree = "<group>"; };
 		9DE4015AC9EBAA287458CF47 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -168,8 +194,10 @@
 		A2916FDF1095FACD6720D86C /* ThinkingBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingBubbleView.swift; sourceTree = "<group>"; };
 		A55F9A5CBD3F3B003E8A86C4 /* BrowserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserService.swift; sourceTree = "<group>"; };
 		AB4845603F169879185B9CAF /* ContextManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextManager.swift; sourceTree = "<group>"; };
+		AC04A027BB37BF3885597623 /* LLMProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderTests.swift; sourceTree = "<group>"; };
 		AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentConfig.swift; sourceTree = "<group>"; };
 		B5A6D0ACADAC7E6F6CF0F778 /* CodeExecutorProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeExecutorProtocol.swift; sourceTree = "<group>"; };
+		B70154CA9283A95EE0DF8661 /* CronParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronParserTests.swift; sourceTree = "<group>"; };
 		B709006A2FC069835A82BC7E /* ModelTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTools.swift; sourceTree = "<group>"; };
 		B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompressor.swift; sourceTree = "<group>"; };
 		B8CBF480620107766CD59D04 /* CronScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronScheduler.swift; sourceTree = "<group>"; };
@@ -180,6 +208,7 @@
 		C8000A49E30379E483282ABA /* AppleReminderTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleReminderTools.swift; sourceTree = "<group>"; };
 		CF142E825A15CFC6EC137150 /* ExecutionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionResult.swift; sourceTree = "<group>"; };
 		D07AF5898D7488DC64851298 /* DefaultUSER.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultUSER.md; sourceTree = "<group>"; };
+		D137B1FBCA97EEA884CE0C94 /* SSEParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParserTests.swift; sourceTree = "<group>"; };
 		D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillLibraryView.swift; sourceTree = "<group>"; };
 		D3F0A84BDBA6BF872B7DBFDA /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		DBD59C7ED6E02691214A8AEB /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
@@ -202,6 +231,7 @@
 			isa = PBXGroup;
 			children = (
 				63AD6D728FE2FD75EE225F50 /* iClaw */,
+				493C83ABDA3EF93EE3DE4F98 /* iClawTests */,
 				4341BB328898326B2028393F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -301,6 +331,7 @@
 			isa = PBXGroup;
 			children = (
 				3D8B499E2C3FA4B27CE66753 /* iClaw.app */,
+				19714679979E3E33EBAB9F79 /* iClawTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -325,6 +356,22 @@
 				A55F9A5CBD3F3B003E8A86C4 /* BrowserService.swift */,
 			);
 			path = Browser;
+			sourceTree = "<group>";
+		};
+		493C83ABDA3EF93EE3DE4F98 /* iClawTests */ = {
+			isa = PBXGroup;
+			children = (
+				4ECA5AF506B076EB6BB45A96 /* AgentPermissionTests.swift */,
+				5DB4D74B81DB6C5AD8E4CD36 /* BrowserServiceTests.swift */,
+				2214316EFEFE9CB4A15A572E /* ChatMessageTests.swift */,
+				4E61FB342DF74E70655961BA /* CodeExecutorTests.swift */,
+				B70154CA9283A95EE0DF8661 /* CronParserTests.swift */,
+				AC04A027BB37BF3885597623 /* LLMProviderTests.swift */,
+				D137B1FBCA97EEA884CE0C94 /* SSEParserTests.swift */,
+				9BEC1F17290AEC4EF4027176 /* ToolCategoryTests.swift */,
+				0CEA69ECFE0EBB381587BE37 /* ToolDefinitionsTests.swift */,
+			);
+			path = iClawTests;
 			sourceTree = "<group>";
 		};
 		4EED6A7A3527FB3EB14ABE0D /* Chat */ = {
@@ -517,6 +564,24 @@
 			productReference = 3D8B499E2C3FA4B27CE66753 /* iClaw.app */;
 			productType = "com.apple.product-type.application";
 		};
+		980C6BDD40A72EF20924695E /* iClawTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8B07510247B1335B87FC77F1 /* Build configuration list for PBXNativeTarget "iClawTests" */;
+			buildPhases = (
+				18C834AE3BA8575CD6355E93 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2CE2B70FDF3301004F256371 /* PBXTargetDependency */,
+			);
+			name = iClawTests;
+			packageProductDependencies = (
+			);
+			productName = iClawTests;
+			productReference = 19714679979E3E33EBAB9F79 /* iClawTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -527,7 +592,6 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					800D64E66822D598F1BB9413 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -551,6 +615,7 @@
 			projectRoot = "";
 			targets = (
 				800D64E66822D598F1BB9413 /* iClaw */,
+				980C6BDD40A72EF20924695E /* iClawTests */,
 			);
 		};
 /* End PBXProject section */
@@ -571,6 +636,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		18C834AE3BA8575CD6355E93 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FBECFB283E57D01C5CD863E7 /* AgentPermissionTests.swift in Sources */,
+				72CE2127283A5D11F1F07F73 /* BrowserServiceTests.swift in Sources */,
+				FCC5539F5EA629335C43A1D2 /* ChatMessageTests.swift in Sources */,
+				26E54F437FA509C088931ED9 /* CodeExecutorTests.swift in Sources */,
+				FDF63EF8094E45DF4BDB83E4 /* CronParserTests.swift in Sources */,
+				A4B5A12EC7C2422A5F8DC91D /* LLMProviderTests.swift in Sources */,
+				4F784024F2EF5B97CA5543D3 /* SSEParserTests.swift in Sources */,
+				4EE9A73CDC15265EB9B03E05 /* ToolCategoryTests.swift in Sources */,
+				39549DA7C8671A97194EDCDA /* ToolDefinitionsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F6625D4104480ADFAE209E12 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -664,6 +745,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		2CE2B70FDF3301004F256371 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 800D64E66822D598F1BB9413 /* iClaw */;
+			targetProxy = D9A815018C3158D2E5E78721 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin PBXVariantGroup section */
 		46C878B8C1C520071EFFD4F5 /* Localizable.strings */ = {
 			isa = PBXVariantGroup;
@@ -689,7 +778,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 938YYDD5ZL;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = iClaw/Info.plist;
@@ -707,6 +796,46 @@
 			};
 			name = Debug;
 		};
+		2F767576323FAA407F923339 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				ENABLE_TESTABILITY = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.iclaw.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/iClaw";
+			};
+			name = Release;
+		};
+		3093D6BEA659635DE0AE9727 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				ENABLE_TESTABILITY = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.iclaw.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/iClaw";
+			};
+			name = Debug;
+		};
 		4C06D6AB9ABB92209B1BFA98 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -716,7 +845,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 938YYDD5ZL;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = iClaw/Info.plist;
@@ -861,6 +990,15 @@
 			buildConfigurations = (
 				FAF5BA8B991002ECF2208C21 /* Debug */,
 				4C5A89D31E66F88CCD68C375 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8B07510247B1335B87FC77F1 /* Build configuration list for PBXNativeTarget "iClawTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3093D6BEA659635DE0AE9727 /* Debug */,
+				2F767576323FAA407F923339 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
