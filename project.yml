@@ -47,3 +47,20 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+
+  iClawTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: iClawTests
+    dependencies:
+      - target: iClaw
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.iclaw.tests
+        ENABLE_TESTABILITY: "YES"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/iClaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/iClaw"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
