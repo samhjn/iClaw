@@ -48,6 +48,9 @@ fastlane/test_output
 
 vendor/
 
+# Generated
+iClaw/Generated/GitInfo.generated.swift
+
 # Misc
 *.orig
 *.bak

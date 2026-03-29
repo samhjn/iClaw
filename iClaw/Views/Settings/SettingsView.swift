@@ -109,8 +109,15 @@ struct SettingsView: View {
                 HStack {
                     Text(L10n.Settings.version)
                     Spacer()
-                    Text("1.0.0")
+                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")
                         .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text(L10n.Settings.build)
+                    Spacer()
+                    Text(GitInfo.isDirty ? "\(GitInfo.commitHash)-dirty" : GitInfo.commitHash)
+                        .foregroundStyle(.secondary)
+                        .font(.system(.body, design: .monospaced))
                 }
             }
         }
