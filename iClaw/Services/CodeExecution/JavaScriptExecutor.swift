@@ -28,11 +28,13 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     ) async throws -> ExecutionResult {
         os_log(.info, log: jsLog, "[JS] execute called, mode=%{public}@, timeout=%{public}f", mode.rawValue, timeout)
 
+        let callerManagedContext = execId != nil
         let effectiveExecId = execId ?? UUID().uuidString
         let script = Self.buildScript(code: code, mode: mode, blockedBridgeActions: blockedBridgeActions, execId: effectiveExecId)
 
-        // Register native-layer permission checker if we have blocked actions
-        let needsPermissionRegistration = !blockedBridgeActions.isEmpty
+        // Only register permissions if the caller hasn't already set up a context
+        // (callers like CodeExecutionTools pre-register with agentId for file ops).
+        let needsPermissionRegistration = !callerManagedContext && !blockedBridgeActions.isEmpty
         if needsPermissionRegistration {
             await AppleEcosystemBridge.shared.registerPermissions(execId: effectiveExecId) { action in
                 !blockedBridgeActions.contains(action)

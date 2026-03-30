@@ -101,6 +101,13 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertTrue(names.contains("set_model"))
         XCTAssertTrue(names.contains("get_model"))
         XCTAssertTrue(names.contains("list_models"))
+
+        // Files
+        XCTAssertTrue(names.contains("file_list"))
+        XCTAssertTrue(names.contains("file_read"))
+        XCTAssertTrue(names.contains("file_write"))
+        XCTAssertTrue(names.contains("file_delete"))
+        XCTAssertTrue(names.contains("file_info"))
     }
 
     func testAppleEcosystemToolsExist() {
@@ -158,6 +165,22 @@ final class ToolDefinitionsTests: XCTestCase {
         let tool = ToolDefinitions.messageSubAgentTool
         XCTAssertEqual(tool.function.name, "message_sub_agent")
         XCTAssertEqual(tool.function.parameters.required, ["agent_id", "message"])
+    }
+
+    func testFileToolsParameters() {
+        let readTool = ToolDefinitions.fileReadTool
+        XCTAssertEqual(readTool.function.name, "file_read")
+        XCTAssertEqual(readTool.function.parameters.required, ["name"])
+        XCTAssertNotNil(readTool.function.parameters.properties?["name"])
+        XCTAssertNotNil(readTool.function.parameters.properties?["mode"])
+
+        let writeTool = ToolDefinitions.fileWriteTool
+        XCTAssertEqual(writeTool.function.name, "file_write")
+        XCTAssertEqual(writeTool.function.parameters.required, ["name", "content"])
+
+        let listTool = ToolDefinitions.fileListTool
+        XCTAssertEqual(listTool.function.name, "file_list")
+        XCTAssertNil(listTool.function.parameters.required)
     }
 
     // MARK: - ToolDefinitionBuilder

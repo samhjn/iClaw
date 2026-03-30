@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "保存图片";
 "chat.imageSaved" = "已保存到相册";
 "chat.copyImage" = "拷贝图片";
+"chat.imageDeleted" = "图片已删除";
 "chat.modalityStripped" = "已暂时移除上下文中的 %d 张图片 — %@ 不支持视觉能力";
 "chat.toolUseUnsupported" = "%@ 不支持工具调用 — 浏览器、子智能体、代码执行等功能将不可用。";
 "chat.retry" = "重试";
@@ -393,6 +394,11 @@
 "toolCard.setModel" = "设置模型";
 "toolCard.getModel" = "获取模型";
 "toolCard.listModels" = "模型列表";
+"toolCard.fileList" = "文件列表";
+"toolCard.fileRead" = "读取文件";
+"toolCard.fileWrite" = "写入文件";
+"toolCard.fileDelete" = "删除文件";
+"toolCard.fileInfo" = "文件信息";
 "toolCard.browse" = "浏览";
 "toolCard.pageInfo" = "页面信息";
 "toolCard.click" = "点击";
@@ -463,9 +469,18 @@
 "toolPermissions.skills" = "技能";
 "toolPermissions.config" = "配置";
 "toolPermissions.model" = "模型";
+"toolPermissions.files" = "文件";
 "toolPermissions.appleSection" = "Apple 生态";
 "toolPermissions.agentSection" = "智能体能力";
 "agentDetail.toolPermissions" = "功能权限";
+
+// MARK: - Agent Files
+"agentFiles.title" = "文件管理";
+"agentFiles.empty" = "暂无文件";
+"agentFiles.emptyDescription" = "智能体创建的文件或您上传的文件将显示在此处。";
+"agentFiles.deleteConfirmTitle" = "删除文件";
+"agentFiles.deleteConfirmMessage" = "确定要删除「%@」吗？此操作无法撤销。";
+"agentFiles.imagePermissionDisabled" = "此智能体的文件访问权限已关闭";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[错误] 日历访问被拒绝。请在「设置 > 隐私 > 日历」中启用。";

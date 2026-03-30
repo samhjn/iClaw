@@ -260,4 +260,59 @@ final class AgentPermissionTests: XCTestCase {
         agent.compressionThreshold = 10000
         XCTAssertEqual(agent.effectiveCompressionThreshold, 10000)
     }
+
+    // MARK: - Files Permission
+
+    @MainActor
+    func testFilesPermissionDisabled() {
+        agent.setPermissionLevel(.disabled, for: .files)
+        XCTAssertEqual(agent.permissionLevel(for: .files), .disabled)
+        XCTAssertFalse(agent.isToolAllowed("file_list"))
+        XCTAssertFalse(agent.isToolAllowed("file_read"))
+        XCTAssertFalse(agent.isToolAllowed("file_write"))
+        XCTAssertFalse(agent.isToolAllowed("file_delete"))
+        XCTAssertFalse(agent.isToolAllowed("file_info"))
+    }
+
+    @MainActor
+    func testFilesPermissionReadOnly() {
+        agent.setPermissionLevel(.readOnly, for: .files)
+        XCTAssertTrue(agent.isToolAllowed("file_list"))
+        XCTAssertTrue(agent.isToolAllowed("file_read"))
+        XCTAssertTrue(agent.isToolAllowed("file_info"))
+        XCTAssertFalse(agent.isToolAllowed("file_write"))
+        XCTAssertFalse(agent.isToolAllowed("file_delete"))
+    }
+
+    @MainActor
+    func testFilesPermissionWriteOnly() {
+        agent.setPermissionLevel(.writeOnly, for: .files)
+        XCTAssertFalse(agent.isToolAllowed("file_list"))
+        XCTAssertFalse(agent.isToolAllowed("file_read"))
+        XCTAssertFalse(agent.isToolAllowed("file_info"))
+        XCTAssertTrue(agent.isToolAllowed("file_write"))
+        XCTAssertTrue(agent.isToolAllowed("file_delete"))
+    }
+
+    @MainActor
+    func testFilesBridgeActionsDisabled() {
+        agent.setPermissionLevel(.disabled, for: .files)
+        let blocked = ToolCategory.blockedBridgeActions(for: agent)
+        XCTAssertTrue(blocked.contains("files.list"))
+        XCTAssertTrue(blocked.contains("files.read"))
+        XCTAssertTrue(blocked.contains("files.write"))
+        XCTAssertTrue(blocked.contains("files.delete"))
+        XCTAssertTrue(blocked.contains("files.info"))
+    }
+
+    @MainActor
+    func testFilesBridgeActionsReadOnly() {
+        agent.setPermissionLevel(.readOnly, for: .files)
+        let blocked = ToolCategory.blockedBridgeActions(for: agent)
+        XCTAssertFalse(blocked.contains("files.list"))
+        XCTAssertFalse(blocked.contains("files.read"))
+        XCTAssertFalse(blocked.contains("files.info"))
+        XCTAssertTrue(blocked.contains("files.write"))
+        XCTAssertTrue(blocked.contains("files.delete"))
+    }
 }

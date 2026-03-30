@@ -187,6 +187,18 @@ final class FunctionCallRouter {
                 ModelTools(agent: agent, modelContext: modelContext)
                     .listModels(arguments: arguments))
 
+        // --- Files ---
+        case "file_list":
+            return ToolCallResult(FileTools(agent: agent).listFiles(arguments: arguments))
+        case "file_read":
+            return ToolCallResult(FileTools(agent: agent).readFile(arguments: arguments))
+        case "file_write":
+            return ToolCallResult(FileTools(agent: agent).writeFile(arguments: arguments))
+        case "file_delete":
+            return ToolCallResult(FileTools(agent: agent).deleteFile(arguments: arguments))
+        case "file_info":
+            return ToolCallResult(FileTools(agent: agent).fileInfo(arguments: arguments))
+
         // --- Browser ---
         case "browser_navigate":
             return try await runAsync { await self.browserTools.navigate(arguments: arguments) }

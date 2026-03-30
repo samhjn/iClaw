@@ -76,12 +76,12 @@ final class Message {
     /// Extract inline base64 data-URI images from `content` into `imageAttachmentsData`.
     /// Content is updated with localized image placeholders. Returns true if any images were extracted.
     @discardableResult
-    func extractAndStoreInlineImages() -> Bool {
+    func extractAndStoreInlineImages(agentId: UUID? = nil) -> Bool {
         guard let content, content.contains(";base64,") else { return false }
         let existingCount = (imageAttachmentsData.flatMap {
             try? JSONDecoder().decode([ImageAttachment].self, from: $0)
         })?.count ?? 0
-        let (cleaned, images) = Self.extractInlineImages(from: content, startIndex: existingCount)
+        let (cleaned, images) = Self.extractInlineImages(from: content, startIndex: existingCount, agentId: agentId)
         guard !images.isEmpty else { return false }
 
         self.content = cleaned
@@ -96,7 +96,7 @@ final class Message {
 
     /// Parse markdown image syntax with base64 data URIs, returning cleaned text and extracted images.
     /// Images are replaced with `![](attachment:N)` so the markdown renderer can display them inline.
-    static func extractInlineImages(from content: String, startIndex: Int = 0) -> (cleanedContent: String, images: [ImageAttachment]) {
+    static func extractInlineImages(from content: String, startIndex: Int = 0, agentId: UUID? = nil) -> (cleanedContent: String, images: [ImageAttachment]) {
         let pattern = "!\\[[^\\]]*\\]\\((data:image/[^)]+)\\)"
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return (content, [])
@@ -113,7 +113,7 @@ final class Message {
 
         for match in matches {
             let uri = nsContent.substring(with: match.range(at: 1))
-            if let attachment = ImageAttachment.from(base64DataURI: uri) {
+            if let attachment = ImageAttachment.from(base64DataURI: uri, agentId: agentId) {
                 images.append(attachment)
                 replacementRanges.append((match.range, "![](attachment:\(imageIndex))"))
                 imageIndex += 1

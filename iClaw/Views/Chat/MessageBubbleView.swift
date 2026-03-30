@@ -187,12 +187,36 @@ private struct MessageImageGrid: View {
 
         LazyVGrid(columns: columns, spacing: 4) {
             ForEach(images) { attachment in
-                if let uiImage = attachment.uiImage {
+                let maxW: CGFloat = images.count == 1 ? 240 : 140
+                let maxH: CGFloat = images.count == 1 ? 240 : 140
+
+                if attachment.isFileDeleted {
+                    ZStack {
+                        if let thumb = attachment.thumbnailImage {
+                            Image(uiImage: thumb)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .blur(radius: 3)
+                        } else {
+                            Color(.systemGray5)
+                        }
+                        Color.black.opacity(0.5)
+                        VStack(spacing: 4) {
+                            Image(systemName: "trash.slash")
+                                .font(.title3)
+                            Text(L10n.Chat.imageDeleted)
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: maxW, maxHeight: maxH)
+                    .frame(minHeight: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else if let uiImage = attachment.uiImage {
                     Image(uiImage: uiImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: images.count == 1 ? 240 : 140,
-                               maxHeight: images.count == 1 ? 240 : 140)
+                        .frame(maxWidth: maxW, maxHeight: maxH)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .contentShape(Rectangle())
                         .onTapGesture {

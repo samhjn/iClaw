@@ -102,6 +102,10 @@ private struct SingleToolCallCard: View {
                 return String(id.prefix(8)) + "..."
             }
             return nil
+        case "file_list":
+            return nil
+        case "file_read", "file_write", "file_delete", "file_info":
+            return dict["name"] as? String
         case "save_code", "run_snippet", "delete_code":
             return dict["name"] as? String
         case "install_skill", "uninstall_skill":
@@ -509,6 +513,16 @@ struct ToolMeta {
             return ToolMeta(displayName: L10n.ToolCard.getModel, icon: "cpu", color: .teal)
         case "list_models":
             return ToolMeta(displayName: L10n.ToolCard.listModels, icon: "list.bullet.rectangle", color: .teal)
+        case "file_list":
+            return ToolMeta(displayName: L10n.ToolCard.fileList, icon: "folder", color: .cyan)
+        case "file_read":
+            return ToolMeta(displayName: L10n.ToolCard.fileRead, icon: "doc.text", color: .cyan)
+        case "file_write":
+            return ToolMeta(displayName: L10n.ToolCard.fileWrite, icon: "doc.badge.plus", color: .cyan)
+        case "file_delete":
+            return ToolMeta(displayName: L10n.ToolCard.fileDelete, icon: "doc.badge.minus", color: .red)
+        case "file_info":
+            return ToolMeta(displayName: L10n.ToolCard.fileInfo, icon: "doc.badge.gearshape", color: .cyan)
         case "browser_navigate":
             return ToolMeta(displayName: L10n.ToolCard.browse, icon: "globe", color: .cyan)
         case "browser_get_page_info":

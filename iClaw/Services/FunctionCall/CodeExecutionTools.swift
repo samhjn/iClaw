@@ -20,6 +20,17 @@ struct CodeExecutionTools {
 
         let blockedActions = ToolCategory.blockedBridgeActions(for: agent)
         let execId = UUID().uuidString
+        let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
+
+        await AppleEcosystemBridge.shared.registerContext(
+            execId: execId, agentId: agentId
+        ) { action in !blockedActions.contains(action) }
+
+        defer {
+            Task { @MainActor in
+                AppleEcosystemBridge.shared.unregisterPermissions(execId: execId)
+            }
+        }
 
         do {
             let result = try await jsExecutor.execute(

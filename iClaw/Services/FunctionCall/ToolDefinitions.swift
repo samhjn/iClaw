@@ -48,6 +48,13 @@ enum ToolDefinitions {
             browserWaitTool,
             browserScrollTool,
 
+            // File Management
+            fileListTool,
+            fileReadTool,
+            fileWriteTool,
+            fileDeleteTool,
+            fileInfoTool,
+
             // Apple Ecosystem — Calendar
             calendarListCalendarsTool,
             calendarCreateEventTool,
@@ -369,6 +376,54 @@ enum ToolDefinitions {
         description: "List all available LLM providers/models that can be assigned to agents.",
         properties: [:],
         required: []
+    )
+
+    // MARK: - File Management Tools
+
+    static let fileListTool = ToolDefinitionBuilder.build(
+        name: "file_list",
+        description: "List all files in the agent's file folder with name, size, and modification date.",
+        properties: [:],
+        required: []
+    )
+
+    static let fileReadTool = ToolDefinitionBuilder.build(
+        name: "file_read",
+        description: "Read a file from the agent's file folder. Text files are returned as UTF-8 text; use mode='base64' for binary files.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The filename to read"),
+            "mode": ToolDefinitionBuilder.enumParam("Read mode", values: ["text", "base64"])
+        ],
+        required: ["name"]
+    )
+
+    static let fileWriteTool = ToolDefinitionBuilder.build(
+        name: "file_write",
+        description: "Write or create a file in the agent's file folder. Text content by default; use encoding='base64' to write binary data.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The filename to write (e.g. 'notes.txt', 'data.json')"),
+            "content": ToolDefinitionBuilder.stringParam("The content to write (text or base64-encoded)"),
+            "encoding": ToolDefinitionBuilder.enumParam("Content encoding", values: ["text", "base64"])
+        ],
+        required: ["name", "content"]
+    )
+
+    static let fileDeleteTool = ToolDefinitionBuilder.build(
+        name: "file_delete",
+        description: "Delete a file from the agent's file folder.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The filename to delete")
+        ],
+        required: ["name"]
+    )
+
+    static let fileInfoTool = ToolDefinitionBuilder.build(
+        name: "file_info",
+        description: "Get metadata about a file: size, creation date, modification date, and whether it's an image.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The filename to get info for")
+        ],
+        required: ["name"]
     )
 
     // MARK: - Browser Tools

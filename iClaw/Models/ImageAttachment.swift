@@ -8,16 +8,67 @@ struct ImageAttachment: Codable, Identifiable {
     let width: Int
     let height: Int
 
+    /// When non-nil, the full-resolution image lives on disk at this reference
+    /// (format: `agentfile://<agentId>/<filename>`).
+    /// `imageData` then holds only a small thumbnail for fallback display.
+    var fileReference: String?
+
     var base64DataURI: String {
-        "data:\(mimeType);base64,\(imageData.base64EncodedString())"
+        let data = resolvedImageData ?? imageData
+        return "data:\(mimeType);base64,\(data.base64EncodedString())"
+    }
+
+    /// Resolve the best available image data: file-backed full resolution first, then inline data.
+    var resolvedImageData: Data? {
+        if let fileReference {
+            if let data = AgentFileManager.shared.loadImageData(from: fileReference) {
+                return data
+            }
+            return imageData.isEmpty ? nil : imageData
+        }
+        return imageData.isEmpty ? nil : imageData
+    }
+
+    /// Whether the original file has been deleted by the user.
+    var isFileDeleted: Bool {
+        guard let fileReference else { return false }
+        return AgentFileManager.shared.loadImageData(from: fileReference) == nil
     }
 
     var uiImage: UIImage? {
-        UIImage(data: imageData)
+        guard let data = resolvedImageData else { return nil }
+        return UIImage(data: data)
     }
 
-    /// Compress and resize a UIImage into an ImageAttachment.
-    /// Max dimension is capped at `maxDimension` pixels; JPEG quality at `quality`.
+    /// The inline thumbnail image (always from `imageData`, ignoring file reference).
+    var thumbnailImage: UIImage? {
+        imageData.isEmpty ? nil : UIImage(data: imageData)
+    }
+
+    // MARK: - Factory Methods
+
+    /// Create from a UIImage with full-resolution saved to the agent's file folder.
+    /// `imageData` stores a small thumbnail; the full file is referenced via `fileReference`.
+    static func from(image: UIImage, agentId: UUID, maxDimension: CGFloat = 1024, quality: CGFloat = 0.75) -> ImageAttachment? {
+        let resized = resize(image: image, maxDimension: maxDimension)
+        guard let fullData = resized.jpegData(compressionQuality: quality) else { return nil }
+        let w = Int(resized.size.width * resized.scale)
+        let h = Int(resized.size.height * resized.scale)
+
+        let thumbnail = generateThumbnail(from: resized)
+        let ref = AgentFileManager.shared.saveImage(fullData, mimeType: "image/jpeg", agentId: agentId)
+
+        return ImageAttachment(
+            id: UUID(),
+            imageData: thumbnail,
+            mimeType: "image/jpeg",
+            width: w,
+            height: h,
+            fileReference: ref
+        )
+    }
+
+    /// Legacy factory: inline-only (no file reference). Used for backward compatibility.
     static func from(image: UIImage, maxDimension: CGFloat = 1024, quality: CGFloat = 0.75) -> ImageAttachment? {
         let resized = resize(image: image, maxDimension: maxDimension)
         guard let data = resized.jpegData(compressionQuality: quality) else { return nil }
@@ -30,8 +81,8 @@ struct ImageAttachment: Codable, Identifiable {
         )
     }
 
-    /// Create an ImageAttachment by decoding a `data:image/...;base64,...` URI.
-    static func from(base64DataURI uri: String) -> ImageAttachment? {
+    /// Create from a base64 data URI, optionally saving to the agent's file folder.
+    static func from(base64DataURI uri: String, agentId: UUID? = nil) -> ImageAttachment? {
         guard uri.hasPrefix("data:") else { return nil }
         let withoutPrefix = String(uri.dropFirst(5))
         guard let semicolonIdx = withoutPrefix.firstIndex(of: ";") else { return nil }
@@ -47,8 +98,30 @@ struct ImageAttachment: Codable, Identifiable {
             height = Int(image.size.height * image.scale)
         }
 
-        return ImageAttachment(id: UUID(), imageData: data, mimeType: mimeType, width: width, height: height)
+        if let agentId {
+            let thumbnail: Data
+            if let image = UIImage(data: data) {
+                thumbnail = generateThumbnail(from: image)
+            } else {
+                thumbnail = Data()
+            }
+            let ref = AgentFileManager.shared.saveImage(data, mimeType: mimeType, agentId: agentId)
+            return ImageAttachment(id: UUID(), imageData: thumbnail, mimeType: mimeType,
+                                   width: width, height: height, fileReference: ref)
+        }
+
+        return ImageAttachment(id: UUID(), imageData: data, mimeType: mimeType,
+                               width: width, height: height)
     }
+
+    // MARK: - Thumbnail
+
+    static func generateThumbnail(from image: UIImage, maxDimension: CGFloat = 64, quality: CGFloat = 0.3) -> Data {
+        let resized = resize(image: image, maxDimension: maxDimension)
+        return resized.jpegData(compressionQuality: quality) ?? Data()
+    }
+
+    // MARK: - Resize
 
     private static func resize(image: UIImage, maxDimension: CGFloat) -> UIImage {
         let size = image.size

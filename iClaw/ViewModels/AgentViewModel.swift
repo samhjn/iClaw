@@ -40,8 +40,10 @@ final class AgentViewModel {
     }
 
     func deleteAgent(_ agent: Agent) {
+        let agentId = agent.id
         modelContext.delete(agent)
         try? modelContext.save()
+        AgentFileManager.shared.cleanupAgentFiles(agentId: agentId)
         fetchAgents()
     }
 

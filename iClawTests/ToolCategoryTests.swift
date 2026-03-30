@@ -62,6 +62,7 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertTrue(ToolCategory.allCases.contains(.cron))
         XCTAssertTrue(ToolCategory.allCases.contains(.health))
         XCTAssertTrue(ToolCategory.allCases.contains(.subAgents))
+        XCTAssertTrue(ToolCategory.allCases.contains(.files))
     }
 
     func testAppleCategories() {
@@ -87,6 +88,7 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertTrue(agent.contains(.skills))
         XCTAssertTrue(agent.contains(.config))
         XCTAssertTrue(agent.contains(.model))
+        XCTAssertTrue(agent.contains(.files))
         XCTAssertFalse(agent.contains(.calendar))
     }
 
@@ -167,6 +169,11 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertEqual(ToolCategory.category(for: "message_sub_agent"), .subAgents)
         XCTAssertEqual(ToolCategory.category(for: "read_config"), .config)
         XCTAssertEqual(ToolCategory.category(for: "set_model"), .model)
+        XCTAssertEqual(ToolCategory.category(for: "file_list"), .files)
+        XCTAssertEqual(ToolCategory.category(for: "file_read"), .files)
+        XCTAssertEqual(ToolCategory.category(for: "file_write"), .files)
+        XCTAssertEqual(ToolCategory.category(for: "file_delete"), .files)
+        XCTAssertEqual(ToolCategory.category(for: "file_info"), .files)
         XCTAssertNil(ToolCategory.category(for: "unknown_tool"))
     }
 
@@ -175,9 +182,14 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertTrue(ToolCategory.isWriteTool("execute_javascript"))
         XCTAssertTrue(ToolCategory.isWriteTool("calendar_create_event"))
         XCTAssertTrue(ToolCategory.isWriteTool("schedule_cron"))
+        XCTAssertTrue(ToolCategory.isWriteTool("file_write"))
+        XCTAssertTrue(ToolCategory.isWriteTool("file_delete"))
         XCTAssertFalse(ToolCategory.isWriteTool("browser_get_page_info"))
         XCTAssertFalse(ToolCategory.isWriteTool("list_cron"))
         XCTAssertFalse(ToolCategory.isWriteTool("read_config"))
+        XCTAssertFalse(ToolCategory.isWriteTool("file_list"))
+        XCTAssertFalse(ToolCategory.isWriteTool("file_read"))
+        XCTAssertFalse(ToolCategory.isWriteTool("file_info"))
         XCTAssertFalse(ToolCategory.isWriteTool("unknown_tool"))
     }
 
@@ -191,10 +203,20 @@ final class ToolCategoryTests: XCTestCase {
     }
 
     func testAgentCategoriesHaveNoBridgeActions() {
-        for cat in ToolCategory.agentCategories {
+        let exceptionsWithBridgeActions: Set<ToolCategory> = [.files]
+        for cat in ToolCategory.agentCategories where !exceptionsWithBridgeActions.contains(cat) {
             XCTAssertTrue(cat.allBridgeActions.isEmpty,
                          "Agent category \(cat) should have no bridge actions")
         }
+    }
+
+    func testFilesCategoryHasBridgeActions() {
+        XCTAssertFalse(ToolCategory.files.allBridgeActions.isEmpty)
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.list"))
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.read"))
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.info"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.write"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.delete"))
     }
 
     func testAllBridgeActionNamesCoversAll() {
@@ -245,6 +267,7 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertTrue(ToolCategory.calendar.hasWriteTools)
         XCTAssertTrue(ToolCategory.browser.hasWriteTools)
         XCTAssertTrue(ToolCategory.health.hasWriteTools)
+        XCTAssertTrue(ToolCategory.files.hasWriteTools)
         XCTAssertFalse(ToolCategory.contacts.hasWriteTools)
         XCTAssertFalse(ToolCategory.location.hasWriteTools)
         XCTAssertFalse(ToolCategory.map.hasWriteTools)

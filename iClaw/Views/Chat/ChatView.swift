@@ -317,6 +317,7 @@ private struct ChatContentView: View {
                 canRetry: vm.canRetry,
                 cancelFailureReason: vm.cancelFailureReason,
                 pendingImages: vm.pendingImages,
+                isImageDisabled: vm.session.agent.map { $0.permissionLevel(for: .files) == .disabled } ?? false,
                 onSend: { vm.sendMessage() },
                 onStop: { vm.cancelGeneration() },
                 onStopCompression: { vm.cancelCompression() },
