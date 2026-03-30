@@ -153,13 +153,6 @@ struct LLMChatMessage: Codable {
         LLMChatMessage(role: "tool", content: content, toolCallId: toolCallId, name: name)
     }
 
-    static func toolWithImages(content: String, images: [ImageAttachment], toolCallId: String, name: String? = nil) -> LLMChatMessage {
-        var parts: [ContentPart] = [.text(content)]
-        for img in images {
-            parts.append(.imageURL(url: img.base64DataURI, detail: "auto"))
-        }
-        return LLMChatMessage(role: "tool", content: content, contentParts: parts, toolCallId: toolCallId, name: name)
-    }
 }
 
 struct LLMToolCall: Codable, Identifiable {

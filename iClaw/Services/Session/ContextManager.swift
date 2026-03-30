@@ -149,31 +149,11 @@ final class ContextManager {
                 }
 
             case .tool:
-                if let imgData = msg.imageAttachmentsData,
-                   let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
-                   !images.isEmpty {
-                    let (live, _) = Self.partitionLiveImages(images)
-                    if !live.isEmpty {
-                        result.append(.toolWithImages(
-                            content: msg.content ?? "",
-                            images: live,
-                            toolCallId: msg.toolCallId ?? "",
-                            name: msg.name
-                        ))
-                    } else {
-                        result.append(.tool(
-                            content: msg.content ?? "",
-                            toolCallId: msg.toolCallId ?? "",
-                            name: msg.name
-                        ))
-                    }
-                } else {
-                    result.append(.tool(
-                        content: msg.content ?? "",
-                        toolCallId: msg.toolCallId ?? "",
-                        name: msg.name
-                    ))
-                }
+                result.append(.tool(
+                    content: msg.content ?? "",
+                    toolCallId: msg.toolCallId ?? "",
+                    name: msg.name
+                ))
 
             default:
                 break
