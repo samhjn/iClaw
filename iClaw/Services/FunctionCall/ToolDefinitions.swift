@@ -54,6 +54,7 @@ enum ToolDefinitions {
             fileWriteTool,
             fileDeleteTool,
             fileInfoTool,
+            attachMediaTool,
 
             // Apple Ecosystem — Calendar
             calendarListCalendarsTool,
@@ -139,7 +140,7 @@ enum ToolDefinitions {
 
     static let executeJavaScriptTool = ToolDefinitionBuilder.build(
         name: "execute_javascript",
-        description: "Execute JavaScript code in a WKWebView sandbox. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — all return Promises, use `await` in script mode (e.g. `let events = await apple.calendar.searchEvents({})`). Default timeout 60s (max 300s).",
+        description: "Execute JavaScript code in a WKWebView sandbox. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). File system: `fs.list()`, `fs.read(name)`, `fs.write(name, content)`, `fs.delete(name)`, `fs.info(name)` — persistent agent file storage. Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — all return Promises, use `await` in script mode (e.g. `let events = await apple.calendar.searchEvents({})`). Default timeout 60s (max 300s).",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The JavaScript code to execute"),
             "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
@@ -422,6 +423,16 @@ enum ToolDefinitions {
         description: "Get metadata about a file: size, creation date, modification date, and whether it's an image.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("The filename to get info for")
+        ],
+        required: ["name"]
+    )
+
+    static let attachMediaTool = ToolDefinitionBuilder.build(
+        name: "attach_media",
+        description: "Attach a file from the agent's folder as multimodal content in the conversation. The attached file becomes visible to the LLM for analysis. Currently supports image files (jpg, png, gif, webp, heic, bmp, tiff). Future support planned for audio and video.",
+        properties: [
+            "name": ToolDefinitionBuilder.stringParam("The filename to attach (e.g. 'photo.jpg', 'chart.png')"),
+            "modality": ToolDefinitionBuilder.enumParam("Media type (auto-detected from extension if omitted)", values: ["image", "audio", "video"])
         ],
         required: ["name"]
     )

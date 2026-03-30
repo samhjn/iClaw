@@ -198,6 +198,8 @@ final class FunctionCallRouter {
             return ToolCallResult(FileTools(agent: agent).deleteFile(arguments: arguments))
         case "file_info":
             return ToolCallResult(FileTools(agent: agent).fileInfo(arguments: arguments))
+        case "attach_media":
+            return FileTools(agent: agent).attachMedia(arguments: arguments)
 
         // --- Browser ---
         case "browser_navigate":

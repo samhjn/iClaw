@@ -398,6 +398,7 @@
 "toolCard.fileWrite" = "파일 쓰기";
 "toolCard.fileDelete" = "파일 삭제";
 "toolCard.fileInfo" = "파일 정보";
+"toolCard.attachMedia" = "미디어 첨부";
 "toolCard.browse" = "브라우즈";
 "toolCard.pageInfo" = "페이지 정보";
 "toolCard.click" = "클릭";

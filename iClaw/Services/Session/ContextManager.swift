@@ -149,6 +149,14 @@ final class ContextManager {
                 }
 
             case .tool:
+                if let imgData = msg.imageAttachmentsData,
+                   let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
+                   !images.isEmpty {
+                    let (live, _) = Self.partitionLiveImages(images)
+                    for img in live where !pendingImages.contains(where: { $0.id == img.id }) {
+                        pendingImages.append(img)
+                    }
+                }
                 result.append(.tool(
                     content: msg.content ?? "",
                     toolCallId: msg.toolCallId ?? "",

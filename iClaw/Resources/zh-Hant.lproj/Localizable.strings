@@ -399,6 +399,7 @@
 "toolCard.fileWrite" = "寫入檔案";
 "toolCard.fileDelete" = "刪除檔案";
 "toolCard.fileInfo" = "檔案資訊";
+"toolCard.attachMedia" = "附加媒體";
 "toolCard.browse" = "瀏覽";
 "toolCard.pageInfo" = "頁面資訊";
 "toolCard.click" = "點擊";

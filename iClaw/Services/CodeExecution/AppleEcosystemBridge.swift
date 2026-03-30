@@ -10,9 +10,10 @@ private let bridgeLog = OSLog(subsystem: "com.iclaw.jsruntime", category: "apple
 /// synchronously via `window.webkit.messageHandlers.appleBridge.postMessage()`
 /// and receive results inline.
 ///
-/// The bridge installs a high-level `apple` global object with sub-namespaces:
-/// `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`,
-/// `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*`.
+/// The bridge installs two global objects:
+/// - `fs` — standalone file system API: `fs.list()`, `fs.read()`, `fs.write()`, `fs.delete()`, `fs.info()`
+/// - `apple` — Apple ecosystem APIs: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`,
+///   `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*`
 ///
 /// Per-agent permissions are enforced in two layers:
 /// 1. **JS layer**: blocked actions are injected into the preamble and rejected before `postMessage`.
@@ -264,99 +265,100 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
     nonisolated static func jsPreamble(blockedActions: Set<String>, execId: String) -> String {
         let blockedArray = blockedActions.map { "'\($0)'" }.joined(separator: ",")
         return """
-        var apple = (function() {
-            var __blockedActions = new Set([\(blockedArray)]);
-            var __execId = '\(execId)';
+        var __blockedActions = new Set([\(blockedArray)]);
+        var __execId = '\(execId)';
 
-            async function call(action, args) {
-                if (__blockedActions.has(action)) {
-                    return '[Error] Action \\'' + action + '\\' is not permitted for this agent.';
-                }
-                try {
-                    return await window.webkit.messageHandlers.appleBridge.postMessage({action: action, args: args || {}, execId: __execId});
-                } catch(e) {
-                    return '[Error] Bridge call failed: ' + e.message;
-                }
+        async function __bridgeCall(action, args) {
+            if (__blockedActions.has(action)) {
+                return '[Error] Action \\'' + action + '\\' is not permitted for this agent.';
             }
+            try {
+                return await window.webkit.messageHandlers.appleBridge.postMessage({action: action, args: args || {}, execId: __execId});
+            } catch(e) {
+                return '[Error] Bridge call failed: ' + e.message;
+            }
+        }
 
+        var fs = {
+            list: function() { return __bridgeCall('files.list', {}); },
+            read: function(name, opts) { var a = opts || {}; a.name = name; return __bridgeCall('files.read', a); },
+            write: function(name, content, opts) { var a = opts || {}; a.name = name; a.content = content; return __bridgeCall('files.write', a); },
+            delete: function(name) { return __bridgeCall('files.delete', {name: name}); },
+            info: function(name) { return __bridgeCall('files.info', {name: name}); }
+        };
+
+        var apple = (function() {
             return {
-                files: {
-                    list: function() { return call('files.list', {}); },
-                    read: function(name, opts) { var a = opts || {}; a.name = name; return call('files.read', a); },
-                    write: function(name, content, opts) { var a = opts || {}; a.name = name; a.content = content; return call('files.write', a); },
-                    delete: function(name) { return call('files.delete', {name: name}); },
-                    info: function(name) { return call('files.info', {name: name}); }
-                },
                 calendar: {
-                    listCalendars: function() { return call('calendar.listCalendars', {}); },
-                    createEvent: function(opts) { return call('calendar.createEvent', opts); },
-                    searchEvents: function(opts) { return call('calendar.searchEvents', opts || {}); },
-                    updateEvent: function(opts) { return call('calendar.updateEvent', opts); },
-                    deleteEvent: function(eventId) { return call('calendar.deleteEvent', {event_id: eventId}); }
+                    listCalendars: function() { return __bridgeCall('calendar.listCalendars', {}); },
+                    createEvent: function(opts) { return __bridgeCall('calendar.createEvent', opts); },
+                    searchEvents: function(opts) { return __bridgeCall('calendar.searchEvents', opts || {}); },
+                    updateEvent: function(opts) { return __bridgeCall('calendar.updateEvent', opts); },
+                    deleteEvent: function(eventId) { return __bridgeCall('calendar.deleteEvent', {event_id: eventId}); }
                 },
                 reminders: {
-                    list: function(opts) { return call('reminders.list', opts || {}); },
-                    lists: function() { return call('reminders.lists', {}); },
-                    create: function(opts) { return call('reminders.create', opts); },
+                    list: function(opts) { return __bridgeCall('reminders.list', opts || {}); },
+                    lists: function() { return __bridgeCall('reminders.lists', {}); },
+                    create: function(opts) { return __bridgeCall('reminders.create', opts); },
                     complete: function(reminderId, completed) {
-                        return call('reminders.complete', {reminder_id: reminderId, completed: completed !== false});
+                        return __bridgeCall('reminders.complete', {reminder_id: reminderId, completed: completed !== false});
                     },
-                    delete: function(reminderId) { return call('reminders.delete', {reminder_id: reminderId}); }
+                    delete: function(reminderId) { return __bridgeCall('reminders.delete', {reminder_id: reminderId}); }
                 },
                 contacts: {
-                    search: function(query) { return call('contacts.search', {query: query}); },
-                    getDetail: function(contactId) { return call('contacts.getDetail', {contact_id: contactId}); }
+                    search: function(query) { return __bridgeCall('contacts.search', {query: query}); },
+                    getDetail: function(contactId) { return __bridgeCall('contacts.getDetail', {contact_id: contactId}); }
                 },
                 clipboard: {
-                    read: function() { return call('clipboard.read', {}); },
-                    write: function(text) { return call('clipboard.write', {text: text}); }
+                    read: function() { return __bridgeCall('clipboard.read', {}); },
+                    write: function(text) { return __bridgeCall('clipboard.write', {text: text}); }
                 },
                 notifications: {
-                    schedule: function(opts) { return call('notifications.schedule', opts); },
-                    cancel: function(id) { return call('notifications.cancel', {id: id}); },
-                    cancelAll: function() { return call('notifications.cancel', {cancel_all: true}); },
-                    list: function() { return call('notifications.list', {}); }
+                    schedule: function(opts) { return __bridgeCall('notifications.schedule', opts); },
+                    cancel: function(id) { return __bridgeCall('notifications.cancel', {id: id}); },
+                    cancelAll: function() { return __bridgeCall('notifications.cancel', {cancel_all: true}); },
+                    list: function() { return __bridgeCall('notifications.list', {}); }
                 },
                 location: {
                     getCurrent: function(includeAddress) {
-                        return call('location.getCurrent', {include_address: includeAddress !== false});
+                        return __bridgeCall('location.getCurrent', {include_address: includeAddress !== false});
                     },
-                    geocode: function(address) { return call('location.geocode', {address: address}); },
+                    geocode: function(address) { return __bridgeCall('location.geocode', {address: address}); },
                     reverseGeocode: function(lat, lon) {
-                        return call('location.reverseGeocode', {latitude: lat, longitude: lon});
+                        return __bridgeCall('location.reverseGeocode', {latitude: lat, longitude: lon});
                     }
                 },
                 maps: {
                     searchPlaces: function(query, opts) {
                         var args = opts || {};
                         args.query = query;
-                        return call('maps.searchPlaces', args);
+                        return __bridgeCall('maps.searchPlaces', args);
                     },
-                    getDirections: function(opts) { return call('maps.getDirections', opts); }
+                    getDirections: function(opts) { return __bridgeCall('maps.getDirections', opts); }
                 },
                 health: {
-                    readSteps: function(opts) { return call('health.readSteps', opts || {}); },
-                    readHeartRate: function(opts) { return call('health.readHeartRate', opts || {}); },
-                    readSleep: function(opts) { return call('health.readSleep', opts || {}); },
-                    readBodyMass: function(opts) { return call('health.readBodyMass', opts || {}); },
-                    readBloodPressure: function(opts) { return call('health.readBloodPressure', opts || {}); },
-                    readBloodGlucose: function(opts) { return call('health.readBloodGlucose', opts || {}); },
-                    readBloodOxygen: function(opts) { return call('health.readBloodOxygen', opts || {}); },
-                    readBodyTemperature: function(opts) { return call('health.readBodyTemperature', opts || {}); },
-                    writeDietaryEnergy: function(opts) { return call('health.writeDietaryEnergy', opts || {}); },
-                    writeBodyMass: function(opts) { return call('health.writeBodyMass', opts || {}); },
-                    writeDietaryWater: function(opts) { return call('health.writeDietaryWater', opts || {}); },
-                    writeDietaryCarbohydrates: function(opts) { return call('health.writeDietaryCarbohydrates', opts || {}); },
-                    writeDietaryProtein: function(opts) { return call('health.writeDietaryProtein', opts || {}); },
-                    writeDietaryFat: function(opts) { return call('health.writeDietaryFat', opts || {}); },
-                    writeBloodPressure: function(opts) { return call('health.writeBloodPressure', opts || {}); },
-                    writeBodyFat: function(opts) { return call('health.writeBodyFat', opts || {}); },
-                    writeHeight: function(opts) { return call('health.writeHeight', opts || {}); },
-                    writeBloodGlucose: function(opts) { return call('health.writeBloodGlucose', opts || {}); },
-                    writeBloodOxygen: function(opts) { return call('health.writeBloodOxygen', opts || {}); },
-                    writeBodyTemperature: function(opts) { return call('health.writeBodyTemperature', opts || {}); },
-                    writeHeartRate: function(opts) { return call('health.writeHeartRate', opts || {}); },
-                    writeWorkout: function(opts) { return call('health.writeWorkout', opts || {}); }
+                    readSteps: function(opts) { return __bridgeCall('health.readSteps', opts || {}); },
+                    readHeartRate: function(opts) { return __bridgeCall('health.readHeartRate', opts || {}); },
+                    readSleep: function(opts) { return __bridgeCall('health.readSleep', opts || {}); },
+                    readBodyMass: function(opts) { return __bridgeCall('health.readBodyMass', opts || {}); },
+                    readBloodPressure: function(opts) { return __bridgeCall('health.readBloodPressure', opts || {}); },
+                    readBloodGlucose: function(opts) { return __bridgeCall('health.readBloodGlucose', opts || {}); },
+                    readBloodOxygen: function(opts) { return __bridgeCall('health.readBloodOxygen', opts || {}); },
+                    readBodyTemperature: function(opts) { return __bridgeCall('health.readBodyTemperature', opts || {}); },
+                    writeDietaryEnergy: function(opts) { return __bridgeCall('health.writeDietaryEnergy', opts || {}); },
+                    writeBodyMass: function(opts) { return __bridgeCall('health.writeBodyMass', opts || {}); },
+                    writeDietaryWater: function(opts) { return __bridgeCall('health.writeDietaryWater', opts || {}); },
+                    writeDietaryCarbohydrates: function(opts) { return __bridgeCall('health.writeDietaryCarbohydrates', opts || {}); },
+                    writeDietaryProtein: function(opts) { return __bridgeCall('health.writeDietaryProtein', opts || {}); },
+                    writeDietaryFat: function(opts) { return __bridgeCall('health.writeDietaryFat', opts || {}); },
+                    writeBloodPressure: function(opts) { return __bridgeCall('health.writeBloodPressure', opts || {}); },
+                    writeBodyFat: function(opts) { return __bridgeCall('health.writeBodyFat', opts || {}); },
+                    writeHeight: function(opts) { return __bridgeCall('health.writeHeight', opts || {}); },
+                    writeBloodGlucose: function(opts) { return __bridgeCall('health.writeBloodGlucose', opts || {}); },
+                    writeBloodOxygen: function(opts) { return __bridgeCall('health.writeBloodOxygen', opts || {}); },
+                    writeBodyTemperature: function(opts) { return __bridgeCall('health.writeBodyTemperature', opts || {}); },
+                    writeHeartRate: function(opts) { return __bridgeCall('health.writeHeartRate', opts || {}); },
+                    writeWorkout: function(opts) { return __bridgeCall('health.writeWorkout', opts || {}); }
                 }
             };
         })();

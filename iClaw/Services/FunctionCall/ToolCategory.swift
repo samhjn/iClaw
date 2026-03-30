@@ -147,7 +147,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .model:
             return ["get_model", "list_models"]
         case .files:
-            return ["file_list", "file_read", "file_info"]
+            return ["file_list", "file_read", "file_info", "attach_media"]
         }
     }
 

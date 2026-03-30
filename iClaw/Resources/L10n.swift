@@ -532,6 +532,7 @@ enum L10n {
         static var fileWrite: String { tr("toolCard.fileWrite") }
         static var fileDelete: String { tr("toolCard.fileDelete") }
         static var fileInfo: String { tr("toolCard.fileInfo") }
+        static var attachMedia: String { tr("toolCard.attachMedia") }
         static var browse: String { tr("toolCard.browse") }
         static var pageInfo: String { tr("toolCard.pageInfo") }
         static var click: String { tr("toolCard.click") }

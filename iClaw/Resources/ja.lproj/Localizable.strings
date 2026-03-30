@@ -398,6 +398,7 @@
 "toolCard.fileWrite" = "ファイル書き込み";
 "toolCard.fileDelete" = "ファイル削除";
 "toolCard.fileInfo" = "ファイル情報";
+"toolCard.attachMedia" = "メディア添付";
 "toolCard.browse" = "ブラウズ";
 "toolCard.pageInfo" = "ページ情報";
 "toolCard.click" = "クリック";

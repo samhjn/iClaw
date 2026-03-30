@@ -399,6 +399,7 @@
 "toolCard.fileWrite" = "Write File";
 "toolCard.fileDelete" = "Delete File";
 "toolCard.fileInfo" = "File Info";
+"toolCard.attachMedia" = "Attach Media";
 "toolCard.browse" = "Browse";
 "toolCard.pageInfo" = "Page Info";
 "toolCard.click" = "Click";
