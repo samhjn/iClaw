@@ -44,6 +44,10 @@ final class ChatViewModel {
 
     let session: Session
     private var modelContext: ModelContext
+
+    private var agentId: UUID? {
+        session.agent.map { AgentFileManager.shared.resolveAgentId(for: $0) }
+    }
     private var generationTask: Task<Void, Never>?
     /// The actual compression work task — should NOT be cancelled on view disappear.
     private var compressionTask: Task<Void, Never>?
@@ -78,7 +82,7 @@ final class ChatViewModel {
     private func migrateInlineImages() {
         var needsSave = false
         for msg in messages where msg.role == .assistant {
-            if msg.extractAndStoreInlineImages() {
+            if msg.extractAndStoreInlineImages(agentId: agentId) {
                 needsSave = true
             }
         }
@@ -383,7 +387,7 @@ final class ChatViewModel {
                         content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
                         session: session
                     )
-                    partialMsg.extractAndStoreInlineImages()
+                    partialMsg.extractAndStoreInlineImages(agentId: agentId)
                     attachPendingToolImages(to: partialMsg)
                     modelContext.insert(partialMsg)
                     session.messages.append(partialMsg)
@@ -433,7 +437,7 @@ final class ChatViewModel {
                         content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
                         session: session
                     )
-                    partialMsg.extractAndStoreInlineImages()
+                    partialMsg.extractAndStoreInlineImages(agentId: agentId)
                     attachPendingToolImages(to: partialMsg)
                     modelContext.insert(partialMsg)
                     session.messages.append(partialMsg)
@@ -465,7 +469,7 @@ final class ChatViewModel {
                     session: session
                 )
                 assistantMsg.thinkingContent = combinedThinking
-                assistantMsg.extractAndStoreInlineImages()
+                assistantMsg.extractAndStoreInlineImages(agentId: agentId)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
@@ -476,7 +480,7 @@ final class ChatViewModel {
             } else if !finalContent.isEmpty || combinedThinking != nil {
                 let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent, session: session)
                 assistantMsg.thinkingContent = combinedThinking
-                assistantMsg.extractAndStoreInlineImages()
+                assistantMsg.extractAndStoreInlineImages(agentId: agentId)
                 attachPendingToolImages(to: assistantMsg)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
@@ -947,7 +951,14 @@ final class ChatViewModel {
     // MARK: - Image Management
 
     func addImage(_ uiImage: UIImage) {
-        guard let attachment = ImageAttachment.from(image: uiImage) else { return }
+        let attachment: ImageAttachment?
+        if let agent = session.agent {
+            let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
+            attachment = ImageAttachment.from(image: uiImage, agentId: agentId)
+        } else {
+            attachment = ImageAttachment.from(image: uiImage)
+        }
+        guard let attachment else { return }
         pendingImages.append(attachment)
     }
 

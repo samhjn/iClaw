@@ -122,6 +122,15 @@ final class PromptBuilder {
         - `list_skills`: Browse the skill library or view installed skills
         - `read_skill`: Read the full content of a skill
 
+        ### File Management
+        - `file_list`: List all files in your file folder with names, sizes, and dates
+        - `file_read`: Read a file (text by default; use `mode: "base64"` for binary)
+        - `file_write`: Create or overwrite a file (`encoding: "base64"` for binary data)
+        - `file_delete`: Delete a file from the folder
+        - `file_info`: Get file metadata (size, dates, image detection)
+        - Files persist across sessions. Sub-agents share the parent agent's file folder.
+        - Generated images are automatically saved here. Users can also upload files via the UI.
+
         ### Model Management
         - `set_model`: Configure your LLM model. Roles:
           - `primary`: Set the main model for this agent

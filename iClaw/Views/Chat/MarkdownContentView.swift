@@ -729,12 +729,22 @@ private struct MarkdownImageView: View {
     private var isDataURI: Bool { urlString.hasPrefix("data:image/") }
     private var isAttachmentRef: Bool { urlString.hasPrefix("attachment:") }
 
-    private var attachmentImage: UIImage? {
+    private var attachmentIndex: Int? {
         guard isAttachmentRef,
               let idx = Int(urlString.dropFirst("attachment:".count)),
               idx >= 0, idx < imageAttachments.count
         else { return nil }
+        return idx
+    }
+
+    private var attachmentImage: UIImage? {
+        guard let idx = attachmentIndex else { return nil }
         return imageAttachments[idx].uiImage
+    }
+
+    private var isAttachmentFileDeleted: Bool {
+        guard let idx = attachmentIndex else { return false }
+        return imageAttachments[idx].isFileDeleted
     }
 
     private static func decodeDataURI(_ urlString: String) -> UIImage? {
@@ -747,7 +757,9 @@ private struct MarkdownImageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if isAttachmentRef {
-                if let uiImage = attachmentImage {
+                if isAttachmentFileDeleted {
+                    imageDeletedView
+                } else if let uiImage = attachmentImage {
                     thumbnailImage(Image(uiImage: uiImage))
                         .onAppear { resolvedImage = uiImage }
                 } else {
@@ -823,6 +835,21 @@ private struct MarkdownImageView: View {
             Image(systemName: "photo.badge.exclamationmark")
                 .foregroundStyle(.secondary)
             Text(L10n.Chat.imageLoadFailed)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemGray6))
+        )
+    }
+
+    private var imageDeletedView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "trash.slash")
+                .foregroundStyle(.secondary)
+            Text(L10n.Chat.imageDeleted)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

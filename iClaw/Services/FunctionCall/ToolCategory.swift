@@ -58,6 +58,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     case skills
     case config
     case model
+    case files
 
     var id: String { rawValue }
 
@@ -82,6 +83,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .skills:        return L10n.ToolPermissions.skills
         case .config:        return L10n.ToolPermissions.config
         case .model:         return L10n.ToolPermissions.model
+        case .files:         return L10n.ToolPermissions.files
         }
     }
 
@@ -102,6 +104,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .skills:        return "book.pages"
         case .config:        return "slider.horizontal.3"
         case .model:         return "cpu"
+        case .files:         return "folder"
         }
     }
 
@@ -143,6 +146,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             return ["read_config"]
         case .model:
             return ["get_model", "list_models"]
+        case .files:
+            return ["file_list", "file_read", "file_info"]
         }
     }
 
@@ -187,6 +192,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             return ["write_config"]
         case .model:
             return ["set_model"]
+        case .files:
+            return ["file_write", "file_delete"]
         }
     }
 
@@ -216,6 +223,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
                 "health.readBodyMass", "health.readBloodPressure", "health.readBloodGlucose",
                 "health.readBloodOxygen", "health.readBodyTemperature",
             ]
+        case .files:
+            return ["files.list", "files.read", "files.info"]
         case .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model:
             return []
         }
@@ -238,6 +247,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
                 "health.writeHeight", "health.writeBloodGlucose", "health.writeBloodOxygen",
                 "health.writeBodyTemperature", "health.writeHeartRate", "health.writeWorkout",
             ]
+        case .files:
+            return ["files.write", "files.delete"]
         case .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model:
             return []
         }
@@ -253,7 +264,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     ]
 
     static let agentCategories: [ToolCategory] = [
-        .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model,
+        .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model, .files,
     ]
 
     /// Every function-call tool name across all categories.

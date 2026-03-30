@@ -99,6 +99,7 @@ enum L10n {
         static var saveImageToPhotos: String { tr("chat.saveImageToPhotos") }
         static var imageSaved: String { tr("chat.imageSaved") }
         static var copyImage: String { tr("chat.copyImage") }
+        static var imageDeleted: String { tr("chat.imageDeleted") }
         static func modalityStripped(_ count: Int, _ model: String) -> String { tr("chat.modalityStripped", count, model) }
         static func toolUseUnsupported(_ model: String) -> String { tr("chat.toolUseUnsupported", model) }
         static var retry: String { tr("chat.retry") }
@@ -116,6 +117,19 @@ enum L10n {
         static var createAgentDescription: String { tr("agents.createAgentDescription") }
         static var enterName: String { tr("agents.enterName") }
         static var renameAgent: String { tr("agents.renameAgent") }
+    }
+
+    // MARK: - Agent Detail
+
+    // MARK: - Agent Files
+
+    enum AgentFiles {
+        static var title: String { tr("agentFiles.title") }
+        static var empty: String { tr("agentFiles.empty") }
+        static var emptyDescription: String { tr("agentFiles.emptyDescription") }
+        static var deleteConfirmTitle: String { tr("agentFiles.deleteConfirmTitle") }
+        static func deleteConfirmMessage(_ name: String) -> String { tr("agentFiles.deleteConfirmMessage", name) }
+        static var imagePermissionDisabled: String { tr("agentFiles.imagePermissionDisabled") }
     }
 
     // MARK: - Agent Detail
@@ -184,6 +198,7 @@ enum L10n {
         static var skills: String { tr("toolPermissions.skills") }
         static var config: String { tr("toolPermissions.config") }
         static var model: String { tr("toolPermissions.model") }
+        static var files: String { tr("toolPermissions.files") }
         static var appleSection: String { tr("toolPermissions.appleSection") }
         static var agentSection: String { tr("toolPermissions.agentSection") }
     }
@@ -512,6 +527,11 @@ enum L10n {
         static var setModel: String { tr("toolCard.setModel") }
         static var getModel: String { tr("toolCard.getModel") }
         static var listModels: String { tr("toolCard.listModels") }
+        static var fileList: String { tr("toolCard.fileList") }
+        static var fileRead: String { tr("toolCard.fileRead") }
+        static var fileWrite: String { tr("toolCard.fileWrite") }
+        static var fileDelete: String { tr("toolCard.fileDelete") }
+        static var fileInfo: String { tr("toolCard.fileInfo") }
         static var browse: String { tr("toolCard.browse") }
         static var pageInfo: String { tr("toolCard.pageInfo") }
         static var click: String { tr("toolCard.click") }

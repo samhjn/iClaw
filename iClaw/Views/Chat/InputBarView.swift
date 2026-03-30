@@ -11,6 +11,7 @@ struct InputBarView: View {
     var canRetry: Bool = false
     var cancelFailureReason: String?
     var pendingImages: [ImageAttachment] = []
+    var isImageDisabled: Bool = false
     let onSend: () -> Void
     var onStop: (() -> Void)?
     var onStopCompression: (() -> Void)?
@@ -21,6 +22,7 @@ struct InputBarView: View {
 
     @State private var isInputFocused = false
     @State private var showImageSourcePicker = false
+    @State private var showImageDisabledToast = false
     @State private var showPhotoPicker = false
     @State private var showCamera = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -74,15 +76,22 @@ struct InputBarView: View {
                 }
 
                 Button {
-                    showImageSourcePicker = true
+                    if isImageDisabled {
+                        showImageDisabledToast = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showImageDisabledToast = false
+                        }
+                    } else {
+                        showImageSourcePicker = true
+                    }
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 24))
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isImageDisabled ? .quaternary : .secondary)
                         .frame(width: 32, height: 36)
                 }
-                .disabled(isBusy)
+                .disabled(isBusy && !isImageDisabled)
 
                 PasteableTextInput(
                     text: $text,
@@ -154,6 +163,19 @@ struct InputBarView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             isInputFocused = false
+        }
+        .overlay(alignment: .top) {
+            if showImageDisabledToast {
+                Text(L10n.AgentFiles.imagePermissionDisabled)
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(.black.opacity(0.75)))
+                    .offset(y: -44)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.2), value: showImageDisabledToast)
+            }
         }
     }
 

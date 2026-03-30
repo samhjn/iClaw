@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "Save Image";
 "chat.imageSaved" = "Saved to Photos";
 "chat.copyImage" = "Copy Image";
+"chat.imageDeleted" = "Image deleted";
 "chat.modalityStripped" = "%d image(s) temporarily excluded from context — %@ does not support vision.";
 "chat.toolUseUnsupported" = "%@ does not support tool use — features like browsing, sub-agents, and code execution will be unavailable.";
 "chat.retry" = "Retry";
@@ -393,6 +394,11 @@
 "toolCard.setModel" = "Set Model";
 "toolCard.getModel" = "Get Model";
 "toolCard.listModels" = "List Models";
+"toolCard.fileList" = "List Files";
+"toolCard.fileRead" = "Read File";
+"toolCard.fileWrite" = "Write File";
+"toolCard.fileDelete" = "Delete File";
+"toolCard.fileInfo" = "File Info";
 "toolCard.browse" = "Browse";
 "toolCard.pageInfo" = "Page Info";
 "toolCard.click" = "Click";
@@ -463,9 +469,18 @@
 "toolPermissions.skills" = "Skills";
 "toolPermissions.config" = "Config";
 "toolPermissions.model" = "Model";
+"toolPermissions.files" = "Files";
 "toolPermissions.appleSection" = "Apple Ecosystem";
 "toolPermissions.agentSection" = "Agent Capabilities";
 "agentDetail.toolPermissions" = "Tool Permissions";
+
+// MARK: - Agent Files
+"agentFiles.title" = "Files";
+"agentFiles.empty" = "No Files";
+"agentFiles.emptyDescription" = "Files created by the agent or uploaded by you will appear here.";
+"agentFiles.deleteConfirmTitle" = "Delete File";
+"agentFiles.deleteConfirmMessage" = "Are you sure you want to delete \"%@\"? This cannot be undone.";
+"agentFiles.imagePermissionDisabled" = "File access is disabled for this agent";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[Error] Calendar access denied. Please enable in Settings > Privacy > Calendars.";

@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "이미지 저장";
 "chat.imageSaved" = "사진에 저장되었습니다";
 "chat.copyImage" = "이미지 복사";
+"chat.imageDeleted" = "이미지가 삭제되었습니다";
 "chat.modalityStripped" = "컨텍스트에서 이미지 %d개 일시적으로 제외됨 — %@은(는) 비전을 지원하지 않습니다";
 "chat.toolUseUnsupported" = "%@은(는) 도구 사용을 지원하지 않습니다 — 브라우저, 서브 에이전트, 코드 실행 등의 기능을 사용할 수 없습니다";
 "chat.retry" = "재시도";
@@ -392,6 +393,11 @@
 "toolCard.setModel" = "모델 설정";
 "toolCard.getModel" = "모델 조회";
 "toolCard.listModels" = "모델 목록";
+"toolCard.fileList" = "파일 목록";
+"toolCard.fileRead" = "파일 읽기";
+"toolCard.fileWrite" = "파일 쓰기";
+"toolCard.fileDelete" = "파일 삭제";
+"toolCard.fileInfo" = "파일 정보";
 "toolCard.browse" = "브라우즈";
 "toolCard.pageInfo" = "페이지 정보";
 "toolCard.click" = "클릭";
@@ -462,9 +468,18 @@
 "toolPermissions.skills" = "스킬";
 "toolPermissions.config" = "설정";
 "toolPermissions.model" = "모델";
+"toolPermissions.files" = "파일";
 "toolPermissions.appleSection" = "Apple 생태계";
 "toolPermissions.agentSection" = "에이전트 기능";
 "agentDetail.toolPermissions" = "도구 권한";
+
+// MARK: - Agent Files
+"agentFiles.title" = "파일 관리";
+"agentFiles.empty" = "파일 없음";
+"agentFiles.emptyDescription" = "에이전트가 생성하거나 업로드한 파일이 여기에 표시됩니다.";
+"agentFiles.deleteConfirmTitle" = "파일 삭제";
+"agentFiles.deleteConfirmMessage" = "\"%@\"을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.";
+"agentFiles.imagePermissionDisabled" = "이 에이전트의 파일 접근 권한이 비활성화되었습니다";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[오류] 캘린더 접근이 거부되었습니다. 「설정 > 개인 정보 보호 > 캘린더」에서 활성화하세요.";

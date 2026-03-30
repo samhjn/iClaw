@@ -66,6 +66,7 @@
 "chat.saveImageToPhotos" = "画像を保存";
 "chat.imageSaved" = "写真に保存しました";
 "chat.copyImage" = "画像をコピー";
+"chat.imageDeleted" = "画像は削除されました";
 "chat.modalityStripped" = "コンテキストから画像 %d 枚を一時的に除外しました — %@ はビジョンに対応していません";
 "chat.toolUseUnsupported" = "%@ はツール使用に対応していません — ブラウザ、サブエージェント、コード実行などの機能が利用できません。";
 "chat.retry" = "リトライ";
@@ -392,6 +393,11 @@
 "toolCard.setModel" = "モデル設定";
 "toolCard.getModel" = "モデル取得";
 "toolCard.listModels" = "モデル一覧";
+"toolCard.fileList" = "ファイル一覧";
+"toolCard.fileRead" = "ファイル読み取り";
+"toolCard.fileWrite" = "ファイル書き込み";
+"toolCard.fileDelete" = "ファイル削除";
+"toolCard.fileInfo" = "ファイル情報";
 "toolCard.browse" = "ブラウズ";
 "toolCard.pageInfo" = "ページ情報";
 "toolCard.click" = "クリック";
@@ -462,9 +468,18 @@
 "toolPermissions.skills" = "スキル";
 "toolPermissions.config" = "設定";
 "toolPermissions.model" = "モデル";
+"toolPermissions.files" = "ファイル";
 "toolPermissions.appleSection" = "Apple エコシステム";
 "toolPermissions.agentSection" = "エージェント機能";
 "agentDetail.toolPermissions" = "ツール権限";
+
+// MARK: - Agent Files
+"agentFiles.title" = "ファイル管理";
+"agentFiles.empty" = "ファイルなし";
+"agentFiles.emptyDescription" = "エージェントが作成したファイルやアップロードしたファイルがここに表示されます。";
+"agentFiles.deleteConfirmTitle" = "ファイルを削除";
+"agentFiles.deleteConfirmMessage" = "「%@」を削除してもよろしいですか？この操作は取り消せません。";
+"agentFiles.imagePermissionDisabled" = "このエージェントのファイルアクセス権限は無効です";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[エラー] カレンダーへのアクセスが拒否されました。「設定 > プライバシー > カレンダー」で有効にしてください。";

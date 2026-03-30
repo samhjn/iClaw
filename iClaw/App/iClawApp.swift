@@ -42,6 +42,7 @@ struct iClawApp: App {
         }
 
         Self.resetStaleActiveSessions(in: modelContainer)
+        Self.cleanupOrphanAgentFiles(in: modelContainer)
     }
 
     /// Sessions stuck in `isActive` from a previous crash or force-quit can never
@@ -57,6 +58,14 @@ struct iClawApp: App {
         }
         try? context.save()
         print("[iClawApp] Reset \(stale.count) stale active session(s).")
+    }
+
+    private static func cleanupOrphanAgentFiles(in container: ModelContainer) {
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<Agent>()
+        guard let allAgents = try? context.fetch(descriptor) else { return }
+        let knownIds = Set(allAgents.map(\.id))
+        AgentFileManager.shared.cleanupOrphanDirectories(knownAgentIds: knownIds)
     }
 
     var body: some Scene {

@@ -26,9 +26,19 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
 
     static let messageHandlerName = "appleBridge"
 
-    /// Permission checkers keyed by execution ID.
-    /// Each JS execution registers a checker before running and removes it after.
-    private var permissionCheckers: [String: (String) -> Bool] = [:]
+    /// Execution contexts keyed by execution ID.
+    /// Each JS execution registers a context before running and removes it after.
+    private var executionContexts: [String: ExecutionContext] = [:]
+
+    struct ExecutionContext {
+        let permissionChecker: (String) -> Bool
+        let agentId: UUID?
+    }
+
+    /// Permission checkers keyed by execution ID (legacy accessor).
+    private var permissionCheckers: [String: (String) -> Bool] {
+        executionContexts.mapValues { $0.permissionChecker }
+    }
 
     /// Install the bridge on a WKWebView configuration before the web view is created.
     func install(on configuration: WKWebViewConfiguration) {
@@ -46,12 +56,17 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
 
     /// Register a permission checker for a JS execution context.
     func registerPermissions(execId: String, checker: @escaping (String) -> Bool) {
-        permissionCheckers[execId] = checker
+        executionContexts[execId] = ExecutionContext(permissionChecker: checker, agentId: nil)
     }
 
-    /// Unregister the permission checker after execution completes.
+    /// Register a full execution context with permissions and agent ID (for file operations).
+    func registerContext(execId: String, agentId: UUID?, checker: @escaping (String) -> Bool) {
+        executionContexts[execId] = ExecutionContext(permissionChecker: checker, agentId: agentId)
+    }
+
+    /// Unregister the execution context after completion.
     func unregisterPermissions(execId: String) {
-        permissionCheckers.removeValue(forKey: execId)
+        executionContexts.removeValue(forKey: execId)
     }
 
     // MARK: - WKScriptMessageHandlerWithReply
@@ -72,22 +87,62 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             let execId = body["execId"] as? String
 
             // Native-layer permission check (defense-in-depth)
-            if let execId, let checker = permissionCheckers[execId], !checker(action) {
+            let ctx = execId.flatMap { executionContexts[$0] }
+            if let execId, let ctx, !ctx.permissionChecker(action) {
                 os_log(.info, log: bridgeLog, "[Bridge] BLOCKED action=%{public}@ execId=%{public}@", action, execId)
                 replyHandler("[Error] Action '\(action)' is not permitted for this agent.", nil)
                 return
             }
 
             os_log(.info, log: bridgeLog, "[Bridge] action=%{public}@", action)
-            let result = await dispatch(action: action, args: args)
+            let result = await dispatch(action: action, args: args, context: ctx)
             replyHandler(result, nil)
         }
     }
 
     // MARK: - Dispatch
 
-    private func dispatch(action: String, args: [String: Any]) async -> String {
+    private func dispatch(action: String, args: [String: Any], context: ExecutionContext? = nil) async -> String {
         switch action {
+
+        // --- Files ---
+        case "files.list":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            let files = AgentFileManager.shared.listFiles(agentId: agentId)
+            if files.isEmpty { return "[]" }
+            let items = files.map { "{\"name\":\"\($0.name)\",\"size\":\($0.size),\"is_image\":\($0.isImage)}" }
+            return "[\(items.joined(separator: ","))]"
+        case "files.read":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
+            let mode = args["mode"] as? String ?? "text"
+            do {
+                let data = try AgentFileManager.shared.readFile(agentId: agentId, name: name)
+                if mode == "base64" { return data.base64EncodedString() }
+                return String(data: data, encoding: .utf8) ?? "[Error] Binary file; use mode='base64'."
+            } catch { return "[Error] \(error.localizedDescription)" }
+        case "files.write":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
+            let content = args["content"] as? String ?? ""
+            let encoding = args["encoding"] as? String ?? "text"
+            let data: Data
+            if encoding == "base64" {
+                guard let d = Data(base64Encoded: content, options: .ignoreUnknownCharacters) else { return "[Error] Invalid base64." }
+                data = d
+            } else { data = Data(content.utf8) }
+            do { try AgentFileManager.shared.writeFile(agentId: agentId, name: name, data: data); return "OK" }
+            catch { return "[Error] \(error.localizedDescription)" }
+        case "files.delete":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
+            do { try AgentFileManager.shared.deleteFile(agentId: agentId, name: name); return "OK" }
+            catch { return "[Error] \(error.localizedDescription)" }
+        case "files.info":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
+            guard let info = AgentFileManager.shared.fileInfo(agentId: agentId, name: name) else { return "[Error] File not found." }
+            return "{\"name\":\"\(info.name)\",\"size\":\(info.size),\"is_image\":\(info.isImage)}"
 
         // --- Calendar ---
         case "calendar.listCalendars":
@@ -225,6 +280,13 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             }
 
             return {
+                files: {
+                    list: function() { return call('files.list', {}); },
+                    read: function(name, opts) { var a = opts || {}; a.name = name; return call('files.read', a); },
+                    write: function(name, content, opts) { var a = opts || {}; a.name = name; a.content = content; return call('files.write', a); },
+                    delete: function(name) { return call('files.delete', {name: name}); },
+                    info: function(name) { return call('files.info', {name: name}); }
+                },
                 calendar: {
                     listCalendars: function() { return call('calendar.listCalendars', {}); },
                     createEvent: function(opts) { return call('calendar.createEvent', opts); },

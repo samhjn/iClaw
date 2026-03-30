@@ -51,6 +51,9 @@ struct AgentDetailView: View {
                     NavigationLink(L10n.AgentDetail.cronJobs) {
                         CronJobListView(agent: agent)
                     }
+                    NavigationLink(L10n.AgentFiles.title) {
+                        AgentFileBrowserView(agent: agent)
+                    }
                     NavigationLink(L10n.AgentDetail.customConfigs) {
                         CustomConfigsView(agent: agent)
                     }

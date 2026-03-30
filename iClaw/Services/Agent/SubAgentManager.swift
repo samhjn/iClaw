@@ -169,7 +169,8 @@ final class SubAgentManager {
                     toolCallsData: try? JSONEncoder().encode(toolCalls),
                     session: session
                 )
-                assistantMsg.extractAndStoreInlineImages()
+                let rootAgentId = AgentFileManager.shared.resolveAgentId(for: subAgent)
+                assistantMsg.extractAndStoreInlineImages(agentId: rootAgentId)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
 
@@ -197,7 +198,8 @@ final class SubAgentManager {
 
             if let content = msg.content, !content.isEmpty {
                 let assistantMsg = Message(role: .assistant, content: content, session: session)
-                assistantMsg.extractAndStoreInlineImages()
+                let rootAgentId = AgentFileManager.shared.resolveAgentId(for: subAgent)
+                assistantMsg.extractAndStoreInlineImages(agentId: rootAgentId)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
@@ -339,6 +341,7 @@ final class SubAgentManager {
         forceStop(subAgentId: subAgentId)
         activeSessions.removeValue(forKey: subAgentId)
         inflightTasks.removeValue(forKey: subAgentId)
+        AgentFileManager.shared.cleanupAgentFiles(agentId: subAgentId)
         modelContext.delete(subAgent)
         try? modelContext.save()
     }
