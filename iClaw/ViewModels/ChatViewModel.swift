@@ -6,7 +6,9 @@ import UIKit
 @Observable
 final class ChatViewModel {
     var messages: [Message] = []
-    var inputText: String = ""
+    var inputText: String = "" {
+        didSet { Self.cachedInputTexts[session.id] = inputText }
+    }
     var isLoading: Bool = false
     var streamingContent: String = ""
     var streamingThinking: String = ""
@@ -95,6 +97,8 @@ final class ChatViewModel {
 
     /// Survives ViewModel recreation caused by SwiftData-triggered view re-renders.
     private static var cachedErrors: [UUID: String] = [:]
+    /// Draft input text — survives ViewModel recreation (e.g. silent-mode toggle, navigation).
+    private static var cachedInputTexts: [UUID: String] = [:]
     /// Sessions where the user explicitly dismissed the retry/error banner.
     private static var dismissedSessions: Set<UUID> = []
     /// Active generation tasks keyed by session ID — survives ViewModel recreation
@@ -107,6 +111,13 @@ final class ChatViewModel {
         self.session = session
         self.modelContext = modelContext
         self.isVerbose = session.agent?.isVerbose ?? true
+        // Restore draft text: prefer in-memory cache (more up-to-date), fall back to persisted value.
+        if let cached = Self.cachedInputTexts[session.id], !cached.isEmpty {
+            self.inputText = cached
+        } else if let draft = session.draftText, !draft.isEmpty {
+            self.inputText = draft
+            Self.cachedInputTexts[session.id] = draft
+        }
         loadMessages()
         checkActiveSessionLock()
         recoverStaleActiveState()
@@ -331,6 +342,7 @@ final class ChatViewModel {
 
         isLoading = true
         inputText = ""
+        session.draftText = nil
         Self.dismissedSessions.remove(session.id)
         canRetry = false
         errorMessage = nil
@@ -913,6 +925,10 @@ final class ChatViewModel {
         isCompressing = false
         cancelWatchdog?.cancel()
         cancelWatchdog = nil
+        // Persist draft text so it survives app quit.
+        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        session.draftText = trimmed.isEmpty ? nil : inputText
+        try? modelContext.save()
     }
 
     // MARK: - Stale Active State Recovery

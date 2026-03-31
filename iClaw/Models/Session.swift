@@ -34,6 +34,9 @@ final class Session {
     /// Partial streaming content from assistant (persisted so re-entry can display progress).
     var pendingStreamingContent: String?
 
+    /// Draft text the user was typing but hasn't sent yet (persisted across app quit / session exit).
+    var draftText: String?
+
     /// UUID of the parent session that spawned this sub-agent session (for content relay).
     var parentSessionIdRaw: String?
 
