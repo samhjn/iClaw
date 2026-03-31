@@ -520,7 +520,7 @@ struct ToolMeta {
         case "file_write":
             return ToolMeta(displayName: L10n.ToolCard.fileWrite, icon: "doc.badge.plus", color: .cyan)
         case "file_delete":
-            return ToolMeta(displayName: L10n.ToolCard.fileDelete, icon: "doc.badge.minus", color: .red)
+            return ToolMeta(displayName: L10n.ToolCard.fileDelete, icon: "trash", color: .red)
         case "file_info":
             return ToolMeta(displayName: L10n.ToolCard.fileInfo, icon: "doc.badge.gearshape", color: .cyan)
         case "attach_media":

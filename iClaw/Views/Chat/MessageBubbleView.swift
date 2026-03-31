@@ -4,6 +4,7 @@ struct MessageBubbleView: View {
     var message: Message?
     var streamingContent: String?
     var streamingThinking: String?
+    var isVerbose: Bool = true
 
     private var role: MessageRole {
         message?.role ?? .assistant
@@ -71,7 +72,24 @@ struct MessageBubbleView: View {
         return Self.sanitizeForCopy(streamingContent ?? "")
     }
 
+    /// In silent mode, hide tool results and content-less assistant messages with tool calls.
+    private var shouldHideInSilentMode: Bool {
+        guard !isVerbose else { return false }
+        if isTool { return true }
+        if isAssistant, let calls = toolCalls, !calls.isEmpty, content.isEmpty { return true }
+        return false
+    }
+
     var body: some View {
+        if shouldHideInSilentMode {
+            EmptyView()
+        } else {
+            messageBody
+        }
+    }
+
+    @ViewBuilder
+    private var messageBody: some View {
         HStack(alignment: .top) {
             if isUser { Spacer(minLength: 48) }
 
@@ -128,7 +146,7 @@ struct MessageBubbleView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                if let thinking = thinkingText, !thinking.isEmpty {
+                if isVerbose, let thinking = thinkingText, !thinking.isEmpty {
                     ThinkingBubbleView(content: thinking, isStreaming: isStreamingThinking)
                 }
 
@@ -152,7 +170,7 @@ struct MessageBubbleView: View {
     @ViewBuilder
     private func assistantWithToolCalls(_ calls: [LLMToolCall]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let thinking = thinkingText, !thinking.isEmpty {
+            if isVerbose, let thinking = thinkingText, !thinking.isEmpty {
                 ThinkingBubbleView(content: thinking, isStreaming: false)
             }
 
@@ -170,7 +188,9 @@ struct MessageBubbleView: View {
                 MessageImageGrid(images: imageAttachments)
             }
 
-            ToolCallCardView(toolCalls: calls)
+            if isVerbose {
+                ToolCallCardView(toolCalls: calls)
+            }
         }
     }
 }

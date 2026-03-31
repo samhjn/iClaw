@@ -71,6 +71,13 @@
 "chat.toolUseUnsupported" = "%@ はツール使用に対応していません — ブラウザ、サブエージェント、コード実行などの機能が利用できません。";
 "chat.retry" = "リトライ";
 "chat.retryHint" = "生成が停止されました。リトライするか、新しいメッセージを送信できます。";
+"chat.verbose" = "詳細";
+"chat.silent" = "サイレント";
+"chat.switchToSilent" = "サイレントモードに切替";
+"chat.switchToVerbose" = "詳細モードに切替";
+"chat.silentThinking" = "思考中（%d回目）…";
+"chat.silentRunningTool" = "%@ を実行中…";
+"chat.displayModeScope" = "%@ の全セッションに適用";
 
 // MARK: - Agents
 "agents.title" = "エージェント";

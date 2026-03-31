@@ -104,6 +104,13 @@ enum L10n {
         static func toolUseUnsupported(_ model: String) -> String { tr("chat.toolUseUnsupported", model) }
         static var retry: String { tr("chat.retry") }
         static var retryHint: String { tr("chat.retryHint") }
+        static var verbose: String { tr("chat.verbose") }
+        static var silent: String { tr("chat.silent") }
+        static var switchToSilent: String { tr("chat.switchToSilent") }
+        static var switchToVerbose: String { tr("chat.switchToVerbose") }
+        static func silentThinking(_ turn: Int) -> String { tr("chat.silentThinking", turn) }
+        static func silentRunningTool(_ name: String) -> String { tr("chat.silentRunningTool", name) }
+        static func displayModeScope(_ agentName: String) -> String { tr("chat.displayModeScope", agentName) }
     }
 
     // MARK: - Agents

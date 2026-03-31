@@ -55,7 +55,60 @@ struct ChatView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .font(.caption)
+                        .font(.body)
+                        .frame(minWidth: 32, minHeight: 32)
+                        .contentShape(Rectangle())
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Section {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                vm.isVerbose = true
+                            }
+                        } label: {
+                            Label {
+                                Text(L10n.Chat.verbose)
+                            } icon: {
+                                if vm.isVerbose {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                vm.isVerbose = false
+                            }
+                        } label: {
+                            Label {
+                                Text(L10n.Chat.silent)
+                            } icon: {
+                                if !vm.isVerbose {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    } header: {
+                        if let agentName = session.agent?.name {
+                            Text(L10n.Chat.displayModeScope(agentName))
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: vm.isVerbose ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                            .font(.caption2)
+                        Text(vm.isVerbose ? L10n.Chat.verbose : L10n.Chat.silent)
+                            .font(.caption2.weight(.medium))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(vm.isVerbose ? Color.accentColor.opacity(0.12) : Color(.systemGray5))
+                    )
+                    .foregroundStyle(vm.isVerbose ? Color.accentColor : .secondary)
                 }
             }
         }
@@ -89,19 +142,20 @@ private struct ChatContentView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(vm.messages, id: \.id) { message in
-                            MessageBubbleView(message: message)
+                            MessageBubbleView(message: message, isVerbose: vm.isVerbose)
                                 .id(message.id)
                         }
 
-                        if vm.isLoading && (!vm.streamingContent.isEmpty || !vm.streamingThinking.isEmpty) {
+                        if vm.isLoading && (!vm.streamingContent.isEmpty || (vm.isVerbose && !vm.streamingThinking.isEmpty)) {
                             MessageBubbleView(
                                 streamingContent: vm.streamingContent,
-                                streamingThinking: vm.streamingThinking
+                                streamingThinking: vm.isVerbose ? vm.streamingThinking : nil,
+                                isVerbose: vm.isVerbose
                             )
                             .id("streaming")
                         }
 
-                        if vm.isLoading && vm.streamingContent.isEmpty && vm.streamingThinking.isEmpty && !vm.isCompressing {
+                        if vm.isLoading && vm.streamingContent.isEmpty && (vm.isVerbose ? vm.streamingThinking.isEmpty : true) && !vm.isCompressing {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 4)
@@ -109,6 +163,10 @@ private struct ChatContentView: View {
                                     Text(L10n.Chat.cancelling)
                                         .font(.subheadline)
                                         .foregroundStyle(.orange)
+                                } else if !vm.isVerbose {
+                                    TimelineView(.periodic(from: .now, by: 0.3)) { _ in
+                                        silentLabel(for: vm.silentStatus)
+                                    }
                                 } else {
                                     Text(L10n.Chat.thinking)
                                         .font(.subheadline)
@@ -299,6 +357,7 @@ private struct ChatContentView: View {
                 .background(Color.orange.opacity(0.08))
             }
 
+
             if let modelName = vm.activeModelName {
                 Text(modelName)
                     .font(.caption2)
@@ -329,6 +388,39 @@ private struct ChatContentView: View {
         .animation(.easeInOut(duration: 0.25), value: vm.canRetry)
         .animation(.easeInOut(duration: 0.25), value: vm.isLoading)
         .animation(.easeInOut(duration: 0.25), value: vm.errorMessage)
+        .animation(.easeInOut(duration: 0.2), value: vm.silentStatus)
+    }
+
+    @ViewBuilder
+    private func silentLabel(for status: String) -> some View {
+        if status.hasPrefix("tool:") {
+            let name = String(status.dropFirst(5))
+            let meta = ToolMeta.resolve(name)
+            HStack(spacing: 6) {
+                Image(systemName: meta.icon)
+                    .font(.caption)
+                    .foregroundStyle(meta.color)
+                Text(meta.displayName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else if status.hasPrefix("think:"), let n = Int(status.dropFirst(6)), n > 1 {
+            HStack(spacing: 6) {
+                Text(L10n.Chat.silentThinking(n))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                if let lastTool = vm.silentLastTool {
+                    let meta = ToolMeta.resolve(lastTool)
+                    Image(systemName: meta.icon)
+                        .font(.caption2)
+                        .foregroundStyle(meta.color.opacity(0.6))
+                }
+            }
+        } else {
+            Text(L10n.Chat.thinking)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

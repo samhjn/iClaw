@@ -51,6 +51,9 @@ final class Agent {
     /// nil = all tools enabled (backward compatible default).
     var appleToolPermissionsRaw: String?
 
+    /// Display mode: true = verbose (show CoT & tool calls), false = silent (hide them).
+    var isVerbose: Bool = true
+
     var createdAt: Date
     var updatedAt: Date
 

@@ -71,6 +71,13 @@
 "chat.toolUseUnsupported" = "%@ does not support tool use — features like browsing, sub-agents, and code execution will be unavailable.";
 "chat.retry" = "Retry";
 "chat.retryHint" = "Generation was stopped. You can retry or send a new message.";
+"chat.verbose" = "Verbose";
+"chat.silent" = "Silent";
+"chat.switchToSilent" = "Switch to Silent Mode";
+"chat.switchToVerbose" = "Switch to Verbose Mode";
+"chat.silentThinking" = "Thinking (round %d)…";
+"chat.silentRunningTool" = "Running %@…";
+"chat.displayModeScope" = "Applies to all sessions of %@";
 
 // MARK: - Agents
 "agents.title" = "Agents";

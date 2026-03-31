@@ -41,6 +41,30 @@ final class ChatViewModel {
     /// Shown when the primary model does not support tool use (function calling).
     var toolUseWarning: String?
 
+    /// Display mode: verbose (show CoT & tool calls) or silent (hide them). Synced to Agent.
+    var isVerbose: Bool = true {
+        didSet { session.agent?.isVerbose = isVerbose }
+    }
+
+    /// Silent-mode status — survives ViewModel recreation (SwiftData can recreate the VM mid-generation).
+    private static var silentStatuses: [UUID: String] = [:]
+    private static var silentRounds: [UUID: Int] = [:]
+    /// Last tool that was executed, shown alongside thinking status so brief tool calls aren't missed.
+    private static var silentLastTools: [UUID: String] = [:]
+
+    var silentStatus: String {
+        get { Self.silentStatuses[session.id] ?? "" }
+        set { Self.silentStatuses[session.id] = newValue }
+    }
+    private var silentRound: Int {
+        get { Self.silentRounds[session.id] ?? 0 }
+        set { Self.silentRounds[session.id] = newValue }
+    }
+    var silentLastTool: String? {
+        Self.silentLastTools[session.id]
+    }
+
+
     /// Whether a manual compression is running.
     var isCompressing: Bool = false
 
@@ -82,6 +106,7 @@ final class ChatViewModel {
     init(session: Session, modelContext: ModelContext) {
         self.session = session
         self.modelContext = modelContext
+        self.isVerbose = session.agent?.isVerbose ?? true
         loadMessages()
         checkActiveSessionLock()
         recoverStaleActiveState()
@@ -259,6 +284,8 @@ final class ChatViewModel {
         errorMessage = nil
         canRetry = false
         cancelled = false
+        silentRound = 1
+        silentStatus = "think:1"
 
         removeTrailingAbortedMessages()
 
@@ -307,6 +334,8 @@ final class ChatViewModel {
         Self.dismissedSessions.remove(session.id)
         canRetry = false
         errorMessage = nil
+        silentRound = 1
+        silentStatus = "think:1"
 
         let imageData: Data? = pendingImages.isEmpty ? nil : try? JSONEncoder().encode(pendingImages)
         pendingImages = []
@@ -348,6 +377,8 @@ final class ChatViewModel {
             session.isActive = true
             try? modelContext.save()
         } else {
+            silentRound += 1
+            silentStatus = "think:\(silentRound)"
             streamingContent = ""
             streamingThinking = ""
         }
@@ -365,6 +396,9 @@ final class ChatViewModel {
                 streamCancelAction = nil
                 Self.activeGenerations.removeValue(forKey: session.id)
                 Self.activeStreamCancels.removeValue(forKey: session.id)
+                Self.silentStatuses.removeValue(forKey: session.id)
+                Self.silentRounds.removeValue(forKey: session.id)
+                Self.silentLastTools.removeValue(forKey: session.id)
                 session.isActive = false
                 session.pendingStreamingContent = nil
                 generationTask = nil
@@ -603,9 +637,11 @@ final class ChatViewModel {
                 }
 
                 if parallelBatch.count == 1, let only = parallelBatch.first {
+                    silentStatus = "tool:\(only.1.function.name)"
                     let result = await fnRouter.execute(toolCall: only.1)
                     results.append((only.0, only.1, result))
                 } else {
+                    silentStatus = "tool:message_sub_agent"
                     await withTaskGroup(of: (Int, LLMToolCall, ToolCallResult).self) { group in
                         for (batchIndex, toolCall) in parallelBatch {
                             group.addTask { @MainActor in
@@ -621,6 +657,7 @@ final class ChatViewModel {
 
                 index = cursor
             } else {
+                silentStatus = "tool:\(current.function.name)"
                 let result = await fnRouter.execute(toolCall: current)
                 results.append((index, current, result))
                 index += 1
@@ -674,6 +711,10 @@ final class ChatViewModel {
             session.messages.append(toolMsg)
         }
 
+        if let lastCall = results.last {
+            Self.silentLastTools[session.id] = lastCall.1.function.name
+        }
+        silentStatus = "think:\(silentRound)"
         try? modelContext.save()
         loadMessages()
 

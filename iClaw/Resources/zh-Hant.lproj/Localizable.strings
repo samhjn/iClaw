@@ -71,6 +71,13 @@
 "chat.toolUseUnsupported" = "%@ 不支援工具呼叫 — 瀏覽器、子智能體、程式碼執行等功能將無法使用。";
 "chat.retry" = "重試";
 "chat.retryHint" = "生成已停止，可以重試或傳送新訊息。";
+"chat.verbose" = "詳細";
+"chat.silent" = "靜默";
+"chat.switchToSilent" = "切換到靜默模式";
+"chat.switchToVerbose" = "切換到詳細模式";
+"chat.silentThinking" = "思考中（第 %d 輪）…";
+"chat.silentRunningTool" = "正在執行 %@…";
+"chat.displayModeScope" = "套用於 %@ 的所有會話";
 
 // MARK: - Agents
 "agents.title" = "智能體";
