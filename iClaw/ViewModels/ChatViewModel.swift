@@ -11,7 +11,15 @@ final class ChatViewModel {
     var streamingContent: String = ""
     var streamingThinking: String = ""
     var pendingImages: [ImageAttachment] = []
-    var errorMessage: String?
+    var errorMessage: String? {
+        didSet {
+            if let errorMessage {
+                Self.cachedErrors[session.id] = errorMessage
+            } else {
+                Self.cachedErrors.removeValue(forKey: session.id)
+            }
+        }
+    }
     var activeModelName: String?
 
     /// True when the last generation ended with an error or was cancelled,
@@ -49,6 +57,8 @@ final class ChatViewModel {
         session.agent.map { AgentFileManager.shared.resolveAgentId(for: $0) }
     }
     private var generationTask: Task<Void, Never>?
+    /// Explicit cancel closure for the active SSE stream, bypassing cooperative cancellation.
+    private var streamCancelAction: (@Sendable () -> Void)?
     /// The actual compression work task — should NOT be cancelled on view disappear.
     private var compressionTask: Task<Void, Never>?
     /// A lightweight polling task that tracks an orphaned compression (started by a previous ViewModel).
@@ -59,6 +69,16 @@ final class ChatViewModel {
     /// to the next final assistant message for display in the chat UI.
     private var pendingToolImageAttachments: [ImageAttachment] = []
 
+    /// Survives ViewModel recreation caused by SwiftData-triggered view re-renders.
+    private static var cachedErrors: [UUID: String] = [:]
+    /// Sessions where the user explicitly dismissed the retry/error banner.
+    private static var dismissedSessions: Set<UUID> = []
+    /// Active generation tasks keyed by session ID — survives ViewModel recreation
+    /// so a new ViewModel instance can still cancel an orphaned generation.
+    private static var activeGenerations: [UUID: Task<Void, Never>] = [:]
+    /// Explicit stream-cancel closures keyed by session ID — survives ViewModel recreation.
+    private static var activeStreamCancels: [UUID: @Sendable () -> Void] = [:]
+
     init(session: Session, modelContext: ModelContext) {
         self.session = session
         self.modelContext = modelContext
@@ -67,6 +87,7 @@ final class ChatViewModel {
         recoverStaleActiveState()
         recoverCompressionState()
         recoverRetryState()
+        recoverActiveModelName()
         startMonitoringIfNeeded()
         checkToolUseCapability()
         initialScrollTarget = session.lastViewedMessageId
@@ -148,12 +169,24 @@ final class ChatViewModel {
     private var cancelWatchdog: Task<Void, Never>?
 
     func cancelGeneration() {
-        guard isLoading, generationTask != nil else { return }
+        guard isLoading else { return }
+        let localTask = generationTask
+        let staticTask = Self.activeGenerations[session.id]
+        guard localTask != nil || staticTask != nil else { return }
+
         isCancelling = true
         cancelFailureReason = nil
         cancelled = true
         canRetry = true
-        generationTask?.cancel()
+
+        streamCancelAction?()
+        Self.activeStreamCancels[session.id]?()
+        streamCancelAction = nil
+        Self.activeStreamCancels.removeValue(forKey: session.id)
+
+        localTask?.cancel()
+        if localTask == nil { staticTask?.cancel() }
+        Self.activeGenerations.removeValue(forKey: session.id)
 
         cancelWatchdog?.cancel()
         cancelWatchdog = Task { @MainActor [weak self] in
@@ -169,8 +202,14 @@ final class ChatViewModel {
 
     @MainActor
     private func forceStopGeneration() {
+        streamCancelAction?()
+        Self.activeStreamCancels[session.id]?()
+        streamCancelAction = nil
+        Self.activeStreamCancels.removeValue(forKey: session.id)
         generationTask?.cancel()
+        Self.activeGenerations[session.id]?.cancel()
         generationTask = nil
+        Self.activeGenerations.removeValue(forKey: session.id)
         isLoading = false
         isCancelling = false
         isCompressing = false
@@ -201,6 +240,13 @@ final class ChatViewModel {
 
     // MARK: - Retry Generation
 
+    /// Dismiss both error and natural retry banners persistently.
+    func dismissRetry() {
+        errorMessage = nil
+        canRetry = false
+        Self.dismissedSessions.insert(session.id)
+    }
+
     /// Retry the last generation attempt. Works after API errors or user-initiated cancellation.
     func retryGeneration() {
         guard !isLoading else { return }
@@ -208,17 +254,17 @@ final class ChatViewModel {
         checkActiveSessionLock()
         guard canSend else { return }
 
+        isLoading = true
+        Self.dismissedSessions.remove(session.id)
         errorMessage = nil
         canRetry = false
         cancelled = false
 
-        // Remove trailing aborted/force-stopped assistant messages so the LLM
-        // gets a clean context on retry.
         removeTrailingAbortedMessages()
 
-        generationTask = Task {
-            await generateResponse()
-        }
+        let task = Task { await generateResponse() }
+        generationTask = task
+        Self.activeGenerations[session.id] = task
     }
 
     /// Strips partial/aborted assistant messages from the tail of the session
@@ -251,11 +297,14 @@ final class ChatViewModel {
     func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        guard !isLoading else { return }
 
         checkActiveSessionLock()
         guard canSend else { return }
 
+        isLoading = true
         inputText = ""
+        Self.dismissedSessions.remove(session.id)
         canRetry = false
         errorMessage = nil
 
@@ -278,9 +327,9 @@ final class ChatViewModel {
         loadMessages()
 
         cancelled = false
-        generationTask = Task {
-            await generateResponse()
-        }
+        let task = Task { await generateResponse() }
+        generationTask = task
+        Self.activeGenerations[session.id] = task
     }
 
     private var generationDepth = 0
@@ -313,6 +362,9 @@ final class ChatViewModel {
                 cancelFailureReason = nil
                 cancelWatchdog?.cancel()
                 cancelWatchdog = nil
+                streamCancelAction = nil
+                Self.activeGenerations.removeValue(forKey: session.id)
+                Self.activeStreamCancels.removeValue(forKey: session.id)
                 session.isActive = false
                 session.pendingStreamingContent = nil
                 generationTask = nil
@@ -370,11 +422,13 @@ final class ChatViewModel {
             var pendingToolCalls: [LLMToolCall] = []
             var lastUsage: LLMUsage?
 
-            let (stream, providerName, _) = try await router.chatCompletionStreamWithFailover(
+            let (stream, providerName, _, cancelStream) = try await router.chatCompletionStreamWithFailover(
                 agent: agent,
                 messages: contextMessages,
                 tools: toolDefs
             )
+            streamCancelAction = cancelStream
+            Self.activeStreamCancels[session.id] = cancelStream
             activeModelName = providerName
 
             var lastPersistTime = Date.distantPast
@@ -499,12 +553,14 @@ final class ChatViewModel {
                 loadMessages()
             }
         } catch {
-            if !Task.isCancelled && !cancelled {
-                errorMessage = error.localizedDescription
-                canRetry = true
+            if Task.isCancelled || cancelled {
+                if !(error is CancellationError) {
+                    errorMessage = error.localizedDescription
+                }
             } else {
-                canRetry = true
+                errorMessage = error.localizedDescription
             }
+            canRetry = true
             pendingToolImageAttachments = []
         }
     }
@@ -784,15 +840,29 @@ final class ChatViewModel {
 
     private func recoverRetryState() {
         guard !isLoading, !canRetry, generationTask == nil else { return }
+        guard !session.isActive else { return }
+        guard !Self.dismissedSessions.contains(session.id) else { return }
         guard let last = session.sortedMessages.last else { return }
 
         if last.role == .user {
             canRetry = true
+            if errorMessage == nil, let cached = Self.cachedErrors[session.id] {
+                errorMessage = cached
+            }
         } else if last.role == .assistant,
                   let content = last.content,
                   content.contains(L10n.Chat.aborted) || content.contains(L10n.Chat.forceStoppedContent) {
             canRetry = true
         }
+    }
+
+    private func recoverActiveModelName() {
+        guard activeModelName == nil, let agent = session.agent else { return }
+        let router = ModelRouter(modelContext: modelContext)
+        let chain = router.resolveProviderChainWithModels(for: agent)
+        guard let primary = chain.first else { return }
+        let effectiveModel = primary.modelName ?? primary.provider.modelName
+        activeModelName = "\(primary.provider.name) (\(effectiveModel))"
     }
 
     func onViewDisappear() {

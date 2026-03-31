@@ -125,7 +125,7 @@ final class ModelRouter {
         agent: Agent,
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
-    ) async throws -> (stream: AsyncStream<StreamChunk>, providerName: String, capabilities: ModelCapabilities) {
+    ) async throws -> (stream: AsyncStream<StreamChunk>, providerName: String, capabilities: ModelCapabilities, cancel: @Sendable () -> Void) {
         let chain = resolveProviderChainWithModels(for: agent)
         guard !chain.isEmpty else { throw emptyChainError(for: agent) }
 
@@ -133,14 +133,19 @@ final class ModelRouter {
 
         for (index, entry) in chain.enumerated() {
             do {
+                try Task.checkCancellation()
                 let effectiveModel = entry.modelName ?? entry.provider.modelName
                 let caps = entry.provider.capabilities(for: effectiveModel)
                 let effectiveTools = caps.supportsToolUse ? tools : nil
                 let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
-                let stream = try await service.chatCompletionStream(messages: messages, tools: effectiveTools)
+                let (stream, cancel) = try await service.chatCompletionStream(messages: messages, tools: effectiveTools)
                 lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
                 failoverOccurred = index > 0
-                return (stream, lastUsedProviderName!, caps)
+                return (stream, lastUsedProviderName!, caps, cancel)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let urlError as URLError where urlError.code == .cancelled {
+                throw CancellationError()
             } catch {
                 let isLast = index == chain.count - 1
                 if isLast { throw error }
@@ -164,6 +169,7 @@ final class ModelRouter {
 
         for (index, entry) in chain.enumerated() {
             do {
+                try Task.checkCancellation()
                 let effectiveModel = entry.modelName ?? entry.provider.modelName
                 let caps = entry.provider.capabilities(for: effectiveModel)
                 let effectiveTools = caps.supportsToolUse ? tools : nil
@@ -172,6 +178,10 @@ final class ModelRouter {
                 lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
                 failoverOccurred = index > 0
                 return (response, lastUsedProviderName!)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let urlError as URLError where urlError.code == .cancelled {
+                throw CancellationError()
             } catch {
                 let isLast = index == chain.count - 1
                 if isLast { throw error }
@@ -187,7 +197,7 @@ final class ModelRouter {
         provider: LLMProvider,
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
-    ) async throws -> AsyncStream<StreamChunk> {
+    ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let service = LLMService(provider: provider)
         return try await service.chatCompletionStream(messages: messages, tools: tools)
     }

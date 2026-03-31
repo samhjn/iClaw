@@ -9,6 +9,31 @@ enum StreamChunk {
     case error(String)
 }
 
+/// Thread-safe holder for the inner SSE-reading Task, allowing external cancellation
+/// that bypasses AsyncStream's cooperative cancellation.
+final class StreamCancelState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _innerTask: Task<Void, Never>?
+    private var _cancelled = false
+
+    var innerTask: Task<Void, Never>? {
+        get { lock.withLock { _innerTask } }
+        set {
+            lock.withLock {
+                _innerTask = newValue
+                if _cancelled { newValue?.cancel() }
+            }
+        }
+    }
+
+    func cancel() {
+        lock.withLock {
+            _cancelled = true
+            _innerTask?.cancel()
+        }
+    }
+}
+
 final class LLMService: @unchecked Sendable {
     let provider: LLMProvider
     private let modelNameOverride: String?
@@ -104,7 +129,7 @@ final class LLMService: @unchecked Sendable {
     func chatCompletionStream(
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]? = nil
-    ) async throws -> AsyncStream<StreamChunk> {
+    ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         switch apiStyle {
         case .openAI:
             return try await openAIChatCompletionStream(messages: messages, tools: tools)
@@ -149,7 +174,7 @@ final class LLMService: @unchecked Sendable {
     private func openAIChatCompletionStream(
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
-    ) async throws -> AsyncStream<StreamChunk> {
+    ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let caps = effectiveCapabilities
         let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
         let request = LLMChatRequest(
@@ -177,13 +202,15 @@ final class LLMService: @unchecked Sendable {
             throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
         }
 
-        return AsyncStream { continuation in
-            Task {
+        let cancelState = StreamCancelState()
+        let stream = AsyncStream<StreamChunk> { continuation in
+            let innerTask = Task {
                 var sseParser = SSEParser()
                 var toolCallAccumulators: [Int: (id: String, name: String, arguments: String)] = [:]
 
                 do {
                     for try await line in bytes.lines {
+                        guard !Task.isCancelled else { break }
                         let events = sseParser.parse(chunk: line + "\n\n")
 
                         for event in events {
@@ -250,11 +277,18 @@ final class LLMService: @unchecked Sendable {
                     continuation.yield(.done)
                     continuation.finish()
                 } catch {
-                    continuation.yield(.error(error.localizedDescription))
+                    if !Task.isCancelled {
+                        continuation.yield(.error(error.localizedDescription))
+                    }
                     continuation.finish()
                 }
             }
+            cancelState.innerTask = innerTask
+            continuation.onTermination = { @Sendable _ in
+                innerTask.cancel()
+            }
         }
+        return (stream, { cancelState.cancel() })
     }
 
     // MARK: - Anthropic Implementation
@@ -282,7 +316,7 @@ final class LLMService: @unchecked Sendable {
     private func anthropicChatCompletionStream(
         messages: [LLMChatMessage],
         tools: [LLMToolDefinition]?
-    ) async throws -> AsyncStream<StreamChunk> {
+    ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let anthropicReq = buildAnthropicBody(messages: messages, tools: tools, stream: true)
         let urlRequest = try buildAnthropicURLRequest(body: anthropicReq)
         let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
@@ -297,14 +331,16 @@ final class LLMService: @unchecked Sendable {
             throw LLMError.apiError(statusCode: httpResponse.statusCode, message: body)
         }
 
-        return AsyncStream { continuation in
-            Task {
+        let cancelState = StreamCancelState()
+        let stream = AsyncStream<StreamChunk> { continuation in
+            let innerTask = Task {
                 var sseParser = SSEParser()
                 var toolCallAccumulators: [Int: (id: String, name: String, arguments: String)] = [:]
                 var activeBlockTypes: [Int: String] = [:]
 
                 do {
                     for try await line in bytes.lines {
+                        guard !Task.isCancelled else { break }
                         let events = sseParser.parse(chunk: line + "\n\n")
 
                         for event in events {
@@ -411,11 +447,18 @@ final class LLMService: @unchecked Sendable {
                     continuation.yield(.done)
                     continuation.finish()
                 } catch {
-                    continuation.yield(.error(error.localizedDescription))
+                    if !Task.isCancelled {
+                        continuation.yield(.error(error.localizedDescription))
+                    }
                     continuation.finish()
                 }
             }
+            cancelState.innerTask = innerTask
+            continuation.onTermination = { @Sendable _ in
+                innerTask.cancel()
+            }
         }
+        return (stream, { cancelState.cancel() })
     }
 
     // MARK: - Anthropic Helpers

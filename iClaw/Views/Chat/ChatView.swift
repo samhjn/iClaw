@@ -191,8 +191,7 @@ private struct ChatContentView: View {
                             .contentShape(Rectangle())
                     }
                     Button {
-                        vm.errorMessage = nil
-                        vm.canRetry = false
+                        vm.dismissRetry()
                     } label: {
                         Text(L10n.Common.dismiss)
                             .font(.caption)
@@ -225,7 +224,7 @@ private struct ChatContentView: View {
                     }
                     .tint(.accentColor)
                     Button {
-                        vm.canRetry = false
+                        vm.dismissRetry()
                     } label: {
                         Text(L10n.Common.dismiss)
                             .font(.caption)
