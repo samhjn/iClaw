@@ -37,6 +37,9 @@ final class Session {
     /// Draft text the user was typing but hasn't sent yet (persisted across app quit / session exit).
     var draftText: String?
 
+    /// Draft image attachments (JSON-encoded [ImageAttachment]) persisted across app quit / session exit.
+    var draftImagesData: Data?
+
     /// UUID of the parent session that spawned this sub-agent session (for content relay).
     var parentSessionIdRaw: String?
 

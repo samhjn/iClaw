@@ -7,7 +7,12 @@ import UIKit
 final class ChatViewModel {
     var messages: [Message] = []
     var inputText: String = "" {
-        didSet { Self.cachedInputTexts[session.id] = inputText }
+        didSet {
+            Self.cachedInputTexts[session.id] = inputText
+            // Persist eagerly so draft survives app kill.
+            let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+            session.draftText = trimmed.isEmpty ? nil : inputText
+        }
     }
     var isLoading: Bool = false
     var streamingContent: String = ""
@@ -99,6 +104,25 @@ final class ChatViewModel {
     private static var cachedErrors: [UUID: String] = [:]
     /// Draft input text — survives ViewModel recreation (e.g. silent-mode toggle, navigation).
     private static var cachedInputTexts: [UUID: String] = [:]
+
+    /// Draft pending images — survives ViewModel recreation.
+    private static var cachedPendingImages: [UUID: [ImageAttachment]] = [:]
+
+    /// Return cached pending images for a session (used by file browser to exclude draft files).
+    static func cachedPendingImages(for sessionId: UUID) -> [ImageAttachment] {
+        cachedPendingImages[sessionId] ?? []
+    }
+
+    /// Check whether there is a non-empty cached draft for a session (used by session list).
+    static func hasCachedInput(for sessionId: UUID) -> Bool {
+        if let text = cachedInputTexts[sessionId], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return true
+        }
+        if let images = cachedPendingImages[sessionId], !images.isEmpty {
+            return true
+        }
+        return false
+    }
     /// Sessions where the user explicitly dismissed the retry/error banner.
     private static var dismissedSessions: Set<UUID> = []
     /// Active generation tasks keyed by session ID — survives ViewModel recreation
@@ -117,6 +141,14 @@ final class ChatViewModel {
         } else if let draft = session.draftText, !draft.isEmpty {
             self.inputText = draft
             Self.cachedInputTexts[session.id] = draft
+        }
+        // Restore draft images.
+        if let cached = Self.cachedPendingImages[session.id], !cached.isEmpty {
+            self.pendingImages = cached
+        } else if let data = session.draftImagesData,
+                  let images = try? JSONDecoder().decode([ImageAttachment].self, from: data), !images.isEmpty {
+            self.pendingImages = images
+            Self.cachedPendingImages[session.id] = images
         }
         loadMessages()
         checkActiveSessionLock()
@@ -349,8 +381,18 @@ final class ChatViewModel {
         silentRound = 1
         silentStatus = "think:1"
 
-        let imageData: Data? = pendingImages.isEmpty ? nil : try? JSONEncoder().encode(pendingImages)
+        // Promote inline draft images to file-backed attachments now that the message is being sent.
+        let finalImages: [ImageAttachment] = pendingImages.compactMap { attachment in
+            if attachment.fileReference != nil { return attachment }
+            guard let agent = session.agent else { return attachment }
+            let aid = AgentFileManager.shared.resolveAgentId(for: agent)
+            guard let image = attachment.uiImage else { return attachment }
+            return ImageAttachment.from(image: image, agentId: aid) ?? attachment
+        }
+        let imageData: Data? = finalImages.isEmpty ? nil : try? JSONEncoder().encode(finalImages)
         pendingImages = []
+        Self.cachedPendingImages.removeValue(forKey: session.id)
+        session.draftImagesData = nil
 
         let userMessage = Message(role: .user, content: text, session: session)
         userMessage.imageAttachmentsData = imageData
@@ -925,9 +967,7 @@ final class ChatViewModel {
         isCompressing = false
         cancelWatchdog?.cancel()
         cancelWatchdog = nil
-        // Persist draft text so it survives app quit.
-        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        session.draftText = trimmed.isEmpty ? nil : inputText
+        // Flush draft text to disk so it survives app quit.
         try? modelContext.save()
     }
 
@@ -1078,19 +1118,22 @@ final class ChatViewModel {
     // MARK: - Image Management
 
     func addImage(_ uiImage: UIImage) {
-        let attachment: ImageAttachment?
-        if let agent = session.agent {
-            let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
-            attachment = ImageAttachment.from(image: uiImage, agentId: agentId)
-        } else {
-            attachment = ImageAttachment.from(image: uiImage)
-        }
-        guard let attachment else { return }
+        // Keep draft images inline-only (no file written to agent folder)
+        // so they don't appear in the file browser before the message is sent.
+        // They will be promoted to file-backed attachments in sendMessage().
+        guard let attachment = ImageAttachment.from(image: uiImage) else { return }
         pendingImages.append(attachment)
+        persistDraftImages()
     }
 
     func removeImage(id: UUID) {
         pendingImages.removeAll { $0.id == id }
+        persistDraftImages()
+    }
+
+    private func persistDraftImages() {
+        Self.cachedPendingImages[session.id] = pendingImages
+        session.draftImagesData = pendingImages.isEmpty ? nil : try? JSONEncoder().encode(pendingImages)
     }
 
     // MARK: - Think Tag Extraction

@@ -253,6 +253,7 @@
 "sessions.sessionsCount" = "%d sessions";
 "sessions.selectAgent" = "Select Agent";
 "sessions.messagesCount" = "%d messages";
+"sessions.draft" = "Draft";
 
 // MARK: - Settings
 "settings.title" = "Settings";

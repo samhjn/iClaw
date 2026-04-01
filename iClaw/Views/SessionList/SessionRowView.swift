@@ -9,6 +9,7 @@ struct SessionRowView: View {
         let messageCount = rowData?.messageCount ?? 0
         let previewContent = rowData?.previewContent
         let isStreaming = rowData?.isStreaming ?? false
+        let hasDraft = rowData?.hasDraft ?? false
 
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -38,6 +39,15 @@ struct SessionRowView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
                         .background(Capsule().fill(.green))
+                }
+
+                if hasDraft && !isActive {
+                    Text(L10n.Sessions.draft)
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(.orange.opacity(0.12)))
                 }
 
                 Spacer()

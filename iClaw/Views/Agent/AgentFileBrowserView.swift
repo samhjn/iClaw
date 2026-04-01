@@ -102,7 +102,34 @@ struct AgentFileBrowserView: View {
     }
 
     private func refreshFiles() {
-        files = AgentFileManager.shared.listFiles(agentId: agentId)
+        let allFiles = AgentFileManager.shared.listFiles(agentId: agentId)
+        let draftFilenames = collectDraftFilenames()
+        files = draftFilenames.isEmpty ? allFiles : allFiles.filter { !draftFilenames.contains($0.name) }
+    }
+
+    /// Collect filenames referenced by unsent draft images across all sessions of this agent.
+    private func collectDraftFilenames() -> Set<String> {
+        var names = Set<String>()
+        // Check in-memory cache first.
+        for session in agent.sessions {
+            for attachment in ChatViewModel.cachedPendingImages(for: session.id) {
+                if let ref = attachment.fileReference,
+                   let (_, filename) = AgentFileManager.parseFileReference(ref) {
+                    names.insert(filename)
+                }
+            }
+            // Also check persisted draft data (survives app restart).
+            if let data = session.draftImagesData,
+               let images = try? JSONDecoder().decode([ImageAttachment].self, from: data) {
+                for img in images {
+                    if let ref = img.fileReference,
+                       let (_, filename) = AgentFileManager.parseFileReference(ref) {
+                        names.insert(filename)
+                    }
+                }
+            }
+        }
+        return names
     }
 
     private func deleteFile(_ file: FileInfo) {

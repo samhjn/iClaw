@@ -252,6 +252,7 @@
 "sessions.sessionsCount" = "%d개 세션";
 "sessions.selectAgent" = "에이전트 선택";
 "sessions.messagesCount" = "%d개 메시지";
+"sessions.draft" = "임시 저장";
 
 // MARK: - Settings
 "settings.title" = "설정";

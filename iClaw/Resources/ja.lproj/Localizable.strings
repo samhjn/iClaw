@@ -252,6 +252,7 @@
 "sessions.sessionsCount" = "%d セッション";
 "sessions.selectAgent" = "エージェントを選択";
 "sessions.messagesCount" = "%d 件のメッセージ";
+"sessions.draft" = "下書き";
 
 // MARK: - Settings
 "settings.title" = "設定";

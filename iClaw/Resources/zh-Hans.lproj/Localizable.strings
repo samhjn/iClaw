@@ -253,6 +253,7 @@
 "sessions.sessionsCount" = "%d 个会话";
 "sessions.selectAgent" = "选择智能体";
 "sessions.messagesCount" = "%d 条消息";
+"sessions.draft" = "草稿";
 
 // MARK: - Settings
 "settings.title" = "设置";

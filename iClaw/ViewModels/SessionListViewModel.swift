@@ -6,6 +6,7 @@ struct SessionRowData {
     let messageCount: Int
     let previewContent: String?
     let isStreaming: Bool
+    let hasDraft: Bool
 }
 
 @Observable
@@ -49,10 +50,20 @@ final class SessionListViewModel {
                 return nil
             }()
             let preview = rawPreview.map { Self.sanitizePreview($0) }
+            let hasDraft: Bool = {
+                if let draft = session.draftText, !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return true
+                }
+                if session.draftImagesData != nil {
+                    return true
+                }
+                return ChatViewModel.hasCachedInput(for: session.id)
+            }()
             cache[session.id] = SessionRowData(
                 messageCount: session.messages.count,
                 previewContent: preview,
-                isStreaming: isStreaming
+                isStreaming: isStreaming,
+                hasDraft: hasDraft
             )
         }
         rowDataCache = cache
