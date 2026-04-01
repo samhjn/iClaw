@@ -261,6 +261,9 @@
 "settings.about" = "このアプリについて";
 "settings.version" = "バージョン";
 "settings.build" = "ビルド";
+"settings.aboutDescription" = "iClaw は LLM エージェントと対話するためのオープンソース iOS クライアントです。マルチプロバイダーモデルルーティング、サブエージェント、ブラウザ自動化、コード実行、cron スケジューリング、Apple エコシステム連携（カレンダー、リマインダー、連絡先、ヘルスケア、マップなど）に対応しています。";
+"settings.sourceCode" = "ソースコード";
+"settings.license" = "MIT ライセンスに基づき公開";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "プロバイダーを編集";

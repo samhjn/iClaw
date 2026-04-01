@@ -62,6 +62,7 @@
 		839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */; };
 		85FBE9AFDE5E62822E010632 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6FA049A05520F6A61F7763D0 /* Assets.xcassets */; };
 		8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */; };
+		A1B2C3D4E5F60718A9B0C1D2 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718A9B0C1D3 /* AboutView.swift */; };
 		91FC43248B875B7599B0AFE4 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4845603F169879185B9CAF /* ContextManager.swift */; };
 		976B43C21F7B924DD339DE33 /* SessionCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */; };
 		981820D7F144AD9C634AC068 /* Agent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2451AAD7AD253EDA6298F2 /* Agent.swift */; };
@@ -150,6 +151,7 @@
 		31321BA5D5DDEED322500D1D /* DefaultSOUL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultSOUL.md; sourceTree = "<group>"; };
 		318E344ABF631CB93195C099 /* ModelRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRouter.swift; sourceTree = "<group>"; };
 		31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718A9B0C1D3 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		36E25850C697EF01F57455B5 /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
 		380F4D6FD89A274BEE1F4FB9 /* SubAgentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManager.swift; sourceTree = "<group>"; };
 		3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionCallView.swift; sourceTree = "<group>"; };
@@ -257,6 +259,7 @@
 		0722AB4710B66CCA8EBD9F18 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D4E5F60718A9B0C1D3 /* AboutView.swift */,
 				EBA652DA47A238C04345F10E /* LLMProviderEditView.swift */,
 				31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */,
 			);
@@ -789,6 +792,7 @@
 				B6A5F610D999EC9DAF28278D /* SessionListViewModel.swift in Sources */,
 				4A5A293020E0E4D215FF3F32 /* SessionRowView.swift in Sources */,
 				7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */,
+				A1B2C3D4E5F60718A9B0C1D2 /* AboutView.swift in Sources */,
 				8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */,
 				3D7FB68BE84A307A19972099 /* SettingsViewModel.swift in Sources */,
 				0B76B6A987EB3B0682EB0AD7 /* ShortcutsGuideView.swift in Sources */,
