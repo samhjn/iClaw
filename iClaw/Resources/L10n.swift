@@ -201,6 +201,7 @@ enum L10n {
         static var browser: String { tr("toolPermissions.browser") }
         static var codeExecution: String { tr("toolPermissions.codeExecution") }
         static var subAgents: String { tr("toolPermissions.subAgents") }
+        static var sessions: String { tr("toolPermissions.sessions") }
         static var cron: String { tr("toolPermissions.cron") }
         static var skills: String { tr("toolPermissions.skills") }
         static var config: String { tr("toolPermissions.config") }
@@ -362,6 +363,7 @@ enum L10n {
         static var selectAgent: String { tr("sessions.selectAgent") }
         static func messagesCount(_ count: Int) -> String { tr("sessions.messagesCount", count) }
         static var draft: String { tr("sessions.draft") }
+        static var searchSessions: String { tr("sessions.searchSessions") }
     }
 
     // MARK: - Settings

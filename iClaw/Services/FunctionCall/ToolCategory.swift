@@ -54,6 +54,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     case browser
     case codeExecution
     case subAgents
+    case sessions
     case cron
     case skills
     case config
@@ -79,6 +80,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .browser:       return L10n.ToolPermissions.browser
         case .codeExecution: return L10n.ToolPermissions.codeExecution
         case .subAgents:     return L10n.ToolPermissions.subAgents
+        case .sessions:      return L10n.ToolPermissions.sessions
         case .cron:          return L10n.ToolPermissions.cron
         case .skills:        return L10n.ToolPermissions.skills
         case .config:        return L10n.ToolPermissions.config
@@ -100,6 +102,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .browser:       return "safari"
         case .codeExecution: return "curlybraces"
         case .subAgents:     return "person.2.fill"
+        case .sessions:      return "text.bubble.fill"
         case .cron:          return "clock.arrow.circlepath"
         case .skills:        return "book.pages"
         case .config:        return "slider.horizontal.3"
@@ -138,6 +141,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             return ["list_code", "load_code"]
         case .subAgents:
             return ["list_sub_agents", "collect_sub_agent_output"]
+        case .sessions:
+            return ["search_sessions", "recall_session"]
         case .cron:
             return ["list_cron"]
         case .skills:
@@ -184,6 +189,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             return ["execute_javascript", "save_code", "run_snippet", "delete_code"]
         case .subAgents:
             return ["create_sub_agent", "message_sub_agent", "stop_sub_agent", "delete_sub_agent"]
+        case .sessions:
+            return []
         case .cron:
             return ["schedule_cron", "unschedule_cron"]
         case .skills:
@@ -225,7 +232,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             ]
         case .files:
             return ["files.list", "files.read", "files.info"]
-        case .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model:
+        case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model:
             return []
         }
     }
@@ -249,7 +256,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             ]
         case .files:
             return ["files.write", "files.delete"]
-        case .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model:
+        case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model:
             return []
         }
     }
@@ -264,7 +271,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     ]
 
     static let agentCategories: [ToolCategory] = [
-        .browser, .codeExecution, .subAgents, .cron, .skills, .config, .model, .files,
+        .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .files,
     ]
 
     /// Every function-call tool name across all categories.

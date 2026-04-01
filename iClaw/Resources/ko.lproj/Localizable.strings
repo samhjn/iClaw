@@ -253,6 +253,7 @@
 "sessions.selectAgent" = "에이전트 선택";
 "sessions.messagesCount" = "%d개 메시지";
 "sessions.draft" = "임시 저장";
+"sessions.searchSessions" = "세션 검색";
 
 // MARK: - Settings
 "settings.title" = "설정";
@@ -476,6 +477,7 @@
 "toolPermissions.browser" = "브라우저";
 "toolPermissions.codeExecution" = "코드 실행";
 "toolPermissions.subAgents" = "서브 에이전트";
+"toolPermissions.sessions" = "세션 기억";
 "toolPermissions.cron" = "예약 작업";
 "toolPermissions.skills" = "스킬";
 "toolPermissions.config" = "설정";

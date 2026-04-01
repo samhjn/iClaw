@@ -26,6 +26,11 @@ enum ToolDefinitions {
             listSubAgentsTool,
             stopSubAgentTool,
             deleteSubAgentTool,
+
+            // Session RAG
+            searchSessionsTool,
+            recallSessionTool,
+
             scheduleCronTool,
             unscheduleCronTool,
             listCronTool,
@@ -254,6 +259,28 @@ enum ToolDefinitions {
             "agent_id": ToolDefinitionBuilder.stringParam("The UUID of the sub-agent to delete")
         ],
         required: ["agent_id"]
+    )
+
+    // MARK: - Session RAG Tools
+
+    static let searchSessionsTool = ToolDefinitionBuilder.build(
+        name: "search_sessions",
+        description: "Search past conversation sessions by keyword. Returns matching session IDs, titles, and metadata. Use this to discover relevant prior conversations when the Related Sessions list is insufficient or empty, then use `recall_session` to retrieve their context.",
+        properties: [
+            "query": ToolDefinitionBuilder.stringParam("Search query — keywords to match against session titles and message content"),
+            "limit": ToolDefinitionBuilder.intParam("Maximum number of results (1-20, default: 10)")
+        ],
+        required: ["query"]
+    )
+
+    static let recallSessionTool = ToolDefinitionBuilder.build(
+        name: "recall_session",
+        description: "Retrieve context from a past session by its UUID. Returns the session's compressed history summary and recent messages. Use this for RAG — to recall relevant context from prior conversations.",
+        properties: [
+            "session_id": ToolDefinitionBuilder.stringParam("The UUID of the session to recall (from search_sessions results or the Related Sessions section)"),
+            "max_messages": ToolDefinitionBuilder.intParam("Maximum number of recent messages to include (default: 30, max: 50)")
+        ],
+        required: ["session_id"]
     )
 
     // MARK: - Cron Job Tools

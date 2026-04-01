@@ -253,6 +253,7 @@
 "sessions.selectAgent" = "エージェントを選択";
 "sessions.messagesCount" = "%d 件のメッセージ";
 "sessions.draft" = "下書き";
+"sessions.searchSessions" = "セッションを検索";
 
 // MARK: - Settings
 "settings.title" = "設定";
@@ -476,6 +477,7 @@
 "toolPermissions.browser" = "ブラウザ";
 "toolPermissions.codeExecution" = "コード実行";
 "toolPermissions.subAgents" = "サブエージェント";
+"toolPermissions.sessions" = "セッション記憶";
 "toolPermissions.cron" = "定期タスク";
 "toolPermissions.skills" = "スキル";
 "toolPermissions.config" = "設定";

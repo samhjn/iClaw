@@ -480,7 +480,23 @@ final class ChatViewModel {
 
             guard !Task.isCancelled, !cancelled else { return }
 
-            let systemPrompt = promptBuilder.buildSystemPrompt(for: agent, isSubAgent: agent.parentAgent != nil)
+            // Compute related sessions once at session start (first generation)
+            // and persist them so the system prompt stays stable across turns.
+            let relatedSessions: [(id: UUID, title: String, updatedAt: Date)]
+            if agent.permissionLevel(for: .sessions) != .disabled {
+                relatedSessions = Self.resolveRelatedSessions(
+                    session: session,
+                    modelContext: modelContext
+                )
+            } else {
+                relatedSessions = []
+            }
+
+            let systemPrompt = promptBuilder.buildSystemPrompt(
+                for: agent,
+                isSubAgent: agent.parentAgent != nil,
+                relatedSessions: relatedSessions
+            )
             var contextMessages = contextManager.buildContextWindow(
                 session: session,
                 systemPrompt: systemPrompt
@@ -1196,6 +1212,46 @@ final class ChatViewModel {
             compressedCount: compressedIdx,
             pendingCount: pendingCount
         )
+    }
+
+    // MARK: - Related Sessions (RAG)
+
+    /// Resolve related sessions: use persisted IDs if available, otherwise compute and persist.
+    /// Called once per session start so the system prompt stays stable across turns.
+    static func resolveRelatedSessions(
+        session: Session,
+        modelContext: ModelContext
+    ) -> [(id: UUID, title: String, updatedAt: Date)] {
+        // If already computed, look up the persisted session objects
+        let existingIds = session.relatedSessionIds
+        if !existingIds.isEmpty {
+            return lookupSessions(ids: existingIds, modelContext: modelContext)
+        }
+
+        // First generation — compute and persist
+        let sessionService = SessionService(modelContext: modelContext)
+        let found = sessionService.findRelatedSessions(for: session, maxResults: 5)
+        if !found.isEmpty {
+            session.relatedSessionIds = found.map(\.id)
+            try? modelContext.save()
+        }
+        return found
+    }
+
+    private static func lookupSessions(
+        ids: [UUID],
+        modelContext: ModelContext
+    ) -> [(id: UUID, title: String, updatedAt: Date)] {
+        var results: [(id: UUID, title: String, updatedAt: Date)] = []
+        for sessionId in ids {
+            var descriptor = FetchDescriptor<Session>()
+            descriptor.predicate = #Predicate { $0.id == sessionId }
+            descriptor.fetchLimit = 1
+            if let session = (try? modelContext.fetch(descriptor))?.first {
+                results.append((id: session.id, title: session.title, updatedAt: session.updatedAt))
+            }
+        }
+        return results
     }
 
     // MARK: - Modality Stripping

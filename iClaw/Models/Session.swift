@@ -40,8 +40,21 @@ final class Session {
     /// Draft image attachments (JSON-encoded [ImageAttachment]) persisted across app quit / session exit.
     var draftImagesData: Data?
 
+    /// Pipe-separated UUIDs of related sessions (computed once at session start, persisted for stable prompt).
+    var relatedSessionIdsRaw: String?
+
     /// UUID of the parent session that spawned this sub-agent session (for content relay).
     var parentSessionIdRaw: String?
+
+    var relatedSessionIds: [UUID] {
+        get {
+            guard let raw = relatedSessionIdsRaw, !raw.isEmpty else { return [] }
+            return raw.components(separatedBy: "|").compactMap { UUID(uuidString: $0) }
+        }
+        set {
+            relatedSessionIdsRaw = newValue.isEmpty ? nil : newValue.map(\.uuidString).joined(separator: "|")
+        }
+    }
 
     var parentSessionId: UUID? {
         get { parentSessionIdRaw.flatMap { UUID(uuidString: $0) } }

@@ -95,6 +95,16 @@ final class FunctionCallRouter {
         case "delete_sub_agent":
             return ToolCallResult(subAgentTools.deleteSubAgent(arguments: arguments))
 
+        // --- Session RAG ---
+        case "search_sessions":
+            return ToolCallResult(
+                SessionRAGTools(agent: agent, modelContext: modelContext, currentSessionId: sessionId)
+                    .searchSessions(arguments: arguments))
+        case "recall_session":
+            return ToolCallResult(
+                SessionRAGTools(agent: agent, modelContext: modelContext, currentSessionId: sessionId)
+                    .recallSession(arguments: arguments))
+
         // --- Config ---
         case "read_config":
             return ToolCallResult(

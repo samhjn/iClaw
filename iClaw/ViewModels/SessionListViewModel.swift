@@ -15,7 +15,9 @@ final class SessionListViewModel {
     var rowDataCache: [UUID: SessionRowData] = [:]
     var selectedSession: Session?
     var sessionToDelete: Session?
+    var searchText: String = ""
 
+    private var allSessions: [Session] = []
     private var modelContext: ModelContext
     private var autoRefreshTask: Task<Void, Never>?
 
@@ -29,7 +31,40 @@ final class SessionListViewModel {
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
-        sessions = all.filter { !$0.isArchived && $0.agent?.parentAgent == nil }
+        allSessions = all.filter { !$0.isArchived && $0.agent?.parentAgent == nil }
+        applySearch()
+    }
+
+    func applySearch() {
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            sessions = allSessions
+        } else {
+            let keywords = SessionService.extractSearchKeywords(from: searchText)
+            if keywords.isEmpty {
+                sessions = allSessions
+            } else {
+                sessions = allSessions.filter { session in
+                    let titleLower = session.title.lowercased()
+                    for keyword in keywords {
+                        if titleLower.contains(keyword) { return true }
+                    }
+                    // Check last message preview
+                    if let lastMsg = session.messages.max(by: { $0.timestamp < $1.timestamp }),
+                       let content = lastMsg.content?.lowercased() {
+                        for keyword in keywords {
+                            if content.contains(keyword) { return true }
+                        }
+                    }
+                    // Check agent name
+                    if let agentName = session.agent?.name.lowercased() {
+                        for keyword in keywords {
+                            if agentName.contains(keyword) { return true }
+                        }
+                    }
+                    return false
+                }
+            }
+        }
         rebuildRowDataCache()
     }
 

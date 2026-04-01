@@ -11,7 +11,9 @@ struct SessionListView: View {
         NavigationStack {
             Group {
                 if let vm = viewModel {
-                    if vm.sessions.isEmpty {
+                    if vm.sessions.isEmpty && !vm.searchText.isEmpty {
+                        searchEmptyView
+                    } else if vm.sessions.isEmpty {
                         emptyStateView
                     } else {
                         sessionsList(vm)
@@ -39,6 +41,16 @@ struct SessionListView: View {
                     showNewSessionSheet = false
                 }
             }
+            .searchable(
+                text: Binding(
+                    get: { viewModel?.searchText ?? "" },
+                    set: { newValue in
+                        viewModel?.searchText = newValue
+                        viewModel?.applySearch()
+                    }
+                ),
+                prompt: L10n.Sessions.searchSessions
+            )
             .navigationDestination(item: $navigateToSession) { session in
                 ChatView(session: session)
             }
@@ -59,6 +71,10 @@ struct SessionListView: View {
                 viewModel?.fetchSessions()
             }
         }
+    }
+
+    private var searchEmptyView: some View {
+        ContentUnavailableView.search(text: viewModel?.searchText ?? "")
     }
 
     private var emptyStateView: some View {

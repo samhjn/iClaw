@@ -254,6 +254,7 @@
 "sessions.selectAgent" = "选择智能体";
 "sessions.messagesCount" = "%d 条消息";
 "sessions.draft" = "草稿";
+"sessions.searchSessions" = "搜索会话";
 
 // MARK: - Settings
 "settings.title" = "设置";
@@ -477,6 +478,7 @@
 "toolPermissions.browser" = "浏览器";
 "toolPermissions.codeExecution" = "代码执行";
 "toolPermissions.subAgents" = "子智能体";
+"toolPermissions.sessions" = "会话记忆";
 "toolPermissions.cron" = "定时任务";
 "toolPermissions.skills" = "技能";
 "toolPermissions.config" = "配置";

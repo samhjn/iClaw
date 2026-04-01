@@ -2,7 +2,11 @@ import Foundation
 
 final class PromptBuilder {
 
-    func buildSystemPrompt(for agent: Agent, isSubAgent: Bool = false) -> String {
+    func buildSystemPrompt(
+        for agent: Agent,
+        isSubAgent: Bool = false,
+        relatedSessions: [(id: UUID, title: String, updatedAt: Date)] = []
+    ) -> String {
         var sections: [String] = []
 
         sections.append(buildCapabilitiesSection(for: agent))
@@ -23,6 +27,10 @@ final class PromptBuilder {
 
         if !agent.customConfigs.isEmpty {
             sections.append(buildCustomConfigsIndex(agent))
+        }
+
+        if !relatedSessions.isEmpty {
+            sections.append(buildRelatedSessionsSection(relatedSessions))
         }
 
         return sections.joined(separator: "\n\n---\n\n")
@@ -102,6 +110,18 @@ final class PromptBuilder {
             - `list_sub_agents`: List all sub-agents with status and message counts.
             - `stop_sub_agent`: Force-stop a running sub-agent.
             - `delete_sub_agent`: Permanently delete a sub-agent.
+            """)
+        }
+
+        if isEnabled(.sessions, for: agent) {
+            parts.append("""
+            ### Session Memory (RAG)
+            You can search and recall context from past conversation sessions.
+
+            - `search_sessions`: Search past sessions by keyword. Returns session IDs, titles, dates, and message counts. Use when the Related Sessions list is insufficient or when you need to find context beyond what was auto-injected.
+            - `recall_session`: Retrieve context from a specific session by UUID — returns compressed history and recent messages.
+
+            **When to use:** Related sessions (if any) are auto-injected in the "Related Sessions" section — you can recall those directly without searching. For longer conversations or new topics, use `search_sessions` to discover additional relevant history.
             """)
         }
 
@@ -208,6 +228,9 @@ final class PromptBuilder {
         if isEnabled(.skills, for: agent) {
             guidelines.append("Create and install skills to give yourself or other agents specialized capabilities.")
         }
+        if isEnabled(.sessions, for: agent) {
+            guidelines.append("When the user seems to reference past conversations or you need prior context, use `search_sessions` and `recall_session` to retrieve relevant history.")
+        }
         parts.append("### Important Guidelines\n" + guidelines.map { "- \($0)" }.joined(separator: "\n"))
 
         return parts.joined(separator: "\n\n")
@@ -309,6 +332,25 @@ final class PromptBuilder {
         }
 
         return parts.joined(separator: "\n\n")
+    }
+
+    private func buildRelatedSessionsSection(_ sessions: [(id: UUID, title: String, updatedAt: Date)]) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .short
+
+        var lines: [String] = [
+            "## Related Sessions",
+            "",
+            "The following past sessions may contain relevant context. Use `recall_session` with the session ID to retrieve details.",
+            ""
+        ]
+
+        for session in sessions {
+            lines.append("- **\(session.title)** — `\(session.id.uuidString)` (updated \(dateFormatter.string(from: session.updatedAt)))")
+        }
+
+        return lines.joined(separator: "\n")
     }
 
     private func buildCustomConfigsIndex(_ agent: Agent) -> String {

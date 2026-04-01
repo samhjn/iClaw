@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0152A5A4948B73FFAB40D028 /* SessionRAGTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = E85F8077CCA0AA89047D4085 /* SessionRAGTools.swift */; };
 		065A5E0E2C10D89A0DD3B2C6 /* AppleHealthTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3B2152CACD350B80DDEEBE /* AppleHealthTools.swift */; };
 		076B61C851641A6F8F6FA78E /* MarkdownEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F83422956DC29BF68C138F /* MarkdownEditorView.swift */; };
 		07DB6EDE202EDEFCA724940D /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */; };
@@ -231,6 +232,7 @@
 		E053BCA6983DC80249C37C8D /* SkillDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillDetailView.swift; sourceTree = "<group>"; };
 		E6591935F1E60250635E6F3E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		E7EC3C4478D8B7E4852726ED /* AppleLocationTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleLocationTools.swift; sourceTree = "<group>"; };
+		E85F8077CCA0AA89047D4085 /* SessionRAGTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRAGTools.swift; sourceTree = "<group>"; };
 		EBA652DA47A238C04345F10E /* LLMProviderEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderEditView.swift; sourceTree = "<group>"; };
 		EC2451AAD7AD253EDA6298F2 /* Agent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Agent.swift; sourceTree = "<group>"; };
 		EC948E69917416DDE10084F4 /* ImageAttachmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentTests.swift; sourceTree = "<group>"; };
@@ -494,6 +496,7 @@
 				1FAD6624A609D322B43704AA /* FileTools.swift */,
 				7C739D21301D859C4813C401 /* FunctionCallRouter.swift */,
 				B709006A2FC069835A82BC7E /* ModelTools.swift */,
+				E85F8077CCA0AA89047D4085 /* SessionRAGTools.swift */,
 				4383D71D07DF723A7E50B296 /* SkillTools.swift */,
 				6F041EB3237F760F5B79BCD5 /* SubAgentTools.swift */,
 				BDCDBED624DF84E9BC19628E /* ToolCategory.swift */,
@@ -778,6 +781,7 @@
 				976B43C21F7B924DD339DE33 /* SessionCompressor.swift in Sources */,
 				49927AE4E041938DB7CBB8B6 /* SessionListView.swift in Sources */,
 				B6A5F610D999EC9DAF28278D /* SessionListViewModel.swift in Sources */,
+				0152A5A4948B73FFAB40D028 /* SessionRAGTools.swift in Sources */,
 				4A5A293020E0E4D215FF3F32 /* SessionRowView.swift in Sources */,
 				7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */,
 				8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */,

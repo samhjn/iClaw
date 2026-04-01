@@ -254,6 +254,7 @@
 "sessions.selectAgent" = "Select Agent";
 "sessions.messagesCount" = "%d messages";
 "sessions.draft" = "Draft";
+"sessions.searchSessions" = "Search sessions";
 
 // MARK: - Settings
 "settings.title" = "Settings";
@@ -477,6 +478,7 @@
 "toolPermissions.browser" = "Browser";
 "toolPermissions.codeExecution" = "Code Execution";
 "toolPermissions.subAgents" = "Sub-Agents";
+"toolPermissions.sessions" = "Sessions";
 "toolPermissions.cron" = "Cron Jobs";
 "toolPermissions.skills" = "Skills";
 "toolPermissions.config" = "Config";
