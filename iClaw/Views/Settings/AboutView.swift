@@ -6,7 +6,10 @@ struct AboutView: View {
     }
 
     private var build: String {
-        GitInfo.isDirty ? "\(GitInfo.commitHash)-dirty" : GitInfo.commitHash
+        let info = Bundle.main.infoDictionary
+        let hash = info?["GitCommitHash"] as? String ?? "dev"
+        let dirty = info?["GitIsDirty"] as? Bool ?? false
+        return dirty ? "\(hash)-dirty" : hash
     }
 
     var body: some View {

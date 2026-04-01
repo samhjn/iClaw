@@ -24,7 +24,6 @@
 		261E583DCD29AB3EAA06AD92 /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949EA8CFA50E16335110B086 /* InputBarView.swift */; };
 		26E54F437FA509C088931ED9 /* CodeExecutorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E61FB342DF74E70655961BA /* CodeExecutorTests.swift */; };
 		28B9CE497D3468878E2BFFA1 /* AgentFileBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D5C0D768A0C9E560A8C0951 /* AgentFileBrowserView.swift */; };
-		31A906343D81734FD6CAC971 /* GitInfo.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050D5F65B0F089A68634D62 /* GitInfo.generated.swift */; };
 		3278F89F144A3D6ACBF2ED2A /* AppleContactsTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DD8EFB95C18D5907CA6F49 /* AppleContactsTools.swift */; };
 		33372511181318FED8272C00 /* CronJobListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092DD5EE7670CFD435BCE570 /* CronJobListView.swift */; };
 		3710DF57660ED815E3028EC3 /* AgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6357B86866613D68EAD23432 /* AgentViewModel.swift */; };
@@ -42,6 +41,7 @@
 		4EE9A73CDC15265EB9B03E05 /* ToolCategoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEC1F17290AEC4EF4027176 /* ToolCategoryTests.swift */; };
 		4F4123F3E9E723C649F2CB84 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0A84BDBA6BF872B7DBFDA /* ChatView.swift */; };
 		4F784024F2EF5B97CA5543D3 /* SSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D137B1FBCA97EEA884CE0C94 /* SSEParserTests.swift */; };
+		4FCA544B266C5E97DC9ABB4F /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFA88F66778A758D15E4133 /* AboutView.swift */; };
 		60895C4A0FF0A3ADED9FCEC7 /* SkillLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */; };
 		60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF90D5B3F5F299198F904BA8 /* AgentConfig.swift */; };
 		61421AF6F0FB7E917E95E6A9 /* BrowserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55F9A5CBD3F3B003E8A86C4 /* BrowserService.swift */; };
@@ -62,7 +62,6 @@
 		839E6C99607BCB5FE5AC6E0D /* AgentSkillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C378677C443CB71D9A5EDA3 /* AgentSkillsView.swift */; };
 		85FBE9AFDE5E62822E010632 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6FA049A05520F6A61F7763D0 /* Assets.xcassets */; };
 		8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */; };
-		A1B2C3D4E5F60718A9B0C1D2 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718A9B0C1D3 /* AboutView.swift */; };
 		91FC43248B875B7599B0AFE4 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4845603F169879185B9CAF /* ContextManager.swift */; };
 		976B43C21F7B924DD339DE33 /* SessionCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F7B6B48A8A3FB815AFB7AD /* SessionCompressor.swift */; };
 		981820D7F144AD9C634AC068 /* Agent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2451AAD7AD253EDA6298F2 /* Agent.swift */; };
@@ -151,7 +150,6 @@
 		31321BA5D5DDEED322500D1D /* DefaultSOUL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultSOUL.md; sourceTree = "<group>"; };
 		318E344ABF631CB93195C099 /* ModelRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRouter.swift; sourceTree = "<group>"; };
 		31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60718A9B0C1D3 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		36E25850C697EF01F57455B5 /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
 		380F4D6FD89A274BEE1F4FB9 /* SubAgentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManager.swift; sourceTree = "<group>"; };
 		3861799453CF3BFFEFA0ACCD /* FunctionCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionCallView.swift; sourceTree = "<group>"; };
@@ -180,6 +178,7 @@
 		6357B86866613D68EAD23432 /* AgentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentViewModel.swift; sourceTree = "<group>"; };
 		65F951651FB3C7B10CA174E9 /* Skill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skill.swift; sourceTree = "<group>"; };
 		6C6ADA3EA1432CE86A4DCE89 /* ShortcutsGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsGuideView.swift; sourceTree = "<group>"; };
+		6EFA88F66778A758D15E4133 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		6F041EB3237F760F5B79BCD5 /* SubAgentTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentTools.swift; sourceTree = "<group>"; };
 		6FA049A05520F6A61F7763D0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6FBC7B62C41084DB868A09B6 /* ToolCallCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCallCardView.swift; sourceTree = "<group>"; };
@@ -224,7 +223,6 @@
 		C4CB55CD147490CD6A0DA455 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		C8000A49E30379E483282ABA /* AppleReminderTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleReminderTools.swift; sourceTree = "<group>"; };
 		CF142E825A15CFC6EC137150 /* ExecutionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionResult.swift; sourceTree = "<group>"; };
-		D050D5F65B0F089A68634D62 /* GitInfo.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitInfo.generated.swift; sourceTree = "<group>"; };
 		D07AF5898D7488DC64851298 /* DefaultUSER.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DefaultUSER.md; sourceTree = "<group>"; };
 		D137B1FBCA97EEA884CE0C94 /* SSEParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParserTests.swift; sourceTree = "<group>"; };
 		D37AEC5F7F6565DADCBD20E8 /* SkillLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillLibraryView.swift; sourceTree = "<group>"; };
@@ -259,7 +257,7 @@
 		0722AB4710B66CCA8EBD9F18 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				A1B2C3D4E5F60718A9B0C1D3 /* AboutView.swift */,
+				6EFA88F66778A758D15E4133 /* AboutView.swift */,
 				EBA652DA47A238C04345F10E /* LLMProviderEditView.swift */,
 				31C6B5900D1E071F0DCBEF60 /* SettingsView.swift */,
 			);
@@ -432,14 +430,6 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
-		5296CE78B49292002640EC7E /* Generated */ = {
-			isa = PBXGroup;
-			children = (
-				D050D5F65B0F089A68634D62 /* GitInfo.generated.swift */,
-			);
-			path = Generated;
-			sourceTree = "<group>";
-		};
 		56642AD4BD05520B02E7E859 /* Skill */ = {
 			isa = PBXGroup;
 			children = (
@@ -456,7 +446,6 @@
 				4ABE3E70DACD1E8D7587DCE5 /* iClaw-Bridging-Header.h */,
 				41306CB0B101F9685DA89F4F /* iClaw.entitlements */,
 				0F42FED94FABD5522B7E666A /* App */,
-				5296CE78B49292002640EC7E /* Generated */,
 				4EF65B30D873C7BBB9EB58BE /* Models */,
 				C33203BF54F859263CACEEC9 /* Resources */,
 				D06039B3670E34D508E75C53 /* Services */,
@@ -586,9 +575,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AC54C57074B6D3F3FCED5966 /* Build configuration list for PBXNativeTarget "iClaw" */;
 			buildPhases = (
-				D7C2085AD389FE6B6F9C0ECF /* Generate Git Info */,
 				F6625D4104480ADFAE209E12 /* Sources */,
 				2BCF353900D65598CD98ADD4 /* Resources */,
+				D05A57CBA7FFA3B845DC22A8 /* Stamp Git Info */,
 			);
 			buildRules = (
 			);
@@ -675,7 +664,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		D7C2085AD389FE6B6F9C0ECF /* Generate Git Info */ = {
+		D05A57CBA7FFA3B845DC22A8 /* Stamp Git Info */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -685,15 +674,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Generate Git Info";
+			name = "Stamp Git Info";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(SRCROOT)/iClaw/Generated/GitInfo.generated.swift",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "COMMIT=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null || echo \"unknown\")\nDIRTY=false\nif ! git -C \"${SRCROOT}\" diff --quiet HEAD -- ':!iClaw/Generated/GitInfo.generated.swift' 2>/dev/null; then\n  DIRTY=true\nfi\nif ! git -C \"${SRCROOT}\" diff --cached --quiet HEAD -- ':!iClaw/Generated/GitInfo.generated.swift' 2>/dev/null; then\n  DIRTY=true\nfi\nOUTPUT_FILE=\"${SRCROOT}/iClaw/Generated/GitInfo.generated.swift\"\nmkdir -p \"$(dirname \"${OUTPUT_FILE}\")\"\necho \"// Auto-generated by build script — do not edit.\" > \"${OUTPUT_FILE}\"\necho \"enum GitInfo {\" >> \"${OUTPUT_FILE}\"\necho \"    static let commitHash = \\\"${COMMIT}\\\"\" >> \"${OUTPUT_FILE}\"\necho \"    static let isDirty = ${DIRTY}\" >> \"${OUTPUT_FILE}\"\necho \"}\" >> \"${OUTPUT_FILE}\"\n";
+			shellScript = "PLIST=\"${BUILT_PRODUCTS_DIR}/${INFOPLIST_PATH}\"\n[ -f \"${PLIST}\" ] || exit 0\nCOMMIT=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null || echo \"unknown\")\nDIRTY=false\nif ! git -C \"${SRCROOT}\" diff --quiet HEAD 2>/dev/null; then\n  DIRTY=true\nfi\nif ! git -C \"${SRCROOT}\" diff --cached --quiet HEAD 2>/dev/null; then\n  DIRTY=true\nfi\n/usr/libexec/PlistBuddy -c \"Add :GitCommitHash string ${COMMIT}\" \"${PLIST}\" 2>/dev/null || \\\n/usr/libexec/PlistBuddy -c \"Set :GitCommitHash ${COMMIT}\" \"${PLIST}\"\n/usr/libexec/PlistBuddy -c \"Add :GitIsDirty bool ${DIRTY}\" \"${PLIST}\" 2>/dev/null || \\\n/usr/libexec/PlistBuddy -c \"Set :GitIsDirty ${DIRTY}\" \"${PLIST}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -720,6 +708,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4FCA544B266C5E97DC9ABB4F /* AboutView.swift in Sources */,
 				981820D7F144AD9C634AC068 /* Agent.swift in Sources */,
 				60E7A57D2B880A50C089008A /* AgentConfig.swift in Sources */,
 				4996B0A463A1588C606A425A /* AgentDetailView.swift in Sources */,
@@ -766,7 +755,6 @@
 				6DA4A08DC1D5A92B9DA2F71C /* FunctionCallRouter.swift in Sources */,
 				E0C9AA11D18FE2CB04D3ECAC /* FunctionCallView.swift in Sources */,
 				C2F719E1F6CFF4237169C442 /* FunctionDefinition.swift in Sources */,
-				31A906343D81734FD6CAC971 /* GitInfo.generated.swift in Sources */,
 				FFCC6CE88E20DC424CBBD97C /* ImageAttachment.swift in Sources */,
 				6B907713A265A78879C9F169 /* ImageAttachmentBar.swift in Sources */,
 				B5315EB3C88A95B901699E54 /* ImagePreview.swift in Sources */,
@@ -792,7 +780,6 @@
 				B6A5F610D999EC9DAF28278D /* SessionListViewModel.swift in Sources */,
 				4A5A293020E0E4D215FF3F32 /* SessionRowView.swift in Sources */,
 				7FA336C8A24E4F4690A388BD /* SessionService.swift in Sources */,
-				A1B2C3D4E5F60718A9B0C1D2 /* AboutView.swift in Sources */,
 				8C7272FE11D300605B89F749 /* SettingsView.swift in Sources */,
 				3D7FB68BE84A307A19972099 /* SettingsViewModel.swift in Sources */,
 				0B76B6A987EB3B0682EB0AD7 /* ShortcutsGuideView.swift in Sources */,
