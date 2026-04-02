@@ -72,8 +72,7 @@ final class SessionListViewModel {
         var cache: [UUID: SessionRowData] = [:]
         cache.reserveCapacity(sessions.count)
         for session in sessions {
-            let isStreaming = session.isActive && session.pendingStreamingContent != nil
-                && !session.pendingStreamingContent!.isEmpty
+            let isStreaming = session.isActive && !(session.pendingStreamingContent ?? "").isEmpty
             let rawPreview: String? = {
                 if isStreaming {
                     return session.pendingStreamingContent

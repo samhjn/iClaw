@@ -103,7 +103,11 @@ struct iClawApp: App {
             forTaskWithIdentifier: CronScheduler.bgTaskIdentifier,
             using: nil
         ) { task in
-            scheduler.handleBackgroundTask(task as! BGAppRefreshTask)
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            scheduler.handleBackgroundTask(refreshTask)
         }
     }
 

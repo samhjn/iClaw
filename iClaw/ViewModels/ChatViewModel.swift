@@ -1285,7 +1285,7 @@ final class ChatViewModel {
 
             // Clear contentParts entirely so the encoder falls back to
             // plain string `content`, which all APIs accept for any role.
-            let hasTextContent = messages[i].content != nil && !messages[i].content!.isEmpty
+            let hasTextContent = !(messages[i].content ?? "").isEmpty
             let hasToolCalls = messages[i].toolCalls != nil
             if !hasTextContent && !hasToolCalls && messages[i].toolCallId == nil {
                 // Synthetic image-only message (e.g. flush from ContextManager) — remove entirely

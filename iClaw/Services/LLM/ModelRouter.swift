@@ -139,9 +139,10 @@ final class ModelRouter {
                 let effectiveTools = caps.supportsToolUse ? tools : nil
                 let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
                 let (stream, cancel) = try await service.chatCompletionStream(messages: messages, tools: effectiveTools)
-                lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
+                let providerName = "\(entry.provider.name) (\(effectiveModel))"
+                lastUsedProviderName = providerName
                 failoverOccurred = index > 0
-                return (stream, lastUsedProviderName!, caps, cancel)
+                return (stream, providerName, caps, cancel)
             } catch is CancellationError {
                 throw CancellationError()
             } catch let urlError as URLError where urlError.code == .cancelled {
@@ -175,9 +176,10 @@ final class ModelRouter {
                 let effectiveTools = caps.supportsToolUse ? tools : nil
                 let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
                 let response = try await service.chatCompletion(messages: messages, tools: effectiveTools)
-                lastUsedProviderName = "\(entry.provider.name) (\(effectiveModel))"
+                let providerName = "\(entry.provider.name) (\(effectiveModel))"
+                lastUsedProviderName = providerName
                 failoverOccurred = index > 0
-                return (response, lastUsedProviderName!)
+                return (response, providerName)
             } catch is CancellationError {
                 throw CancellationError()
             } catch let urlError as URLError where urlError.code == .cancelled {

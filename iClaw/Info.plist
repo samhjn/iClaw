@@ -67,7 +67,6 @@
 	<array>
 		<string>fetch</string>
 		<string>processing</string>
-		<string>bluetooth-peripheral</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>

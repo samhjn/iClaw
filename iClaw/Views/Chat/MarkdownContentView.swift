@@ -536,7 +536,7 @@ struct MarkdownContentView: View {
             // Italic: *text* or _text_
             if (remaining.hasPrefix("*") && !remaining.hasPrefix("**")) ||
                (remaining.hasPrefix("_") && !remaining.hasPrefix("__")) {
-                let marker = remaining.first!
+                guard let marker = remaining.first else { break }
                 let after = remaining.dropFirst()
                 if let endIdx = after.firstIndex(of: marker) {
                     let italicText = String(after[after.startIndex..<endIdx])
@@ -586,7 +586,7 @@ struct MarkdownContentView: View {
             }
 
             // Regular character
-            let char = remaining.first!
+            guard let char = remaining.first else { break }
             result.append(AttributedString(String(char)))
             remaining = remaining.dropFirst()
         }
