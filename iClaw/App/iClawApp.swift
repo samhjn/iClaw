@@ -18,6 +18,7 @@ struct iClawApp: App {
             CronJob.self,
             Skill.self,
             InstalledSkill.self,
+            SessionEmbedding.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
@@ -43,6 +44,7 @@ struct iClawApp: App {
 
         Self.resetStaleActiveSessions(in: modelContainer)
         Self.cleanupOrphanAgentFiles(in: modelContainer)
+        Self.backfillSessionEmbeddings(in: modelContainer)
     }
 
     /// Sessions stuck in `isActive` from a previous crash or force-quit can never
@@ -58,6 +60,12 @@ struct iClawApp: App {
         }
         try? context.save()
         print("[iClawApp] Reset \(stale.count) stale active session(s).")
+    }
+
+    /// Backfill embeddings for existing sessions that don't have one yet.
+    private static func backfillSessionEmbeddings(in container: ModelContainer) {
+        let context = ModelContext(container)
+        SessionVectorStore(modelContext: context).backfillMissingEmbeddings()
     }
 
     private static func cleanupOrphanAgentFiles(in container: ModelContainer) {

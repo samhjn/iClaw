@@ -461,6 +461,10 @@ final class ChatViewModel {
                 }
                 try? modelContext.save()
                 BrowserService.shared.releaseLock(sessionId: session.id)
+
+                // Update embedding after generation completes (handles continued sessions)
+                SessionVectorStore(modelContext: modelContext)
+                    .updateEmbedding(for: session)
             }
         }
 
@@ -851,6 +855,9 @@ final class ChatViewModel {
         if let result {
             compressor.commit(result: result, to: session, modelContext: modelContext)
             compressor.autoGenerateTitleIfNeeded(session: session, llmService: llmService, modelContext: modelContext)
+            // Update vector embedding after compression
+            SessionVectorStore(modelContext: modelContext)
+                .updateEmbedding(for: session)
             let newTokens = contextManager.activeContextTokens(session: session)
             print("[AutoCompress] Committed — tokens \(activeTokens) → \(newTokens)")
         } else {
@@ -911,6 +918,9 @@ final class ChatViewModel {
             if let result {
                 compressor.commit(result: result, to: session, modelContext: modelContext)
                 compressor.autoGenerateTitleIfNeeded(session: session, llmService: llmService, modelContext: modelContext)
+                // Update vector embedding after manual compression
+                SessionVectorStore(modelContext: modelContext)
+                    .updateEmbedding(for: session)
                 let afterTokens = contextManager.activeContextTokens(session: session)
                 print("[ManualCompress] Committed — tokens \(beforeTokens) → \(afterTokens)")
             } else {
@@ -1228,9 +1238,9 @@ final class ChatViewModel {
             return lookupSessions(ids: existingIds, modelContext: modelContext)
         }
 
-        // First generation — compute and persist
+        // First generation — compute via hybrid search (local vector + keyword) and persist
         let sessionService = SessionService(modelContext: modelContext)
-        let found = sessionService.findRelatedSessions(for: session, maxResults: 5)
+        let found = sessionService.findRelatedSessionsHybrid(for: session, maxResults: 5)
         if !found.isEmpty {
             session.relatedSessionIds = found.map(\.id)
             try? modelContext.save()

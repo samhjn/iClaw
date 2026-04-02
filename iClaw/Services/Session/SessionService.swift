@@ -29,6 +29,7 @@ final class SessionService {
     }
 
     func deleteSession(_ session: Session) {
+        SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: session.id)
         modelContext.delete(session)
         try? modelContext.save()
     }
@@ -137,9 +138,10 @@ final class SessionService {
             .map(\.session)
     }
 
-    /// Fetch context from a specific session for RAG recall.
-    /// Returns the compressed context plus the most recent messages.
-    func fetchSessionContext(sessionId: UUID, maxMessages: Int = 30) -> SessionContextSnapshot? {
+    /// Fetch context from a specific session for RAG recall with paging support.
+    /// - `limit`: number of messages per page (default 3)
+    /// - `offset`: skip this many messages from the end (0 = most recent page)
+    func fetchSessionContext(sessionId: UUID, limit: Int = 3, offset: Int = 0) -> SessionContextSnapshot? {
         var descriptor = FetchDescriptor<Session>()
         descriptor.predicate = #Predicate { $0.id == sessionId }
         descriptor.fetchLimit = 1
@@ -147,10 +149,15 @@ final class SessionService {
         guard let session = (try? modelContext.fetch(descriptor))?.first else { return nil }
 
         let sorted = session.sortedMessages.filter { $0.role != .system }
-        let recent = sorted.suffix(maxMessages)
+        let total = sorted.count
+
+        // Page from the end: offset=0 → last `limit` messages
+        let endIdx = max(total - offset, 0)
+        let startIdx = max(endIdx - limit, 0)
+        let page = sorted[startIdx..<endIdx]
 
         var transcript: [SessionContextSnapshot.MessageEntry] = []
-        for msg in recent {
+        for msg in page {
             transcript.append(.init(
                 role: msg.role.rawValue,
                 content: msg.content ?? "",
@@ -165,7 +172,10 @@ final class SessionService {
             createdAt: session.createdAt,
             updatedAt: session.updatedAt,
             compressedContext: session.compressedContext,
-            recentMessages: transcript
+            recentMessages: transcript,
+            totalMessages: total,
+            offset: offset,
+            hasMore: startIdx > 0
         )
     }
 
@@ -202,6 +212,72 @@ final class SessionService {
         )
 
         return results.map { (id: $0.id, title: $0.title, updatedAt: $0.updatedAt) }
+    }
+
+    // MARK: - Hybrid Search (Vector + Keyword Fallback)
+
+    /// Hybrid search: try local vector similarity first, fall back to keyword search.
+    func searchSessionsHybrid(
+        query: String,
+        agent: Agent,
+        excludeSessionId: UUID? = nil,
+        limit: Int = 10
+    ) -> [Session] {
+        let vectorStore = SessionVectorStore(modelContext: modelContext)
+        let vectorResults = vectorStore.search(
+            query: query,
+            agent: agent,
+            excludeSessionId: excludeSessionId,
+            limit: limit
+        )
+        if !vectorResults.isEmpty {
+            return lookupSessionsByIds(vectorResults.map(\.sessionId))
+        }
+        return searchSessions(query: query, agent: agent, excludeSessionId: excludeSessionId, limit: limit)
+    }
+
+    /// Find related sessions using vector similarity when available, keyword fallback.
+    func findRelatedSessionsHybrid(
+        for session: Session,
+        maxResults: Int = 5
+    ) -> [(id: UUID, title: String, updatedAt: Date)] {
+        guard let agent = session.agent else { return [] }
+
+        var queryParts: [String] = []
+        if session.title != L10n.Chat.newChat {
+            queryParts.append(session.title)
+        }
+        let recentUserMessages = session.sortedMessages
+            .filter { $0.role == .user }
+            .suffix(3)
+        for msg in recentUserMessages {
+            if let content = msg.content {
+                queryParts.append(String(content.prefix(200)))
+            }
+        }
+        let query = queryParts.joined(separator: " ")
+        guard !query.isEmpty else { return [] }
+
+        let results = searchSessionsHybrid(
+            query: query,
+            agent: agent,
+            excludeSessionId: session.id,
+            limit: maxResults
+        )
+        return results.map { (id: $0.id, title: $0.title, updatedAt: $0.updatedAt) }
+    }
+
+    private func lookupSessionsByIds(_ ids: [UUID]) -> [Session] {
+        var results: [Session] = []
+        for id in ids {
+            var descriptor = FetchDescriptor<Session>()
+            descriptor.predicate = #Predicate { $0.id == id }
+            descriptor.fetchLimit = 1
+            if let session = (try? modelContext.fetch(descriptor))?.first {
+                results.append(session)
+            }
+        }
+        return results
     }
 
     // MARK: - Keyword Extraction
@@ -246,6 +322,9 @@ struct SessionContextSnapshot {
     let updatedAt: Date
     let compressedContext: String?
     let recentMessages: [MessageEntry]
+    let totalMessages: Int
+    let offset: Int
+    let hasMore: Bool
 
     struct MessageEntry {
         let role: String
@@ -256,21 +335,22 @@ struct SessionContextSnapshot {
 
     func formatted(maxTokens: Int = 4000) -> String {
         var parts: [String] = []
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .short
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .short
 
         parts.append("# Session: \(title)")
         parts.append("ID: \(sessionId.uuidString)")
-        parts.append("Created: \(dateFormatter.string(from: createdAt))")
-        parts.append("Updated: \(dateFormatter.string(from: updatedAt))")
+        parts.append("Created: \(df.string(from: createdAt))")
+        parts.append("Updated: \(df.string(from: updatedAt))")
+        parts.append("Total messages: \(totalMessages)")
 
         if let compressed = compressedContext, !compressed.isEmpty {
             parts.append("\n## Compressed History\n\(compressed)")
         }
 
         if !recentMessages.isEmpty {
-            parts.append("\n## Recent Messages")
+            parts.append("\n## Messages (offset=\(offset), showing \(recentMessages.count) of \(totalMessages))")
             var tokenEstimate = parts.joined(separator: "\n").count / 4
 
             for msg in recentMessages {
@@ -279,13 +359,17 @@ struct SessionContextSnapshot {
                 let entryTokens = entry.count / 4
 
                 if tokenEstimate + entryTokens > maxTokens {
-                    parts.append("... (truncated, \(recentMessages.count) messages total)")
+                    parts.append("... (token limit reached)")
                     break
                 }
 
                 parts.append(entry)
                 tokenEstimate += entryTokens
             }
+        }
+
+        if hasMore {
+            parts.append("\n> Use `recall_session` with `offset: \(offset + recentMessages.count)` to load earlier messages.")
         }
 
         return parts.joined(separator: "\n")

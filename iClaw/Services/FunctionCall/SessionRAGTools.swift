@@ -19,7 +19,7 @@ struct SessionRAGTools {
 
         let limit = min(max((arguments["limit"] as? Int) ?? 10, 1), 20)
 
-        let results = sessionService.searchSessions(
+        let results = sessionService.searchSessionsHybrid(
             query: query,
             agent: agent,
             excludeSessionId: currentSessionId,
@@ -38,7 +38,8 @@ struct SessionRAGTools {
         for session in results {
             let msgCount = session.messages.count
             let hasCompressed = session.compressedContext != nil && !(session.compressedContext?.isEmpty ?? true)
-            output += "\n- **\(session.title)**"
+            let isCurrent = session.id == currentSessionId
+            output += "\n- **\(session.title)**\(isCurrent ? " (current session)" : "")"
             output += "\n  ID: `\(session.id.uuidString)`"
             output += "\n  Updated: \(df.string(from: session.updatedAt))"
             output += "\n  Messages: \(msgCount)\(hasCompressed ? " (has compressed history)" : "")"
@@ -67,10 +68,14 @@ struct SessionRAGTools {
             return toolError("Session not found: \(sessionIdStr)")
         }
 
-        let maxMessages = min((arguments["max_messages"] as? Int) ?? 30, 50)
+        // Paging: limit (page size, default 3) + offset (skip from end, default 0)
+        let limit = min((arguments["max_messages"] as? Int) ?? 3, 50)
+        let offset = max((arguments["offset"] as? Int) ?? 0, 0)
+
         guard let snapshot = sessionService.fetchSessionContext(
             sessionId: sessionId,
-            maxMessages: maxMessages
+            limit: limit,
+            offset: offset
         ) else {
             return toolError("Session not found: \(sessionIdStr)")
         }

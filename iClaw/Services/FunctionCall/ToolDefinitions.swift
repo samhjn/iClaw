@@ -275,10 +275,11 @@ enum ToolDefinitions {
 
     static let recallSessionTool = ToolDefinitionBuilder.build(
         name: "recall_session",
-        description: "Retrieve context from a past session by its UUID. Returns the session's compressed history summary and recent messages. Use this for RAG — to recall relevant context from prior conversations.",
+        description: "Retrieve context from a past session by its UUID. Returns the session title, compressed history summary, and the 3 most recent messages by default. Supports paging: use `offset` to load earlier messages. The response tells you if there are more messages available.",
         properties: [
             "session_id": ToolDefinitionBuilder.stringParam("The UUID of the session to recall (from search_sessions results or the Related Sessions section)"),
-            "max_messages": ToolDefinitionBuilder.intParam("Maximum number of recent messages to include (default: 30, max: 50)")
+            "max_messages": ToolDefinitionBuilder.intParam("Page size — number of messages to retrieve (default: 3, max: 50)"),
+            "offset": ToolDefinitionBuilder.intParam("Skip this many messages from the end. 0 = most recent (default). Use the offset value suggested in the previous response to page backwards through history.")
         ],
         required: ["session_id"]
     )
