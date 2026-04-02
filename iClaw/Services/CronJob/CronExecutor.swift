@@ -16,9 +16,10 @@ final class CronExecutor {
         formatter.timeStyle = .short
 
         let sessionTitle = "⏰ \(job.name) — \(formatter.string(from: Date()))"
-        let session = Session(title: sessionTitle, agent: agent)
+        let session = Session(title: sessionTitle)
         session.isActive = true
         context.insert(session)
+        session.agent = agent
 
         let triggerMessage = buildTriggerMessage(job: job)
         let userMsg = Message(role: .user, content: triggerMessage, session: session)

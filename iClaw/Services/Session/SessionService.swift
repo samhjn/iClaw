@@ -9,8 +9,9 @@ final class SessionService {
     }
 
     func createSession(title: String, agent: Agent) -> Session {
-        let session = Session(title: title, agent: agent)
+        let session = Session(title: title)
         modelContext.insert(session)
+        session.agent = agent
         try? modelContext.save()
         return session
     }

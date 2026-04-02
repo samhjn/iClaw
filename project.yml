@@ -93,8 +93,9 @@ schemes:
       config: Debug
     test:
       config: Debug
-      targets:
-        - iClawTests
+      testPlans:
+        - path: iClaw.xctestplan
+          defaultPlan: true
     profile:
       config: Release
     analyze:

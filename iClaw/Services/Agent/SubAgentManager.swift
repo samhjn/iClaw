@@ -71,9 +71,10 @@ final class SubAgentManager {
 
         try? modelContext.save()
 
-        let session = Session(title: "Sub: \(name)", agent: subAgent)
+        let session = Session(title: "Sub: \(name)")
         session.parentSessionIdRaw = parentSessionId?.uuidString
         modelContext.insert(session)
+        session.agent = subAgent
         try? modelContext.save()
 
         activeSessions[subAgent.id] = session

@@ -7,10 +7,7 @@ DerivedData/
 *.xcscmblueprint
 *.xccheckout
 xcuserdata/
-
-# Keep shared schemes (required by Xcode Cloud)
-!*.xcodeproj/xcshareddata/
-!*.xcodeproj/xcshareddata/xcschemes/
+*.xcodeproj
 
 # Swift Package Manager
 .build/
