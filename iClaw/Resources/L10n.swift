@@ -601,6 +601,8 @@ enum L10n {
         static var healthWriteBodyTemperature: String { tr("toolCard.healthWriteBodyTemperature") }
         static var healthWriteHeartRate: String { tr("toolCard.healthWriteHeartRate") }
         static var healthWriteWorkout: String { tr("toolCard.healthWriteWorkout") }
+        static var searchSessions: String { tr("toolCard.searchSessions") }
+        static var recallSession: String { tr("toolCard.recallSession") }
     }
 
     // MARK: - Tool Result

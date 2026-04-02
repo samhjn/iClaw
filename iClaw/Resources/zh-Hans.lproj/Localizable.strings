@@ -467,6 +467,8 @@
 "toolCard.healthWriteBodyTemperature" = "写入体温";
 "toolCard.healthWriteHeartRate" = "写入心率";
 "toolCard.healthWriteWorkout" = "写入运动";
+"toolCard.searchSessions" = "搜索会话";
+"toolCard.recallSession" = "回忆会话";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "标准输出";

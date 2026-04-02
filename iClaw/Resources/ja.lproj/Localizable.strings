@@ -466,6 +466,8 @@
 "toolCard.healthWriteBodyTemperature" = "体温記録";
 "toolCard.healthWriteHeartRate" = "心拍数記録";
 "toolCard.healthWriteWorkout" = "ワークアウト記録";
+"toolCard.searchSessions" = "セッション検索";
+"toolCard.recallSession" = "セッション想起";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "標準出力";

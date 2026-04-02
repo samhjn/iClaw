@@ -466,6 +466,8 @@
 "toolCard.healthWriteBodyTemperature" = "체온 기록";
 "toolCard.healthWriteHeartRate" = "심박수 기록";
 "toolCard.healthWriteWorkout" = "운동 기록";
+"toolCard.searchSessions" = "세션 검색";
+"toolCard.recallSession" = "세션 회상";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "표준 출력";

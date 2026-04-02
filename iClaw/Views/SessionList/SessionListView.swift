@@ -3,15 +3,18 @@ import SwiftData
 
 struct SessionListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismissSearch) private var dismissSearch
     @State private var viewModel: SessionListViewModel?
     @State private var showNewSessionSheet = false
     @State private var navigateToSession: Session?
+    @State private var searchText = ""
+    @State private var isSearchActive = false
 
     var body: some View {
         NavigationStack {
             Group {
                 if let vm = viewModel {
-                    if vm.sessions.isEmpty && !vm.searchText.isEmpty {
+                    if vm.sessions.isEmpty && isSearchActive {
                         searchEmptyView
                     } else if vm.sessions.isEmpty {
                         emptyStateView
@@ -41,16 +44,18 @@ struct SessionListView: View {
                     showNewSessionSheet = false
                 }
             }
-            .searchable(
-                text: Binding(
-                    get: { viewModel?.searchText ?? "" },
-                    set: { newValue in
-                        viewModel?.searchText = newValue
-                        viewModel?.applySearch()
-                    }
-                ),
-                prompt: L10n.Sessions.searchSessions
-            )
+            .searchable(text: $searchText, isPresented: $isSearchActive, prompt: L10n.Sessions.searchSessions)
+            .onChange(of: searchText) { _, newValue in
+                viewModel?.searchText = newValue
+                viewModel?.applySearch()
+            }
+            .onChange(of: isSearchActive) { _, active in
+                if !active && !searchText.isEmpty {
+                    searchText = ""
+                    viewModel?.searchText = ""
+                    viewModel?.applySearch()
+                }
+            }
             .navigationDestination(item: $navigateToSession) { session in
                 ChatView(session: session)
             }
@@ -74,7 +79,7 @@ struct SessionListView: View {
     }
 
     private var searchEmptyView: some View {
-        ContentUnavailableView.search(text: viewModel?.searchText ?? "")
+        ContentUnavailableView.search(text: searchText)
     }
 
     private var emptyStateView: some View {
@@ -159,7 +164,7 @@ struct NewSessionSheet: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(agent.name)
                                         .font(.headline)
-                                    Text("\(agent.sessions.count) sessions")
+                                    Text(L10n.Sessions.sessionsCount(agent.sessions.count))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }

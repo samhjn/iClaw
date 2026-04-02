@@ -467,6 +467,8 @@
 "toolCard.healthWriteBodyTemperature" = "Write Body Temperature";
 "toolCard.healthWriteHeartRate" = "Write Heart Rate";
 "toolCard.healthWriteWorkout" = "Write Workout";
+"toolCard.searchSessions" = "Search Sessions";
+"toolCard.recallSession" = "Recall Session";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "stdout";
