@@ -53,28 +53,47 @@ final class LaunchTaskManager {
     // MARK: - Cleanup orphan agent files
 
     private func cleanupOrphanAgentFiles() async {
-        let context = ModelContext(container)
-        let descriptor = FetchDescriptor<Agent>()
-        guard let allAgents = try? context.fetch(descriptor) else { return }
-        let knownIds = Set(allAgents.map(\.id))
+        let knownIds: Set<UUID> = await MainActor.run {
+            let context = ModelContext(container)
+            let descriptor = FetchDescriptor<Agent>()
+            guard let allAgents = try? context.fetch(descriptor) else { return Set() }
+            return Set(allAgents.map(\.id))
+        }
+        guard !knownIds.isEmpty else { return }
         AgentFileManager.shared.cleanupOrphanDirectories(knownAgentIds: knownIds)
     }
 
     // MARK: - Backfill embeddings (CPU-throttled)
 
     private func backfillSessionEmbeddings() async {
-        let context = ModelContext(container)
-        let store = SessionVectorStore(modelContext: context)
-
-        let pending = store.sessionsNeedingEmbedding()
+        let pending: [SessionEmbeddingTask] = await MainActor.run {
+            let context = ModelContext(container)
+            let store = SessionVectorStore(modelContext: context)
+            return store.sessionsNeedingEmbedding().map {
+                SessionEmbeddingTask(sessionId: $0.id, text: SessionVectorStore.buildEmbeddingText(for: $0))
+            }
+        }
         let total = pending.count
         guard total > 0 else { return }
 
+        let localService = LocalEmbeddingService()
         let batchSize = 5
-        for (index, session) in pending.enumerated() {
+
+        for (index, task) in pending.enumerated() {
             if Task.isCancelled { break }
 
-            store.updateEmbedding(for: session)
+            guard !task.text.isEmpty else { continue }
+            guard let vector = localService.embed(text: task.text) else { continue }
+
+            await MainActor.run {
+                let context = ModelContext(self.container)
+                let store = SessionVectorStore(modelContext: context)
+                store.upsertEmbeddingDirect(
+                    sessionId: task.sessionId,
+                    vector: vector,
+                    sourceText: task.text
+                )
+            }
 
             let progress = Double(index + 1) / Double(total)
             await MainActor.run {
@@ -84,10 +103,14 @@ final class LaunchTaskManager {
                 )
             }
 
-            // Yield CPU every batch to keep the system responsive
             if (index + 1) % batchSize == 0 && index + 1 < total {
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
     }
+}
+
+private struct SessionEmbeddingTask {
+    let sessionId: UUID
+    let text: String
 }

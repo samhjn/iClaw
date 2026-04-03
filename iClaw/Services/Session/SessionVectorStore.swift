@@ -188,4 +188,11 @@ final class SessionVectorStore {
         }
         try? modelContext.save()
     }
+
+    /// Insert or update an embedding with a pre-computed vector. Used by background
+    /// tasks that compute embeddings off-main-actor but persist on `@MainActor`.
+    func upsertEmbeddingDirect(sessionId: UUID, vector: [Float], sourceText: String) {
+        let hash = Self.sha256(sourceText)
+        upsertEmbedding(sessionId: sessionId, vector: vector, modelName: "NLEmbedding.local", sourceTextHash: hash)
+    }
 }

@@ -23,6 +23,9 @@ final class AgentFileManager {
 
     /// Walk the parentAgent chain to find the top-level (root) agent ID.
     /// Sub-agents share the root agent's file folder.
+    ///
+    /// - Important: This traverses SwiftData `@Relationship` properties (`parentAgent`).
+    ///   All callers must be on `@MainActor` to avoid concurrent relationship faulting.
     func resolveAgentId(for agent: Agent) -> UUID {
         var current = agent
         while let parent = current.parentAgent {

@@ -14,6 +14,7 @@ struct ToolCallResult {
     static let cancelled = ToolCallResult("[Cancelled] Operation was cancelled.")
 }
 
+@MainActor
 final class FunctionCallRouter {
     let agent: Agent
     let modelContext: ModelContext
@@ -265,9 +266,9 @@ final class FunctionCallRouter {
 
         // --- Apple Clipboard ---
         case "clipboard_read":
-            return try await runAsync { await AppleClipboardTools().readClipboard(arguments: arguments) }
+            return try await runAsync { AppleClipboardTools().readClipboard(arguments: arguments) }
         case "clipboard_write":
-            return try await runAsync { await AppleClipboardTools().writeClipboard(arguments: arguments) }
+            return try await runAsync { AppleClipboardTools().writeClipboard(arguments: arguments) }
 
         // --- Apple Notifications ---
         case "notification_schedule":
