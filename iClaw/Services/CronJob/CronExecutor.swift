@@ -3,6 +3,7 @@ import SwiftData
 import UserNotifications
 
 /// Executes a cron job: creates a new session, injects the job hint, and runs the LLM agent loop.
+@MainActor
 final class CronExecutor {
     private let modelContainer: ModelContainer
 

@@ -123,7 +123,7 @@ final class CronScheduler {
 
         let executor = self.executor
         let container = self.modelContainer
-        Task {
+        Task { @MainActor in
             let ctx = ModelContext(container)
             let descriptor = FetchDescriptor<CronJob>(
                 predicate: #Predicate<CronJob> { $0.id == jobId }

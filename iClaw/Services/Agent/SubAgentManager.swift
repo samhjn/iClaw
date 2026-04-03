@@ -3,8 +3,11 @@ import SwiftData
 
 /// Manages sub-agent lifecycle: creation, messaging, inflight tracking, stop, and cleanup.
 final class SubAgentManager {
+    static let maxNestingDepth = 5
+
     private let agentService: AgentService
     private let modelContext: ModelContext
+    private let nestingDepth: Int
 
     /// Maps subAgentId → active session for that agent.
     private var activeSessions: [UUID: Session] = [:]
@@ -12,8 +15,9 @@ final class SubAgentManager {
     /// Tracks in-flight tasks by subAgentId so they can be cancelled.
     private var inflightTasks: [UUID: Task<String, Error>] = [:]
 
-    init(modelContext: ModelContext) {
+    init(modelContext: ModelContext, nestingDepth: Int = 0) {
         self.modelContext = modelContext
+        self.nestingDepth = nestingDepth
         self.agentService = AgentService(modelContext: modelContext)
     }
 
@@ -95,6 +99,10 @@ final class SubAgentManager {
         content: String,
         imageAttachments: [ImageAttachment]? = nil
     ) async throws -> SubAgentResponse {
+        guard nestingDepth < Self.maxNestingDepth else {
+            throw SubAgentError.maxDepthExceeded(nestingDepth)
+        }
+
         guard let subAgent = agentService.fetchAgent(id: subAgentId),
               let session = activeSessions[subAgentId] ?? subAgent.sessions.last else {
             throw SubAgentError.agentNotFound
@@ -140,7 +148,7 @@ final class SubAgentManager {
         let router = ModelRouter(modelContext: modelContext)
         let promptBuilder = PromptBuilder()
         let contextManager = ContextManager()
-        let fnRouter = FunctionCallRouter(agent: subAgent, modelContext: modelContext, sessionId: session.id)
+        let fnRouter = FunctionCallRouter(agent: subAgent, modelContext: modelContext, sessionId: session.id, nestingDepth: nestingDepth + 1)
 
         let caps = router.primaryModelCapabilities(for: subAgent)
 
@@ -357,12 +365,14 @@ enum SubAgentError: LocalizedError {
     case agentNotFound
     case emptyResponse
     case sessionLocked(String)
+    case maxDepthExceeded(Int)
 
     var errorDescription: String? {
         switch self {
         case .agentNotFound: return "Sub-agent not found"
         case .emptyResponse: return "Sub-agent returned an empty response"
         case .sessionLocked(let reason): return "Session locked: \(reason)"
+        case .maxDepthExceeded(let depth): return "Sub-agent nesting depth limit exceeded (\(depth)/\(SubAgentManager.maxNestingDepth)). Simplify the task or reduce sub-agent delegation."
         }
     }
 }

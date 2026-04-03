@@ -18,15 +18,17 @@ final class FunctionCallRouter {
     let agent: Agent
     let modelContext: ModelContext
     let sessionId: UUID?
+    let nestingDepth: Int
     private let agentService: AgentService
     private let subAgentManager: SubAgentManager
 
-    init(agent: Agent, modelContext: ModelContext, sessionId: UUID? = nil) {
+    init(agent: Agent, modelContext: ModelContext, sessionId: UUID? = nil, nestingDepth: Int = 0) {
         self.agent = agent
         self.modelContext = modelContext
         self.sessionId = sessionId
+        self.nestingDepth = nestingDepth
         self.agentService = AgentService(modelContext: modelContext)
-        self.subAgentManager = SubAgentManager(modelContext: modelContext)
+        self.subAgentManager = SubAgentManager(modelContext: modelContext, nestingDepth: nestingDepth)
     }
 
     // MARK: - Public API
