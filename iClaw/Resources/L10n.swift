@@ -109,6 +109,7 @@ enum L10n {
         static var imageDeleted: String { tr("chat.imageDeleted") }
         static func modalityStripped(_ count: Int, _ model: String) -> String { tr("chat.modalityStripped", count, model) }
         static func toolUseUnsupported(_ model: String) -> String { tr("chat.toolUseUnsupported", model) }
+        static var exportSession: String { tr("chat.exportSession") }
         static var retry: String { tr("chat.retry") }
         static var retryHint: String { tr("chat.retryHint") }
         static var verbose: String { tr("chat.verbose") }
@@ -617,6 +618,15 @@ enum L10n {
     enum ToolResult {
         static var stdout: String { tr("toolResult.stdout") }
         static var stderr: String { tr("toolResult.stderr") }
+    }
+
+    // MARK: - Export
+
+    enum Export {
+        static var roleUser: String { tr("export.roleUser") }
+        static var roleAssistant: String { tr("export.roleAssistant") }
+        static var roleTool: String { tr("export.roleTool") }
+        static var toolCall: String { tr("export.toolCall") }
     }
 }
 

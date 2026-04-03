@@ -11,7 +11,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     let isAvailable = true
 
     func execute(code: String, mode: ExecutionMode, timeout: TimeInterval) async throws -> ExecutionResult {
-        try await execute(code: code, mode: mode, timeout: timeout, blockedBridgeActions: [], execId: nil)
+        try await execute(code: code, mode: mode, timeout: timeout, blockedBridgeActions: [], execId: nil, args: [:])
     }
 
     /// Execute JS with per-agent Apple bridge permission enforcement.
@@ -19,12 +19,14 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     /// - Parameters:
     ///   - blockedBridgeActions: Bridge actions blocked for this agent (from `ToolCategory.blockedBridgeActions(for:)`).
     ///   - execId: Unique ID for this execution context, used for native-layer permission verification.
+    ///   - args: Key-value arguments injected into the JS environment as the `args` object.
     func execute(
         code: String,
         mode: ExecutionMode,
         timeout: TimeInterval,
         blockedBridgeActions: Set<String>,
-        execId: String?
+        execId: String?,
+        args: [String: Any] = [:]
     ) async throws -> ExecutionResult {
         os_log(.info, log: jsLog, "[JS] execute called, mode=%{public}@, timeout=%{public}f", mode.rawValue, timeout)
 
@@ -49,14 +51,18 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
             }
         }
 
+        // Inject user args via WKWebView's native argument bridging.
+        // The `args` variable becomes available in the JS script scope automatically.
+        let jsArguments: [String: Any] = args.isEmpty ? [:] : ["args": args]
+
         // If the WebContent process crashes (OOM, etc.), the runtime auto-recreates.
         // Retry once so transient crashes are transparent to the caller.
         let dict: [String: Any]
         do {
-            dict = try await WKWebViewJSRuntime.shared.evaluate(script: script, timeout: timeout)
+            dict = try await WKWebViewJSRuntime.shared.evaluate(script: script, arguments: jsArguments, timeout: timeout)
         } catch CodeExecutorError.runtimeCrashed {
             os_log(.info, log: jsLog, "[JS] Runtime crashed, retrying once after auto-recovery")
-            dict = try await WKWebViewJSRuntime.shared.evaluate(script: script, timeout: timeout)
+            dict = try await WKWebViewJSRuntime.shared.evaluate(script: script, arguments: jsArguments, timeout: timeout)
         }
 
         let stdout = dict["stdout"] as? String ?? ""
@@ -132,6 +138,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     static let runtimeScript: String = """
     var __stdout = '';
     var __stderr = '';
+    if (typeof args === 'undefined') var args = {};
 
     function __appendOut(s) { __stdout += s; }
     function __appendErr(s) { __stderr += s; }

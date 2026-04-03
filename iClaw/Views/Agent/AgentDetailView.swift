@@ -352,9 +352,7 @@ struct CodeSnippetEditView: View {
             }
 
             Section(L10n.AgentDetail.snippetCode) {
-                TextEditor(text: $code)
-                    .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 200)
+                HighlightedTextEditor(text: $code, language: language)
             }
         }
         .navigationTitle(isNewSnippet ? L10n.AgentDetail.newSnippet : name)

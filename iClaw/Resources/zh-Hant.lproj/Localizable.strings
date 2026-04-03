@@ -73,6 +73,7 @@
 "chat.imageDeleted" = "圖片已刪除";
 "chat.modalityStripped" = "已暫時移除上下文中的 %d 張圖片 — %@ 不支援視覺能力";
 "chat.toolUseUnsupported" = "%@ 不支援工具呼叫 — 瀏覽器、子智能體、程式碼執行等功能將無法使用。";
+"chat.exportSession" = "匯出對話";
 "chat.retry" = "重試";
 "chat.retryHint" = "生成已停止，可以重試或傳送新訊息。";
 "chat.verbose" = "詳細";
@@ -522,3 +523,9 @@
 "permError.healthUnavailable" = "[錯誤] 此裝置不支援健康資料。";
 "permError.healthFailed" = "[錯誤] 請求 HealthKit 存取權限失敗：%@";
 "permError.toolNotPermitted" = "[錯誤] 工具 '%@'（%@）未獲此智能體授權。請在智能體設定中檢查工具權限。";
+
+// MARK: - Export
+"export.roleUser" = "使用者";
+"export.roleAssistant" = "助手";
+"export.roleTool" = "工具";
+"export.toolCall" = "工具呼叫";

@@ -13,6 +13,7 @@ struct CodeExecutionTools {
         let modeStr = arguments["mode"] as? String ?? "script"
         let mode: ExecutionMode = modeStr == "repr" ? .repr : .script
         let timeout = resolveJSTimeout(arguments: arguments)
+        let userArgs = arguments["args"] as? [String: Any] ?? [:]
 
         guard let jsExecutor = CodeExecutorRegistry.shared.executor(for: "javascript") as? JavaScriptExecutor else {
             return "[Error] JavaScript executor is not available"
@@ -38,7 +39,8 @@ struct CodeExecutionTools {
                 mode: mode,
                 timeout: timeout,
                 blockedBridgeActions: blockedActions,
-                execId: execId
+                execId: execId,
+                args: userArgs
             )
             var output = ""
             if !result.stdout.isEmpty {
@@ -140,6 +142,9 @@ struct CodeExecutionTools {
         }
         if let timeout = arguments["timeout"] {
             jsArgs["timeout"] = timeout
+        }
+        if let args = arguments["args"] {
+            jsArgs["args"] = args
         }
 
         return try await executeJavaScript(arguments: jsArgs)

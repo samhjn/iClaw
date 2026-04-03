@@ -73,6 +73,7 @@
 "chat.imageDeleted" = "이미지가 삭제되었습니다";
 "chat.modalityStripped" = "컨텍스트에서 이미지 %d개 일시적으로 제외됨 — %@은(는) 비전을 지원하지 않습니다";
 "chat.toolUseUnsupported" = "%@은(는) 도구 사용을 지원하지 않습니다 — 브라우저, 서브 에이전트, 코드 실행 등의 기능을 사용할 수 없습니다";
+"chat.exportSession" = "세션 내보내기";
 "chat.retry" = "재시도";
 "chat.retryHint" = "생성이 중지되었습니다. 재시도하거나 새 메시지를 보낼 수 있습니다.";
 "chat.verbose" = "상세";
@@ -521,3 +522,9 @@
 "permError.healthUnavailable" = "[오류] 이 기기에서 건강 데이터를 사용할 수 없습니다.";
 "permError.healthFailed" = "[오류] HealthKit 접근 권한 요청에 실패했습니다: %@";
 "permError.toolNotPermitted" = "[오류] 도구 '%@'(%@)은(는) 이 에이전트에 허용되지 않습니다. 에이전트 설정에서 도구 권한을 확인하세요.";
+
+// MARK: - Export
+"export.roleUser" = "사용자";
+"export.roleAssistant" = "어시스턴트";
+"export.roleTool" = "도구";
+"export.toolCall" = "도구 호출";

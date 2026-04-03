@@ -73,6 +73,7 @@
 "chat.imageDeleted" = "Image deleted";
 "chat.modalityStripped" = "%d image(s) temporarily excluded from context — %@ does not support vision.";
 "chat.toolUseUnsupported" = "%@ does not support tool use — features like browsing, sub-agents, and code execution will be unavailable.";
+"chat.exportSession" = "Export Session";
 "chat.retry" = "Retry";
 "chat.retryHint" = "Generation was stopped. You can retry or send a new message.";
 "chat.verbose" = "Verbose";
@@ -522,3 +523,9 @@
 "permError.healthUnavailable" = "[Error] Health data is not available on this device.";
 "permError.healthFailed" = "[Error] Failed to request HealthKit access: %@";
 "permError.toolNotPermitted" = "[Error] Tool '%@' (%@) is not permitted for this agent. Check Tool Permissions in agent settings.";
+
+// MARK: - Export
+"export.roleUser" = "User";
+"export.roleAssistant" = "Assistant";
+"export.roleTool" = "Tool";
+"export.toolCall" = "Tool Call";

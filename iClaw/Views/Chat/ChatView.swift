@@ -30,6 +30,14 @@ struct ChatView: View {
                         Label(L10n.Chat.rename, systemImage: "pencil")
                     }
 
+                    Button {
+                        if let url = SessionExporter.exportToFile(session) {
+                            Self.presentActivitySheet(items: [url])
+                        }
+                    } label: {
+                        Label(L10n.Chat.exportSession, systemImage: "square.and.arrow.up.on.square")
+                    }
+
                     let stats = vm.compressionStats
 
                     Section {
@@ -490,5 +498,23 @@ private func tokenColor(for ratio: Double) -> Color {
     case ..<0.85: return .yellow
     case ..<1.0: return .orange
     default: return .red
+    }
+}
+
+// MARK: - Helpers
+
+private extension ChatView {
+    static func presentActivitySheet(items: [Any]) {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController { topVC = presented }
+        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = topVC.view
+            popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        topVC.present(activityVC, animated: true)
     }
 }

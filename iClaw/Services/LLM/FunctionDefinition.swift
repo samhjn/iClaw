@@ -40,4 +40,8 @@ enum ToolDefinitionBuilder {
     static func numberParam(_ description: String) -> JSONSchemaProperty {
         JSONSchemaProperty(type: "number", description: description)
     }
+
+    static func objectParam(_ description: String) -> JSONSchemaProperty {
+        JSONSchemaProperty(type: "object", description: description)
+    }
 }

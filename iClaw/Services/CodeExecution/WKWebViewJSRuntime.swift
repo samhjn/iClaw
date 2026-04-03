@@ -70,7 +70,11 @@ final class WKWebViewJSRuntime: NSObject {
     /// The caller is responsible for wrapping user code + runtime preamble in an
     /// IIFE that produces the dictionary.  This method adds timeout and crash
     /// handling on top.
-    func evaluate(script: String, timeout: TimeInterval) async throws -> [String: Any] {
+    ///
+    /// - Parameters:
+    ///   - arguments: Key-value pairs injected as local variables in the script scope
+    ///     (bridged automatically by WKWebView: String, Number, Bool, Array, Dictionary, null).
+    func evaluate(script: String, arguments: [String: Any] = [:], timeout: TimeInterval) async throws -> [String: Any] {
         await ensureReady()
 
         let execId = UUID().uuidString
@@ -79,7 +83,7 @@ final class WKWebViewJSRuntime: NSObject {
             try await withCheckedThrowingContinuation { continuation in
                 pendingContinuations[execId] = continuation
 
-                webView.callAsyncJavaScript(script, arguments: [:], in: nil, in: .page) { [weak self] result in
+                webView.callAsyncJavaScript(script, arguments: arguments, in: nil, in: .page) { [weak self] result in
                     Task { @MainActor in
                         guard let self, let cont = self.pendingContinuations.removeValue(forKey: execId) else { return }
                         switch result {
