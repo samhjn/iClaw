@@ -49,10 +49,10 @@ targets:
           [ -f "${PLIST}" ] || exit 0
           COMMIT=$(git -C "${SRCROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
           DIRTY=false
-          if ! git -C "${SRCROOT}" diff --quiet HEAD 2>/dev/null; then
+          if ! git -C "${SRCROOT}" diff --quiet HEAD -- ':!iClaw/Info.plist' 2>/dev/null; then
             DIRTY=true
           fi
-          if ! git -C "${SRCROOT}" diff --cached --quiet HEAD 2>/dev/null; then
+          if ! git -C "${SRCROOT}" diff --cached --quiet HEAD -- ':!iClaw/Info.plist' 2>/dev/null; then
             DIRTY=true
           fi
           /usr/libexec/PlistBuddy -c "Add :GitCommitHash string ${COMMIT}" "${PLIST}" 2>/dev/null || \
