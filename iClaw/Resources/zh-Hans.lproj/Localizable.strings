@@ -1,5 +1,9 @@
 /* 简体中文 */
 
+// MARK: - Launch Tasks
+"launch.cleaningUp" = "正在清理…";
+"launch.buildingIndex" = "正在构建搜索索引…";
+
 // MARK: - Tabs
 "tabs.sessions" = "会话";
 "tabs.agents" = "智能体";

@@ -43,32 +43,32 @@ final class SessionVectorStore {
 
     // MARK: - Backfill
 
-    /// Compute embeddings for all sessions that don't have one yet.
-    /// Designed to be called on app launch as a background task.
-    func backfillMissingEmbeddings() {
+    /// Returns sessions that still need an embedding vector computed.
+    func sessionsNeedingEmbedding() -> [Session] {
         let allSessions: [Session]
         do {
             var descriptor = FetchDescriptor<Session>()
             descriptor.predicate = #Predicate { $0.isArchived == false }
             allSessions = try modelContext.fetch(descriptor)
-        } catch { return }
+        } catch { return [] }
 
         let existingIds = Set(fetchAllEmbeddings().map(\.sessionIdRaw))
 
+        return allSessions.filter { session in
+            !existingIds.contains(session.id.uuidString)
+                && session.messages.count >= 2
+                && !Self.buildEmbeddingText(for: session).isEmpty
+        }
+    }
+
+    /// Compute embeddings for all sessions that don't have one yet.
+    /// Designed to be called on app launch as a background task.
+    func backfillMissingEmbeddings() {
+        let pending = sessionsNeedingEmbedding()
         var count = 0
-        for session in allSessions {
-            if existingIds.contains(session.id.uuidString) { continue }
-            // Only embed sessions with meaningful content
-            guard session.messages.count >= 2 else { continue }
-
-            let text = Self.buildEmbeddingText(for: session)
-            guard !text.isEmpty else { continue }
-
-            if let vector = localService.embed(text: text) {
-                let hash = Self.sha256(text)
-                upsertEmbedding(sessionId: session.id, vector: vector, modelName: "NLEmbedding.local", sourceTextHash: hash)
-                count += 1
-            }
+        for session in pending {
+            updateEmbedding(for: session)
+            count += 1
         }
 
         #if DEBUG

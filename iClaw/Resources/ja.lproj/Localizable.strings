@@ -1,5 +1,9 @@
 /* 日本語 */
 
+// MARK: - Launch Tasks
+"launch.cleaningUp" = "クリーンアップ中…";
+"launch.buildingIndex" = "検索インデックスを構築中…";
+
 // MARK: - Tabs
 "tabs.sessions" = "セッション";
 "tabs.agents" = "エージェント";

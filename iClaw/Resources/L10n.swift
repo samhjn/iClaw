@@ -14,6 +14,13 @@ enum L10n {
         String(format: NSLocalizedString(key, comment: ""), arguments: args)
     }
 
+    // MARK: - Launch Tasks
+
+    enum Launch {
+        static var cleaningUp: String { tr("launch.cleaningUp") }
+        static var buildingIndex: String { tr("launch.buildingIndex") }
+    }
+
     // MARK: - Tabs
 
     enum Tabs {

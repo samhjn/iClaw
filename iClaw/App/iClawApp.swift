@@ -6,6 +6,7 @@ import BackgroundTasks
 struct iClawApp: App {
     let modelContainer: ModelContainer
     @State private var cronScheduler: CronScheduler?
+    @State private var launchTaskManager: LaunchTaskManager
 
     init() {
         let schema = Schema([
@@ -24,7 +25,6 @@ struct iClawApp: App {
         do {
             modelContainer = try ModelContainer(for: schema, configurations: [config])
         } catch {
-            // Schema migration failed — delete the old store and recreate
             print("[iClawApp] ModelContainer migration failed: \(error). Deleting old store.")
             let storeURL = config.url
             let related = [
@@ -42,9 +42,10 @@ struct iClawApp: App {
             }
         }
 
+        _launchTaskManager = State(initialValue: LaunchTaskManager(container: modelContainer))
+
+        // Only keep lightweight, correctness-critical work synchronous
         Self.resetStaleActiveSessions(in: modelContainer)
-        Self.cleanupOrphanAgentFiles(in: modelContainer)
-        Self.backfillSessionEmbeddings(in: modelContainer)
     }
 
     /// Sessions stuck in `isActive` from a previous crash or force-quit can never
@@ -62,24 +63,14 @@ struct iClawApp: App {
         print("[iClawApp] Reset \(stale.count) stale active session(s).")
     }
 
-    /// Backfill embeddings for existing sessions that don't have one yet.
-    private static func backfillSessionEmbeddings(in container: ModelContainer) {
-        let context = ModelContext(container)
-        SessionVectorStore(modelContext: context).backfillMissingEmbeddings()
-    }
-
-    private static func cleanupOrphanAgentFiles(in container: ModelContainer) {
-        let context = ModelContext(container)
-        let descriptor = FetchDescriptor<Agent>()
-        guard let allAgents = try? context.fetch(descriptor) else { return }
-        let knownIds = Set(allAgents.map(\.id))
-        AgentFileManager.shared.cleanupOrphanDirectories(knownAgentIds: knownIds)
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .onAppear { startCronScheduler() }
+                .launchTaskOverlay(manager: launchTaskManager)
+                .onAppear {
+                    launchTaskManager.runAll()
+                    startCronScheduler()
+                }
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }

@@ -1,5 +1,9 @@
 /* English — Base language */
 
+// MARK: - Launch Tasks
+"launch.cleaningUp" = "Cleaning up…";
+"launch.buildingIndex" = "Building search index…";
+
 // MARK: - Tabs
 "tabs.sessions" = "Sessions";
 "tabs.agents" = "Agents";
