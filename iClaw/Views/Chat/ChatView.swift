@@ -327,6 +327,7 @@ private struct ChatContentView: View {
                             .contentShape(Rectangle())
                     }
                     .tint(.accentColor)
+                    .disabled(vm.isLoading)
                     Button {
                         UIPasteboard.general.string = error
                     } label: {
@@ -369,6 +370,7 @@ private struct ChatContentView: View {
                             .contentShape(Rectangle())
                     }
                     .tint(.accentColor)
+                    .disabled(vm.isLoading)
                     Button {
                         vm.dismissRetry()
                     } label: {

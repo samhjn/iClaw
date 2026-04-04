@@ -1117,3 +1117,233 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(sorted[2].content, "First")
     }
 }
+
+// MARK: - Retry Deduplication Tests
+
+final class RetryDeduplicationTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        context = ModelContext(container)
+    }
+
+    @MainActor
+    override func tearDown() {
+        if let sessions = try? context.fetch(FetchDescriptor<Session>()) {
+            for s in sessions {
+                ChatViewModel._clearActiveGeneration(for: s.id)
+            }
+        }
+        container = nil
+        context = nil
+        super.tearDown()
+    }
+
+    // MARK: - Guard: isLoading
+
+    @MainActor
+    func testRetryBlockedWhenAlreadyLoading() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.isLoading = true
+        vm.canRetry = true
+        vm.errorMessage = "some error"
+
+        vm.retryGeneration()
+
+        XCTAssertTrue(vm.canRetry, "canRetry must stay true — retryGeneration was a no-op")
+        XCTAssertEqual(vm.errorMessage, "some error", "errorMessage must stay — retryGeneration was a no-op")
+    }
+
+    // MARK: - Guard: activeGenerations (cross-VM)
+
+    @MainActor
+    func testRetryBlockedByActiveGenerationStaticGuard() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.canRetry = true
+        vm.errorMessage = "API error"
+
+        vm.retryGeneration()
+
+        XCTAssertTrue(vm.canRetry, "retryGeneration must be a no-op — generation already active")
+        XCTAssertEqual(vm.errorMessage, "API error", "Error must stay — retryGeneration was blocked")
+        XCTAssertFalse(vm.isLoading, "isLoading must stay false — retryGeneration was blocked")
+    }
+
+    @MainActor
+    func testSendBlockedByActiveGenerationStaticGuard() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.inputText = "hello"
+
+        vm.sendMessage()
+
+        XCTAssertFalse(vm.isLoading, "isLoading must stay false — send was blocked")
+        XCTAssertEqual(vm.inputText, "hello", "Input must stay — send was blocked")
+    }
+
+    @MainActor
+    func testRetryPopulatesActiveGenerations() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        XCTAssertFalse(ChatViewModel._hasActiveGeneration(for: session.id))
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.retryGeneration()
+
+        XCTAssertTrue(ChatViewModel._hasActiveGeneration(for: session.id),
+                       "retryGeneration must register the task in activeGenerations")
+    }
+
+    // MARK: - Double-tap on same VM
+
+    @MainActor
+    func testDoubleRetryOnSameVMBlocked() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.retryGeneration()
+
+        XCTAssertTrue(vm.isLoading)
+        XCTAssertFalse(vm.canRetry)
+
+        vm.canRetry = true
+        vm.retryGeneration()
+
+        XCTAssertTrue(vm.canRetry, "Guard short-circuits — canRetry stays true, no state mutation")
+        XCTAssertTrue(vm.isLoading, "isLoading unchanged from first call")
+    }
+
+    // MARK: - Flags set correctly
+
+    @MainActor
+    func testRetrySetsFlagsCorrectly() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.canRetry = true
+        vm.errorMessage = "API error"
+
+        vm.retryGeneration()
+
+        XCTAssertTrue(vm.isLoading)
+        XCTAssertFalse(vm.canRetry)
+        XCTAssertNil(vm.errorMessage)
+    }
+
+    // MARK: - Eager session.isActive
+
+    @MainActor
+    func testRetryEagerlySetsSessionActive() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        XCTAssertFalse(session.isActive)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.retryGeneration()
+
+        XCTAssertTrue(session.isActive, "session.isActive must be set eagerly before the Task runs")
+    }
+
+    @MainActor
+    func testSendEagerlySetsSessionActive() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+        try! context.save()
+
+        XCTAssertFalse(session.isActive)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.inputText = "hello"
+        vm.sendMessage()
+
+        XCTAssertTrue(session.isActive, "session.isActive must be set eagerly before the Task runs")
+    }
+
+    // MARK: - Recovery blocked for active session
+
+    @MainActor
+    func testRecoverRetryStateBlockedWhenSessionActive() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+
+        let msg = Message(role: .user, content: "hello", session: session)
+        context.insert(msg)
+        session.messages.append(msg)
+        session.isActive = true
+        try! context.save()
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+
+        XCTAssertFalse(vm.canRetry, "canRetry must not be set when session is active")
+    }
+
+    // MARK: - Dismiss prevents recovery across VM recreation
+
+    @MainActor
+    func testDismissRetryPreventsRecoveryAcrossVMs() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Test", agent: agent)
+        context.insert(session)
+
+        let msg = Message(role: .user, content: "hello", session: session)
+        context.insert(msg)
+        session.messages.append(msg)
+        try! context.save()
+
+        let vm1 = ChatViewModel(session: session, modelContext: context)
+        vm1.canRetry = true
+        vm1.dismissRetry()
+
+        let vm2 = ChatViewModel(session: session, modelContext: context)
+
+        XCTAssertFalse(vm2.canRetry, "canRetry must not recover after explicit dismiss")
+    }
+}

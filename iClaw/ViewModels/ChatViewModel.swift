@@ -136,6 +136,26 @@ final class ChatViewModel {
     /// Explicit stream-cancel closures keyed by session ID — survives ViewModel recreation.
     private static var activeStreamCancels: [UUID: @Sendable () -> Void] = [:]
 
+    #if DEBUG
+    /// Cancel and clear any active generation for the given session. Test-only.
+    static func _clearActiveGeneration(for sessionId: UUID) {
+        activeGenerations[sessionId]?.cancel()
+        activeGenerations.removeValue(forKey: sessionId)
+        activeStreamCancels.removeValue(forKey: sessionId)
+        dismissedSessions.remove(sessionId)
+    }
+
+    /// Whether a generation is active for the session. Test-only.
+    static func _hasActiveGeneration(for sessionId: UUID) -> Bool {
+        activeGenerations[sessionId] != nil
+    }
+
+    /// Inject a placeholder active generation entry. Test-only.
+    static func _simulateActiveGeneration(for sessionId: UUID) {
+        activeGenerations[sessionId] = Task {}
+    }
+    #endif
+
     init(session: Session, modelContext: ModelContext) {
         self.session = session
         self.modelContext = modelContext
@@ -325,7 +345,7 @@ final class ChatViewModel {
 
     /// Retry the last generation attempt. Works after API errors or user-initiated cancellation.
     func retryGeneration() {
-        guard !isLoading else { return }
+        guard !isLoading, Self.activeGenerations[session.id] == nil else { return }
 
         checkActiveSessionLock()
         guard canSend else { return }
@@ -340,6 +360,7 @@ final class ChatViewModel {
 
         removeTrailingAbortedMessages()
 
+        session.isActive = true
         let task = Task { await generateResponse() }
         generationTask = task
         Self.activeGenerations[session.id] = task
@@ -375,7 +396,7 @@ final class ChatViewModel {
     func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        guard !isLoading else { return }
+        guard !isLoading, Self.activeGenerations[session.id] == nil else { return }
 
         checkActiveSessionLock()
         guard canSend else { return }
@@ -418,6 +439,7 @@ final class ChatViewModel {
         loadMessages()
 
         cancelled = false
+        session.isActive = true
         let task = Task { await generateResponse() }
         generationTask = task
         Self.activeGenerations[session.id] = task
