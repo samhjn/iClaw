@@ -2,18 +2,11 @@
   "configurations" : [
     {
       "id" : "9A1B2C3D-4E5F-6789-ABCD-EF0123456789",
-      "name" : "iOS 17",
+      "name" : "Default",
       "options" : {
 
       }
     },
-    {
-      "id" : "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
-      "name" : "iOS 18",
-      "options" : {
-
-      }
-    }
   ],
   "defaultOptions" : {
     "targetForVariableExpansion" : {

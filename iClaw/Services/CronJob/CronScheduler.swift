@@ -177,8 +177,10 @@ final class CronScheduler {
 
         return jobs.filter { job in
             guard let nextRun = job.nextRunAt else {
-                // Never scheduled — compute and check
-                if let computed = try? CronParser.nextFireDate(after: job.createdAt, for: job.cronExpression) {
+                // Never scheduled — look back 61s so the creation minute itself is considered
+                // (nextFireDate always advances ≥1 min past its input).
+                let refDate = job.createdAt.addingTimeInterval(-61)
+                if let computed = try? CronParser.nextFireDate(after: refDate, for: job.cronExpression) {
                     return computed <= now
                 }
                 return false
