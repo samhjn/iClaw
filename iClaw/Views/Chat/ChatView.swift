@@ -219,13 +219,13 @@ private struct ChatContentView: View {
                     .padding()
                     .background(ScrollViewOffsetObserver(scrollState: scrollState))
                 }
-                .scrollPosition(id: $scrollPosition, anchor: .top)
+                .scrollPosition(id: $scrollPosition, anchor: .center)
                 .onAppear {
                     if !hasRestoredScroll {
                         hasRestoredScroll = true
                         if let target = vm.initialScrollTarget {
                             DispatchQueue.main.async {
-                                proxy.scrollTo(target.uuidString, anchor: .top)
+                                proxy.scrollTo(target.uuidString, anchor: .center)
                             }
                         } else if let lastId = vm.messages.last?.id {
                             DispatchQueue.main.async {
@@ -254,20 +254,21 @@ private struct ChatContentView: View {
                         proxy.scrollTo("streaming", anchor: .bottom)
                     }
                 }
-                .onChange(of: vm.isVerbose) { _, _ in
+                .onChange(of: vm.isVerbose) { _, newValue in
+                    guard newValue else { return }
                     guard let sv = scrollState.scrollView else { return }
                     let savedOffset = sv.contentOffset.y
                     let savedHeight = sv.contentSize.height
                     guard savedHeight > 0 else { return }
-                    for delay in [0.05, 0.35] {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                            let newHeight = sv.contentSize.height
-                            guard newHeight > 0, abs(newHeight - savedHeight) > 1 else { return }
-                            sv.setContentOffset(
-                                CGPoint(x: 0, y: savedOffset * (newHeight / savedHeight)),
-                                animated: false
-                            )
-                        }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        let newHeight = sv.contentSize.height
+                        guard abs(newHeight - savedHeight) > 1 else { return }
+                        let newOffset = savedOffset * (newHeight / savedHeight)
+                        let maxScroll = max(0, newHeight - sv.bounds.height)
+                        sv.setContentOffset(
+                            CGPoint(x: 0, y: min(max(0, newOffset), maxScroll)),
+                            animated: false
+                        )
                     }
                 }
                 .onDisappear {
@@ -619,14 +620,14 @@ private struct ScrollViewOffsetObserver: UIViewRepresentable {
 
     final class Coordinator: NSObject {
         let scrollState: ChatScrollState
-        private var observation: NSKeyValueObservation?
+        private var offsetObservation: NSKeyValueObservation?
 
         init(scrollState: ChatScrollState) {
             self.scrollState = scrollState
         }
 
         func observe(_ scrollView: UIScrollView) {
-            observation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
+            offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
                 guard let self else { return }
                 let distance = max(0, sv.contentSize.height - sv.contentOffset.y - sv.bounds.height)
                 let threshold: CGFloat = (sv.isTracking || sv.isDragging) ? 50 : 200
@@ -637,7 +638,7 @@ private struct ScrollViewOffsetObserver: UIViewRepresentable {
             }
         }
 
-        deinit { observation?.invalidate() }
+        deinit { offsetObservation?.invalidate() }
     }
 }
 
