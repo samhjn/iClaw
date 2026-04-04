@@ -473,7 +473,7 @@ final class SessionSortedMessagesTests: XCTestCase {
         let elapsed = CFAbsoluteTimeGetCurrent() - start
 
         XCTAssertLessThan(elapsed, 1.0,
-            "100 calls to sortedMessages (200 msgs) should complete within 1s, took \(elapsed)s")
+            "100 calls to sortedMessages (200 msgs, cached) should complete within 1s, took \(elapsed)s")
     }
 
     @MainActor

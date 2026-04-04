@@ -77,7 +77,19 @@ final class Session {
         self.updatedAt = Date()
     }
 
+    @Transient private var _sortedCache: [Message] = []
+    @Transient private var _sortedCacheCount: Int = -1
+
     var sortedMessages: [Message] {
-        messages.sorted { $0.timestamp < $1.timestamp }
+        let count = messages.count
+        if count == _sortedCacheCount { return _sortedCache }
+        let sorted = messages.sorted { $0.timestamp < $1.timestamp }
+        _sortedCache = sorted
+        _sortedCacheCount = count
+        return sorted
+    }
+
+    func invalidateMessageCache() {
+        _sortedCacheCount = -1
     }
 }
