@@ -6,6 +6,13 @@ struct MessageBubbleView: View {
     var streamingThinking: String?
     var isVerbose: Bool = true
 
+    @State private var cache = DecodedCache()
+
+    private final class DecodedCache {
+        var toolCalls: [LLMToolCall]??
+        var imageAttachments: [ImageAttachment]?
+    }
+
     private var role: MessageRole {
         message?.role ?? .assistant
     }
@@ -31,13 +38,23 @@ struct MessageBubbleView: View {
     }
 
     private var toolCalls: [LLMToolCall]? {
-        guard let data = message?.toolCallsData else { return nil }
-        return try? JSONDecoder().decode([LLMToolCall].self, from: data)
+        if let cached = cache.toolCalls { return cached }
+        let result: [LLMToolCall]? = {
+            guard let data = message?.toolCallsData else { return nil }
+            return try? JSONDecoder().decode([LLMToolCall].self, from: data)
+        }()
+        cache.toolCalls = .some(result)
+        return result
     }
 
     private var imageAttachments: [ImageAttachment] {
-        guard let data = message?.imageAttachmentsData else { return [] }
-        return (try? JSONDecoder().decode([ImageAttachment].self, from: data)) ?? []
+        if let cached = cache.imageAttachments { return cached }
+        let result: [ImageAttachment] = {
+            guard let data = message?.imageAttachmentsData else { return [] }
+            return (try? JSONDecoder().decode([ImageAttachment].self, from: data)) ?? []
+        }()
+        cache.imageAttachments = result
+        return result
     }
 
     /// True when the rendered content already references images inline via `attachment:N`.
@@ -216,42 +233,65 @@ private struct MessageImageGrid: View {
 
         LazyVGrid(columns: columns, spacing: 4) {
             ForEach(images) { attachment in
-                let maxW: CGFloat = images.count == 1 ? 240 : 140
-                let maxH: CGFloat = images.count == 1 ? 240 : 140
+                CachedImageCell(attachment: attachment, isSingle: images.count == 1)
+            }
+        }
+    }
+}
 
-                if attachment.isFileDeleted {
-                    ZStack {
-                        if let thumb = attachment.thumbnailImage {
-                            Image(uiImage: thumb)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .blur(radius: 3)
-                        } else {
-                            Color(.systemGray5)
-                        }
-                        Color.black.opacity(0.5)
-                        VStack(spacing: 4) {
-                            Image(systemName: "trash.slash")
-                                .font(.title3)
-                            Text(L10n.Chat.imageDeleted)
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(.white)
+private struct CachedImageCell: View {
+    let attachment: ImageAttachment
+    let isSingle: Bool
+
+    @State private var resolved: UIImage?
+    @State private var deleted = false
+    @State private var hasResolved = false
+
+    private var maxW: CGFloat { isSingle ? 240 : 140 }
+    private var maxH: CGFloat { isSingle ? 240 : 140 }
+
+    var body: some View {
+        Group {
+            if deleted {
+                ZStack {
+                    if let thumb = attachment.thumbnailImage {
+                        Image(uiImage: thumb)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .blur(radius: 3)
+                    } else {
+                        Color(.systemGray5)
                     }
-                    .frame(maxWidth: maxW, maxHeight: maxH)
-                    .frame(minHeight: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else if let uiImage = attachment.uiImage {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: maxW, maxHeight: maxH)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            ImagePreviewCoordinator.shared.show(uiImage)
-                        }
+                    Color.black.opacity(0.5)
+                    VStack(spacing: 4) {
+                        Image(systemName: "trash.slash")
+                            .font(.title3)
+                        Text(L10n.Chat.imageDeleted)
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.white)
                 }
+                .frame(maxWidth: maxW, maxHeight: maxH)
+                .frame(minHeight: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else if let uiImage = resolved {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: maxW, maxHeight: maxH)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        ImagePreviewCoordinator.shared.show(uiImage)
+                    }
+            }
+        }
+        .onAppear {
+            guard !hasResolved else { return }
+            hasResolved = true
+            deleted = attachment.isFileDeleted
+            if !deleted {
+                resolved = attachment.uiImage
             }
         }
     }
@@ -260,12 +300,14 @@ private struct MessageImageGrid: View {
 // MARK: - Context Menu Modifier
 
 private struct MessageContextMenuModifier: ViewModifier {
-    let text: String
+    let textProvider: () -> String
     @State private var showCopied = false
 
     func body(content: Content) -> some View {
         content
             .contextMenu {
+                let text = textProvider()
+
                 Button {
                     UIPasteboard.general.string = text
                     showCopied = true
@@ -322,8 +364,8 @@ private struct MessageContextMenuModifier: ViewModifier {
 }
 
 extension View {
-    func messageContextMenu(text: String) -> some View {
-        modifier(MessageContextMenuModifier(text: text))
+    func messageContextMenu(text: @escaping @autoclosure () -> String) -> some View {
+        modifier(MessageContextMenuModifier(textProvider: text))
     }
 }
 

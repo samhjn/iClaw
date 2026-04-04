@@ -11,6 +11,8 @@ struct MarkdownContentView: View {
 
     @State private var cachedBlocks: [MarkdownBlock] = []
     @State private var cachedContent: String = ""
+    @State private var refreshTask: Task<Void, Never>?
+    @State private var inlineCache: [String: AttributedString] = [:]
 
     init(_ content: String, isUser: Bool = false, imageAttachments: [ImageAttachment] = []) {
         self.content = content
@@ -30,8 +32,46 @@ struct MarkdownContentView: View {
 
     private func refreshBlocksIfNeeded() {
         guard content != cachedContent else { return }
-        cachedContent = content
-        cachedBlocks = parseBlocks()
+
+        if cachedBlocks.isEmpty {
+            cachedContent = content
+            cachedBlocks = parseBlocks()
+            rebuildInlineCache()
+            return
+        }
+
+        refreshTask?.cancel()
+        refreshTask = Task {
+            try? await Task.sleep(for: .milliseconds(80))
+            guard !Task.isCancelled else { return }
+            cachedContent = content
+            cachedBlocks = parseBlocks()
+            rebuildInlineCache()
+        }
+    }
+
+    private func rebuildInlineCache() {
+        var cache: [String: AttributedString] = [:]
+        let isUser = isUserMessage
+        for block in cachedBlocks {
+            switch block {
+            case .paragraph(let text):
+                cache[text] = Self.parseInlineMarkdown(text, isUserMessage: isUser)
+            case .heading(_, let text):
+                cache[text] = Self.parseInlineMarkdown(text, isUserMessage: isUser)
+            case .bulletList(let items):
+                for item in items { cache[item] = Self.parseInlineMarkdown(item, isUserMessage: isUser) }
+            case .orderedList(let items):
+                for item in items { cache[item] = Self.parseInlineMarkdown(item, isUserMessage: isUser) }
+            case .taskList(let items):
+                for item in items { cache[item.text] = Self.parseInlineMarkdown(item.text, isUserMessage: isUser) }
+            case .blockquote(let text):
+                cache[text] = Self.parseInlineMarkdown(text, isUserMessage: isUser)
+            default:
+                break
+            }
+        }
+        inlineCache = cache
     }
 
     // MARK: - Block Rendering
@@ -108,7 +148,7 @@ struct MarkdownContentView: View {
         case 3: .headline
         default: .subheadline.bold()
         }
-        Text(text)
+        Text(inlineCache[text] ?? parseInlineMarkdown(text))
             .font(font)
             .foregroundStyle(isUserMessage ? .white : .primary)
             .padding(.top, level <= 2 ? 4 : 2)
@@ -116,7 +156,7 @@ struct MarkdownContentView: View {
 
     @ViewBuilder
     private func renderInlineText(_ text: String) -> some View {
-        let attributed = parseInlineMarkdown(text)
+        let attributed = inlineCache[text] ?? parseInlineMarkdown(text)
         Text(attributed)
             .font(.body)
             .foregroundStyle(isUserMessage ? .white : .primary)
@@ -476,6 +516,10 @@ struct MarkdownContentView: View {
     // MARK: - Inline Parsing
 
     func parseInlineMarkdown(_ text: String) -> AttributedString {
+        Self.parseInlineMarkdown(text, isUserMessage: isUserMessage)
+    }
+
+    static func parseInlineMarkdown(_ text: String, isUserMessage: Bool) -> AttributedString {
         var result = AttributedString()
         var remaining = text[text.startIndex...]
         var plainBuffer = ""
@@ -534,7 +578,7 @@ struct MarkdownContentView: View {
                 if let endRange = after.range(of: "***") {
                     flushPlain()
                     let inner = String(after[after.startIndex..<endRange.lowerBound])
-                    var attr = parseInlineMarkdown(inner)
+                    var attr = parseInlineMarkdown(inner, isUserMessage: isUserMessage)
                     attr.font = .body.bold().italic()
                     result.append(attr)
                     remaining = after[endRange.upperBound...]
@@ -548,7 +592,7 @@ struct MarkdownContentView: View {
                 if let endRange = after.range(of: "**") {
                     flushPlain()
                     let boldText = String(after[after.startIndex..<endRange.lowerBound])
-                    var attr = parseInlineMarkdown(boldText)
+                    var attr = parseInlineMarkdown(boldText, isUserMessage: isUserMessage)
                     attr.font = .body.bold()
                     result.append(attr)
                     remaining = after[endRange.upperBound...]
@@ -564,7 +608,7 @@ struct MarkdownContentView: View {
                 if let endIdx = after.firstIndex(of: marker) {
                     flushPlain()
                     let italicText = String(after[after.startIndex..<endIdx])
-                    var attr = parseInlineMarkdown(italicText)
+                    var attr = parseInlineMarkdown(italicText, isUserMessage: isUserMessage)
                     attr.font = .body.italic()
                     result.append(attr)
                     remaining = after[after.index(after: endIdx)...]
@@ -677,13 +721,16 @@ private struct MarkdownTableView: View {
     let table: MarkdownTable
     let isUserMessage: Bool
 
+    @State private var parsedHeaders: [AttributedString] = []
+    @State private var parsedRows: [[AttributedString]] = []
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             Grid(horizontalSpacing: 0, verticalSpacing: 0) {
                 GridRow {
-                    ForEach(Array(table.headers.enumerated()), id: \.offset) { colIdx, header in
+                    ForEach(Array(parsedHeaders.enumerated()), id: \.offset) { colIdx, header in
                         cellView(
-                            text: header,
+                            attributed: header,
                             alignment: colIdx < table.alignments.count ? table.alignments[colIdx] : .leading,
                             isHeader: true,
                             isLastColumn: colIdx == table.headers.count - 1
@@ -699,11 +746,11 @@ private struct MarkdownTableView: View {
                         .gridCellColumns(table.headers.count)
                 }
 
-                ForEach(Array(table.rows.enumerated()), id: \.offset) { rowIdx, row in
+                ForEach(Array(parsedRows.enumerated()), id: \.offset) { rowIdx, row in
                     GridRow {
                         ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
                             cellView(
-                                text: cell,
+                                attributed: cell,
                                 alignment: colIdx < table.alignments.count ? table.alignments[colIdx] : .leading,
                                 isHeader: false,
                                 isLastColumn: colIdx == table.headers.count - 1
@@ -721,10 +768,21 @@ private struct MarkdownTableView: View {
                     .stroke(isUserMessage ? Color.white.opacity(0.2) : Color(.systemGray4), lineWidth: 0.5)
             )
         }
+        .onAppear { buildAttributedStrings() }
+        .onChange(of: table) { _, _ in buildAttributedStrings() }
     }
 
-    private func cellView(text: String, alignment: TableAlignment, isHeader: Bool, isLastColumn: Bool) -> some View {
-        Text(text)
+    private func buildAttributedStrings() {
+        parsedHeaders = table.headers.map {
+            MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUserMessage)
+        }
+        parsedRows = table.rows.map { row in
+            row.map { MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUserMessage) }
+        }
+    }
+
+    private func cellView(attributed: AttributedString, alignment: TableAlignment, isHeader: Bool, isLastColumn: Bool) -> some View {
+        Text(attributed)
             .font(isHeader ? .caption.bold() : .caption)
             .foregroundStyle(isUserMessage ? .white : .primary)
             .multilineTextAlignment(alignment.textAlignment)

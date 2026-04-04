@@ -168,12 +168,26 @@ private struct ChatContentView: View {
     @State private var forceScrollToBottom = false
     @State private var scrollState = ChatScrollState()
 
+    private var displayMessages: [Message] {
+        if vm.isVerbose { return vm.messages }
+        return vm.messages.filter { msg in
+            if msg.role == .tool { return false }
+            if msg.role == .assistant,
+               let data = msg.toolCallsData,
+               data.count > 2,
+               (msg.content ?? "").isEmpty {
+                return false
+            }
+            return true
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(vm.messages, id: \.id) { message in
+                        ForEach(displayMessages, id: \.id) { message in
                             MessageBubbleView(message: message, isVerbose: vm.isVerbose)
                                 .id(message.id.uuidString)
                         }
