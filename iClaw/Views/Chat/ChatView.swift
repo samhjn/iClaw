@@ -8,15 +8,28 @@ struct ChatView: View {
     @State private var showTitleEditor = false
     @State private var editingTitle = ""
 
-    private func ensureViewModel() -> ChatViewModel {
-        if let vm = viewModel { return vm }
-        let vm = ChatViewModel(session: session, modelContext: modelContext)
-        viewModel = vm
-        return vm
+    var body: some View {
+        ZStack {
+            if let vm = viewModel {
+                chatBody(vm: vm)
+            }
+        }
+        .onAppear {
+            if viewModel == nil {
+                viewModel = ChatViewModel(session: session, modelContext: modelContext)
+            }
+            viewModel?.onViewAppear()
+        }
+        .onDisappear {
+            viewModel?.onViewDisappear()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+            viewModel?.prepareForBackground()
+        }
     }
 
-    var body: some View {
-        let vm = ensureViewModel()
+    @ViewBuilder
+    private func chatBody(vm: ChatViewModel) -> some View {
         ChatContentView(vm: vm)
         .navigationTitle(session.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -70,54 +83,7 @@ struct ChatView: View {
             }
 
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Section {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                vm.isVerbose = true
-                            }
-                        } label: {
-                            Label {
-                                Text(L10n.Chat.verbose)
-                            } icon: {
-                                if vm.isVerbose {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                vm.isVerbose = false
-                            }
-                        } label: {
-                            Label {
-                                Text(L10n.Chat.silent)
-                            } icon: {
-                                if !vm.isVerbose {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    } header: {
-                        if let agentName = session.agent?.name {
-                            Text(L10n.Chat.displayModeScope(agentName))
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: vm.isVerbose ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                            .font(.caption2)
-                        Text(vm.isVerbose ? L10n.Chat.verbose : L10n.Chat.silent)
-                            .font(.caption2.weight(.medium))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(vm.isVerbose ? Color.accentColor.opacity(0.12) : Color(.systemGray5))
-                    )
-                    .foregroundStyle(vm.isVerbose ? Color.accentColor : .secondary)
-                }
+                ChatDisplayModeMenu(vm: vm, agentName: vm.agentDisplayName)
             }
         }
         .alert(L10n.Chat.renameSession, isPresented: $showTitleEditor) {
@@ -130,11 +96,61 @@ struct ChatView: View {
             }
             Button(L10n.Common.cancel, role: .cancel) {}
         }
-        .onAppear {
-            viewModel?.onViewAppear()
-        }
-        .onDisappear {
-            viewModel?.onViewDisappear()
+    }
+}
+
+private struct ChatDisplayModeMenu: View {
+    @Bindable var vm: ChatViewModel
+    let agentName: String?
+
+    var body: some View {
+        Menu {
+            Section {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        vm.isVerbose = true
+                    }
+                } label: {
+                    Label {
+                        Text(L10n.Chat.verbose)
+                    } icon: {
+                        if vm.isVerbose {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        vm.isVerbose = false
+                    }
+                } label: {
+                    Label {
+                        Text(L10n.Chat.silent)
+                    } icon: {
+                        if !vm.isVerbose {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            } header: {
+                if let agentName {
+                    Text(L10n.Chat.displayModeScope(agentName))
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: vm.isVerbose ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                    .font(.caption2)
+                Text(vm.isVerbose ? L10n.Chat.verbose : L10n.Chat.silent)
+                    .font(.caption2.weight(.medium))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(vm.isVerbose ? Color.accentColor.opacity(0.12) : Color(.systemGray5))
+            )
+            .foregroundStyle(vm.isVerbose ? Color.accentColor : .secondary)
         }
     }
 }
@@ -446,7 +462,7 @@ private struct ChatContentView: View {
                 canRetry: vm.canRetry,
                 cancelFailureReason: vm.cancelFailureReason,
                 pendingImages: vm.pendingImages,
-                isImageDisabled: vm.session.agent.map { $0.permissionLevel(for: .files) == .disabled } ?? false,
+                isImageDisabled: vm.isImageInputDisabled,
                 onSend: {
                     forceScrollToBottom = true
                     vm.sendMessage()

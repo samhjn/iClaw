@@ -63,6 +63,8 @@ struct iClawApp: App {
         print("[iClawApp] Reset \(stale.count) stale active session(s).")
     }
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -82,6 +84,16 @@ struct iClawApp: App {
                 }
         }
         .modelContainer(modelContainer)
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                cronScheduler?.pause()
+            case .active:
+                cronScheduler?.resume()
+            default:
+                break
+            }
+        }
     }
 
     private func startCronScheduler() {

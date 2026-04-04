@@ -47,6 +47,29 @@ final class CronScheduler {
         isRunning = false
     }
 
+    /// Suspend the in-process timer while the app is in the background so it
+    /// cannot block the main thread during termination. The `BGAppRefreshTask`
+    /// path handles background execution instead.
+    func pause() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    /// Re-arm the in-process timer when the app returns to the foreground.
+    func resume() {
+        guard isRunning, timer == nil else { return }
+        timer = Timer.scheduledTimer(
+            withTimeInterval: Self.checkInterval,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.drainDueJobs()
+            }
+        }
+        timer?.tolerance = 5
+        Task { await drainDueJobs() }
+    }
+
     func rescheduleAll() {
         Task { await updateNextRunDates() }
     }

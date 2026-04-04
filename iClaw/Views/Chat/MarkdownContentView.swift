@@ -9,6 +9,9 @@ struct MarkdownContentView: View {
     let isUserMessage: Bool
     var imageAttachments: [ImageAttachment]
 
+    @State private var cachedBlocks: [MarkdownBlock] = []
+    @State private var cachedContent: String = ""
+
     init(_ content: String, isUser: Bool = false, imageAttachments: [ImageAttachment] = []) {
         self.content = content
         self.isUserMessage = isUser
@@ -17,10 +20,18 @@ struct MarkdownContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(parseBlocks().enumerated()), id: \.offset) { _, block in
+            ForEach(Array(cachedBlocks.enumerated()), id: \.offset) { _, block in
                 renderBlock(block)
             }
         }
+        .onAppear { refreshBlocksIfNeeded() }
+        .onChange(of: content) { _, _ in refreshBlocksIfNeeded() }
+    }
+
+    private func refreshBlocksIfNeeded() {
+        guard content != cachedContent else { return }
+        cachedContent = content
+        cachedBlocks = parseBlocks()
     }
 
     // MARK: - Block Rendering
@@ -115,7 +126,7 @@ struct MarkdownContentView: View {
 
     // MARK: - Block Parsing
 
-    private func parseBlocks() -> [MarkdownBlock] {
+    func parseBlocks() -> [MarkdownBlock] {
         let lines = content.components(separatedBy: "\n")
         var blocks: [MarkdownBlock] = []
         var i = 0
@@ -464,9 +475,17 @@ struct MarkdownContentView: View {
 
     // MARK: - Inline Parsing
 
-    private func parseInlineMarkdown(_ text: String) -> AttributedString {
+    func parseInlineMarkdown(_ text: String) -> AttributedString {
         var result = AttributedString()
         var remaining = text[text.startIndex...]
+        var plainBuffer = ""
+
+        func flushPlain() {
+            if !plainBuffer.isEmpty {
+                result.append(AttributedString(plainBuffer))
+                plainBuffer = ""
+            }
+        }
 
         while !remaining.isEmpty {
             // Image inline: ![alt](url) → render as [🖼 alt] link
@@ -478,6 +497,7 @@ struct MarkdownContentView: View {
                     if afterBracket.hasPrefix("(") {
                         let urlPart = afterBracket.dropFirst()
                         if let closeParen = urlPart.firstIndex(of: ")") {
+                            flushPlain()
                             let urlStr = String(urlPart[urlPart.startIndex..<closeParen])
                             var attr = AttributedString("🖼 \(altText.isEmpty ? urlStr : altText)")
                             if let url = URL(string: urlStr) {
@@ -497,6 +517,7 @@ struct MarkdownContentView: View {
             if remaining.hasPrefix("`") {
                 let after = remaining.dropFirst()
                 if let endIdx = after.firstIndex(of: "`") {
+                    flushPlain()
                     let code = String(after[after.startIndex..<endIdx])
                     var attr = AttributedString(code)
                     attr.font = .system(.body, design: .monospaced)
@@ -511,6 +532,7 @@ struct MarkdownContentView: View {
             if remaining.hasPrefix("***") {
                 let after = remaining.dropFirst(3)
                 if let endRange = after.range(of: "***") {
+                    flushPlain()
                     let inner = String(after[after.startIndex..<endRange.lowerBound])
                     var attr = parseInlineMarkdown(inner)
                     attr.font = .body.bold().italic()
@@ -524,6 +546,7 @@ struct MarkdownContentView: View {
             if remaining.hasPrefix("**") {
                 let after = remaining.dropFirst(2)
                 if let endRange = after.range(of: "**") {
+                    flushPlain()
                     let boldText = String(after[after.startIndex..<endRange.lowerBound])
                     var attr = parseInlineMarkdown(boldText)
                     attr.font = .body.bold()
@@ -539,6 +562,7 @@ struct MarkdownContentView: View {
                 guard let marker = remaining.first else { break }
                 let after = remaining.dropFirst()
                 if let endIdx = after.firstIndex(of: marker) {
+                    flushPlain()
                     let italicText = String(after[after.startIndex..<endIdx])
                     var attr = parseInlineMarkdown(italicText)
                     attr.font = .body.italic()
@@ -552,6 +576,7 @@ struct MarkdownContentView: View {
             if remaining.hasPrefix("~~") {
                 let after = remaining.dropFirst(2)
                 if let endRange = after.range(of: "~~") {
+                    flushPlain()
                     let strikeText = String(after[after.startIndex..<endRange.lowerBound])
                     var attr = AttributedString(strikeText)
                     attr.strikethroughStyle = .single
@@ -570,6 +595,7 @@ struct MarkdownContentView: View {
                     if afterBracket.hasPrefix("(") {
                         let urlPart = afterBracket.dropFirst()
                         if let closeParen = urlPart.firstIndex(of: ")") {
+                            flushPlain()
                             let urlStr = String(urlPart[urlPart.startIndex..<closeParen])
                             var attr = AttributedString(linkText)
                             if let url = URL(string: urlStr) {
@@ -585,19 +611,20 @@ struct MarkdownContentView: View {
                 }
             }
 
-            // Regular character
+            // Batch plain characters instead of appending one at a time
             guard let char = remaining.first else { break }
-            result.append(AttributedString(String(char)))
+            plainBuffer.append(char)
             remaining = remaining.dropFirst()
         }
 
+        flushPlain()
         return result
     }
 }
 
 // MARK: - Block Types
 
-private enum MarkdownBlock {
+enum MarkdownBlock: Equatable {
     case heading(level: Int, text: String)
     case codeBlock(language: String, code: String)
     case paragraph(text: String)
@@ -611,14 +638,14 @@ private enum MarkdownBlock {
     case empty
 }
 
-private struct TaskListItem {
+struct TaskListItem: Equatable {
     let checked: Bool
     let text: String
 }
 
 // MARK: - Table Types
 
-enum TableAlignment {
+enum TableAlignment: Equatable {
     case leading, center, trailing
 
     var horizontal: HorizontalAlignment {
@@ -638,7 +665,7 @@ enum TableAlignment {
     }
 }
 
-struct MarkdownTable {
+struct MarkdownTable: Equatable {
     let headers: [String]
     let alignments: [TableAlignment]
     let rows: [[String]]

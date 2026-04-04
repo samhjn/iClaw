@@ -53,6 +53,11 @@ final class ChatViewModel {
         didSet { session.agent?.isVerbose = isVerbose }
     }
 
+    /// Cached from session.agent so ChatContentView.body doesn't observe
+    /// SwiftData model properties directly (prevents save-cascade invalidation).
+    private(set) var isImageInputDisabled: Bool = false
+    private(set) var agentDisplayName: String?
+
     /// Silent-mode status — survives ViewModel recreation (SwiftData can recreate the VM mid-generation).
     private static var silentStatuses: [UUID: String] = [:]
     private static var silentRounds: [UUID: Int] = [:]
@@ -135,6 +140,8 @@ final class ChatViewModel {
         self.session = session
         self.modelContext = modelContext
         self.isVerbose = session.agent?.isVerbose ?? true
+        self.isImageInputDisabled = session.agent.map { $0.permissionLevel(for: .files) == .disabled } ?? false
+        self.agentDisplayName = session.agent?.name
         // Restore draft text: prefer in-memory cache (more up-to-date), fall back to persisted value.
         if let cached = Self.cachedInputTexts[session.id], !cached.isEmpty {
             self.inputText = cached
@@ -164,6 +171,7 @@ final class ChatViewModel {
     func loadMessages() {
         messages = session.sortedMessages
         migrateInlineImages()
+        refreshCompressionStats()
     }
 
     /// One-time migration: extract inline base64 images from existing assistant messages
@@ -997,6 +1005,13 @@ final class ChatViewModel {
         try? modelContext.save()
     }
 
+    /// Prepare for app suspension/termination. Cancels active streams so the
+    /// main thread is free to handle the system's exit signal promptly.
+    func prepareForBackground() {
+        streamCancelAction?()
+        Self.activeStreamCancels[session.id]?()
+    }
+
     // MARK: - Stale Active State Recovery
 
     /// If the session is marked active but no task is running and this is a fresh
@@ -1138,7 +1153,12 @@ final class ChatViewModel {
         session.title = title
         session.isTitleCustomized = true
         session.updatedAt = Date()
-        try? modelContext.save()
+        // Defer save so the SwiftData observation cascade doesn't block
+        // the current SwiftUI update cycle (prevents main-thread hang
+        // when ForEach children are invalidated synchronously).
+        Task { @MainActor [modelContext] in
+            try? modelContext.save()
+        }
     }
 
     // MARK: - Image Management
@@ -1204,18 +1224,22 @@ final class ChatViewModel {
 
     // MARK: - Info
 
-    var compressionStats: CompressionStats {
+    private(set) var compressionStats = CompressionStats(
+        activeTokens: 0, threshold: 0, totalMessages: 0,
+        compressedCount: 0, pendingCount: 0
+    )
+
+    func refreshCompressionStats() {
         let contextManager = ContextManager()
         let active = contextManager.activeContextTokens(session: session)
         let threshold = session.agent?.effectiveCompressionThreshold ?? ContextManager.compressionThreshold
         let compressedIdx = session.compressedUpToIndex
         let totalMsgs = session.messages.count
 
-        _ = session.sortedMessages
         let pendingEnd = max(totalMsgs - 3, compressedIdx)
         let pendingCount = max(pendingEnd - compressedIdx, 0)
 
-        return CompressionStats(
+        compressionStats = CompressionStats(
             activeTokens: active,
             threshold: threshold,
             totalMessages: totalMsgs,
