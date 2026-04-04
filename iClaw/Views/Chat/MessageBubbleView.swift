@@ -26,6 +26,10 @@ struct MessageBubbleView: View {
         role == .assistant
     }
 
+    private var isStreaming: Bool {
+        streamingContent != nil
+    }
+
     private var toolCalls: [LLMToolCall]? {
         guard let data = message?.toolCallsData else { return nil }
         return try? JSONDecoder().decode([LLMToolCall].self, from: data)
@@ -151,13 +155,18 @@ struct MessageBubbleView: View {
                 }
 
                 if !content.isEmpty {
-                    MarkdownContentView(content, isUser: false, imageAttachments: imageAttachments)
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemGray6))
-                        )
-                        .foregroundStyle(.primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        MarkdownContentView(content, isUser: false, imageAttachments: imageAttachments)
+                        if isStreaming {
+                            StreamingDotsView()
+                        }
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemGray6))
+                    )
+                    .foregroundStyle(.primary)
                 }
 
                 if !imageAttachments.isEmpty && !contentHasInlineImageRefs {
@@ -315,5 +324,29 @@ private struct MessageContextMenuModifier: ViewModifier {
 extension View {
     func messageContextMenu(text: String) -> some View {
         modifier(MessageContextMenuModifier(text: text))
+    }
+}
+
+// MARK: - Streaming Dots
+
+private struct StreamingDotsView: View {
+    @State private var phase = 0
+    let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.secondary.opacity(0.6))
+                    .frame(width: 5, height: 5)
+                    .scaleEffect(phase == index ? 1.3 : 0.7)
+                    .opacity(phase == index ? 1.0 : 0.5)
+                    .animation(.easeInOut(duration: 0.4), value: phase)
+            }
+        }
+        .padding(.top, 2)
+        .onReceive(timer) { _ in
+            phase = (phase + 1) % 3
+        }
     }
 }

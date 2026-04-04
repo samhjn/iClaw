@@ -6,7 +6,7 @@
       "options" : {
 
       }
-    },
+    }
   ],
   "defaultOptions" : {
     "targetForVariableExpansion" : {
@@ -19,7 +19,7 @@
     {
       "target" : {
         "containerPath" : "container:iClaw.xcodeproj",
-        "identifier" : "iClawTests",
+        "identifier" : "980C6BDD40A72EF20924695E",
         "name" : "iClawTests"
       }
     }

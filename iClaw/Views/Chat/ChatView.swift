@@ -139,10 +139,18 @@ struct ChatView: View {
     }
 }
 
+@Observable
+private final class ChatScrollState {
+    var isNearBottom = true
+    weak var scrollView: UIScrollView?
+}
+
 private struct ChatContentView: View {
     @Bindable var vm: ChatViewModel
-    @State private var scrollPosition: UUID?
+    @State private var scrollPosition: String?
     @State private var hasRestoredScroll = false
+    @State private var forceScrollToBottom = false
+    @State private var scrollState = ChatScrollState()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -151,7 +159,7 @@ private struct ChatContentView: View {
                     LazyVStack(spacing: 12) {
                         ForEach(vm.messages, id: \.id) { message in
                             MessageBubbleView(message: message, isVerbose: vm.isVerbose)
-                                .id(message.id)
+                                .id(message.id.uuidString)
                         }
 
                         if vm.isLoading && (!vm.streamingContent.isEmpty || (vm.isVerbose && !vm.streamingThinking.isEmpty)) {
@@ -181,9 +189,9 @@ private struct ChatContentView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
-                            .padding()
-                            .id("loading")
-                        }
+                        .padding()
+                        .id("loading")
+                    }
 
                         if vm.isCompressing {
                             CompressionPanel(stats: vm.compressionStats, isCancelling: vm.isCancellingCompression) {
@@ -193,6 +201,7 @@ private struct ChatContentView: View {
                         }
                     }
                     .padding()
+                    .background(ScrollViewOffsetObserver(scrollState: scrollState))
                 }
                 .scrollPosition(id: $scrollPosition, anchor: .top)
                 .onAppear {
@@ -200,31 +209,85 @@ private struct ChatContentView: View {
                         hasRestoredScroll = true
                         if let target = vm.initialScrollTarget {
                             DispatchQueue.main.async {
-                                proxy.scrollTo(target, anchor: .top)
+                                proxy.scrollTo(target.uuidString, anchor: .top)
                             }
                         } else if let lastId = vm.messages.last?.id {
                             DispatchQueue.main.async {
-                                proxy.scrollTo(lastId, anchor: .bottom)
+                                proxy.scrollTo(lastId.uuidString, anchor: .bottom)
                             }
                         }
                     }
                 }
                 .onChange(of: vm.messages.count) {
+                    let shouldForce = forceScrollToBottom
+                    forceScrollToBottom = false
+                    guard shouldForce || scrollState.isNearBottom else { return }
                     withAnimation {
-                        proxy.scrollTo(vm.messages.last?.id, anchor: .bottom)
+                        proxy.scrollTo(vm.messages.last?.id.uuidString, anchor: .bottom)
                     }
                 }
                 .onChange(of: vm.streamingContent) {
+                    guard scrollState.isNearBottom, !vm.streamingContent.isEmpty else { return }
                     withAnimation {
                         proxy.scrollTo("streaming", anchor: .bottom)
                     }
                 }
+                .onChange(of: vm.streamingThinking) {
+                    guard scrollState.isNearBottom, vm.isVerbose, !vm.streamingThinking.isEmpty else { return }
+                    withAnimation {
+                        proxy.scrollTo("streaming", anchor: .bottom)
+                    }
+                }
+                .onChange(of: vm.isVerbose) { _, _ in
+                    guard let sv = scrollState.scrollView else { return }
+                    let savedOffset = sv.contentOffset.y
+                    let savedHeight = sv.contentSize.height
+                    guard savedHeight > 0 else { return }
+                    for delay in [0.05, 0.35] {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            let newHeight = sv.contentSize.height
+                            guard newHeight > 0, abs(newHeight - savedHeight) > 1 else { return }
+                            sv.setContentOffset(
+                                CGPoint(x: 0, y: savedOffset * (newHeight / savedHeight)),
+                                animated: false
+                            )
+                        }
+                    }
+                }
                 .onDisappear {
-                    if let visibleId = scrollPosition {
-                        vm.saveScrollPosition(visibleId)
+                    if let visibleId = scrollPosition,
+                       let uuid = UUID(uuidString: visibleId) {
+                        vm.saveScrollPosition(uuid)
                     } else if let lastId = vm.messages.last?.id {
                         vm.saveScrollPosition(lastId)
                     }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        if let sv = scrollState.scrollView, sv.isDecelerating {
+                            sv.setContentOffset(sv.contentOffset, animated: false)
+                        }
+                        withAnimation {
+                            if vm.isLoading && !vm.streamingContent.isEmpty {
+                                proxy.scrollTo("streaming", anchor: .bottom)
+                            } else if let lastId = vm.messages.last?.id {
+                                proxy.scrollTo(lastId.uuidString, anchor: .bottom)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 34, height: 34)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
+                    .opacity(scrollState.isNearBottom ? 0 : 1)
+                    .scaleEffect(scrollState.isNearBottom ? 0.5 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: scrollState.isNearBottom)
+                    .allowsHitTesting(!scrollState.isNearBottom)
                 }
             }
 
@@ -384,7 +447,10 @@ private struct ChatContentView: View {
                 cancelFailureReason: vm.cancelFailureReason,
                 pendingImages: vm.pendingImages,
                 isImageDisabled: vm.session.agent.map { $0.permissionLevel(for: .files) == .disabled } ?? false,
-                onSend: { vm.sendMessage() },
+                onSend: {
+                    forceScrollToBottom = true
+                    vm.sendMessage()
+                },
                 onStop: { vm.cancelGeneration() },
                 onStopCompression: { vm.cancelCompression() },
                 onRetry: { vm.retryGeneration() },
@@ -502,6 +568,62 @@ private func tokenColor(for ratio: Double) -> Color {
 }
 
 // MARK: - Helpers
+
+// MARK: - Scroll Offset Observer
+
+private struct ScrollViewOffsetObserver: UIViewRepresentable {
+    let scrollState: ChatScrollState
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isHidden = true
+        view.isUserInteractionEnabled = false
+        DispatchQueue.main.async {
+            guard let scrollView = Self.findScrollView(from: view) else { return }
+            scrollState.scrollView = scrollView
+            context.coordinator.observe(scrollView)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(scrollState: scrollState)
+    }
+
+    private static func findScrollView(from view: UIView) -> UIScrollView? {
+        var current: UIView? = view.superview
+        while let sv = current {
+            if let scrollView = sv as? UIScrollView { return scrollView }
+            current = sv.superview
+        }
+        return nil
+    }
+
+    final class Coordinator: NSObject {
+        let scrollState: ChatScrollState
+        private var observation: NSKeyValueObservation?
+
+        init(scrollState: ChatScrollState) {
+            self.scrollState = scrollState
+        }
+
+        func observe(_ scrollView: UIScrollView) {
+            observation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
+                guard let self else { return }
+                let distance = max(0, sv.contentSize.height - sv.contentOffset.y - sv.bounds.height)
+                let threshold: CGFloat = (sv.isTracking || sv.isDragging) ? 50 : 200
+                let near = distance <= threshold
+                if near != self.scrollState.isNearBottom {
+                    DispatchQueue.main.async { self.scrollState.isNearBottom = near }
+                }
+            }
+        }
+
+        deinit { observation?.invalidate() }
+    }
+}
 
 private extension ChatView {
     static func presentActivitySheet(items: [Any]) {
