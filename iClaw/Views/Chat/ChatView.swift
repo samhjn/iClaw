@@ -182,6 +182,18 @@ private struct ChatContentView: View {
         }
     }
 
+    private func nearestVisibleId(to target: UUID) -> UUID? {
+        let displayed = displayMessages
+        if displayed.contains(where: { $0.id == target }) { return target }
+        let all = vm.messages
+        guard let idx = all.firstIndex(where: { $0.id == target }) else { return displayed.last?.id }
+        let visibleIds = Set(displayed.map(\.id))
+        for i in stride(from: idx, through: 0, by: -1) {
+            if visibleIds.contains(all[i].id) { return all[i].id }
+        }
+        return displayed.first?.id
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
@@ -237,23 +249,24 @@ private struct ChatContentView: View {
                 .onAppear {
                     if !hasRestoredScroll {
                         hasRestoredScroll = true
-                        if let target = vm.initialScrollTarget {
+                        if let target = vm.initialScrollTarget,
+                           let resolved = nearestVisibleId(to: target) {
                             DispatchQueue.main.async {
-                                proxy.scrollTo(target.uuidString, anchor: .center)
+                                proxy.scrollTo(resolved.uuidString, anchor: .center)
                             }
-                        } else if let lastId = vm.messages.last?.id {
+                        } else if let lastId = displayMessages.last?.id {
                             DispatchQueue.main.async {
                                 proxy.scrollTo(lastId.uuidString, anchor: .bottom)
                             }
                         }
                     }
                 }
-                .onChange(of: vm.messages.count) {
+                .onChange(of: displayMessages.count) {
                     let shouldForce = forceScrollToBottom
                     forceScrollToBottom = false
                     guard shouldForce || scrollState.isNearBottom else { return }
                     withAnimation {
-                        proxy.scrollTo(vm.messages.last?.id.uuidString, anchor: .bottom)
+                        proxy.scrollTo(displayMessages.last?.id.uuidString, anchor: .bottom)
                     }
                 }
                 .onChange(of: vm.streamingContent) {
@@ -289,7 +302,7 @@ private struct ChatContentView: View {
                     if let visibleId = scrollPosition,
                        let uuid = UUID(uuidString: visibleId) {
                         vm.saveScrollPosition(uuid)
-                    } else if let lastId = vm.messages.last?.id {
+                    } else if let lastId = displayMessages.last?.id {
                         vm.saveScrollPosition(lastId)
                     }
                 }
@@ -301,7 +314,7 @@ private struct ChatContentView: View {
                         withAnimation {
                             if vm.isLoading && !vm.streamingContent.isEmpty {
                                 proxy.scrollTo("streaming", anchor: .bottom)
-                            } else if let lastId = vm.messages.last?.id {
+                            } else if let lastId = displayMessages.last?.id {
                                 proxy.scrollTo(lastId.uuidString, anchor: .bottom)
                             }
                         }

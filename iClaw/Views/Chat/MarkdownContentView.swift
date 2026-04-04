@@ -723,81 +723,133 @@ private struct MarkdownTableView: View {
 
     @State private var parsedHeaders: [AttributedString] = []
     @State private var parsedRows: [[AttributedString]] = []
+    @State private var columnWidths: [CGFloat] = []
+    @State private var hasBuilt = false
+    @State private var showAll = false
+
+    private static let maxCollapsedRows = 10
+    private static let cellPaddingH: CGFloat = 8
+    private static let cellPaddingV: CGFloat = 6
+    private static let minColWidth: CGFloat = 50
+    private static let maxColWidth: CGFloat = 280
+
+    private var visibleRowCount: Int {
+        if showAll || table.rows.count <= Self.maxCollapsedRows {
+            return parsedRows.count
+        }
+        return min(Self.maxCollapsedRows, parsedRows.count)
+    }
+
+    private var separatorColor: Color {
+        isUserMessage ? Color.white.opacity(0.2) : Color(.systemGray4)
+    }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                GridRow {
-                    ForEach(Array(parsedHeaders.enumerated()), id: \.offset) { colIdx, header in
-                        cellView(
-                            attributed: header,
-                            alignment: colIdx < table.alignments.count ? table.alignments[colIdx] : .leading,
-                            isHeader: true,
-                            isLastColumn: colIdx == table.headers.count - 1
-                        )
-                    }
-                }
-                .background(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
+        if hasBuilt && !columnWidths.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        tableRow(cells: parsedHeaders, isHeader: true)
+                            .background(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
 
-                GridRow {
-                    Rectangle()
-                        .fill(isUserMessage ? Color.white.opacity(0.3) : Color(.systemGray4))
-                        .frame(height: 1)
-                        .gridCellColumns(table.headers.count)
-                }
+                        Rectangle()
+                            .fill(isUserMessage ? Color.white.opacity(0.3) : Color(.systemGray4))
+                            .frame(height: 1)
 
-                ForEach(Array(parsedRows.enumerated()), id: \.offset) { rowIdx, row in
-                    GridRow {
-                        ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
-                            cellView(
-                                attributed: cell,
-                                alignment: colIdx < table.alignments.count ? table.alignments[colIdx] : .leading,
-                                isHeader: false,
-                                isLastColumn: colIdx == table.headers.count - 1
-                            )
+                        ForEach(0..<visibleRowCount, id: \.self) { rowIdx in
+                            tableRow(cells: parsedRows[rowIdx], isHeader: false)
+                                .background(rowIdx % 2 == 1
+                                    ? (isUserMessage ? Color.white.opacity(0.05) : Color(.systemGray6).opacity(0.5))
+                                    : Color.clear)
                         }
                     }
-                    .background(rowIdx % 2 == 1
-                        ? (isUserMessage ? Color.white.opacity(0.05) : Color(.systemGray6).opacity(0.5))
-                        : Color.clear)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(separatorColor, lineWidth: 0.5)
+                    )
+                }
+                .textSelection(.enabled)
+
+                if table.rows.count > Self.maxCollapsedRows && !showAll {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { showAll = true }
+                    } label: {
+                        Text("\(Image(systemName: "chevron.down")) \(table.rows.count - Self.maxCollapsedRows) more rows")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isUserMessage ? Color.white.opacity(0.2) : Color(.systemGray4), lineWidth: 0.5)
-            )
-        }
-        .onAppear { buildAttributedStrings() }
-        .onChange(of: table) { _, _ in buildAttributedStrings() }
-    }
-
-    private func buildAttributedStrings() {
-        parsedHeaders = table.headers.map {
-            MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUserMessage)
-        }
-        parsedRows = table.rows.map { row in
-            row.map { MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUserMessage) }
+            .onAppear { buildIfNeeded() }
+            .onChange(of: table) { _, _ in rebuild() }
+        } else {
+            Color.clear.frame(height: 1)
+                .onAppear { buildIfNeeded() }
         }
     }
 
-    private func cellView(attributed: AttributedString, alignment: TableAlignment, isHeader: Bool, isLastColumn: Bool) -> some View {
-        Text(attributed)
-            .font(isHeader ? .caption.bold() : .caption)
-            .foregroundStyle(isUserMessage ? .white : .primary)
-            .multilineTextAlignment(alignment.textAlignment)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(minWidth: 60, maxWidth: .infinity, alignment: Alignment(horizontal: alignment.horizontal, vertical: .center))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .textSelection(.enabled)
-            .overlay(alignment: .trailing) {
-                if !isLastColumn {
+    private func tableRow(cells: [AttributedString], isHeader: Bool) -> some View {
+        HStack(spacing: 0) {
+            ForEach(0..<columnWidths.count, id: \.self) { colIdx in
+                let alignment = colIdx < table.alignments.count ? table.alignments[colIdx] : TableAlignment.leading
+                Text(colIdx < cells.count ? cells[colIdx] : AttributedString())
+                    .font(isHeader ? .caption.bold() : .caption)
+                    .foregroundStyle(isUserMessage ? .white : .primary)
+                    .lineLimit(isHeader ? 1 : nil)
+                    .multilineTextAlignment(alignment.textAlignment)
+                    .padding(.horizontal, Self.cellPaddingH)
+                    .padding(.vertical, Self.cellPaddingV)
+                    .frame(
+                        width: columnWidths[colIdx],
+                        alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
+                    )
+                if colIdx < columnWidths.count - 1 {
                     Rectangle()
                         .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
                         .frame(width: 0.5)
                 }
             }
+        }
+    }
+
+    private func buildIfNeeded() {
+        guard !hasBuilt else { return }
+        rebuild()
+    }
+
+    private func rebuild() {
+        let isUser = isUserMessage
+        parsedHeaders = table.headers.map {
+            MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUser)
+        }
+        parsedRows = table.rows.map { row in
+            row.map { MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUser) }
+        }
+        columnWidths = measureColumnWidths()
+        hasBuilt = true
+    }
+
+    private func measureColumnWidths() -> [CGFloat] {
+        let font = UIFont.preferredFont(forTextStyle: .caption1)
+        let boldFont = UIFont.boldSystemFont(ofSize: font.pointSize)
+        let padding = Self.cellPaddingH * 2
+
+        return (0..<table.headers.count).map { col in
+            let headerSize = NSAttributedString(string: table.headers[col], attributes: [.font: boldFont]).size()
+            var maxWidth = headerSize.width
+
+            let rowsToMeasure = min(table.rows.count, 30)
+            for rowIdx in 0..<rowsToMeasure {
+                if col < table.rows[rowIdx].count {
+                    let cellSize = NSAttributedString(string: table.rows[rowIdx][col], attributes: [.font: font]).size()
+                    maxWidth = max(maxWidth, cellSize.width)
+                }
+            }
+            return max(Self.minColWidth, min(ceil(maxWidth) + padding, Self.maxColWidth))
+        }
     }
 }
 
