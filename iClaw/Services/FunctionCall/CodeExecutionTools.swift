@@ -94,8 +94,9 @@ struct CodeExecutionTools {
             existing.language = language
             existing.updatedAt = Date()
         } else {
-            let snippet = CodeSnippet(name: name, language: language, code: code, agent: agent)
+            let snippet = CodeSnippet(name: name, language: language, code: code)
             modelContext.insert(snippet)
+            agent.codeSnippets.append(snippet)
         }
         try? modelContext.save()
         return "Saved code snippet '\(name)' (\(language), \(code.count) chars)"

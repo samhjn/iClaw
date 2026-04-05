@@ -23,7 +23,7 @@ final class CronExecutor {
         session.agent = agent
 
         let triggerMessage = buildTriggerMessage(job: job)
-        let userMsg = Message(role: .user, content: triggerMessage, session: session)
+        let userMsg = Message(role: .user, content: triggerMessage)
         context.insert(userMsg)
         session.messages.append(userMsg)
         try? context.save()
@@ -37,8 +37,7 @@ final class CronExecutor {
         guard router.primaryProvider(for: agent) != nil else {
             let errorMsg = Message(
                 role: .assistant,
-                content: L10n.CronExec.noProvider,
-                session: session
+                content: L10n.CronExec.noProvider
             )
             context.insert(errorMsg)
             session.messages.append(errorMsg)
@@ -90,8 +89,7 @@ final class CronExecutor {
                     let assistantMsg = Message(
                         role: .assistant,
                         content: msg.content,
-                        toolCallsData: try? JSONEncoder().encode(toolCalls),
-                        session: session
+                        toolCallsData: try? JSONEncoder().encode(toolCalls)
                     )
                     context.insert(assistantMsg)
                     session.messages.append(assistantMsg)
@@ -102,8 +100,7 @@ final class CronExecutor {
                             role: .tool,
                             content: result.text,
                             toolCallId: tc.id,
-                            name: tc.function.name,
-                            session: session
+                            name: tc.function.name
                         )
                         if let images = result.imageAttachments,
                            let data = try? JSONEncoder().encode(images) {
@@ -118,7 +115,7 @@ final class CronExecutor {
                 }
 
                 if let content = msg.content, !content.isEmpty {
-                    let assistantMsg = Message(role: .assistant, content: content, session: session)
+                    let assistantMsg = Message(role: .assistant, content: content)
                     context.insert(assistantMsg)
                     session.messages.append(assistantMsg)
                     try? context.save()
@@ -128,8 +125,7 @@ final class CronExecutor {
             } catch {
                 let errorMsg = Message(
                     role: .assistant,
-                    content: "[CronJob Error] \(error.localizedDescription)",
-                    session: session
+                    content: "[CronJob Error] \(error.localizedDescription)"
                 )
                 context.insert(errorMsg)
                 session.messages.append(errorMsg)

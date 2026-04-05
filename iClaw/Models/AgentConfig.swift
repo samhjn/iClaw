@@ -10,11 +10,10 @@ final class AgentConfig {
     var createdAt: Date
     var updatedAt: Date
 
-    init(key: String, content: String, agent: Agent? = nil) {
+    init(key: String, content: String) {
         self.id = UUID()
         self.key = key
         self.content = content
-        self.agent = agent
         self.createdAt = Date()
         self.updatedAt = Date()
     }

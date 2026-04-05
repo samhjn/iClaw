@@ -323,8 +323,7 @@ final class ChatViewModel {
 
         let forceStopMsg = Message(
             role: .assistant,
-            content: L10n.Chat.forceStoppedContent,
-            session: session
+            content: L10n.Chat.forceStoppedContent
         )
         modelContext.insert(forceStopMsg)
         session.messages.append(forceStopMsg)
@@ -423,7 +422,7 @@ final class ChatViewModel {
         Self.cachedPendingImages.removeValue(forKey: session.id)
         session.draftImagesData = nil
 
-        let userMessage = Message(role: .user, content: text, session: session)
+        let userMessage = Message(role: .user, content: text)
         userMessage.imageAttachmentsData = imageData
         if imageData != nil { userMessage.recalculateTokenEstimate() }
         modelContext.insert(userMessage)
@@ -576,8 +575,7 @@ final class ChatViewModel {
                 if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
                     let partialMsg = Message(
                         role: .assistant,
-                        content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
-                        session: session
+                        content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted
                     )
                     partialMsg.extractAndStoreInlineImages(agentId: agentId)
                     attachPendingToolImages(to: partialMsg)
@@ -626,8 +624,7 @@ final class ChatViewModel {
                 if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
                     let partialMsg = Message(
                         role: .assistant,
-                        content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted,
-                        session: session
+                        content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted
                     )
                     partialMsg.extractAndStoreInlineImages(agentId: agentId)
                     attachPendingToolImages(to: partialMsg)
@@ -657,8 +654,7 @@ final class ChatViewModel {
                 let assistantMsg = Message(
                     role: .assistant,
                     content: finalContent.isEmpty ? nil : finalContent,
-                    toolCallsData: try? JSONEncoder().encode(pendingToolCalls),
-                    session: session
+                    toolCallsData: try? JSONEncoder().encode(pendingToolCalls)
                 )
                 assistantMsg.thinkingContent = combinedThinking
                 assistantMsg.extractAndStoreInlineImages(agentId: agentId)
@@ -670,7 +666,7 @@ final class ChatViewModel {
 
                 await processToolCalls(pendingToolCalls, router: router, agent: agent)
             } else if !finalContent.isEmpty || combinedThinking != nil {
-                let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent, session: session)
+                let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent)
                 assistantMsg.thinkingContent = combinedThinking
                 assistantMsg.extractAndStoreInlineImages(agentId: agentId)
                 attachPendingToolImages(to: assistantMsg)
@@ -681,7 +677,7 @@ final class ChatViewModel {
                 try? modelContext.save()
                 loadMessages()
             } else if !pendingToolImageAttachments.isEmpty {
-                let assistantMsg = Message(role: .assistant, content: nil, session: session)
+                let assistantMsg = Message(role: .assistant, content: nil)
                 attachPendingToolImages(to: assistantMsg)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
@@ -714,8 +710,7 @@ final class ChatViewModel {
         if Task.isCancelled || cancelled {
             let cancelMsg = Message(
                 role: .assistant,
-                content: L10n.Chat.toolCallAborted,
-                session: session
+                content: L10n.Chat.toolCallAborted
             )
             modelContext.insert(cancelMsg)
             session.messages.append(cancelMsg)
@@ -770,8 +765,7 @@ final class ChatViewModel {
             if Task.isCancelled || cancelled {
                 let cancelMsg = Message(
                     role: .assistant,
-                    content: L10n.Chat.toolCallAborted,
-                    session: session
+                    content: L10n.Chat.toolCallAborted
                 )
                 modelContext.insert(cancelMsg)
                 session.messages.append(cancelMsg)
@@ -786,8 +780,7 @@ final class ChatViewModel {
         if Task.isCancelled || cancelled {
             let cancelMsg = Message(
                 role: .assistant,
-                content: L10n.Chat.toolCallAborted,
-                session: session
+                content: L10n.Chat.toolCallAborted
             )
             modelContext.insert(cancelMsg)
             session.messages.append(cancelMsg)
@@ -801,8 +794,7 @@ final class ChatViewModel {
                 role: .tool,
                 content: result.text,
                 toolCallId: toolCall.id,
-                name: toolCall.function.name,
-                session: session
+                name: toolCall.function.name
             )
             if let images = result.imageAttachments, !images.isEmpty {
                 if let data = try? JSONEncoder().encode(images) {

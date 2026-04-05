@@ -446,8 +446,10 @@ final class PromptBuilderTests: XCTestCase {
         let skill = Skill(name: "Code Review", summary: "Review code", content: "Always check for edge cases.")
         context.insert(skill)
 
-        let installation = InstalledSkill(agent: agent, skill: skill, isEnabled: true)
+        let installation = InstalledSkill(isEnabled: true)
         context.insert(installation)
+        agent.installedSkills.append(installation)
+        installation.skill = skill
         try! context.save()
 
         let prompt = builder.buildSystemPrompt(for: agent)
@@ -465,8 +467,10 @@ final class PromptBuilderTests: XCTestCase {
         let skill = Skill(name: "Disabled Skill", summary: "Off", content: "Should not appear")
         context.insert(skill)
 
-        let installation = InstalledSkill(agent: agent, skill: skill, isEnabled: false)
+        let installation = InstalledSkill(isEnabled: false)
         context.insert(installation)
+        agent.installedSkills.append(installation)
+        installation.skill = skill
         try! context.save()
 
         let prompt = builder.buildSystemPrompt(for: agent)
@@ -485,10 +489,14 @@ final class PromptBuilderTests: XCTestCase {
         context.insert(s1)
         context.insert(s2)
 
-        let i1 = InstalledSkill(agent: agent, skill: s1, isEnabled: true)
-        let i2 = InstalledSkill(agent: agent, skill: s2, isEnabled: true)
+        let i1 = InstalledSkill(isEnabled: true)
+        let i2 = InstalledSkill(isEnabled: true)
         context.insert(i1)
         context.insert(i2)
+        agent.installedSkills.append(i1)
+        agent.installedSkills.append(i2)
+        i1.skill = s1
+        i2.skill = s2
         try! context.save()
 
         let prompt = builder.buildSystemPrompt(for: agent)
@@ -517,10 +525,12 @@ final class PromptBuilderTests: XCTestCase {
         let agent = Agent(name: "Test")
         context.insert(agent)
 
-        let c1 = AgentConfig(key: "notes.md", content: "My notes", agent: agent)
-        let c2 = AgentConfig(key: "todo.md", content: "My tasks", agent: agent)
+        let c1 = AgentConfig(key: "notes.md", content: "My notes")
+        let c2 = AgentConfig(key: "todo.md", content: "My tasks")
         context.insert(c1)
         context.insert(c2)
+        agent.customConfigs.append(c1)
+        agent.customConfigs.append(c2)
         try! context.save()
 
         let prompt = builder.buildSystemPrompt(for: agent)

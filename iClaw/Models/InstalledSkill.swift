@@ -9,10 +9,8 @@ final class InstalledSkill {
     var isEnabled: Bool
     var installedAt: Date
 
-    init(agent: Agent, skill: Skill, isEnabled: Bool = true) {
+    init(isEnabled: Bool = true) {
         self.id = UUID()
-        self.agent = agent
-        self.skill = skill
         self.isEnabled = isEnabled
         self.installedAt = Date()
     }

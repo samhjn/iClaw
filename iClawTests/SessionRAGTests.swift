@@ -42,7 +42,7 @@ final class SessionRAGTests: XCTestCase {
         session.isArchived = archived
         session.compressedContext = compressed
         for (role, content) in messages {
-            let msg = Message(role: role, content: content, session: session)
+            let msg = Message(role: role, content: content)
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -329,7 +329,7 @@ final class SessionRAGTests: XCTestCase {
         let session = Session(title: "Other Agent Swift Chat")
         context.insert(session)
         session.agent = otherAgent
-        let msg = Message(role: .user, content: "swift", session: session)
+        let msg = Message(role: .user, content: "swift")
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()

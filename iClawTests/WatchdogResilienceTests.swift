@@ -280,11 +280,12 @@ final class CompressionStatsTests: XCTestCase {
     func testCompressionStatsComputesWithoutRedundantSort() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
         for i in 0..<20 {
-            let msg = Message(role: .user, content: "Message \(i)", session: session)
+            let msg = Message(role: .user, content: "Message \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -306,11 +307,12 @@ final class CompressionStatsTests: XCTestCase {
     func testCompressionStatsReturnsCorrectCounts() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
         for i in 0..<5 {
-            let msg = Message(role: .user, content: "Message \(i)", session: session)
+            let msg = Message(role: .user, content: "Message \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -354,8 +356,9 @@ final class ChatViewModelBackgroundTests: XCTestCase {
     func testPrepareForBackgroundDoesNotCrashWhenIdle() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -367,8 +370,9 @@ final class ChatViewModelBackgroundTests: XCTestCase {
     func testSetCustomTitleUpdatesProperties() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Old Title", agent: agent)
+        let session = Session(title: "Old Title")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -382,13 +386,13 @@ final class ChatViewModelBackgroundTests: XCTestCase {
     func testSetCustomTitleCompletesQuickly() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
         for i in 0..<50 {
             let msg = Message(role: i % 2 == 0 ? .user : .assistant,
-                              content: String(repeating: "Content for message \(i). ", count: 20),
-                              session: session)
+                              content: String(repeating: "Content for message \(i). ", count: 20))
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -408,11 +412,12 @@ final class ChatViewModelBackgroundTests: XCTestCase {
     func testCompressionStatsNotRecomputedOnTitleChange() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
         for i in 0..<30 {
-            let msg = Message(role: .user, content: "Message \(i)", session: session)
+            let msg = Message(role: .user, content: "Message \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -460,7 +465,7 @@ final class SessionSortedMessagesTests: XCTestCase {
         context.insert(session)
 
         for i in 0..<200 {
-            let msg = Message(role: .user, content: "Message \(i)", session: session)
+            let msg = Message(role: .user, content: "Message \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -488,7 +493,7 @@ final class SessionSortedMessagesTests: XCTestCase {
         ]
 
         for (i, date) in dates.enumerated() {
-            let msg = Message(role: .user, content: "Message \(i)", session: session)
+            let msg = Message(role: .user, content: "Message \(i)")
             msg.timestamp = date
             context.insert(msg)
             session.messages.append(msg)

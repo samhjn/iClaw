@@ -412,11 +412,11 @@ struct CronJobEditView: View {
                 name: name,
                 cronExpression: cronExpression,
                 jobHint: jobHint,
-                agent: agent,
                 isEnabled: isEnabled
             )
             job.nextRunAt = try? CronParser.nextFireDate(after: Date(), for: cronExpression)
             modelContext.insert(job)
+            agent.cronJobs.append(job)
             savedJob = job
         }
         try? modelContext.save()

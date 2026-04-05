@@ -36,8 +36,9 @@ final class MainActorIsolationTests: XCTestCase {
         let rootId = current.id
 
         for i in 1...15 {
-            let child = Agent(name: "sub-\(i)", parentAgent: current)
+            let child = Agent(name: "sub-\(i)")
             context.insert(child)
+            current.subAgents.append(child)
             current = child
         }
         try! context.save()
@@ -78,8 +79,9 @@ final class MainActorIsolationTests: XCTestCase {
     func testFileToolsAccessesAgentIdSafely() {
         let parent = Agent(name: "Parent")
         context.insert(parent)
-        let child = Agent(name: "Child", parentAgent: parent)
+        let child = Agent(name: "Child")
         context.insert(child)
+        parent.subAgents.append(child)
         try! context.save()
 
         let tools = FileTools(agent: child)
@@ -93,8 +95,9 @@ final class MainActorIsolationTests: XCTestCase {
     func testCodeExecutionToolsListCodeSafely() {
         let parent = Agent(name: "Parent")
         context.insert(parent)
-        let child = Agent(name: "Child", parentAgent: parent)
+        let child = Agent(name: "Child")
         context.insert(child)
+        parent.subAgents.append(child)
         try! context.save()
 
         let tools = CodeExecutionTools(agent: child, modelContext: context)
@@ -128,8 +131,9 @@ final class MainActorIsolationTests: XCTestCase {
     func testSessionRAGToolsSearchOnMainActor() {
         let agent = Agent(name: "Test")
         context.insert(agent)
-        let session = Session(title: "Test Session", agent: agent)
+        let session = Session(title: "Test Session")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let tools = SessionRAGTools(agent: agent, modelContext: context, currentSessionId: session.id)
@@ -159,8 +163,11 @@ final class MainActorIsolationTests: XCTestCase {
         var current: Agent? = nil
 
         for i in 0..<12 {
-            let agent = Agent(name: "Level-\(i)", parentAgent: current)
+            let agent = Agent(name: "Level-\(i)")
             context.insert(agent)
+            if let p = current {
+                p.subAgents.append(agent)
+            }
             agents.append(agent)
             current = agent
         }
@@ -192,9 +199,10 @@ final class MainActorIsolationTests: XCTestCase {
     func testUpsertEmbeddingDirectRoundTrip() {
         let agent = Agent(name: "EmbTest")
         context.insert(agent)
-        let session = Session(title: "Embedding Test", agent: agent)
+        let session = Session(title: "Embedding Test")
         context.insert(session)
-        let msg = Message(role: .user, content: "Hello world", session: session)
+        session.agent = agent
+        let msg = Message(role: .user, content: "Hello world")
         context.insert(msg)
         try! context.save()
 
@@ -231,13 +239,14 @@ final class MainActorIsolationTests: XCTestCase {
     func testConcurrentSessionAndAgentAccess() async {
         let agent = Agent(name: "ConcurrencyTest")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         for i in 0..<5 {
             let msg = Message(role: i % 2 == 0 ? .user : .assistant,
-                              content: "Message \(i)",
-                              session: session)
+                              content: "Message \(i)")
             context.insert(msg)
+            session.messages.append(msg)
         }
         try! context.save()
 

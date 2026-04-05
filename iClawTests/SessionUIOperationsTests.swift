@@ -96,10 +96,11 @@ final class SessionListOperationsTests: XCTestCase {
     func testDeleteSessionCascadesMessages() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "ToDelete", agent: agent)
+        let session = Session(title: "ToDelete")
         context.insert(session)
+        session.agent = agent
         for i in 0..<5 {
-            let msg = Message(role: .user, content: "msg \(i)", session: session)
+            let msg = Message(role: .user, content: "msg \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -135,12 +136,14 @@ final class SessionListOperationsTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
 
-        let visible = Session(title: "Visible", agent: agent)
+        let visible = Session(title: "Visible")
         context.insert(visible)
+        visible.agent = agent
 
-        let archived = Session(title: "Archived", agent: agent)
+        let archived = Session(title: "Archived")
         archived.isArchived = true
         context.insert(archived)
+        archived.agent = agent
 
         try! context.save()
 
@@ -156,13 +159,15 @@ final class SessionListOperationsTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
 
-        let old = Session(title: "Old", agent: agent)
+        let old = Session(title: "Old")
         old.updatedAt = Date(timeIntervalSince1970: 1000)
         context.insert(old)
+        old.agent = agent
 
-        let recent = Session(title: "Recent", agent: agent)
+        let recent = Session(title: "Recent")
         recent.updatedAt = Date(timeIntervalSince1970: 2000)
         context.insert(recent)
+        recent.agent = agent
 
         try! context.save()
 
@@ -198,10 +203,12 @@ final class SessionSearchTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
 
-        let s1 = Session(title: "Swift Programming", agent: agent)
+        let s1 = Session(title: "Swift Programming")
         context.insert(s1)
-        let s2 = Session(title: "Python Tutorial", agent: agent)
+        s1.agent = agent
+        let s2 = Session(title: "Python Tutorial")
         context.insert(s2)
+        s2.agent = agent
         try! context.save()
 
         let vm = SessionListViewModel(modelContext: context)
@@ -217,15 +224,17 @@ final class SessionSearchTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
 
-        let s1 = Session(title: "Chat A", agent: agent)
+        let s1 = Session(title: "Chat A")
         context.insert(s1)
-        let msg = Message(role: .assistant, content: "The answer is 42", session: s1)
+        s1.agent = agent
+        let msg = Message(role: .assistant, content: "The answer is 42")
         context.insert(msg)
         s1.messages.append(msg)
 
-        let s2 = Session(title: "Chat B", agent: agent)
+        let s2 = Session(title: "Chat B")
         context.insert(s2)
-        let msg2 = Message(role: .assistant, content: "Hello world", session: s2)
+        s2.agent = agent
+        let msg2 = Message(role: .assistant, content: "Hello world")
         context.insert(msg2)
         s2.messages.append(msg2)
 
@@ -246,10 +255,12 @@ final class SessionSearchTests: XCTestCase {
         let agentB = Agent(name: "Writer")
         context.insert(agentB)
 
-        let s1 = Session(title: "Session 1", agent: agentA)
+        let s1 = Session(title: "Session 1")
         context.insert(s1)
-        let s2 = Session(title: "Session 2", agent: agentB)
+        s1.agent = agentA
+        let s2 = Session(title: "Session 2")
         context.insert(s2)
+        s2.agent = agentB
         try! context.save()
 
         let vm = SessionListViewModel(modelContext: context)
@@ -265,8 +276,9 @@ final class SessionSearchTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
         for i in 0..<3 {
-            let s = Session(title: "Session \(i)", agent: agent)
+            let s = Session(title: "Session \(i)")
             context.insert(s)
+            s.agent = agent
         }
         try! context.save()
 
@@ -285,8 +297,9 @@ final class SessionSearchTests: XCTestCase {
     func testWhitespaceOnlySearchShowsAll() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let s = Session(title: "Session", agent: agent)
+        let s = Session(title: "Session")
         context.insert(s)
+        s.agent = agent
         try! context.save()
 
         let vm = SessionListViewModel(modelContext: context)
@@ -322,10 +335,11 @@ final class SessionRowDataTests: XCTestCase {
     func testRowDataReflectsMessageCount() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         for i in 0..<3 {
-            let msg = Message(role: .user, content: "msg \(i)", session: session)
+            let msg = Message(role: .user, content: "msg \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -342,15 +356,16 @@ final class SessionRowDataTests: XCTestCase {
     func testRowDataShowsPreviewFromLastMessage() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
-        let older = Message(role: .user, content: "older message", session: session)
+        let older = Message(role: .user, content: "older message")
         older.timestamp = Date(timeIntervalSince1970: 100)
         context.insert(older)
         session.messages.append(older)
 
-        let newer = Message(role: .assistant, content: "latest reply", session: session)
+        let newer = Message(role: .assistant, content: "latest reply")
         newer.timestamp = Date(timeIntervalSince1970: 200)
         context.insert(newer)
         session.messages.append(newer)
@@ -368,10 +383,11 @@ final class SessionRowDataTests: XCTestCase {
     func testRowDataDetectsStreamingState() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         session.isActive = true
         session.pendingStreamingContent = "Generating..."
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = SessionListViewModel(modelContext: context)
@@ -384,9 +400,10 @@ final class SessionRowDataTests: XCTestCase {
     func testRowDataDetectsDraft() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         session.draftText = "unfinished message..."
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = SessionListViewModel(modelContext: context)
@@ -399,9 +416,10 @@ final class SessionRowDataTests: XCTestCase {
     func testRowDataNoDraftWhenEmpty() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         session.draftText = nil
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = SessionListViewModel(modelContext: context)
@@ -414,11 +432,12 @@ final class SessionRowDataTests: XCTestCase {
     func testRowDataPreviewTruncatesLongContent() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
         let longContent = String(repeating: "a", count: 500)
-        let msg = Message(role: .assistant, content: longContent, session: session)
+        let msg = Message(role: .assistant, content: longContent)
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()
@@ -456,8 +475,9 @@ final class SessionRenameTests: XCTestCase {
     func testRenameUpdatesTitle() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Original", agent: agent)
+        let session = Session(title: "Original")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -470,8 +490,9 @@ final class SessionRenameTests: XCTestCase {
     func testRenameSetsTitleCustomizedFlag() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Auto Title", agent: agent)
+        let session = Session(title: "Auto Title")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         XCTAssertFalse(session.isTitleCustomized)
@@ -486,9 +507,10 @@ final class SessionRenameTests: XCTestCase {
     func testRenameUpdatesTimestamp() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         session.updatedAt = Date(timeIntervalSince1970: 1000)
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let before = session.updatedAt
@@ -503,9 +525,10 @@ final class SessionRenameTests: XCTestCase {
     func testRenameDoesNotAffectMessages() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
-        let msg = Message(role: .user, content: "hello", session: session)
+        session.agent = agent
+        let msg = Message(role: .user, content: "hello")
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()
@@ -521,12 +544,12 @@ final class SessionRenameTests: XCTestCase {
     func testRenamePerformanceWithManyMessages() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         for i in 0..<100 {
             let msg = Message(role: i % 2 == 0 ? .user : .assistant,
-                              content: String(repeating: "x", count: 200),
-                              session: session)
+                              content: String(repeating: "x", count: 200))
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -546,10 +569,11 @@ final class SessionRenameTests: XCTestCase {
     func testRenameCachedStatsUnchanged() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         for i in 0..<10 {
-            let msg = Message(role: .user, content: "msg \(i)", session: session)
+            let msg = Message(role: .user, content: "msg \(i)")
             context.insert(msg)
             session.messages.append(msg)
         }
@@ -600,8 +624,9 @@ final class SessionExportTests: XCTestCase {
     func testExportContainsAgentName() {
         let agent = Agent(name: "CodeHelper")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let md = SessionExporter.exportToMarkdown(session)
@@ -613,11 +638,11 @@ final class SessionExportTests: XCTestCase {
         let session = Session(title: "Test")
         context.insert(session)
 
-        let userMsg = Message(role: .user, content: "What is Swift?", session: session)
+        let userMsg = Message(role: .user, content: "What is Swift?")
         context.insert(userMsg)
         session.messages.append(userMsg)
 
-        let assistantMsg = Message(role: .assistant, content: "Swift is a programming language.", session: session)
+        let assistantMsg = Message(role: .assistant, content: "Swift is a programming language.")
         context.insert(assistantMsg)
         session.messages.append(assistantMsg)
 
@@ -658,7 +683,7 @@ final class SessionExportTests: XCTestCase {
         let session = Session(title: "Test")
         context.insert(session)
 
-        let msg = Message(role: .assistant, content: "Result", session: session)
+        let msg = Message(role: .assistant, content: "Result")
         msg.thinkingContent = "Let me think step by step..."
         context.insert(msg)
         session.messages.append(msg)
@@ -685,7 +710,7 @@ final class SessionExportTests: XCTestCase {
     func testExportToFileCreatesReadableFile() {
         let session = Session(title: "Export Test")
         context.insert(session)
-        let msg = Message(role: .user, content: "Test content", session: session)
+        let msg = Message(role: .user, content: "Test content")
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()
@@ -707,12 +732,12 @@ final class SessionExportTests: XCTestCase {
         let session = Session(title: "Test")
         context.insert(session)
 
-        let first = Message(role: .user, content: "FIRST_MESSAGE", session: session)
+        let first = Message(role: .user, content: "FIRST_MESSAGE")
         first.timestamp = Date(timeIntervalSince1970: 100)
         context.insert(first)
         session.messages.append(first)
 
-        let second = Message(role: .assistant, content: "SECOND_MESSAGE", session: session)
+        let second = Message(role: .assistant, content: "SECOND_MESSAGE")
         second.timestamp = Date(timeIntervalSince1970: 200)
         context.insert(second)
         session.messages.append(second)
@@ -764,10 +789,11 @@ final class SessionLifecycleTests: XCTestCase {
     func testSaveScrollPositionPersists() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
-        let msg = Message(role: .user, content: "hello", session: session)
+        let msg = Message(role: .user, content: "hello")
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()
@@ -782,10 +808,11 @@ final class SessionLifecycleTests: XCTestCase {
     func testScrollPositionRestoredOnInit() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
-        let msg = Message(role: .user, content: "hello", session: session)
+        let msg = Message(role: .user, content: "hello")
         context.insert(msg)
         session.messages.append(msg)
         session.lastViewedMessageId = msg.id
@@ -799,8 +826,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testClearScrollPosition() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         session.lastViewedMessageId = UUID()
         try! context.save()
 
@@ -816,8 +844,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testDraftTextPersistsToSession() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -830,9 +859,10 @@ final class SessionLifecycleTests: XCTestCase {
     func testEmptyDraftClearsSessionDraft() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         session.draftText = "old draft"
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -845,9 +875,10 @@ final class SessionLifecycleTests: XCTestCase {
     func testDraftTextRestoredOnInit() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         session.draftText = "saved draft"
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -860,9 +891,10 @@ final class SessionLifecycleTests: XCTestCase {
     func testOnViewAppearLoadsMessages() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
-        let msg = Message(role: .user, content: "hello", session: session)
+        session.agent = agent
+        let msg = Message(role: .user, content: "hello")
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()
@@ -877,8 +909,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testOnViewDisappearSavesDraft() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -895,8 +928,9 @@ final class SessionLifecycleTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         agent.isVerbose = false
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -908,8 +942,9 @@ final class SessionLifecycleTests: XCTestCase {
         let agent = Agent(name: "TestAgent")
         agent.isVerbose = true
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -924,8 +959,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testNoBlockWhenNoOtherActive() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -941,8 +977,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testDismissRetryClearsError() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -961,8 +998,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testCachedAgentDisplayName() {
         let agent = Agent(name: "SmartAssistant")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -973,8 +1011,9 @@ final class SessionLifecycleTests: XCTestCase {
     func testCachedImageInputDisabledDefault() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -1094,17 +1133,17 @@ final class SessionModelTests: XCTestCase {
         let session = Session(title: "Test")
         context.insert(session)
 
-        let msg1 = Message(role: .user, content: "First", session: session)
+        let msg1 = Message(role: .user, content: "First")
         msg1.timestamp = Date(timeIntervalSince1970: 300)
         context.insert(msg1)
         session.messages.append(msg1)
 
-        let msg2 = Message(role: .assistant, content: "Second", session: session)
+        let msg2 = Message(role: .assistant, content: "Second")
         msg2.timestamp = Date(timeIntervalSince1970: 100)
         context.insert(msg2)
         session.messages.append(msg2)
 
-        let msg3 = Message(role: .user, content: "Third", session: session)
+        let msg3 = Message(role: .user, content: "Third")
         msg3.timestamp = Date(timeIntervalSince1970: 200)
         context.insert(msg3)
         session.messages.append(msg3)
@@ -1115,6 +1154,165 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(sorted[0].content, "Second")
         XCTAssertEqual(sorted[1].content, "Third")
         XCTAssertEqual(sorted[2].content, "First")
+    }
+}
+
+// MARK: - Message-Session Relationship Safety Tests
+
+final class MessageSessionRelationshipTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        context = ModelContext(container)
+    }
+
+    override func tearDown() {
+        container = nil
+        context = nil
+        super.tearDown()
+    }
+
+    /// Verify that creating a Message, inserting it, and appending to session
+    /// correctly establishes the inverse relationship without crashing.
+    @MainActor
+    func testInsertThenAppendSetsInverseRelationship() {
+        let session = Session(title: "Test")
+        context.insert(session)
+        try! context.save()
+
+        let msg = Message(role: .user, content: "hello")
+        context.insert(msg)
+        session.messages.append(msg)
+        try! context.save()
+
+        XCTAssertEqual(msg.session?.id, session.id)
+        XCTAssertEqual(session.messages.count, 1)
+    }
+
+    /// Ensure all message roles (user, assistant, tool) work with post-insert relationship binding.
+    @MainActor
+    func testAllRolesBindToSessionAfterInsert() {
+        let session = Session(title: "Test")
+        context.insert(session)
+
+        let roles: [(MessageRole, String?, String?, String?)] = [
+            (.user, "question", nil, nil),
+            (.assistant, "answer", nil, nil),
+            (.tool, "result", "call_123", "my_tool"),
+            (.system, "system prompt", nil, nil),
+        ]
+
+        for (role, content, toolCallId, name) in roles {
+            let msg = Message(role: role, content: content, toolCallId: toolCallId, name: name)
+            context.insert(msg)
+            session.messages.append(msg)
+        }
+        try! context.save()
+
+        XCTAssertEqual(session.messages.count, 4)
+        for msg in session.messages {
+            XCTAssertEqual(msg.session?.id, session.id,
+                           "Message with role \(msg.roleRaw) should have session set via inverse")
+        }
+    }
+
+    /// Verify that multiple messages can be added to a session sequentially
+    /// and all maintain correct relationships after save.
+    @MainActor
+    func testMultipleMessagesSequentialInsert() {
+        let session = Session(title: "Chat")
+        context.insert(session)
+        try! context.save()
+
+        for i in 0..<20 {
+            let role: MessageRole = i % 2 == 0 ? .user : .assistant
+            let msg = Message(role: role, content: "Message \(i)")
+            context.insert(msg)
+            session.messages.append(msg)
+        }
+        try! context.save()
+
+        XCTAssertEqual(session.messages.count, 20)
+        for (i, msg) in session.sortedMessages.enumerated() {
+            XCTAssertEqual(msg.session?.id, session.id, "Message \(i) should belong to session")
+        }
+    }
+
+    /// Verify that a Message with toolCallsData correctly binds to session.
+    @MainActor
+    func testToolCallMessageBindsToSession() {
+        let session = Session(title: "Tool Test")
+        context.insert(session)
+
+        let toolCalls = [LLMToolCall(id: "tc1", name: "test_fn", arguments: "{}")]
+        let toolData = try! JSONEncoder().encode(toolCalls)
+
+        let assistantMsg = Message(role: .assistant, content: "Calling tool", toolCallsData: toolData)
+        context.insert(assistantMsg)
+        session.messages.append(assistantMsg)
+
+        let toolMsg = Message(role: .tool, content: "Tool result", toolCallId: "tc1", name: "test_fn")
+        context.insert(toolMsg)
+        session.messages.append(toolMsg)
+
+        try! context.save()
+
+        XCTAssertEqual(session.messages.count, 2)
+        XCTAssertEqual(assistantMsg.session?.id, session.id)
+        XCTAssertEqual(toolMsg.session?.id, session.id)
+        XCTAssertNotNil(assistantMsg.toolCallsData)
+    }
+
+    /// Verify that two sessions don't cross-contaminate messages.
+    @MainActor
+    func testMessagesDoNotCrossSessionBoundaries() {
+        let s1 = Session(title: "Session 1")
+        let s2 = Session(title: "Session 2")
+        context.insert(s1)
+        context.insert(s2)
+
+        let m1 = Message(role: .user, content: "msg for s1")
+        context.insert(m1)
+        s1.messages.append(m1)
+
+        let m2 = Message(role: .user, content: "msg for s2")
+        context.insert(m2)
+        s2.messages.append(m2)
+
+        try! context.save()
+
+        XCTAssertEqual(s1.messages.count, 1)
+        XCTAssertEqual(s2.messages.count, 1)
+        XCTAssertEqual(m1.session?.id, s1.id)
+        XCTAssertEqual(m2.session?.id, s2.id)
+    }
+
+    /// Verify cascade delete still works with post-insert relationship binding.
+    @MainActor
+    func testCascadeDeleteAfterPostInsertBinding() {
+        let session = Session(title: "To Delete")
+        context.insert(session)
+
+        for i in 0..<5 {
+            let msg = Message(role: .user, content: "msg \(i)")
+            context.insert(msg)
+            session.messages.append(msg)
+        }
+        try! context.save()
+
+        XCTAssertEqual(session.messages.count, 5)
+
+        context.delete(session)
+        try! context.save()
+
+        let remaining = (try? context.fetch(FetchDescriptor<Message>())) ?? []
+        XCTAssertEqual(remaining.count, 0, "Messages should be cascade-deleted with their Session")
     }
 }
 
@@ -1151,8 +1349,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testRetryBlockedWhenAlreadyLoading() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -1172,8 +1371,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testRetryBlockedByActiveGenerationStaticGuard() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         ChatViewModel._simulateActiveGeneration(for: session.id)
@@ -1193,8 +1393,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testSendBlockedByActiveGenerationStaticGuard() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         ChatViewModel._simulateActiveGeneration(for: session.id)
@@ -1212,8 +1413,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testRetryPopulatesActiveGenerations() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         XCTAssertFalse(ChatViewModel._hasActiveGeneration(for: session.id))
@@ -1231,8 +1433,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testDoubleRetryOnSameVMBlocked() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -1254,8 +1457,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testRetrySetsFlagsCorrectly() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         let vm = ChatViewModel(session: session, modelContext: context)
@@ -1275,8 +1479,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testRetryEagerlySetsSessionActive() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         XCTAssertFalse(session.isActive)
@@ -1291,8 +1496,9 @@ final class RetryDeduplicationTests: XCTestCase {
     func testSendEagerlySetsSessionActive() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
         try! context.save()
 
         XCTAssertFalse(session.isActive)
@@ -1310,10 +1516,11 @@ final class RetryDeduplicationTests: XCTestCase {
     func testRecoverRetryStateBlockedWhenSessionActive() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
-        let msg = Message(role: .user, content: "hello", session: session)
+        let msg = Message(role: .user, content: "hello")
         context.insert(msg)
         session.messages.append(msg)
         session.isActive = true
@@ -1330,10 +1537,11 @@ final class RetryDeduplicationTests: XCTestCase {
     func testDismissRetryPreventsRecoveryAcrossVMs() {
         let agent = Agent(name: "TestAgent")
         context.insert(agent)
-        let session = Session(title: "Test", agent: agent)
+        let session = Session(title: "Test")
         context.insert(session)
+        session.agent = agent
 
-        let msg = Message(role: .user, content: "hello", session: session)
+        let msg = Message(role: .user, content: "hello")
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()

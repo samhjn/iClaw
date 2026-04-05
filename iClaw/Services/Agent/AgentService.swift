@@ -19,10 +19,12 @@ final class AgentService {
             name: name,
             soulMarkdown: soulMarkdown ?? DefaultPrompts.defaultSoul,
             memoryMarkdown: memoryMarkdown ?? DefaultPrompts.defaultMemory,
-            userMarkdown: userMarkdown ?? DefaultPrompts.defaultUser,
-            parentAgent: parentAgent
+            userMarkdown: userMarkdown ?? DefaultPrompts.defaultUser
         )
         modelContext.insert(agent)
+        if let parentAgent {
+            parentAgent.subAgents.append(agent)
+        }
         try? modelContext.save()
         return agent
     }
@@ -36,10 +38,10 @@ final class AgentService {
             name: name,
             soulMarkdown: parentAgent.soulMarkdown,
             memoryMarkdown: "",
-            userMarkdown: parentAgent.userMarkdown,
-            parentAgent: parentAgent
+            userMarkdown: parentAgent.userMarkdown
         )
         modelContext.insert(subAgent)
+        parentAgent.subAgents.append(subAgent)
         try? modelContext.save()
         return subAgent
     }
@@ -70,8 +72,9 @@ final class AgentService {
                 existing.content = content
                 existing.updatedAt = Date()
             } else {
-                let config = AgentConfig(key: key, content: content, agent: agent)
+                let config = AgentConfig(key: key, content: content)
                 modelContext.insert(config)
+                agent.customConfigs.append(config)
             }
         }
         agent.updatedAt = Date()

@@ -233,8 +233,9 @@ final class CronJobLifecycleTests: XCTestCase {
 
     @MainActor
     func testCronJobCreation() {
-        let job = CronJob(name: "Test Job", cronExpression: "0 9 * * *", jobHint: "Do stuff", agent: agent)
+        let job = CronJob(name: "Test Job", cronExpression: "0 9 * * *", jobHint: "Do stuff")
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         XCTAssertEqual(job.name, "Test Job")
@@ -249,9 +250,10 @@ final class CronJobLifecycleTests: XCTestCase {
 
     @MainActor
     func testFetchDueJobsReturnsOverdueJobs() {
-        let job = CronJob(name: "Overdue", cronExpression: "* * * * *", jobHint: "test", agent: agent)
+        let job = CronJob(name: "Overdue", cronExpression: "* * * * *", jobHint: "test")
         job.nextRunAt = Date.distantPast
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         let dueJobs = CronScheduler.fetchDueJobs(context: context, now: Date())
@@ -260,9 +262,10 @@ final class CronJobLifecycleTests: XCTestCase {
 
     @MainActor
     func testFetchDueJobsExcludesFutureJobs() {
-        let job = CronJob(name: "Future", cronExpression: "* * * * *", jobHint: "test", agent: agent)
+        let job = CronJob(name: "Future", cronExpression: "* * * * *", jobHint: "test")
         job.nextRunAt = Date.distantFuture
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         let dueJobs = CronScheduler.fetchDueJobs(context: context, now: Date())
@@ -271,10 +274,11 @@ final class CronJobLifecycleTests: XCTestCase {
 
     @MainActor
     func testFetchDueJobsExcludesDisabledJobs() {
-        let job = CronJob(name: "Disabled", cronExpression: "* * * * *", jobHint: "test", agent: agent)
+        let job = CronJob(name: "Disabled", cronExpression: "* * * * *", jobHint: "test")
         job.isEnabled = false
         job.nextRunAt = Date.distantPast
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         let dueJobs = CronScheduler.fetchDueJobs(context: context, now: Date())
@@ -283,9 +287,10 @@ final class CronJobLifecycleTests: XCTestCase {
 
     @MainActor
     func testFetchDueJobsWithNilNextRunAt() {
-        let job = CronJob(name: "NeverScheduled", cronExpression: "* * * * *", jobHint: "test", agent: agent)
+        let job = CronJob(name: "NeverScheduled", cronExpression: "* * * * *", jobHint: "test")
         job.nextRunAt = nil
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         let dueJobs = CronScheduler.fetchDueJobs(context: context, now: Date())
@@ -327,11 +332,11 @@ final class CronJobLifecycleTests: XCTestCase {
         context.insert(session)
         session.agent = agent
 
-        let msg1 = Message(role: .user, content: "First", session: session)
+        let msg1 = Message(role: .user, content: "First")
         msg1.timestamp = Date(timeIntervalSince1970: 100)
-        let msg2 = Message(role: .assistant, content: "Second", session: session)
+        let msg2 = Message(role: .assistant, content: "Second")
         msg2.timestamp = Date(timeIntervalSince1970: 200)
-        let msg3 = Message(role: .user, content: "Third", session: session)
+        let msg3 = Message(role: .user, content: "Third")
         msg3.timestamp = Date(timeIntervalSince1970: 300)
 
         context.insert(msg1)
@@ -441,7 +446,7 @@ final class ModelContextThreadSafetyTests: XCTestCase {
         context.insert(session)
         session.agent = agent
 
-        let userMsg = Message(role: .user, content: "Test trigger", session: session)
+        let userMsg = Message(role: .user, content: "Test trigger")
         context.insert(userMsg)
         session.messages.append(userMsg)
         try! context.save()
@@ -460,8 +465,9 @@ final class ModelContextThreadSafetyTests: XCTestCase {
         let context = ModelContext(container)
         let agent = Agent(name: "FinalizeAgent")
         context.insert(agent)
-        let job = CronJob(name: "Finalize Test", cronExpression: "0 9 * * *", jobHint: "test", agent: agent)
+        let job = CronJob(name: "Finalize Test", cronExpression: "0 9 * * *", jobHint: "test")
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         XCTAssertEqual(job.runCount, 0)

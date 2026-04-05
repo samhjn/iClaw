@@ -163,12 +163,10 @@ final class Agent {
         name: String,
         soulMarkdown: String = "",
         memoryMarkdown: String = "",
-        userMarkdown: String = "",
-        parentAgent: Agent? = nil
+        userMarkdown: String = ""
     ) {
         self.id = UUID()
         self.name = name
-        self.parentAgent = parentAgent
         self.subAgents = []
         self.soulMarkdown = soulMarkdown
         self.memoryMarkdown = memoryMarkdown

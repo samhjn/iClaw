@@ -157,8 +157,9 @@ final class AgentModelTests: XCTestCase {
     func testDeleteAgentCascadesToSubAgents() {
         let parent = Agent(name: "Parent")
         context.insert(parent)
-        let child = Agent(name: "Child", parentAgent: parent)
+        let child = Agent(name: "Child")
         context.insert(child)
+        parent.subAgents.append(child)
         try! context.save()
 
         let childId = child.id
@@ -176,8 +177,9 @@ final class AgentModelTests: XCTestCase {
     func testDeleteAgentCascadesToConfigs() {
         let agent = Agent(name: "Test")
         context.insert(agent)
-        let config = AgentConfig(key: "custom.md", content: "Hello", agent: agent)
+        let config = AgentConfig(key: "custom.md", content: "Hello")
         context.insert(config)
+        agent.customConfigs.append(config)
         try! context.save()
 
         let configId = config.id
@@ -195,8 +197,9 @@ final class AgentModelTests: XCTestCase {
     func testDeleteAgentCascadesToCronJobs() {
         let agent = Agent(name: "Test")
         context.insert(agent)
-        let job = CronJob(name: "Job", cronExpression: "0 9 * * *", jobHint: "Do stuff", agent: agent)
+        let job = CronJob(name: "Job", cronExpression: "0 9 * * *", jobHint: "Do stuff")
         context.insert(job)
+        agent.cronJobs.append(job)
         try! context.save()
 
         let jobId = job.id
@@ -216,10 +219,12 @@ final class AgentModelTests: XCTestCase {
     func testParentChildRelationship() {
         let parent = Agent(name: "Parent")
         context.insert(parent)
-        let child1 = Agent(name: "Child1", parentAgent: parent)
-        let child2 = Agent(name: "Child2", parentAgent: parent)
+        let child1 = Agent(name: "Child1")
+        let child2 = Agent(name: "Child2")
         context.insert(child1)
         context.insert(child2)
+        parent.subAgents.append(child1)
+        parent.subAgents.append(child2)
         try! context.save()
 
         XCTAssertEqual(child1.parentAgent?.id, parent.id)
@@ -270,8 +275,9 @@ final class AgentConfigModelTests: XCTestCase {
     func testAgentConfigWithAgent() {
         let agent = Agent(name: "Test")
         context.insert(agent)
-        let config = AgentConfig(key: "notes.md", content: "Some notes", agent: agent)
+        let config = AgentConfig(key: "notes.md", content: "Some notes")
         context.insert(config)
+        agent.customConfigs.append(config)
         try! context.save()
 
         XCTAssertEqual(config.agent?.id, agent.id)
@@ -282,12 +288,15 @@ final class AgentConfigModelTests: XCTestCase {
     func testMultipleConfigsPerAgent() {
         let agent = Agent(name: "Test")
         context.insert(agent)
-        let c1 = AgentConfig(key: "config1.md", content: "Content 1", agent: agent)
-        let c2 = AgentConfig(key: "config2.md", content: "Content 2", agent: agent)
-        let c3 = AgentConfig(key: "config3.md", content: "Content 3", agent: agent)
+        let c1 = AgentConfig(key: "config1.md", content: "Content 1")
+        let c2 = AgentConfig(key: "config2.md", content: "Content 2")
+        let c3 = AgentConfig(key: "config3.md", content: "Content 3")
         context.insert(c1)
         context.insert(c2)
         context.insert(c3)
+        agent.customConfigs.append(c1)
+        agent.customConfigs.append(c2)
+        agent.customConfigs.append(c3)
         try! context.save()
 
         XCTAssertEqual(agent.customConfigs.count, 3)
@@ -444,8 +453,9 @@ final class AgentServiceTests: XCTestCase {
     @MainActor
     func testReadConfigCustomKey() {
         let agent = service.createAgent(name: "Test")
-        let config = AgentConfig(key: "notes.md", content: "Custom note", agent: agent)
+        let config = AgentConfig(key: "notes.md", content: "Custom note")
         context.insert(config)
+        agent.customConfigs.append(config)
         try! context.save()
 
         XCTAssertEqual(service.readConfig(agent: agent, key: "notes.md"), "Custom note")
@@ -582,9 +592,10 @@ final class AgentViewModelTests: XCTestCase {
     func testFetchAgentsOnlyTopLevel() {
         let parent = Agent(name: "Parent")
         context.insert(parent)
-        let child = Agent(name: "Child", parentAgent: parent)
+        let child = Agent(name: "Child")
         child.subAgentType = "temp"
         context.insert(child)
+        parent.subAgents.append(child)
         try! context.save()
 
         let vm = AgentViewModel(modelContext: context)

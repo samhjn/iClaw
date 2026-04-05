@@ -26,7 +26,6 @@ struct CronTools {
             name: name,
             cronExpression: expression,
             jobHint: hint,
-            agent: agent,
             isEnabled: enabled
         )
 
@@ -35,6 +34,7 @@ struct CronTools {
         }
 
         modelContext.insert(job)
+        agent.cronJobs.append(job)
         try? modelContext.save()
 
         let description = CronParser.describe(expression)

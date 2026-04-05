@@ -61,9 +61,8 @@ final class Session {
         set { parentSessionIdRaw = newValue?.uuidString }
     }
 
-    init(title: String, agent: Agent? = nil) {
+    init(title: String) {
         self.id = UUID()
-        self.agent = agent
         self.title = title
         self.messages = []
         self.compressedContext = nil

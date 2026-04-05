@@ -20,14 +20,12 @@ final class CronJob {
         name: String,
         cronExpression: String,
         jobHint: String,
-        agent: Agent? = nil,
         isEnabled: Bool = true
     ) {
         self.id = UUID()
         self.name = name
         self.cronExpression = cronExpression
         self.jobHint = jobHint
-        self.agent = agent
         self.isEnabled = isEnabled
         self.lastRunAt = nil
         self.nextRunAt = nil

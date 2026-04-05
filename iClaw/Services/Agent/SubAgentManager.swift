@@ -108,7 +108,7 @@ final class SubAgentManager {
             throw SubAgentError.agentNotFound
         }
 
-        let userMsg = Message(role: .user, content: content, session: session)
+        let userMsg = Message(role: .user, content: content)
         if let images = imageAttachments, !images.isEmpty,
            let data = try? JSONEncoder().encode(images) {
             userMsg.imageAttachmentsData = data
@@ -175,8 +175,7 @@ final class SubAgentManager {
                 let assistantMsg = Message(
                     role: .assistant,
                     content: msg.content,
-                    toolCallsData: try? JSONEncoder().encode(toolCalls),
-                    session: session
+                    toolCallsData: try? JSONEncoder().encode(toolCalls)
                 )
                 let rootAgentId = AgentFileManager.shared.resolveAgentId(for: subAgent)
                 assistantMsg.extractAndStoreInlineImages(agentId: rootAgentId)
@@ -190,8 +189,7 @@ final class SubAgentManager {
                         role: .tool,
                         content: result.text,
                         toolCallId: tc.id,
-                        name: tc.function.name,
-                        session: session
+                        name: tc.function.name
                     )
                     if let images = result.imageAttachments,
                        let data = try? JSONEncoder().encode(images) {
@@ -206,7 +204,7 @@ final class SubAgentManager {
             }
 
             if let content = msg.content, !content.isEmpty {
-                let assistantMsg = Message(role: .assistant, content: content, session: session)
+                let assistantMsg = Message(role: .assistant, content: content)
                 let rootAgentId = AgentFileManager.shared.resolveAgentId(for: subAgent)
                 assistantMsg.extractAndStoreInlineImages(agentId: rootAgentId)
                 modelContext.insert(assistantMsg)

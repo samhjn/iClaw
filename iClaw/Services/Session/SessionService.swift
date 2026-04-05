@@ -59,7 +59,6 @@ final class SessionService {
             toolCallsData: toolCallsData,
             toolCallId: toolCallId,
             name: name,
-            session: session,
             tokenEstimate: tokenEstimate
         )
         modelContext.insert(message)

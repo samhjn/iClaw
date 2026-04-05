@@ -138,8 +138,9 @@ struct CustomConfigsView: View {
             Button(L10n.Common.create) {
                 let key = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !key.isEmpty {
-                    let config = AgentConfig(key: key, content: "", agent: agent)
+                    let config = AgentConfig(key: key, content: "")
                     modelContext.insert(config)
+                    agent.customConfigs.append(config)
                     try? modelContext.save()
                 }
                 newKey = ""
@@ -385,8 +386,9 @@ struct CodeSnippetEditView: View {
         guard let agent else { return }
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
-        let newSnippet = CodeSnippet(name: trimmedName, language: language, code: code, agent: agent)
+        let newSnippet = CodeSnippet(name: trimmedName, language: language, code: code)
         modelContext.insert(newSnippet)
+        agent.codeSnippets.append(newSnippet)
         try? modelContext.save()
     }
 

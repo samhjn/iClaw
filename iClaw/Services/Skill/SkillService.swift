@@ -81,8 +81,10 @@ final class SkillService {
         if agent.installedSkills.contains(where: { $0.skill?.id == skill.id }) {
             return nil
         }
-        let installation = InstalledSkill(agent: agent, skill: skill)
+        let installation = InstalledSkill()
         modelContext.insert(installation)
+        agent.installedSkills.append(installation)
+        installation.skill = skill
         agent.updatedAt = Date()
         try? modelContext.save()
         return installation

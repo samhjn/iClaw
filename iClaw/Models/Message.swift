@@ -38,11 +38,9 @@ final class Message {
         toolCallsData: Data? = nil,
         toolCallId: String? = nil,
         name: String? = nil,
-        session: Session? = nil,
         tokenEstimate: Int = 0
     ) {
         self.id = UUID()
-        self.session = session
         self.roleRaw = role.rawValue
         self.content = content
         self.toolCallsData = toolCallsData

@@ -189,15 +189,18 @@ final class AgentFileManagerTests: XCTestCase {
     @MainActor
     func testResolveAgentIdForSubAgent() {
         let parent = Agent(name: "Parent")
-        let child = Agent(name: "Child", parentAgent: parent)
+        let child = Agent(name: "Child")
+        parent.subAgents.append(child)
         XCTAssertEqual(fm.resolveAgentId(for: child), parent.id)
     }
 
     @MainActor
     func testResolveAgentIdForDeepNesting() {
         let root = Agent(name: "Root")
-        let mid = Agent(name: "Mid", parentAgent: root)
-        let leaf = Agent(name: "Leaf", parentAgent: mid)
+        let mid = Agent(name: "Mid")
+        let leaf = Agent(name: "Leaf")
+        root.subAgents.append(mid)
+        mid.subAgents.append(leaf)
         XCTAssertEqual(fm.resolveAgentId(for: leaf), root.id)
     }
 }
