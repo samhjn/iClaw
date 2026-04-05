@@ -22,6 +22,118 @@ struct ModelCapabilities: Codable, Equatable {
     var supportsReasoning: Bool = false
 
     static let `default` = ModelCapabilities()
+
+    /// Infer default capabilities from a model name.
+    ///
+    /// Vision: GPT-4+, Claude 3.5+, Qwen-VL/Omni/3.5+, Gemini 2+
+    /// Image generation (no tool use): gemini-*-image-* models
+    static func inferred(from modelName: String) -> ModelCapabilities {
+        let base = modelName.split(separator: "/").last.map { String($0).lowercased() }
+            ?? modelName.lowercased()
+
+        if base.contains("gemini") && base.contains("image") {
+            return ModelCapabilities(
+                supportsVision: true,
+                supportsToolUse: false,
+                supportsImageGeneration: true,
+                supportsReasoning: false
+            )
+        }
+
+        if inferVision(base) {
+            return ModelCapabilities(
+                supportsVision: true,
+                supportsToolUse: true,
+                supportsImageGeneration: false,
+                supportsReasoning: false
+            )
+        }
+
+        return .default
+    }
+
+    // MARK: - Private inference helpers
+
+    private static func inferVision(_ name: String) -> Bool {
+        isGPTVisionCapable(name)
+            || isClaudeVisionCapable(name)
+            || isQwenVisionCapable(name)
+            || isGeminiVisionCapable(name)
+    }
+
+    /// GPT-4.x and above
+    private static func isGPTVisionCapable(_ name: String) -> Bool {
+        guard name.hasPrefix("gpt-") else { return false }
+        let rest = name.dropFirst(4)
+        guard let digit = rest.first, let num = digit.wholeNumberValue else { return false }
+        return num >= 4
+    }
+
+    /// Claude 3.5 and above
+    private static func isClaudeVisionCapable(_ name: String) -> Bool {
+        guard name.hasPrefix("claude") else { return false }
+
+        // New naming: claude-{variant}-{version} (e.g. claude-sonnet-4-6, claude-opus-4)
+        for variant in ["sonnet", "opus", "haiku"] {
+            let prefix = "claude-\(variant)-"
+            if name.hasPrefix(prefix) {
+                let rest = name.dropFirst(prefix.count)
+                if let digit = rest.first, let num = digit.wholeNumberValue, num >= 4 {
+                    return true
+                }
+            }
+        }
+
+        // Old naming: claude-{version}-{variant} (e.g. claude-3.5-sonnet, claude-3-5-sonnet)
+        guard name.hasPrefix("claude-") else { return false }
+        let rest = name.dropFirst(7) // "claude-"
+        guard let digit = rest.first, let num = digit.wholeNumberValue else { return false }
+        if num > 3 { return true }
+        if num == 3 {
+            let afterDigit = rest.dropFirst(1)
+            if afterDigit.hasPrefix(".5") || afterDigit.hasPrefix("-5") { return true }
+        }
+        return false
+    }
+
+    /// Qwen-VL, Qwen-Omni, or Qwen 3.5+
+    private static func isQwenVisionCapable(_ name: String) -> Bool {
+        guard name.contains("qwen") else { return false }
+        if name.contains("-vl") || name.contains("-omni") { return true }
+
+        // Version directly after "qwen" (no dash): qwen3.5, qwen4, etc.
+        guard let range = name.range(of: "qwen") else { return false }
+        let afterQwen = name[range.upperBound...]
+        guard let first = afterQwen.first, first.isNumber else { return false }
+        if let version = parseLeadingVersion(String(afterQwen)), version >= 3.5 {
+            return true
+        }
+        return false
+    }
+
+    /// Gemini 2 and above (non-image variants handled here)
+    private static func isGeminiVisionCapable(_ name: String) -> Bool {
+        guard name.hasPrefix("gemini-") else { return false }
+        let rest = name.dropFirst(7)
+        guard let digit = rest.first, let num = digit.wholeNumberValue else { return false }
+        return num >= 2
+    }
+
+    private static func parseLeadingVersion(_ str: String) -> Double? {
+        var numStr = ""
+        var hasDot = false
+        for ch in str {
+            if ch.isNumber {
+                numStr.append(ch)
+            } else if ch == "." && !hasDot {
+                hasDot = true
+                numStr.append(ch)
+            } else {
+                break
+            }
+        }
+        return numStr.isEmpty ? nil : Double(numStr)
+    }
 }
 
 @Model
@@ -144,7 +256,7 @@ final class LLMProvider {
         name: String,
         endpoint: String = "https://api.openai.com/v1",
         apiKey: String = "",
-        modelName: String = "gpt-4o",
+        modelName: String = "gpt-5.4",
         isDefault: Bool = false,
         maxTokens: Int = 4096,
         temperature: Double = 0.7

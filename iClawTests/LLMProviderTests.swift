@@ -31,7 +31,7 @@ final class LLMProviderTests: XCTestCase {
         let provider = LLMProvider(name: "Test Provider")
         XCTAssertEqual(provider.name, "Test Provider")
         XCTAssertEqual(provider.endpoint, "https://api.openai.com/v1")
-        XCTAssertEqual(provider.modelName, "gpt-4o")
+        XCTAssertEqual(provider.modelName, "gpt-5.4")
         XCTAssertFalse(provider.isDefault)
         XCTAssertEqual(provider.maxTokens, 4096)
         XCTAssertEqual(provider.temperature, 0.7)
@@ -165,6 +165,145 @@ final class LLMProviderTests: XCTestCase {
         let data = try JSONEncoder().encode(caps)
         let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: data)
         XCTAssertEqual(decoded, caps)
+    }
+
+    // MARK: - Inferred Capabilities
+
+    func testInferredCapabilities_GPTFamily() {
+        let cases: [(String, Bool)] = [
+            ("gpt-5.4", true),
+            ("openai/gpt-5.4", true),
+            ("openai/gpt-5.4-nano", true),
+            ("openai/gpt-5.3-codex", true),
+            ("gpt-4o", true),
+            ("gpt-4.1-mini", true),
+            ("gpt-3.5-turbo", false),
+        ]
+        for (model, expectedVision) in cases {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertEqual(caps.supportsVision, expectedVision,
+                           "\(model): expected vision=\(expectedVision)")
+            XCTAssertTrue(caps.supportsToolUse,
+                          "\(model): GPT models should support tool use")
+            XCTAssertFalse(caps.supportsImageGeneration,
+                           "\(model): GPT models should not generate images")
+        }
+    }
+
+    func testInferredCapabilities_ClaudeFamily() {
+        let visionModels = [
+            "claude-sonnet-4-6",
+            "claude-opus-4-6",
+            "anthropic/claude-sonnet-4.6",
+            "anthropic/claude-opus-4.6",
+            "claude-3.5-sonnet",
+            "claude-3-5-sonnet-20241022",
+        ]
+        for model in visionModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertTrue(caps.supportsVision,
+                          "\(model): expected vision=true")
+            XCTAssertTrue(caps.supportsToolUse,
+                          "\(model): expected toolUse=true")
+            XCTAssertFalse(caps.supportsImageGeneration,
+                           "\(model): expected imageGen=false")
+        }
+
+        let noVisionModels = [
+            "claude-3-opus",
+            "claude-3-haiku",
+        ]
+        for model in noVisionModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertFalse(caps.supportsVision,
+                           "\(model): expected vision=false (below 3.5)")
+        }
+    }
+
+    func testInferredCapabilities_GeminiVision() {
+        let visionModels = [
+            "gemini-3.1-pro-preview",
+            "google/gemini-3.1-flash-lite-preview",
+            "gemini-2.0-flash",
+            "gemini-2.5-pro",
+        ]
+        for model in visionModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertTrue(caps.supportsVision,
+                          "\(model): expected vision=true")
+            XCTAssertTrue(caps.supportsToolUse,
+                          "\(model): expected toolUse=true")
+            XCTAssertFalse(caps.supportsImageGeneration,
+                           "\(model): expected imageGen=false")
+        }
+
+        let noVision = ModelCapabilities.inferred(from: "gemini-1.5-pro")
+        XCTAssertFalse(noVision.supportsVision, "gemini-1.5 should not have vision")
+    }
+
+    func testInferredCapabilities_GeminiImageModels() {
+        let imageModels = [
+            "gemini-3.1-flash-image-preview",
+            "gemini-3-pro-image-preview",
+            "google/gemini-3.1-flash-image-preview",
+        ]
+        for model in imageModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertTrue(caps.supportsVision,
+                          "\(model): image models should support vision")
+            XCTAssertTrue(caps.supportsImageGeneration,
+                          "\(model): expected imageGen=true")
+            XCTAssertFalse(caps.supportsToolUse,
+                           "\(model): image models should NOT support tool use")
+        }
+    }
+
+    func testInferredCapabilities_QwenFamily() {
+        let visionModels = [
+            "qwen3.6-plus",
+            "qwen/qwen3.6-plus:free",
+            "qwen2.5-vl-72b",
+            "qwen-vl-max",
+            "qwen-omni-turbo",
+        ]
+        for model in visionModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertTrue(caps.supportsVision,
+                          "\(model): expected vision=true")
+            XCTAssertTrue(caps.supportsToolUse,
+                          "\(model): expected toolUse=true")
+        }
+
+        let noVision = [
+            "qwen2.5-72b",
+            "qwen3-8b",
+        ]
+        for model in noVision {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertFalse(caps.supportsVision,
+                           "\(model): expected vision=false (below 3.5, no vl/omni)")
+        }
+    }
+
+    func testInferredCapabilities_UnknownModels() {
+        let unknowns = ["llama3", "deepseek-chat", "mistral-large"]
+        for model in unknowns {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertEqual(caps, .default,
+                           "\(model): unknown model should return default capabilities")
+        }
+    }
+
+    func testInferredCapabilities_DoesNotOverrideExisting() {
+        let custom = ModelCapabilities(
+            supportsVision: false,
+            supportsToolUse: false,
+            supportsImageGeneration: true,
+            supportsReasoning: true
+        )
+        let inferred = ModelCapabilities.inferred(from: "gpt-5.4")
+        XCTAssertNotEqual(inferred, custom,
+                          "Inferred and custom should differ — caller decides which to use")
     }
 
     // MARK: - Enabled Models

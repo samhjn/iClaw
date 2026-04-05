@@ -9,7 +9,7 @@ struct LLMProviderEditView: View {
     @State private var name: String = ""
     @State private var endpoint: String = "https://api.openai.com/v1"
     @State private var apiKey: String = ""
-    @State private var modelName: String = "gpt-4o"
+    @State private var modelName: String = "gpt-5.4"
     @State private var maxTokens: Int = 4096
     @State private var temperature: Double = 0.7
     @State private var apiStyle: APIStyle = .openAI
@@ -64,7 +64,7 @@ struct LLMProviderEditView: View {
                 Button(L10n.Common.add) {
                     let trimmed = newModelName.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty {
-                        enabledModels.insert(trimmed)
+                        enableModel(trimmed)
                     }
                     newModelName = ""
                 }
@@ -100,7 +100,7 @@ struct LLMProviderEditView: View {
                     )
                 }
             } else {
-                enabledModels = [modelName]
+                enableModel(modelName)
             }
         }
     }
@@ -148,7 +148,7 @@ struct LLMProviderEditView: View {
                         ForEach(allKnownModels, id: \.self) { model in
                             Button(model) {
                                 modelName = model
-                                enabledModels.insert(model)
+                                enableModel(model)
                             }
                         }
                     } label: {
@@ -350,7 +350,7 @@ struct LLMProviderEditView: View {
                                     .font(.subheadline)
                                 Spacer()
                                 Button {
-                                    enabledModels.insert(model)
+                                    enableModel(model)
                                 } label: {
                                     Image(systemName: "plus.circle.fill")
                                         .foregroundStyle(.green)
@@ -367,7 +367,7 @@ struct LLMProviderEditView: View {
 
                 Button(L10n.Provider.enableAll) {
                     for m in fetchedModels {
-                        enabledModels.insert(m)
+                        enableModel(m)
                     }
                 }
                 .font(.subheadline)
@@ -395,48 +395,52 @@ struct LLMProviderEditView: View {
         Section(L10n.Provider.presets) {
             Button("OpenAI") {
                 endpoint = "https://api.openai.com/v1"
-                modelName = "gpt-4o"
+                modelName = "gpt-5.4"
                 apiStyle = .openAI
-                enabledModels.insert("gpt-4o")
+                enableModel("gpt-5.4")
             }
             Button("Anthropic") {
                 endpoint = "https://api.anthropic.com/v1"
-                modelName = "claude-sonnet-4-20250514"
+                modelName = "claude-sonnet-4-6"
                 apiStyle = .anthropic
-                enabledModels.insert("claude-sonnet-4-20250514")
-                modelCapabilities["claude-sonnet-4-20250514"] = ModelCapabilities(
-                    supportsVision: true,
-                    supportsToolUse: true,
-                    supportsImageGeneration: false,
-                    supportsReasoning: true
-                )
+                enableModel("claude-sonnet-4-6")
+                modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
             }
             Button("DeepSeek") {
                 endpoint = "https://api.deepseek.com/v1"
                 modelName = "deepseek-chat"
                 apiStyle = .openAI
-                enabledModels.insert("deepseek-chat")
+                enableModel("deepseek-chat")
             }
             Button("OpenRouter") {
                 endpoint = "https://openrouter.ai/api/v1"
-                modelName = "openai/gpt-4o"
+                modelName = "anthropic/claude-sonnet-4.6"
                 apiStyle = .openAI
-                enabledModels.insert("openai/gpt-4o")
+                enableModel("anthropic/claude-sonnet-4.6")
+                enableModel("openai/gpt-5.4")
             }
             Button("Local (Ollama)") {
                 endpoint = "http://localhost:11434/v1"
                 modelName = "llama3"
                 apiKey = "ollama"
                 apiStyle = .openAI
-                enabledModels.insert("llama3")
+                enableModel("llama3")
             }
         }
     }
 
     // MARK: - Actions
 
+    /// Insert model into enabled set and auto-infer capabilities if not already configured.
+    private func enableModel(_ model: String) {
+        enabledModels.insert(model)
+        if modelCapabilities[model] == nil {
+            modelCapabilities[model] = ModelCapabilities.inferred(from: model)
+        }
+    }
+
     private func save() {
-        enabledModels.insert(modelName)
+        enableModel(modelName)
 
         // Encode capabilities JSON directly to avoid computed property setter issues with SwiftData
         let capsJSON: String? = {
@@ -505,7 +509,7 @@ struct LLMProviderEditView: View {
                 )
                 await MainActor.run {
                     fetchedModels = models
-                    enabledModels.insert(modelName)
+                    enableModel(modelName)
                     isFetchingModels = false
 
                     if let p = existingProvider {
