@@ -79,21 +79,14 @@ final class LaunchTaskManager {
         let localService = LocalEmbeddingService()
         let batchSize = 5
 
+        var computed: [(sessionId: UUID, vector: [Float], text: String)] = []
+
         for (index, task) in pending.enumerated() {
             if Task.isCancelled { break }
 
             guard !task.text.isEmpty else { continue }
             guard let vector = localService.embed(text: task.text) else { continue }
-
-            await MainActor.run {
-                let context = ModelContext(self.container)
-                let store = SessionVectorStore(modelContext: context)
-                store.upsertEmbeddingDirect(
-                    sessionId: task.sessionId,
-                    vector: vector,
-                    sourceText: task.text
-                )
-            }
+            computed.append((task.sessionId, vector, task.text))
 
             let progress = Double(index + 1) / Double(total)
             await MainActor.run {
@@ -105,6 +98,19 @@ final class LaunchTaskManager {
 
             if (index + 1) % batchSize == 0 && index + 1 < total {
                 try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
+
+        guard !computed.isEmpty else { return }
+        await MainActor.run {
+            let context = ModelContext(self.container)
+            let store = SessionVectorStore(modelContext: context)
+            for item in computed {
+                store.upsertEmbeddingDirect(
+                    sessionId: item.sessionId,
+                    vector: item.vector,
+                    sourceText: item.text
+                )
             }
         }
     }

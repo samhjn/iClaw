@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Photos
 
 // MARK: - Coordinator
 
@@ -37,7 +38,7 @@ final class ImagePreviewCoordinator {
 // MARK: - Root Overlay Modifier
 
 struct ImagePreviewRootModifier: ViewModifier {
-    @State private var coordinator = ImagePreviewCoordinator.shared
+    private var coordinator: ImagePreviewCoordinator { .shared }
 
     func body(content: Content) -> some View {
         content.overlay {
@@ -158,7 +159,7 @@ private struct ImagePreviewOverlay: View {
             }
 
             Button {
-                UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                saveImageToPhotos(image)
                 flashToast(L10n.Chat.imageSaved)
             } label: {
                 VStack(spacing: 4) {
@@ -242,6 +243,16 @@ private struct ImagePreviewOverlay: View {
             } else {
                 scale = 2.5
                 lastScale = 2.5
+            }
+        }
+    }
+
+    private func saveImageToPhotos(_ image: UIImage) {
+        let imageToSave = image
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else { return }
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetCreationRequest.creationRequestForAsset(from: imageToSave)
             }
         }
     }

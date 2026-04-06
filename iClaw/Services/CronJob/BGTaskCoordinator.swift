@@ -34,8 +34,10 @@ final class CronBGTaskCoordinator: @unchecked Sendable {
     @discardableResult
     func registerCronTask() -> Bool {
         guard !isRegistered else { return false }
+
+        let identifier = CronScheduler.bgTaskIdentifier
         let registered = registrar.register(
-            forTaskWithIdentifier: CronScheduler.bgTaskIdentifier,
+            forTaskWithIdentifier: identifier,
             using: nil
         ) { [weak self] task in
             guard let refreshTask = task as? BGAppRefreshTask else {
@@ -50,7 +52,12 @@ final class CronBGTaskCoordinator: @unchecked Sendable {
                 scheduler.handleBackgroundTask(refreshTask)
             }
         }
+
         isRegistered = registered
+        if !registered {
+            print("[BGTaskCoordinator] Registration failed for '\(identifier)'. "
+                  + "Verify BGTaskSchedulerPermittedIdentifiers in Info.plist.")
+        }
         return registered
     }
 }

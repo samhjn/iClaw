@@ -10,6 +10,8 @@ struct iClawApp: App {
     private let bgTaskCoordinator: CronBGTaskCoordinator
 
     init() {
+        Self.installExceptionHandler()
+
         let schema = Schema([
             Agent.self,
             AgentConfig.self,
@@ -45,12 +47,24 @@ struct iClawApp: App {
 
         _launchTaskManager = State(initialValue: LaunchTaskManager(container: modelContainer))
 
-        // Only keep lightweight, correctness-critical work synchronous
         Self.resetStaleActiveSessions(in: modelContainer)
 
         let coordinator = CronBGTaskCoordinator()
         coordinator.registerCronTask()
         bgTaskCoordinator = coordinator
+    }
+
+    private static func installExceptionHandler() {
+        NSSetUncaughtExceptionHandler { exception in
+            let info = """
+            [iClawApp] Uncaught NSException: \(exception.name.rawValue)
+            Reason: \(exception.reason ?? "unknown")
+            User Info: \(exception.userInfo ?? [:])
+            Stack:
+            \(exception.callStackSymbols.joined(separator: "\n"))
+            """
+            print(info)
+        }
     }
 
     /// Sessions stuck in `isActive` from a previous crash or force-quit can never
