@@ -114,6 +114,47 @@ struct ImageAttachment: Codable, Identifiable {
                                width: width, height: height)
     }
 
+    /// Create from an `agentfile://` reference by loading data from disk.
+    /// Returns nil if the referenced file doesn't exist or isn't a valid image.
+    static func from(fileReference ref: String) -> ImageAttachment? {
+        guard let data = AgentFileManager.shared.loadImageData(from: ref) else { return nil }
+        let mimeType = mimeTypeForReference(ref)
+        let width: Int
+        let height: Int
+        let thumbnail: Data
+        if let image = UIImage(data: data) {
+            width = Int(image.size.width * image.scale)
+            height = Int(image.size.height * image.scale)
+            thumbnail = generateThumbnail(from: image)
+        } else {
+            width = 512; height = 512
+            thumbnail = Data()
+        }
+        return ImageAttachment(
+            id: UUID(),
+            imageData: thumbnail,
+            mimeType: mimeType,
+            width: width,
+            height: height,
+            fileReference: ref
+        )
+    }
+
+    private static func mimeTypeForReference(_ ref: String) -> String {
+        guard let (_, filename) = AgentFileManager.parseFileReference(ref) else { return "image/jpeg" }
+        let ext = (filename as NSString).pathExtension.lowercased()
+        switch ext {
+        case "png": return "image/png"
+        case "gif": return "image/gif"
+        case "webp": return "image/webp"
+        case "heic": return "image/heic"
+        case "bmp": return "image/bmp"
+        case "tiff", "tif": return "image/tiff"
+        case "svg": return "image/svg+xml"
+        default: return "image/jpeg"
+        }
+    }
+
     // MARK: - Thumbnail
 
     static func generateThumbnail(from image: UIImage, maxDimension: CGFloat = 64, quality: CGFloat = 0.3) -> Data {

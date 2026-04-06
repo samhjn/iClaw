@@ -93,9 +93,10 @@ final class Message {
     }
 
     /// Parse markdown image syntax with base64 data URIs, returning cleaned text and extracted images.
-    /// Images are replaced with `![](attachment:N)` so the markdown renderer can display them inline.
+    /// When `agentId` is provided, images are saved to disk and replaced with `![alt](agentfile://...)`
+    /// references. Otherwise falls back to `![](attachment:N)` placeholders.
     static func extractInlineImages(from content: String, startIndex: Int = 0, agentId: UUID? = nil) -> (cleanedContent: String, images: [ImageAttachment]) {
-        let pattern = "!\\[[^\\]]*\\]\\((data:image/[^)]+)\\)"
+        let pattern = "!\\[([^\\]]*)\\]\\((data:image/[^)]+)\\)"
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return (content, [])
         }
@@ -110,10 +111,15 @@ final class Message {
         var imageIndex = startIndex
 
         for match in matches {
-            let uri = nsContent.substring(with: match.range(at: 1))
+            let alt = nsContent.substring(with: match.range(at: 1))
+            let uri = nsContent.substring(with: match.range(at: 2))
             if let attachment = ImageAttachment.from(base64DataURI: uri, agentId: agentId) {
                 images.append(attachment)
-                replacementRanges.append((match.range, "![](attachment:\(imageIndex))"))
+                if let ref = attachment.fileReference {
+                    replacementRanges.append((match.range, "![\(alt)](\(ref))"))
+                } else {
+                    replacementRanges.append((match.range, "![\(alt)](attachment:\(imageIndex))"))
+                }
                 imageIndex += 1
             }
         }

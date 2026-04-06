@@ -865,6 +865,14 @@ private struct MarkdownImageView: View {
 
     private var isDataURI: Bool { urlString.hasPrefix("data:image/") }
     private var isAttachmentRef: Bool { urlString.hasPrefix("attachment:") }
+    private var isAgentFileRef: Bool { urlString.hasPrefix("agentfile://") }
+
+    private var isAgentFileImage: Bool {
+        guard isAgentFileRef,
+              let (_, filename) = AgentFileManager.parseFileReference(urlString) else { return false }
+        let ext = (filename as NSString).pathExtension.lowercased()
+        return ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "tif"].contains(ext)
+    }
 
     private var attachmentIndex: Int? {
         guard isAttachmentRef,
@@ -893,7 +901,19 @@ private struct MarkdownImageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if isAttachmentRef {
+            if isAgentFileRef {
+                if isAgentFileImage {
+                    if let data = AgentFileManager.shared.loadImageData(from: urlString),
+                       let uiImage = UIImage(data: data) {
+                        thumbnailImage(Image(uiImage: uiImage))
+                            .onAppear { resolvedImage = uiImage }
+                    } else {
+                        imageDeletedView
+                    }
+                } else {
+                    agentFileLinkView
+                }
+            } else if isAttachmentRef {
                 if isAttachmentFileDeleted {
                     imageDeletedView
                 } else if let uiImage = attachmentImage {
@@ -945,7 +965,11 @@ private struct MarkdownImageView: View {
             }
         }
         .task {
-            if isDataURI {
+            if isAgentFileRef && isAgentFileImage {
+                if let data = AgentFileManager.shared.loadImageData(from: urlString) {
+                    resolvedImage = UIImage(data: data)
+                }
+            } else if isDataURI {
                 resolvedImage = Self.decodeDataURI(urlString)
             } else if !isAttachmentRef, let url = URL(string: urlString) {
                 resolvedImage = await Self.downloadImage(from: url)
@@ -974,6 +998,23 @@ private struct MarkdownImageView: View {
             Text(L10n.Chat.imageLoadFailed)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemGray6))
+        )
+    }
+
+    private var agentFileLinkView: some View {
+        let filename = AgentFileManager.parseFileReference(urlString).map(\.1) ?? urlString
+        return HStack(spacing: 6) {
+            Image(systemName: "doc.fill")
+                .foregroundStyle(.blue)
+            Text(alt.isEmpty ? filename : alt)
+                .font(.caption)
+                .foregroundStyle(.blue)
+                .underline()
         }
         .padding(8)
         .background(

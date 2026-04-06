@@ -1305,7 +1305,8 @@ final class ChatViewModel {
     // MARK: - Modality Stripping
 
     /// Removes image content parts from context messages when the target model
-    /// lacks vision support. Returns the number of images that were stripped.
+    /// lacks vision support. Also strips `agentfile://` image refs from text content
+    /// (replacing with `[Image: description]`). Returns the number of images that were stripped.
     @discardableResult
     static func stripUnsupportedModalities(
         from messages: inout [LLMChatMessage],
@@ -1316,17 +1317,32 @@ final class ChatViewModel {
         var strippedCount = 0
         var indicesToRemove: [Int] = []
         for i in messages.indices {
+            var didModify = false
+
+            // Strip agentfile:// image refs from text content
+            if let content = messages[i].content, content.contains("agentfile://") {
+                let stripped = ContextManager.stripAgentFileImageRefs(content)
+                if stripped != content {
+                    messages[i] = LLMChatMessage(
+                        role: messages[i].role,
+                        content: stripped,
+                        contentParts: messages[i].contentParts,
+                        toolCalls: messages[i].toolCalls,
+                        toolCallId: messages[i].toolCallId,
+                        name: messages[i].name
+                    )
+                    didModify = true
+                }
+            }
+
             guard let parts = messages[i].contentParts else { continue }
             let imageCount = parts.filter { if case .imageURL = $0 { return true }; return false }.count
             guard imageCount > 0 else { continue }
             strippedCount += imageCount
 
-            // Clear contentParts entirely so the encoder falls back to
-            // plain string `content`, which all APIs accept for any role.
             let hasTextContent = !(messages[i].content ?? "").isEmpty
             let hasToolCalls = messages[i].toolCalls != nil
             if !hasTextContent && !hasToolCalls && messages[i].toolCallId == nil {
-                // Synthetic image-only message (e.g. flush from ContextManager) — remove entirely
                 indicesToRemove.append(i)
             } else {
                 messages[i] = LLMChatMessage(
@@ -1338,6 +1354,7 @@ final class ChatViewModel {
                     name: messages[i].name
                 )
             }
+            _ = didModify
         }
         for i in indicesToRemove.reversed() {
             messages.remove(at: i)

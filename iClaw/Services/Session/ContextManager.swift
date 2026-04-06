@@ -104,6 +104,14 @@ final class ContextManager {
                     deletedCount += deleted
                 }
 
+                // Auto-resolve agentfile:// image refs in text content
+                let existingRefs = Set(allImages.compactMap(\.fileReference))
+                for img in Self.resolveAgentFileImages(from: text) {
+                    if let ref = img.fileReference, !existingRefs.contains(ref) {
+                        allImages.append(img)
+                    }
+                }
+
                 let forwardedCount = pendingImages.count
                 allImages.append(contentsOf: pendingImages)
                 pendingImages = []
@@ -273,10 +281,20 @@ final class ContextManager {
         switch message.role {
         case .user:
             let text = Self.stripImageRefsForContext(message.content ?? "")
+            var allImages: [ImageAttachment] = []
             if let imgData = message.imageAttachmentsData,
                let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
                !images.isEmpty {
-                return .userWithImages(text, images: images)
+                allImages.append(contentsOf: images)
+            }
+            let existingRefs = Set(allImages.compactMap(\.fileReference))
+            for img in Self.resolveAgentFileImages(from: text) {
+                if let ref = img.fileReference, !existingRefs.contains(ref) {
+                    allImages.append(img)
+                }
+            }
+            if !allImages.isEmpty {
+                return .userWithImages(text, images: allImages)
             }
             return .user(text)
         case .assistant:
@@ -298,7 +316,7 @@ final class ContextManager {
     }
 
     /// Strip inline image references (base64 data URIs and attachment:N refs) from content.
-    /// Acts as a safety net so the LLM never sees raw base64 or internal attachment URLs.
+    /// `agentfile://` refs are kept since they are small, informative URLs (not raw base64).
     private static func stripImageRefsForContext(_ content: String) -> String {
         var result = content
 
@@ -319,6 +337,39 @@ final class ContextManager {
         }
 
         return result
+    }
+
+    // MARK: - agentfile:// Image Resolution
+
+    /// Resolve `![alt](agentfile://...)` image references in content to `ImageAttachment` objects.
+    /// Used to auto-inject images into LLM context when messages contain `agentfile://` image refs.
+    static func resolveAgentFileImages(from content: String) -> [ImageAttachment] {
+        guard content.contains("agentfile://") else { return [] }
+
+        let pattern = "!\\[[^\\]]*\\]\\((agentfile://[^)]+)\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let nsContent = content as NSString
+        let range = NSRange(location: 0, length: nsContent.length)
+        let matches = regex.matches(in: content, range: range)
+        guard !matches.isEmpty else { return [] }
+
+        var images: [ImageAttachment] = []
+        for match in matches {
+            let ref = nsContent.substring(with: match.range(at: 1))
+            if let attachment = ImageAttachment.from(fileReference: ref) {
+                images.append(attachment)
+            }
+        }
+        return images
+    }
+
+    /// Replace `![alt](agentfile://...)` with `[Image: alt]` for models that don't support vision.
+    static func stripAgentFileImageRefs(_ content: String) -> String {
+        guard content.contains("agentfile://") else { return content }
+        let pattern = "!\\[([^\\]]*)\\]\\(agentfile://[^)]+\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return content }
+        let range = NSRange(content.startIndex..., in: content)
+        return regex.stringByReplacingMatches(in: content, range: range, withTemplate: "[Image: $1]")
     }
 }
 

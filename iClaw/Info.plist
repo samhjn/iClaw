@@ -28,6 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>iclaw</string>
+				<string>agentfile</string>
 			</array>
 		</dict>
 	</array>

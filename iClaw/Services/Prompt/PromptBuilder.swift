@@ -5,11 +5,13 @@ final class PromptBuilder {
     func buildSystemPrompt(
         for agent: Agent,
         isSubAgent: Bool = false,
-        relatedSessions: [(id: UUID, title: String, updatedAt: Date)] = []
+        relatedSessions: [(id: UUID, title: String, updatedAt: Date)] = [],
+        rootAgentId: UUID? = nil
     ) -> String {
         var sections: [String] = []
 
-        sections.append(buildCapabilitiesSection(for: agent))
+        let effectiveRootId = rootAgentId ?? AgentFileManager.shared.resolveAgentId(for: agent)
+        sections.append(buildCapabilitiesSection(for: agent, rootAgentId: effectiveRootId))
 
         sections.append(buildSoulSection(agent.soulMarkdown))
 
@@ -75,7 +77,7 @@ final class PromptBuilder {
         agent.permissionLevel(for: category) != .disabled
     }
 
-    private func buildCapabilitiesSection(for agent: Agent) -> String {
+    private func buildCapabilitiesSection(for agent: Agent, rootAgentId: UUID) -> String {
         var parts: [String] = [
             "## Your Capabilities\n\nYou are an AI agent with the following tools available:"
         ]
@@ -158,6 +160,20 @@ final class PromptBuilder {
             - `attach_media`: Attach an image file from your folder into the conversation so you can see and analyze it
             - Files persist across sessions. Sub-agents share the parent agent's file folder.
             - Generated images are automatically saved here. Users can also upload files via the UI.
+
+            #### File References (`agentfile://` scheme)
+            Your file folder ID: `\(rootAgentId.uuidString)`
+
+            Reference files in markdown using the `agentfile://` URL scheme:
+            - **Link to a file**: `[display text](agentfile://\(rootAgentId.uuidString)/filename)` — rendered as a clickable link in the UI
+            - **Embed an image**: `![description](agentfile://\(rootAgentId.uuidString)/filename.jpg)` — rendered inline in the conversation
+
+            When you output `![description](agentfile://...)` for an image file, the system will:
+            1. Render the image inline in the UI for the user to see
+            2. Automatically inject the image into subsequent LLM context so you (and sub-agents) can see it
+            3. If the current model does not support vision, images will be stripped and the user will be notified
+
+            Images you generate inline (base64 data URIs) are automatically saved to your file folder and converted to `agentfile://` references.
             """)
         }
 

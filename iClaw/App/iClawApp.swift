@@ -127,6 +127,11 @@ struct iClawApp: App {
 
     /// Handles URL scheme: iclaw://cron/trigger/{jobId} and iclaw://cron/run-due
     private func handleDeepLink(_ url: URL) {
+        if url.scheme == "agentfile" {
+            handleAgentFileLink(url)
+            return
+        }
+
         guard url.scheme == "iclaw" else { return }
 
         let pathComponents = url.pathComponents.filter { $0 != "/" }
@@ -142,6 +147,28 @@ struct iClawApp: App {
             }
         } else if fullPath == "cron/run-due" {
             triggerAllDueJobs()
+        }
+    }
+
+    private func handleAgentFileLink(_ url: URL) {
+        let ref = url.absoluteString
+        guard let (agentId, filename) = AgentFileManager.parseFileReference(ref) else { return }
+        let ext = (filename as NSString).pathExtension.lowercased()
+        let imageExts: Set<String> = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "tif"]
+
+        if imageExts.contains(ext) {
+            if let data = AgentFileManager.shared.loadImageData(from: ref),
+               let image = UIImage(data: data) {
+                ImagePreviewCoordinator.shared.show(image)
+            }
+        } else {
+            let fileURL = AgentFileManager.shared.fileURL(agentId: agentId, name: filename)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+            let activityVC = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootVC = windowScene.windows.first?.rootViewController {
+                rootVC.present(activityVC, animated: true)
+            }
         }
     }
 

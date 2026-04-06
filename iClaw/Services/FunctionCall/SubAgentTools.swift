@@ -80,13 +80,24 @@ struct SubAgentTools {
         }
 
         let forwardImages = arguments["forward_images"] as? String ?? "none"
-        let imagesToForward = resolveForwardImages(mode: forwardImages)
+        let imageRefs = resolveForwardImageRefs(mode: forwardImages)
+
+        // Embed agentfile:// image refs in the message text.
+        // ContextManager will auto-resolve them to actual images for the sub-agent's LLM context.
+        let enrichedMessage: String
+        if imageRefs.isEmpty {
+            enrichedMessage = message
+        } else {
+            let refLines = imageRefs.enumerated().map { i, ref in
+                "![forwarded image \(i + 1)](\(ref))"
+            }.joined(separator: "\n")
+            enrichedMessage = message + "\n\n" + refLines
+        }
 
         do {
             let response = try await subAgentManager.sendMessage(
                 to: agentId,
-                content: message,
-                imageAttachments: imagesToForward.isEmpty ? nil : imagesToForward
+                content: enrichedMessage
             )
             return ToolCallResult(response.text, imageAttachments: response.imageAttachments)
         } catch is CancellationError {
@@ -96,8 +107,8 @@ struct SubAgentTools {
         }
     }
 
-    /// Collect images from the parent session based on the forward mode.
-    private func resolveForwardImages(mode: String) -> [ImageAttachment] {
+    /// Collect agentfile:// image references from the parent session.
+    private func resolveForwardImageRefs(mode: String) -> [String] {
         guard mode != "none", let sessionId = parentSessionId else { return [] }
 
         let descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.id == sessionId })
@@ -107,24 +118,23 @@ struct SubAgentTools {
 
         switch mode {
         case "latest":
-            // Find the most recent message (any role) that has images
             if let msg = sorted.last(where: { $0.imageAttachmentsData != nil }),
                let data = msg.imageAttachmentsData,
                let images = try? JSONDecoder().decode([ImageAttachment].self, from: data),
                !images.isEmpty {
-                return images
+                return images.compactMap(\.fileReference)
             }
             return []
 
         case "all":
-            var allImages: [ImageAttachment] = []
+            var allRefs: [String] = []
             for msg in sorted {
                 if let data = msg.imageAttachmentsData,
                    let images = try? JSONDecoder().decode([ImageAttachment].self, from: data) {
-                    allImages.append(contentsOf: images)
+                    allRefs.append(contentsOf: images.compactMap(\.fileReference))
                 }
             }
-            return allImages
+            return allRefs
 
         default:
             return []
