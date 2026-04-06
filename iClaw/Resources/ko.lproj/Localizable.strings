@@ -259,6 +259,8 @@
 "sessions.messagesCount" = "%d개 메시지";
 "sessions.draft" = "임시 저장";
 "sessions.searchSessions" = "세션 검색";
+"sessions.selectSession" = "세션 선택";
+"sessions.selectSessionDescription" = "사이드바에서 세션을 선택하여 대화를 시작하세요.";
 
 // MARK: - Settings
 "settings.title" = "설정";

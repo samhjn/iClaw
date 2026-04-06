@@ -6,12 +6,13 @@ struct SessionListView: View {
     @Environment(\.dismissSearch) private var dismissSearch
     @State private var viewModel: SessionListViewModel?
     @State private var showNewSessionSheet = false
-    @State private var navigateToSession: Session?
+    @State private var selectedSession: Session?
     @State private var searchText = ""
     @State private var isSearchActive = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
 
     var body: some View {
-        NavigationStack {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             Group {
                 if let vm = viewModel {
                     if vm.sessions.isEmpty && isSearchActive {
@@ -39,7 +40,7 @@ struct SessionListView: View {
                 NewSessionSheet { agent in
                     if let vm = viewModel {
                         let session = vm.createSession(agent: agent)
-                        navigateToSession = session
+                        selectedSession = session
                     }
                     showNewSessionSheet = false
                 }
@@ -56,8 +57,16 @@ struct SessionListView: View {
                     viewModel?.applySearch()
                 }
             }
-            .navigationDestination(item: $navigateToSession) { session in
+        } detail: {
+            if let session = selectedSession {
                 ChatView(session: session)
+                    .id(session.id)
+            } else {
+                ContentUnavailableView {
+                    Label(L10n.Sessions.selectSession, systemImage: "bubble.left.and.bubble.right")
+                } description: {
+                    Text(L10n.Sessions.selectSessionDescription)
+                }
             }
         }
         .onAppear {
@@ -71,7 +80,7 @@ struct SessionListView: View {
         .onDisappear {
             viewModel?.stopAutoRefresh()
         }
-        .onChange(of: navigateToSession) { oldValue, newValue in
+        .onChange(of: selectedSession) { oldValue, newValue in
             if oldValue != nil && newValue == nil {
                 viewModel?.fetchSessions()
             }
@@ -96,20 +105,18 @@ struct SessionListView: View {
     }
 
     private func sessionsList(_ vm: SessionListViewModel) -> some View {
-        List {
+        List(selection: $selectedSession) {
             ForEach(vm.sessions, id: \.id) { session in
-                SessionRowView(session: session, rowData: vm.rowDataCache[session.id])
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        navigateToSession = session
+                NavigationLink(value: session) {
+                    SessionRowView(session: session, rowData: vm.rowDataCache[session.id])
+                }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        vm.sessionToDelete = session
+                    } label: {
+                        Label(L10n.Common.delete, systemImage: "trash")
                     }
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            vm.sessionToDelete = session
-                        } label: {
-                            Label(L10n.Common.delete, systemImage: "trash")
-                        }
-                    }
+                }
             }
             .onDelete { offsets in
                 guard let first = offsets.first else { return }
@@ -126,6 +133,9 @@ struct SessionListView: View {
         )) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let session = vm.sessionToDelete {
+                    if selectedSession?.id == session.id {
+                        selectedSession = nil
+                    }
                     vm.deleteSession(session)
                     vm.sessionToDelete = nil
                 }

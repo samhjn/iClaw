@@ -259,6 +259,8 @@
 "sessions.messagesCount" = "%d 件のメッセージ";
 "sessions.draft" = "下書き";
 "sessions.searchSessions" = "セッションを検索";
+"sessions.selectSession" = "セッションを選択";
+"sessions.selectSessionDescription" = "サイドバーからセッションを選択してチャットを始めましょう。";
 
 // MARK: - Settings
 "settings.title" = "設定";

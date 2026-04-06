@@ -260,6 +260,8 @@
 "sessions.messagesCount" = "%d messages";
 "sessions.draft" = "Draft";
 "sessions.searchSessions" = "Search sessions";
+"sessions.selectSession" = "Select a Session";
+"sessions.selectSessionDescription" = "Choose a session from the sidebar to start chatting.";
 
 // MARK: - Settings
 "settings.title" = "Settings";

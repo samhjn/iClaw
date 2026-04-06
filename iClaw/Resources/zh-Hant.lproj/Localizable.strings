@@ -260,6 +260,8 @@
 "sessions.messagesCount" = "%d 則訊息";
 "sessions.draft" = "草稿";
 "sessions.searchSessions" = "搜尋對話";
+"sessions.selectSession" = "選擇對話";
+"sessions.selectSessionDescription" = "從側邊欄選擇一個對話開始聊天。";
 
 // MARK: - Settings
 "settings.title" = "設定";

@@ -372,6 +372,8 @@ enum L10n {
         static func messagesCount(_ count: Int) -> String { tr("sessions.messagesCount", count) }
         static var draft: String { tr("sessions.draft") }
         static var searchSessions: String { tr("sessions.searchSessions") }
+        static var selectSession: String { tr("sessions.selectSession") }
+        static var selectSessionDescription: String { tr("sessions.selectSessionDescription") }
     }
 
     // MARK: - Settings
