@@ -102,10 +102,11 @@ final class LaunchTaskManager {
         }
 
         guard !computed.isEmpty else { return }
+        let results = computed
         await MainActor.run {
             let context = ModelContext(self.container)
             let store = SessionVectorStore(modelContext: context)
-            for item in computed {
+            for item in results {
                 store.upsertEmbeddingDirect(
                     sessionId: item.sessionId,
                     vector: item.vector,
