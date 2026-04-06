@@ -7,6 +7,7 @@ struct iClawApp: App {
     let modelContainer: ModelContainer
     @State private var cronScheduler: CronScheduler?
     @State private var launchTaskManager: LaunchTaskManager
+    private let bgTaskCoordinator: CronBGTaskCoordinator
 
     init() {
         let schema = Schema([
@@ -46,6 +47,10 @@ struct iClawApp: App {
 
         // Only keep lightweight, correctness-critical work synchronous
         Self.resetStaleActiveSessions(in: modelContainer)
+
+        let coordinator = CronBGTaskCoordinator()
+        coordinator.registerCronTask()
+        bgTaskCoordinator = coordinator
     }
 
     /// Sessions stuck in `isActive` from a previous crash or force-quit can never
@@ -101,17 +106,7 @@ struct iClawApp: App {
         let scheduler = CronScheduler(modelContainer: modelContainer)
         scheduler.start()
         cronScheduler = scheduler
-
-        BGTaskScheduler.shared.register(
-            forTaskWithIdentifier: CronScheduler.bgTaskIdentifier,
-            using: nil
-        ) { task in
-            guard let refreshTask = task as? BGAppRefreshTask else {
-                task.setTaskCompleted(success: false)
-                return
-            }
-            scheduler.handleBackgroundTask(refreshTask)
-        }
+        bgTaskCoordinator.scheduler = scheduler
     }
 
     // MARK: - Deep Link Handling
