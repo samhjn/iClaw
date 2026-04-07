@@ -726,10 +726,12 @@ private struct MarkdownTableView: View {
     @State private var columnWidths: [CGFloat] = []
     @State private var hasBuilt = false
     @State private var showAll = false
-    @State private var expandedCells: Set<Int> = []
+    @State private var popoverCell: PopoverCell?
 
-    /// Encode (row, col) into a single Int for Set lookup. Row -1 = header.
-    private static func cellKey(row: Int, col: Int) -> Int { row &* 10000 &+ col }
+    private struct PopoverCell: Identifiable {
+        let id = UUID()
+        let text: AttributedString
+    }
 
     private static let maxCollapsedRows = 10
     private static let cellPaddingH: CGFloat = 8
@@ -753,7 +755,7 @@ private struct MarkdownTableView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     VStack(spacing: 0) {
-                        tableRow(cells: parsedHeaders, isHeader: true, rowIdx: -1)
+                        tableRow(cells: parsedHeaders, isHeader: true)
                             .background(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
 
                         Rectangle()
@@ -761,7 +763,7 @@ private struct MarkdownTableView: View {
                             .frame(height: 1)
 
                         ForEach(0..<visibleRowCount, id: \.self) { rowIdx in
-                            tableRow(cells: parsedRows[rowIdx], isHeader: false, rowIdx: rowIdx)
+                            tableRow(cells: parsedRows[rowIdx], isHeader: false)
                                 .background(rowIdx % 2 == 1
                                     ? (isUserMessage ? Color.white.opacity(0.05) : Color(.systemGray6).opacity(0.5))
                                     : Color.clear)
@@ -789,41 +791,51 @@ private struct MarkdownTableView: View {
             }
             .onAppear { buildIfNeeded() }
             .onChange(of: table) { _, _ in rebuild() }
+            .sheet(item: $popoverCell) { cell in
+                NavigationStack {
+                    ScrollView {
+                        Text(cell.text)
+                            .font(.body)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .navigationTitle("Cell Detail")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { popoverCell = nil }
+                        }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
         } else {
             Color.clear.frame(height: 1)
                 .onAppear { buildIfNeeded() }
         }
     }
 
-    private func tableRow(cells: [AttributedString], isHeader: Bool, rowIdx: Int) -> some View {
+    private func tableRow(cells: [AttributedString], isHeader: Bool) -> some View {
         HStack(spacing: 0) {
             ForEach(0..<columnWidths.count, id: \.self) { colIdx in
                 let alignment = colIdx < table.alignments.count ? table.alignments[colIdx] : TableAlignment.leading
-                let key = Self.cellKey(row: rowIdx, col: colIdx)
-                let isExpanded = expandedCells.contains(key)
-                let defaultLimit = isHeader ? 2 : 8
-                Text(colIdx < cells.count ? cells[colIdx] : AttributedString())
+                let cellText = colIdx < cells.count ? cells[colIdx] : AttributedString()
+                Text(cellText)
                     .font(isHeader ? .caption.bold() : .caption)
                     .foregroundStyle(isUserMessage ? .white : .primary)
-                    .lineLimit(isExpanded ? nil : defaultLimit)
+                    .lineLimit(isHeader ? 2 : 8)
                     .multilineTextAlignment(alignment.textAlignment)
                     .padding(.horizontal, Self.cellPaddingH)
                     .padding(.vertical, Self.cellPaddingV)
                     .frame(
-                        minWidth: columnWidths[colIdx],
-                        maxWidth: isExpanded ? .infinity : columnWidths[colIdx],
+                        width: columnWidths[colIdx],
                         alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
                     )
-                    .fixedSize(horizontal: false, vertical: true)
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            if isExpanded {
-                                expandedCells.remove(key)
-                            } else {
-                                expandedCells.insert(key)
-                            }
-                        }
+                    .onLongPressGesture {
+                        popoverCell = PopoverCell(text: cellText)
                     }
                 if colIdx < columnWidths.count - 1 {
                     Rectangle()
