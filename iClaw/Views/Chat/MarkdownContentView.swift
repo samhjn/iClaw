@@ -810,8 +810,8 @@ private struct MarkdownTableView: View {
                     .padding(.horizontal, Self.cellPaddingH)
                     .padding(.vertical, Self.cellPaddingV)
                     .frame(
-                        width: isExpanded ? nil : columnWidths[colIdx],
                         minWidth: columnWidths[colIdx],
+                        maxWidth: isExpanded ? .infinity : columnWidths[colIdx],
                         alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
                     )
                     .fixedSize(horizontal: false, vertical: true)
