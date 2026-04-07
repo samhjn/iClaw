@@ -13,9 +13,12 @@ concurrency:
 jobs:
   test:
     name: Build & Test
-    runs-on: macos-15
+    runs-on: macos-16
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.app/Contents/Developer
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -29,7 +32,7 @@ jobs:
             -project iClaw.xcodeproj \
             -scheme iClaw \
             -testPlan iClaw \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.0' \
             -resultBundlePath TestResults \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
