@@ -1555,3 +1555,208 @@ final class RetryDeduplicationTests: XCTestCase {
         XCTAssertFalse(vm2.canRetry, "canRetry must not recover after explicit dismiss")
     }
 }
+
+// MARK: - Session State Recovery Tests (cross-VM orphaned generation)
+
+/// Tests that session running state is preserved when the user navigates away
+/// (destroying the owning ChatViewModel) while a generation is still running.
+/// The generation Task survives in the static `activeGenerations` dictionary.
+final class SessionStateRecoveryTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        context = ModelContext(container)
+    }
+
+    @MainActor
+    override func tearDown() {
+        if let sessions = try? context.fetch(FetchDescriptor<Session>()) {
+            for s in sessions {
+                ChatViewModel._clearActiveGeneration(for: s.id)
+            }
+        }
+        container = nil
+        context = nil
+        super.tearDown()
+    }
+
+    // MARK: - recoverStaleActiveState skips reset when activeGenerations is live
+
+    @MainActor
+    func testStaleRecoverySkippedWhenActiveGenerationExists() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Running")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        // Push updatedAt far back so it exceeds the 120s stale threshold.
+        session.updatedAt = Date().addingTimeInterval(-300)
+        try! context.save()
+
+        // Simulate a generation started by a previous ViewModel instance.
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        // Create a fresh ViewModel (as if the user navigated back).
+        let vm = ChatViewModel(session: session, modelContext: context)
+        _ = vm // suppress unused warning
+
+        XCTAssertTrue(session.isActive,
+                      "isActive must NOT be reset when a live generation exists in activeGenerations")
+    }
+
+    @MainActor
+    func testStaleRecoveryResetsWhenNoActiveGeneration() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Stale")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.updatedAt = Date().addingTimeInterval(-300)
+        try! context.save()
+
+        // No activeGenerations entry — truly stale.
+        let vm = ChatViewModel(session: session, modelContext: context)
+        _ = vm
+
+        XCTAssertFalse(session.isActive,
+                       "isActive must be reset when no live generation and stale threshold exceeded")
+    }
+
+    // MARK: - onViewAppear preserves loading state for orphaned generation
+
+    @MainActor
+    func testViewAppearKeepsLoadingWhenActiveGenerationExists() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Running")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.pendingStreamingContent = "partial response..."
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.onViewAppear()
+
+        XCTAssertTrue(vm.isLoading,
+                      "isLoading must remain true when orphaned generation is running")
+    }
+
+    @MainActor
+    func testViewAppearClearsLoadingWhenNoActiveGeneration() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Idle")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = false
+        try! context.save()
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+        vm.onViewAppear()
+
+        XCTAssertFalse(vm.isLoading,
+                       "isLoading must be false when session is inactive and no generation running")
+        XCTAssertEqual(vm.streamingContent, "",
+                       "streamingContent must be cleared when session is inactive")
+    }
+
+    // MARK: - Cross-agent session isolation
+
+    @MainActor
+    func testAgentBSessionDoesNotAffectAgentAState() {
+        // Set up Agent A with an active session.
+        let agentA = Agent(name: "AgentA")
+        context.insert(agentA)
+        let sessionA = Session(title: "A Running")
+        context.insert(sessionA)
+        sessionA.agent = agentA
+        sessionA.isActive = true
+        sessionA.pendingStreamingContent = "working..."
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: sessionA.id)
+
+        // Set up Agent B with a new session (simulates user opening Agent B).
+        let agentB = Agent(name: "AgentB")
+        context.insert(agentB)
+        let sessionB = Session(title: "B New")
+        context.insert(sessionB)
+        sessionB.agent = agentB
+        try! context.save()
+
+        // Creating Agent B's ViewModel must not disturb Agent A's session state.
+        let vmB = ChatViewModel(session: sessionB, modelContext: context)
+        _ = vmB
+
+        XCTAssertTrue(sessionA.isActive,
+                      "Agent A session must remain active when Agent B opens a new session")
+        XCTAssertEqual(sessionA.pendingStreamingContent, "working...",
+                       "Agent A pending content must be preserved")
+        XCTAssertTrue(ChatViewModel._hasActiveGeneration(for: sessionA.id),
+                      "Agent A generation must still be registered")
+    }
+
+    // MARK: - New ViewModel recovers streaming content from orphaned generation
+
+    @MainActor
+    func testNewViewModelRecoversPendingStreamingContent() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Streaming")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.pendingStreamingContent = "Hello, I am responding to your..."
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+
+        // startMonitoringIfNeeded should pick up the pending content.
+        XCTAssertTrue(vm.isLoading,
+                      "ViewModel must show loading for orphaned active session")
+        XCTAssertEqual(vm.streamingContent, "Hello, I am responding to your...",
+                       "ViewModel must recover pendingStreamingContent from session")
+    }
+
+    // MARK: - Session isActive preserved across multiple ViewModel recreations
+
+    @MainActor
+    func testIsActivePreservedAcrossMultipleViewModelRecreations() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Long Running")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.updatedAt = Date().addingTimeInterval(-200) // > 120s stale threshold
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        // Simulate navigating away and back multiple times.
+        for i in 1...3 {
+            let vm = ChatViewModel(session: session, modelContext: context)
+            vm.onViewAppear()
+
+            XCTAssertTrue(session.isActive,
+                          "isActive must stay true on recreation #\(i)")
+            XCTAssertTrue(vm.isLoading,
+                          "isLoading must be true on recreation #\(i)")
+
+            vm.onViewDisappear()
+        }
+    }
+}
