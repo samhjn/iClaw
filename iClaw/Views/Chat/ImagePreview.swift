@@ -68,6 +68,7 @@ private struct ImagePreviewOverlay: View {
     @State private var dismissTranslation: CGSize = .zero
     @State private var isDismissing = false
     @State private var toastMessage: String?
+    @State private var viewportSize: CGSize = .zero
 
     private var dismissProgress: CGFloat {
         guard !isDismissing else { return 1 }
@@ -83,7 +84,7 @@ private struct ImagePreviewOverlay: View {
         )
         let controlsVisible = !isDismissing && dismissProgress < 0.3
 
-        GeometryReader { _ in
+        GeometryReader { geometry in
             ZStack {
                 Color.black.opacity(bgOpacity)
                     .ignoresSafeArea()
@@ -135,6 +136,8 @@ private struct ImagePreviewOverlay: View {
                     .allowsHitTesting(false)
                 }
             }
+            .onAppear { viewportSize = geometry.size }
+            .onChange(of: geometry.size) { _, newSize in viewportSize = newSize }
         }
         .ignoresSafeArea()
         .statusBar(hidden: true)
@@ -180,16 +183,18 @@ private struct ImagePreviewOverlay: View {
         DragGesture(minimumDistance: 6)
             .onChanged { value in
                 if scale > 1 {
-                    panOffset = CGSize(
+                    let raw = CGSize(
                         width: lastPanOffset.width + value.translation.width,
                         height: lastPanOffset.height + value.translation.height
                     )
+                    panOffset = clampedOffset(raw, for: scale)
                 } else {
                     dismissTranslation = value.translation
                 }
             }
             .onEnded { value in
                 if scale > 1 {
+                    panOffset = clampedOffset(panOffset, for: scale)
                     lastPanOffset = panOffset
                     return
                 }
@@ -227,6 +232,9 @@ private struct ImagePreviewOverlay: View {
                     if clamped <= 1 {
                         panOffset = .zero
                         lastPanOffset = .zero
+                    } else {
+                        panOffset = clampedOffset(panOffset, for: clamped)
+                        lastPanOffset = panOffset
                     }
                 }
                 lastScale = clamped
@@ -255,6 +263,34 @@ private struct ImagePreviewOverlay: View {
                 PHAssetCreationRequest.creationRequestForAsset(from: imageToSave)
             }
         }
+    }
+
+    /// Returns the fitted image size within the viewport.
+    private func fittedImageSize() -> CGSize {
+        guard viewportSize.width > 0, viewportSize.height > 0,
+              image.size.width > 0, image.size.height > 0 else {
+            return viewportSize
+        }
+        let imageAspect = image.size.width / image.size.height
+        let viewAspect = viewportSize.width / viewportSize.height
+        if imageAspect > viewAspect {
+            // Image is wider — fits width
+            return CGSize(width: viewportSize.width, height: viewportSize.width / imageAspect)
+        } else {
+            // Image is taller — fits height
+            return CGSize(width: viewportSize.height * imageAspect, height: viewportSize.height)
+        }
+    }
+
+    /// Clamps an offset so the zoomed image cannot be panned beyond its edges.
+    private func clampedOffset(_ offset: CGSize, for currentScale: CGFloat) -> CGSize {
+        let fitted = fittedImageSize()
+        let maxX = max((fitted.width * currentScale - viewportSize.width) / 2, 0)
+        let maxY = max((fitted.height * currentScale - viewportSize.height) / 2, 0)
+        return CGSize(
+            width: min(max(offset.width, -maxX), maxX),
+            height: min(max(offset.height, -maxY), maxY)
+        )
     }
 
     private func flashToast(_ message: String) {
