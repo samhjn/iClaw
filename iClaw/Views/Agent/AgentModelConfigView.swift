@@ -56,6 +56,7 @@ struct AgentModelConfigView: View {
             thinkingLevelSection
             fallbackSection
             subAgentSection
+            imageGenerationSection
             modelWhitelistSection
             compressionSection
             resolutionPreviewSection
@@ -312,6 +313,68 @@ struct AgentModelConfigView: View {
                             agent.subAgentModelNameOverride = nil
                         } else {
                             agent.subAgentModelNameOverride = modelName
+                        }
+                    }
+                }
+                agent.updatedAt = Date()
+                try? modelContext.save()
+            }
+        )
+    }
+
+    // MARK: - Image Generation
+
+    @ViewBuilder
+    private var imageGenerationSection: some View {
+        Section {
+            Picker(L10n.ModelConfig.imageProvider, selection: imageProviderBinding) {
+                Text(L10n.ModelConfig.imageProviderNone).tag("" as String)
+                ForEach(imageCapableProviderModels) { pm in
+                    Text(pm.displayName).tag(pm.id)
+                }
+            }
+        } header: {
+            Text(L10n.ModelConfig.imageGenerationHeader)
+        } footer: {
+            Text(L10n.ModelConfig.imageProviderFooter)
+        }
+    }
+
+    /// Provider+model combos that have image generation capabilities.
+    private var imageCapableProviderModels: [ProviderModel] {
+        allProviderModels.filter { pm in
+            let caps = pm.provider.capabilities(for: pm.modelName)
+            return caps.imageGenerationMode != .none
+        }
+    }
+
+    private var imageProviderBinding: Binding<String> {
+        Binding(
+            get: {
+                guard let pid = agent.imageProviderId else { return "" }
+                let override = agent.imageModelNameOverride
+                if let override {
+                    return "\(pid.uuidString):\(override)"
+                }
+                if let provider = allProviders.first(where: { $0.id == pid }) {
+                    return "\(pid.uuidString):\(provider.modelName)"
+                }
+                return ""
+            },
+            set: { newValue in
+                if newValue.isEmpty {
+                    agent.imageProviderId = nil
+                    agent.imageModelNameOverride = nil
+                } else {
+                    let parts = newValue.split(separator: ":", maxSplits: 1)
+                    if parts.count == 2, let uid = UUID(uuidString: String(parts[0])) {
+                        let modelName = String(parts[1])
+                        agent.imageProviderId = uid
+                        if let provider = allProviders.first(where: { $0.id == uid }),
+                           modelName == provider.modelName {
+                            agent.imageModelNameOverride = nil
+                        } else {
+                            agent.imageModelNameOverride = modelName
                         }
                     }
                 }

@@ -182,6 +182,10 @@
 "modelConfig.thinkingLevel" = "Thinking Level";
 "modelConfig.thinkingLevelUseModelDefault" = "Use Model Default";
 "modelConfig.thinkingLevelFooter" = "Override the model's default thinking level for this agent. Higher levels use more tokens but produce deeper reasoning.";
+"modelConfig.imageProvider" = "Image Generation Model";
+"modelConfig.imageProviderNone" = "Disabled";
+"modelConfig.imageGenerationHeader" = "Image Generation";
+"modelConfig.imageProviderFooter" = "Select a model for the generate_image tool. Only models with image generation capability are shown. When configured, the agent can generate images via tool calling.";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "Cron Jobs";
@@ -312,8 +316,11 @@
 "provider.supportsVisionFooter" = "Enable if this model supports image inputs (e.g. GPT-4o, Claude 3.5 Sonnet)";
 "provider.supportsToolUse" = "Supports Tool Use";
 "provider.supportsToolUseFooter" = "Disable if this model does not support function calling / tool use (some OpenRouter models)";
-"provider.supportsImageGeneration" = "Supports Image Generation";
+"provider.supportsImageGeneration" = "Image Generation";
 "provider.supportsImageGenerationFooter" = "Enable for models that can generate images (e.g. Gemini 2.5 Flash Image / Nano Banana). Sends modalities parameter to the API.";
+"provider.imageGenMode.none" = "None";
+"provider.imageGenMode.chatInline" = "Chat Inline";
+"provider.imageGenMode.dedicatedAPI" = "Dedicated API";
 "provider.supportsReasoning" = "Supports Reasoning";
 "provider.supportsReasoningFooter" = "Enable for models with extended thinking / reasoning (e.g. Claude with extended thinking, DeepSeek R1, o1/o3). Thinking output will be captured and displayed.";
 "provider.thinkingLevel" = "Thinking Level";
@@ -509,6 +516,7 @@
 "toolPermissions.config" = "Config";
 "toolPermissions.model" = "Model";
 "toolPermissions.files" = "Files";
+"toolPermissions.imageGeneration" = "Image Generation";
 "toolPermissions.appleSection" = "Apple Ecosystem";
 "toolPermissions.agentSection" = "Agent Capabilities";
 "agentDetail.toolPermissions" = "Tool Permissions";

@@ -162,7 +162,7 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?
     ) async throws -> LLMChatResponse {
         let caps = effectiveCapabilities
-        let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let modalities: [String]? = caps.imageGenerationMode == .chatInline ? ["image", "text"] : nil
         let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
@@ -195,7 +195,7 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?
     ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let caps = effectiveCapabilities
-        let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let modalities: [String]? = caps.imageGenerationMode == .chatInline ? ["image", "text"] : nil
         let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,

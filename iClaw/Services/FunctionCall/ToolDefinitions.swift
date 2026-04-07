@@ -61,6 +61,9 @@ enum ToolDefinitions {
             fileInfoTool,
             attachMediaTool,
 
+            // Image Generation
+            generateImageTool,
+
             // Apple Ecosystem — Calendar
             calendarListCalendarsTool,
             calendarCreateEventTool,
@@ -1036,5 +1039,19 @@ enum ToolDefinitions {
             "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
         ],
         required: ["bpm"]
+    )
+
+    // MARK: - Image Generation
+
+    static let generateImageTool = ToolDefinitionBuilder.build(
+        name: "generate_image",
+        description: "Generate images using AI image generation models. Use this when the user asks you to create, draw, or generate images. Returns the generated image(s) as attachments in the conversation.",
+        properties: [
+            "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the image to generate. Be specific about style, composition, colors, and subject matter."),
+            "size": ToolDefinitionBuilder.stringParam("Image size. Common values: 1024x1024, 1792x1024, 1024x1792. Optional, defaults to model default."),
+            "quality": ToolDefinitionBuilder.enumParam("Image quality level. Optional.", values: ["standard", "hd"]),
+            "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1.")
+        ],
+        required: ["prompt"]
     )
 }

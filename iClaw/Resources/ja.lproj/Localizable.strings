@@ -181,6 +181,10 @@
 "modelConfig.thinkingLevel" = "思考レベル";
 "modelConfig.thinkingLevelUseModelDefault" = "モデルのデフォルトを使用";
 "modelConfig.thinkingLevelFooter" = "このエージェントのモデルデフォルト思考レベルを上書きします。高いレベルはより多くのトークンを消費しますが、より深い推論を生成します。";
+"modelConfig.imageProvider" = "画像生成モデル";
+"modelConfig.imageProviderNone" = "無効";
+"modelConfig.imageGenerationHeader" = "画像生成";
+"modelConfig.imageProviderFooter" = "generate_imageツールで使用するモデルを選択します。画像生成機能を持つモデルのみ表示されます。設定すると、エージェントはツール呼び出しで画像を生成できます。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定期タスク";
@@ -311,8 +315,11 @@
 "provider.supportsVisionFooter" = "このモデルが画像入力に対応している場合は有効にしてください（例：GPT-4o、Claude 3.5 Sonnet）";
 "provider.supportsToolUse" = "ツール使用対応";
 "provider.supportsToolUseFooter" = "このモデルが関数呼び出し/ツール使用に対応していない場合は無効にしてください（一部の OpenRouter モデル）";
-"provider.supportsImageGeneration" = "画像生成対応";
+"provider.supportsImageGeneration" = "画像生成";
 "provider.supportsImageGenerationFooter" = "画像を生成できるモデルで有効にしてください（例：Gemini 2.5 Flash Image / Nano Banana）。APIにmodalitiesパラメータを送信します。";
+"provider.imageGenMode.none" = "なし";
+"provider.imageGenMode.chatInline" = "チャットインライン";
+"provider.imageGenMode.dedicatedAPI" = "専用API";
 "provider.supportsReasoning" = "推論対応";
 "provider.supportsReasoningFooter" = "拡張思考/推論に対応するモデルで有効にしてください（例：Claude拡張思考、DeepSeek R1、o1/o3）。思考過程がキャプチャされ表示されます。";
 "provider.thinkingLevel" = "思考レベル";
@@ -508,6 +515,7 @@
 "toolPermissions.config" = "設定";
 "toolPermissions.model" = "モデル";
 "toolPermissions.files" = "ファイル";
+"toolPermissions.imageGeneration" = "画像生成";
 "toolPermissions.appleSection" = "Apple エコシステム";
 "toolPermissions.agentSection" = "エージェント機能";
 "agentDetail.toolPermissions" = "ツール権限";

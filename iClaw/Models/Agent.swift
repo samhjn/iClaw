@@ -36,6 +36,10 @@ final class Agent {
     var subAgentProviderIdRaw: String?
     /// Model name override for sub-agent provider
     var subAgentModelNameOverride: String?
+    /// UUID of the provider used for image generation via `generate_image` tool (nil = disabled)
+    var imageProviderIdRaw: String?
+    /// Model name override for the image generation provider
+    var imageModelNameOverride: String?
 
     /// SubAgent lifecycle: "temp" = auto-destroy after task, "persistent" = long-lived, nil = main agent
     var subAgentType: String? = nil
@@ -101,6 +105,11 @@ final class Agent {
     var subAgentProviderId: UUID? {
         get { subAgentProviderIdRaw.flatMap { UUID(uuidString: $0) } }
         set { subAgentProviderIdRaw = newValue?.uuidString }
+    }
+
+    var imageProviderId: UUID? {
+        get { imageProviderIdRaw.flatMap { UUID(uuidString: $0) } }
+        set { imageProviderIdRaw = newValue?.uuidString }
     }
 
     /// Parsed model whitelist as `["providerId:modelName", ...]`. Empty = allow all.

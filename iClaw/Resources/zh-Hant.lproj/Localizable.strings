@@ -182,6 +182,10 @@
 "modelConfig.thinkingLevel" = "思考等級";
 "modelConfig.thinkingLevelUseModelDefault" = "使用模型預設";
 "modelConfig.thinkingLevelFooter" = "覆蓋此智能體的模型預設思考等級。更高等級消耗更多 Token，但能產生更深入的推理。";
+"modelConfig.imageProvider" = "圖片生成模型";
+"modelConfig.imageProviderNone" = "未啟用";
+"modelConfig.imageGenerationHeader" = "圖片生成";
+"modelConfig.imageProviderFooter" = "選擇 generate_image 工具使用的模型。僅顯示具有圖片生成能力的模型。設定後，智能體可透過工具呼叫生成圖片。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "排程任務";
@@ -312,8 +316,11 @@
 "provider.supportsVisionFooter" = "如果此模型支援圖片輸入請啟用（如 GPT-4o、Claude 3.5 Sonnet）";
 "provider.supportsToolUse" = "支援工具呼叫";
 "provider.supportsToolUseFooter" = "如果此模型不支援函式呼叫/工具使用請關閉（部分 OpenRouter 模型）";
-"provider.supportsImageGeneration" = "支援圖片生成";
+"provider.supportsImageGeneration" = "圖片生成";
 "provider.supportsImageGenerationFooter" = "為能生成圖片的模型啟用（如 Gemini 2.5 Flash Image / Nano Banana），將向 API 傳送 modalities 參數";
+"provider.imageGenMode.none" = "不支援";
+"provider.imageGenMode.chatInline" = "對話內聯";
+"provider.imageGenMode.dedicatedAPI" = "獨立 API";
 "provider.supportsReasoning" = "支援推理";
 "provider.supportsReasoningFooter" = "為支援擴展思考/推理的模型啟用（如 Claude 擴展思考、DeepSeek R1、o1/o3）。思考過程將被擷取並顯示。";
 "provider.thinkingLevel" = "思考等級";
@@ -509,6 +516,7 @@
 "toolPermissions.config" = "設定";
 "toolPermissions.model" = "模型";
 "toolPermissions.files" = "檔案";
+"toolPermissions.imageGeneration" = "圖片生成";
 "toolPermissions.appleSection" = "Apple 生態";
 "toolPermissions.agentSection" = "智能體能力";
 "agentDetail.toolPermissions" = "功能權限";
