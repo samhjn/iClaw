@@ -1,0 +1,76 @@
+diff --git a/iClaw/Views/Chat/MarkdownContentView.swift b/iClaw/Views/Chat/MarkdownContentView.swift
+index f77d48b..83d4e95 100644
+--- a/iClaw/Views/Chat/MarkdownContentView.swift
++++ b/iClaw/Views/Chat/MarkdownContentView.swift
+@@ -726,12 +726,18 @@ private struct MarkdownTableView: View {
+     @State private var columnWidths: [CGFloat] = []
+     @State private var hasBuilt = false
+     @State private var showAll = false
++    @State private var popoverCell: PopoverCell?
++
++    private struct PopoverCell: Identifiable {
++        let id = UUID()
++        let text: AttributedString
++    }
+ 
+     private static let maxCollapsedRows = 10
+     private static let cellPaddingH: CGFloat = 8
+     private static let cellPaddingV: CGFloat = 6
+     private static let minColWidth: CGFloat = 50
+-    private static let maxColWidth: CGFloat = 280
++    private static let maxColWidth: CGFloat = 320
+ 
+     private var visibleRowCount: Int {
+         if showAll || table.rows.count <= Self.maxCollapsedRows {
+@@ -785,6 +791,26 @@ private struct MarkdownTableView: View {
+             }
+             .onAppear { buildIfNeeded() }
+             .onChange(of: table) { _, _ in rebuild() }
++            .sheet(item: $popoverCell) { cell in
++                NavigationStack {
++                    ScrollView {
++                        Text(cell.text)
++                            .font(.body)
++                            .padding()
++                            .frame(maxWidth: .infinity, alignment: .leading)
++                            .textSelection(.enabled)
++                    }
++                    .navigationTitle("Cell Detail")
++                    .navigationBarTitleDisplayMode(.inline)
++                    .toolbar {
++                        ToolbarItem(placement: .confirmationAction) {
++                            Button("Done") { popoverCell = nil }
++                        }
++                    }
++                }
++                .presentationDetents([.medium, .large])
++                .presentationDragIndicator(.visible)
++            }
+         } else {
+             Color.clear.frame(height: 1)
+                 .onAppear { buildIfNeeded() }
+@@ -795,10 +821,11 @@ private struct MarkdownTableView: View {
+         HStack(spacing: 0) {
+             ForEach(0..<columnWidths.count, id: \.self) { colIdx in
+                 let alignment = colIdx < table.alignments.count ? table.alignments[colIdx] : TableAlignment.leading
+-                Text(colIdx < cells.count ? cells[colIdx] : AttributedString())
++                let cellText = colIdx < cells.count ? cells[colIdx] : AttributedString()
++                Text(cellText)
+                     .font(isHeader ? .caption.bold() : .caption)
+                     .foregroundStyle(isUserMessage ? .white : .primary)
+-                    .lineLimit(isHeader ? 1 : nil)
++                    .lineLimit(isHeader ? 2 : 8)
+                     .multilineTextAlignment(alignment.textAlignment)
+                     .padding(.horizontal, Self.cellPaddingH)
+                     .padding(.vertical, Self.cellPaddingV)
+@@ -806,6 +833,10 @@ private struct MarkdownTableView: View {
+                         width: columnWidths[colIdx],
+                         alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
+                     )
++                    .contentShape(Rectangle())
++                    .onLongPressGesture {
++                        popoverCell = PopoverCell(text: cellText)
++                    }
+                 if colIdx < columnWidths.count - 1 {
+                     Rectangle()
+                         .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
