@@ -972,7 +972,7 @@ final class ChatViewModel {
         checkActiveSessionLock()
         recoverStaleActiveState()
         recoverCompressionState()
-        if !session.isActive && generationTask == nil {
+        if !session.isActive && generationTask == nil && Self.activeGenerations[session.id] == nil {
             isLoading = false
             streamingContent = ""
         }
@@ -1032,6 +1032,10 @@ final class ChatViewModel {
     /// ViewModel (app was killed / navigated away for a long time), reset the flag.
     private func recoverStaleActiveState() {
         guard session.isActive, generationTask == nil else { return }
+
+        // A generation started by a previous ViewModel instance is still running
+        // in the static dictionary — don't reset the session state.
+        if Self.activeGenerations[session.id] != nil { return }
 
         let lastUpdate = session.updatedAt
         let staleDuration: TimeInterval = 120
@@ -1147,7 +1151,10 @@ final class ChatViewModel {
 
                 guard self.session.isActive else { return }
 
-                if tickCount > 300 {
+                // Don't apply the safety timeout while a real generation task
+                // is still running (e.g. started by a previous ViewModel).
+                let hasLiveGeneration = Self.activeGenerations[self.session.id] != nil
+                if tickCount > 300 && !hasLiveGeneration {
                     self.session.isActive = false
                     try? self.modelContext.save()
                     return
