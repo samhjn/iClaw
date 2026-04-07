@@ -83,6 +83,8 @@
 "chat.silentThinking" = "思考中（第 %d 輪）…";
 "chat.silentRunningTool" = "正在執行 %@…";
 "chat.displayModeScope" = "套用於 %@ 的所有會話";
+"chat.doubleTapToExpand" = "雙擊儲存格查看完整內容";
+"chat.cellDetail" = "儲存格詳情";
 
 // MARK: - Agents
 "agents.title" = "智能體";

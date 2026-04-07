@@ -83,6 +83,8 @@
 "chat.silentThinking" = "Thinking (round %d)…";
 "chat.silentRunningTool" = "Running %@…";
 "chat.displayModeScope" = "Applies to all sessions of %@";
+"chat.doubleTapToExpand" = "Double tap cell to expand";
+"chat.cellDetail" = "Cell Detail";
 
 // MARK: - Agents
 "agents.title" = "Agents";

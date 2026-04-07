@@ -119,6 +119,8 @@ enum L10n {
         static func silentThinking(_ turn: Int) -> String { tr("chat.silentThinking", turn) }
         static func silentRunningTool(_ name: String) -> String { tr("chat.silentRunningTool", name) }
         static func displayModeScope(_ agentName: String) -> String { tr("chat.displayModeScope", agentName) }
+        static var doubleTapToExpand: String { tr("chat.doubleTapToExpand") }
+        static var cellDetail: String { tr("chat.cellDetail") }
     }
 
     // MARK: - Agents
