@@ -10,6 +10,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/samhjn/iclaw/actions/workflows/ios-ci.yml">
+    <img src="https://github.com/samhjn/iclaw/actions/workflows/ios-ci.yml/badge.svg" alt="iOS CI" />
+  </a>
+</p>
+
+<p align="center">
   <a href="https://iclaw.shadow.mov">Website</a> ·
   <a href="#features">Features</a> ·
   <a href="#quick-start">Quick Start</a> ·
