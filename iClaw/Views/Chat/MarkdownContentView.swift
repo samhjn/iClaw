@@ -731,7 +731,7 @@ private struct MarkdownTableView: View {
     private static let cellPaddingH: CGFloat = 8
     private static let cellPaddingV: CGFloat = 6
     private static let minColWidth: CGFloat = 50
-    private static let maxColWidth: CGFloat = 280
+    private static let maxColWidth: CGFloat = 320
 
     private var visibleRowCount: Int {
         if showAll || table.rows.count <= Self.maxCollapsedRows {
@@ -798,7 +798,7 @@ private struct MarkdownTableView: View {
                 Text(colIdx < cells.count ? cells[colIdx] : AttributedString())
                     .font(isHeader ? .caption.bold() : .caption)
                     .foregroundStyle(isUserMessage ? .white : .primary)
-                    .lineLimit(isHeader ? 1 : nil)
+                    .lineLimit(isHeader ? 2 : 8)
                     .multilineTextAlignment(alignment.textAlignment)
                     .padding(.horizontal, Self.cellPaddingH)
                     .padding(.vertical, Self.cellPaddingV)
@@ -806,6 +806,7 @@ private struct MarkdownTableView: View {
                         width: columnWidths[colIdx],
                         alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
                     )
+                    .fixedSize(horizontal: false, vertical: true)
                 if colIdx < columnWidths.count - 1 {
                     Rectangle()
                         .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
