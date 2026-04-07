@@ -47,9 +47,9 @@ final class AgentFileReferenceTests: XCTestCase {
         let pngRef = AgentFileManager.makeFileReference(agentId: testAgentId, filename: "chart.png")
         let gifRef = AgentFileManager.makeFileReference(agentId: testAgentId, filename: "anim.gif")
 
-        try? AgentFileManager.shared.writeFile(agentId: testAgentId, name: "photo.jpg", data: data)
-        try? AgentFileManager.shared.writeFile(agentId: testAgentId, name: "chart.png", data: data)
-        try? AgentFileManager.shared.writeFile(agentId: testAgentId, name: "anim.gif", data: data)
+        _ = try? AgentFileManager.shared.writeFile(agentId: testAgentId, name: "photo.jpg", data: data)
+        _ = try? AgentFileManager.shared.writeFile(agentId: testAgentId, name: "chart.png", data: data)
+        _ = try? AgentFileManager.shared.writeFile(agentId: testAgentId, name: "anim.gif", data: data)
 
         XCTAssertEqual(ImageAttachment.from(fileReference: jpgRef)?.mimeType, "image/jpeg")
         XCTAssertEqual(ImageAttachment.from(fileReference: pngRef)?.mimeType, "image/png")
