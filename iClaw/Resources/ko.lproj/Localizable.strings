@@ -83,6 +83,8 @@
 "chat.silentThinking" = "생각 중 (%d회차)…";
 "chat.silentRunningTool" = "%@ 실행 중…";
 "chat.displayModeScope" = "%@의 모든 세션에 적용";
+"chat.doubleTapToExpand" = "셀을 두 번 탭하여 전체 내용 보기";
+"chat.cellDetail" = "셀 상세";
 
 // MARK: - Agents
 "agents.title" = "에이전트";

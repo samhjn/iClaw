@@ -83,6 +83,8 @@
 "chat.silentThinking" = "思考中（%d回目）…";
 "chat.silentRunningTool" = "%@ を実行中…";
 "chat.displayModeScope" = "%@ の全セッションに適用";
+"chat.doubleTapToExpand" = "セルをダブルタップで全文表示";
+"chat.cellDetail" = "セル詳細";
 
 // MARK: - Agents
 "agents.title" = "エージェント";

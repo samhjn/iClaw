@@ -519,7 +519,7 @@ struct MarkdownContentView: View {
         Self.parseInlineMarkdown(text, isUserMessage: isUserMessage)
     }
 
-    static func parseInlineMarkdown(_ text: String, isUserMessage: Bool) -> AttributedString {
+    static func parseInlineMarkdown(_ text: String, isUserMessage: Bool, baseFont: Font = .body) -> AttributedString {
         var result = AttributedString()
         var remaining = text[text.startIndex...]
         var plainBuffer = ""
@@ -564,7 +564,7 @@ struct MarkdownContentView: View {
                     flushPlain()
                     let code = String(after[after.startIndex..<endIdx])
                     var attr = AttributedString(code)
-                    attr.font = .system(.body, design: .monospaced)
+                    attr.font = baseFont.monospaced()
                     attr.backgroundColor = isUserMessage ? .white.opacity(0.15) : Color(.systemGray5)
                     result.append(attr)
                     remaining = after[after.index(after: endIdx)...]
@@ -578,8 +578,8 @@ struct MarkdownContentView: View {
                 if let endRange = after.range(of: "***") {
                     flushPlain()
                     let inner = String(after[after.startIndex..<endRange.lowerBound])
-                    var attr = parseInlineMarkdown(inner, isUserMessage: isUserMessage)
-                    attr.font = .body.bold().italic()
+                    var attr = parseInlineMarkdown(inner, isUserMessage: isUserMessage, baseFont: baseFont)
+                    attr.font = baseFont.bold().italic()
                     result.append(attr)
                     remaining = after[endRange.upperBound...]
                     continue
@@ -592,8 +592,8 @@ struct MarkdownContentView: View {
                 if let endRange = after.range(of: "**") {
                     flushPlain()
                     let boldText = String(after[after.startIndex..<endRange.lowerBound])
-                    var attr = parseInlineMarkdown(boldText, isUserMessage: isUserMessage)
-                    attr.font = .body.bold()
+                    var attr = parseInlineMarkdown(boldText, isUserMessage: isUserMessage, baseFont: baseFont)
+                    attr.font = baseFont.bold()
                     result.append(attr)
                     remaining = after[endRange.upperBound...]
                     continue
@@ -608,8 +608,8 @@ struct MarkdownContentView: View {
                 if let endIdx = after.firstIndex(of: marker) {
                     flushPlain()
                     let italicText = String(after[after.startIndex..<endIdx])
-                    var attr = parseInlineMarkdown(italicText, isUserMessage: isUserMessage)
-                    attr.font = .body.italic()
+                    var attr = parseInlineMarkdown(italicText, isUserMessage: isUserMessage, baseFont: baseFont)
+                    attr.font = baseFont.italic()
                     result.append(attr)
                     remaining = after[after.index(after: endIdx)...]
                     continue
@@ -726,6 +726,12 @@ private struct MarkdownTableView: View {
     @State private var columnWidths: [CGFloat] = []
     @State private var hasBuilt = false
     @State private var showAll = false
+    @State private var popoverCell: PopoverCell?
+
+    private struct PopoverCell: Identifiable {
+        let id = UUID()
+        let text: AttributedString
+    }
 
     private static let maxCollapsedRows = 10
     private static let cellPaddingH: CGFloat = 8
@@ -771,20 +777,46 @@ private struct MarkdownTableView: View {
                 }
                 .textSelection(.enabled)
 
-                if table.rows.count > Self.maxCollapsedRows && !showAll {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { showAll = true }
-                    } label: {
-                        Text("\(Image(systemName: "chevron.down")) \(table.rows.count - Self.maxCollapsedRows) more rows")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    if table.rows.count > Self.maxCollapsedRows && !showAll {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { showAll = true }
+                        } label: {
+                            Text("\(Image(systemName: "chevron.down")) \(table.rows.count - Self.maxCollapsedRows) more rows")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 4)
+
+                    Text(L10n.Chat.doubleTapToExpand)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
+                .padding(.top, 4)
             }
             .onAppear { buildIfNeeded() }
             .onChange(of: table) { _, _ in rebuild() }
+            .sheet(item: $popoverCell) { cell in
+                NavigationStack {
+                    ScrollView {
+                        Text(cell.text)
+                            .font(.body)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .navigationTitle(L10n.Chat.cellDetail)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(L10n.Common.done) { popoverCell = nil }
+                        }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
         } else {
             Color.clear.frame(height: 1)
                 .onAppear { buildIfNeeded() }
@@ -795,10 +827,11 @@ private struct MarkdownTableView: View {
         HStack(spacing: 0) {
             ForEach(0..<columnWidths.count, id: \.self) { colIdx in
                 let alignment = colIdx < table.alignments.count ? table.alignments[colIdx] : TableAlignment.leading
-                Text(colIdx < cells.count ? cells[colIdx] : AttributedString())
+                let cellText = colIdx < cells.count ? cells[colIdx] : AttributedString()
+                Text(cellText)
                     .font(isHeader ? .caption.bold() : .caption)
                     .foregroundStyle(isUserMessage ? .white : .primary)
-                    .lineLimit(isHeader ? 1 : nil)
+                    .lineLimit(isHeader ? 2 : 8)
                     .multilineTextAlignment(alignment.textAlignment)
                     .padding(.horizontal, Self.cellPaddingH)
                     .padding(.vertical, Self.cellPaddingV)
@@ -806,6 +839,10 @@ private struct MarkdownTableView: View {
                         width: columnWidths[colIdx],
                         alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        popoverCell = PopoverCell(text: cellText)
+                    }
                 if colIdx < columnWidths.count - 1 {
                     Rectangle()
                         .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
@@ -823,10 +860,10 @@ private struct MarkdownTableView: View {
     private func rebuild() {
         let isUser = isUserMessage
         parsedHeaders = table.headers.map {
-            MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUser)
+            MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUser, baseFont: .caption)
         }
         parsedRows = table.rows.map { row in
-            row.map { MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUser) }
+            row.map { MarkdownContentView.parseInlineMarkdown($0, isUserMessage: isUser, baseFont: .caption) }
         }
         columnWidths = measureColumnWidths()
         hasBuilt = true
@@ -836,8 +873,10 @@ private struct MarkdownTableView: View {
         let font = UIFont.preferredFont(forTextStyle: .caption1)
         let boldFont = UIFont.boldSystemFont(ofSize: font.pointSize)
         let padding = Self.cellPaddingH * 2
+        let screenWidth = UIScreen.main.bounds.width
+        let maxTableWidth = screenWidth - 32  // leave some margin
 
-        return (0..<table.headers.count).map { col in
+        var widths = (0..<table.headers.count).map { col -> CGFloat in
             let headerSize = NSAttributedString(string: table.headers[col], attributes: [.font: boldFont]).size()
             var maxWidth = headerSize.width
 
@@ -850,6 +889,15 @@ private struct MarkdownTableView: View {
             }
             return max(Self.minColWidth, min(ceil(maxWidth) + padding, Self.maxColWidth))
         }
+
+        // Proportionally shrink columns if total width exceeds screen width
+        let totalWidth = widths.reduce(0, +)
+        if totalWidth > maxTableWidth && totalWidth > 0 {
+            let scale = maxTableWidth / totalWidth
+            widths = widths.map { max(Self.minColWidth, floor($0 * scale)) }
+        }
+
+        return widths
     }
 }
 
