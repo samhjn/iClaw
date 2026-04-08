@@ -56,6 +56,71 @@ extension View {
     }
 }
 
+// MARK: - Zoom Math (internal for testing)
+
+enum ImagePreviewMath {
+
+    /// Computes the offset needed to keep the pinch anchor point stationary
+    /// as the scale changes.
+    static func zoomAnchorOffset(
+        anchorUnitX: CGFloat,
+        anchorUnitY: CGFloat,
+        viewportSize: CGSize,
+        lastScale: CGFloat,
+        newScale: CGFloat,
+        lastPanOffset: CGSize
+    ) -> CGSize {
+        let anchorX = (anchorUnitX - 0.5) * viewportSize.width
+        let anchorY = (anchorUnitY - 0.5) * viewportSize.height
+        let ratio = newScale / lastScale
+        return CGSize(
+            width: anchorX * (1 - ratio) + lastPanOffset.width * ratio,
+            height: anchorY * (1 - ratio) + lastPanOffset.height * ratio
+        )
+    }
+
+    /// Returns the fitted image size within the viewport (aspect-fit).
+    static func fittedImageSize(imageSize: CGSize, viewportSize: CGSize) -> CGSize {
+        guard viewportSize.width > 0, viewportSize.height > 0,
+              imageSize.width > 0, imageSize.height > 0 else {
+            return viewportSize
+        }
+        let imageAspect = imageSize.width / imageSize.height
+        let viewAspect = viewportSize.width / viewportSize.height
+        if imageAspect > viewAspect {
+            return CGSize(width: viewportSize.width, height: viewportSize.width / imageAspect)
+        } else {
+            return CGSize(width: viewportSize.height * imageAspect, height: viewportSize.height)
+        }
+    }
+
+    /// Clamps an offset so the zoomed image cannot be panned beyond its edges.
+    static func clampedOffset(
+        _ offset: CGSize,
+        scale: CGFloat,
+        fittedSize: CGSize,
+        viewportSize: CGSize
+    ) -> CGSize {
+        let maxX = max((fittedSize.width * scale - viewportSize.width) / 2, 0)
+        let maxY = max((fittedSize.height * scale - viewportSize.height) / 2, 0)
+        return CGSize(
+            width: min(max(offset.width, -maxX), maxX),
+            height: min(max(offset.height, -maxY), maxY)
+        )
+    }
+
+    /// Rubber-band formula: within `limit` moves freely; beyond it, excess is
+    /// damped logarithmically so the user feels resistance.
+    static func rubberBand(_ value: CGFloat, limit: CGFloat) -> CGFloat {
+        let clamped = min(max(value, -limit), limit)
+        let excess = value - clamped
+        guard excess != 0 else { return value }
+        let dim: CGFloat = 200
+        let dampened = dim * (1 - exp(-abs(excess) / dim))
+        return clamped + dampened * (excess > 0 ? 1 : -1)
+    }
+}
+
 // MARK: - Image Preview Overlay
 
 private struct ImagePreviewOverlay: View {
@@ -227,16 +292,13 @@ private struct ImagePreviewOverlay: View {
         MagnifyGesture()
             .onChanged { value in
                 let newScale = max(0.5, lastScale * value.magnification)
-
-                // Pinch center relative to the view center
-                let anchorX = (value.startAnchor.x - 0.5) * viewportSize.width
-                let anchorY = (value.startAnchor.y - 0.5) * viewportSize.height
-
-                // Adjust offset so the image point under the fingers stays stationary
-                let ratio = newScale / lastScale
-                panOffset = CGSize(
-                    width: anchorX * (1 - ratio) + lastPanOffset.width * ratio,
-                    height: anchorY * (1 - ratio) + lastPanOffset.height * ratio
+                panOffset = ImagePreviewMath.zoomAnchorOffset(
+                    anchorUnitX: value.startAnchor.x,
+                    anchorUnitY: value.startAnchor.y,
+                    viewportSize: viewportSize,
+                    lastScale: lastScale,
+                    newScale: newScale,
+                    lastPanOffset: lastPanOffset
                 )
                 scale = newScale
             }
@@ -280,54 +342,23 @@ private struct ImagePreviewOverlay: View {
         }
     }
 
-    /// Returns the fitted image size within the viewport.
     private func fittedImageSize() -> CGSize {
-        guard viewportSize.width > 0, viewportSize.height > 0,
-              image.size.width > 0, image.size.height > 0 else {
-            return viewportSize
-        }
-        let imageAspect = image.size.width / image.size.height
-        let viewAspect = viewportSize.width / viewportSize.height
-        if imageAspect > viewAspect {
-            // Image is wider — fits width
-            return CGSize(width: viewportSize.width, height: viewportSize.width / imageAspect)
-        } else {
-            // Image is taller — fits height
-            return CGSize(width: viewportSize.height * imageAspect, height: viewportSize.height)
-        }
+        ImagePreviewMath.fittedImageSize(imageSize: image.size, viewportSize: viewportSize)
     }
 
-    /// Clamps an offset so the zoomed image cannot be panned beyond its edges.
     private func clampedOffset(_ offset: CGSize, for currentScale: CGFloat) -> CGSize {
-        let fitted = fittedImageSize()
-        let maxX = max((fitted.width * currentScale - viewportSize.width) / 2, 0)
-        let maxY = max((fitted.height * currentScale - viewportSize.height) / 2, 0)
-        return CGSize(
-            width: min(max(offset.width, -maxX), maxX),
-            height: min(max(offset.height, -maxY), maxY)
-        )
+        ImagePreviewMath.clampedOffset(offset, scale: currentScale,
+                                       fittedSize: fittedImageSize(), viewportSize: viewportSize)
     }
 
-    /// Applies rubber-band damping when panning beyond the allowed limits.
     private func rubberBandOffset(_ offset: CGSize, for currentScale: CGFloat) -> CGSize {
         let fitted = fittedImageSize()
         let maxX = max((fitted.width * currentScale - viewportSize.width) / 2, 0)
         let maxY = max((fitted.height * currentScale - viewportSize.height) / 2, 0)
         return CGSize(
-            width: rubberBand(offset.width, limit: maxX),
-            height: rubberBand(offset.height, limit: maxY)
+            width: ImagePreviewMath.rubberBand(offset.width, limit: maxX),
+            height: ImagePreviewMath.rubberBand(offset.height, limit: maxY)
         )
-    }
-
-    /// Rubber-band formula: within `limit` moves freely; beyond it, excess is
-    /// damped logarithmically so the user feels resistance.
-    private func rubberBand(_ value: CGFloat, limit: CGFloat) -> CGFloat {
-        let clamped = min(max(value, -limit), limit)
-        let excess = value - clamped
-        guard excess != 0 else { return value }
-        let dim: CGFloat = 200 // controls how "stretchy" the band feels
-        let dampened = dim * (1 - exp(-abs(excess) / dim))
-        return clamped + dampened * (excess > 0 ? 1 : -1)
     }
 
     private func flashToast(_ message: String) {
