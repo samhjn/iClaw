@@ -994,3 +994,267 @@ final class ConcurrentModificationTests: XCTestCase {
                        "Router should reflect provider change without recreating")
     }
 }
+
+// =============================================================================
+// MARK: - 5. Fix Verification Tests
+// =============================================================================
+
+/// Tests verifying the behavioral fixes applied to deletion flows.
+final class DeletionFixVerificationTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        context = ModelContext(container)
+    }
+
+    override func tearDown() {
+        container = nil
+        context = nil
+        super.tearDown()
+    }
+
+    // MARK: - Fix 1: Active generation cancelled before session deletion
+
+    /// deleteSession should cancel the active generation before deleting.
+    @MainActor
+    func testDeleteSessionCancelsActiveGeneration() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "Active")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.pendingStreamingContent = "streaming..."
+        try! context.save()
+
+        // Simulate an active generation entry
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+        XCTAssertTrue(ChatViewModel._hasActiveGeneration(for: session.id))
+
+        let vm = SessionListViewModel(modelContext: context)
+        vm.deleteSession(session)
+
+        // Generation entry should be cleared
+        XCTAssertFalse(ChatViewModel._hasActiveGeneration(for: session.id),
+                       "Active generation should be cancelled before session deletion")
+    }
+
+    /// deleteSessionAtOffsets should cancel active generations.
+    @MainActor
+    func testDeleteSessionAtOffsetsCancelsActiveGeneration() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        try! context.save()
+
+        let vm = SessionListViewModel(modelContext: context)
+        let s1 = vm.createSession(agent: agent)
+        s1.isActive = true
+        let s2 = vm.createSession(agent: agent)
+        _ = s2
+        try! context.save()
+        vm.fetchSessions()
+
+        let s1Id = s1.id
+        ChatViewModel._simulateActiveGeneration(for: s1Id)
+
+        if let idx = vm.sessions.firstIndex(where: { $0.id == s1Id }) {
+            vm.deleteSessionAtOffsets(IndexSet(integer: idx))
+        }
+
+        XCTAssertFalse(ChatViewModel._hasActiveGeneration(for: s1Id))
+    }
+
+    // MARK: - Fix 1+4: Agent deletion cancels all session generations recursively
+
+    /// deleteAgent should cancel generations for all sessions including sub-agent sessions.
+    @MainActor
+    func testDeleteAgentCancelsAllSessionGenerations() {
+        let agent = Agent(name: "Parent")
+        context.insert(agent)
+
+        let session1 = Session(title: "Main Session")
+        context.insert(session1)
+        session1.agent = agent
+        session1.isActive = true
+
+        let subAgent = Agent(name: "Sub")
+        subAgent.subAgentType = "persistent"
+        context.insert(subAgent)
+        agent.subAgents.append(subAgent)
+
+        let subSession = Session(title: "Sub Session")
+        context.insert(subSession)
+        subSession.agent = subAgent
+        subSession.isActive = true
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session1.id)
+        ChatViewModel._simulateActiveGeneration(for: subSession.id)
+        XCTAssertTrue(ChatViewModel._hasActiveGeneration(for: session1.id))
+        XCTAssertTrue(ChatViewModel._hasActiveGeneration(for: subSession.id))
+
+        let s1Id = session1.id
+        let subSId = subSession.id
+
+        let vm = AgentViewModel(modelContext: context)
+        vm.deleteAgent(agent)
+
+        XCTAssertFalse(ChatViewModel._hasActiveGeneration(for: s1Id),
+                       "Main session generation should be cancelled")
+        XCTAssertFalse(ChatViewModel._hasActiveGeneration(for: subSId),
+                       "Sub-agent session generation should be cancelled")
+    }
+
+    // MARK: - Fix 2: Session deletion cleans up embeddings
+
+    /// deleteSession via SessionListViewModel should clean up embeddings (same as SessionService).
+    @MainActor
+    func testDeleteSessionCleansUpEmbeddings() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        let session = Session(title: "WithEmbedding")
+        context.insert(session)
+        session.agent = agent
+
+        let msg = Message(role: .user, content: "Hello")
+        context.insert(msg)
+        session.messages.append(msg)
+        try! context.save()
+
+        // Create an embedding for this session
+        let store = SessionVectorStore(modelContext: context)
+        store.upsertEmbeddingDirect(
+            sessionId: session.id,
+            vector: [0.1, 0.2, 0.3],
+            sourceText: "test"
+        )
+
+        let embeddingsBefore = (try? context.fetch(FetchDescriptor<SessionEmbedding>())) ?? []
+        XCTAssertEqual(embeddingsBefore.count, 1)
+
+        let vm = SessionListViewModel(modelContext: context)
+        vm.deleteSession(session)
+
+        let embeddingsAfter = (try? context.fetch(FetchDescriptor<SessionEmbedding>())) ?? []
+        XCTAssertTrue(embeddingsAfter.isEmpty,
+                      "Embedding should be cleaned up when session is deleted via SessionListViewModel")
+    }
+
+    /// deleteSessionAtOffsets should also clean up embeddings.
+    @MainActor
+    func testDeleteSessionAtOffsetsCleansUpEmbeddings() {
+        let agent = Agent(name: "TestAgent")
+        context.insert(agent)
+        try! context.save()
+
+        let vm = SessionListViewModel(modelContext: context)
+        let session = vm.createSession(agent: agent)
+        let sessionId = session.id
+
+        let store = SessionVectorStore(modelContext: context)
+        store.upsertEmbeddingDirect(sessionId: sessionId, vector: [0.5], sourceText: "test")
+
+        vm.fetchSessions()
+        if let idx = vm.sessions.firstIndex(where: { $0.id == sessionId }) {
+            vm.deleteSessionAtOffsets(IndexSet(integer: idx))
+        }
+
+        let embeddingsAfter = (try? context.fetch(FetchDescriptor<SessionEmbedding>())) ?? []
+        XCTAssertTrue(embeddingsAfter.isEmpty)
+    }
+
+    // MARK: - Fix 3: Provider deletion shows affected agents
+
+    /// agentNamesUsing returns correct agents that reference the provider.
+    @MainActor
+    func testAgentNamesUsingProvider() {
+        let provider = LLMProvider(name: "TestProvider", isDefault: true)
+        context.insert(provider)
+
+        let agent1 = Agent(name: "AgentA")
+        agent1.primaryProviderId = provider.id
+        context.insert(agent1)
+
+        let agent2 = Agent(name: "AgentB")
+        agent2.fallbackProviderIds = [provider.id]
+        context.insert(agent2)
+
+        let agent3 = Agent(name: "AgentC")
+        agent3.subAgentProviderId = provider.id
+        context.insert(agent3)
+
+        let agent4 = Agent(name: "AgentD") // Does NOT use this provider
+        context.insert(agent4)
+
+        try! context.save()
+
+        let vm = SettingsViewModel(modelContext: context)
+        let names = vm.agentNamesUsing(provider: provider)
+
+        XCTAssertEqual(names.count, 3)
+        XCTAssertTrue(names.contains("AgentA"))
+        XCTAssertTrue(names.contains("AgentB"))
+        XCTAssertTrue(names.contains("AgentC"))
+        XCTAssertFalse(names.contains("AgentD"))
+    }
+
+    /// agentNamesUsing returns empty when no agents reference the provider.
+    @MainActor
+    func testAgentNamesUsingProviderReturnsEmptyWhenUnused() {
+        let provider = LLMProvider(name: "Unused", isDefault: true)
+        context.insert(provider)
+
+        let agent = Agent(name: "Independent")
+        context.insert(agent)
+        try! context.save()
+
+        let vm = SettingsViewModel(modelContext: context)
+        let names = vm.agentNamesUsing(provider: provider)
+        XCTAssertTrue(names.isEmpty)
+    }
+
+    /// confirmDeleteProvider populates affectedAgentNames and providerToDelete.
+    @MainActor
+    func testConfirmDeleteProviderSetsState() {
+        let provider = LLMProvider(name: "Target", isDefault: true)
+        context.insert(provider)
+
+        let agent = Agent(name: "Affected")
+        agent.primaryProviderId = provider.id
+        context.insert(agent)
+        try! context.save()
+
+        let vm = SettingsViewModel(modelContext: context)
+        XCTAssertNil(vm.providerToDelete)
+        XCTAssertTrue(vm.affectedAgentNames.isEmpty)
+
+        vm.confirmDeleteProvider(provider)
+
+        XCTAssertNotNil(vm.providerToDelete)
+        XCTAssertEqual(vm.providerToDelete?.id, provider.id)
+        XCTAssertEqual(vm.affectedAgentNames, ["Affected"])
+    }
+
+    /// deleteProvider clears the confirmation state.
+    @MainActor
+    func testDeleteProviderClearsConfirmationState() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "ToDelete", endpoint: "https://x.com", apiKey: "", modelName: "m")
+
+        let provider = vm.providers.first!
+        vm.confirmDeleteProvider(provider)
+        XCTAssertNotNil(vm.providerToDelete)
+
+        vm.deleteProvider(provider)
+
+        XCTAssertNil(vm.providerToDelete)
+        XCTAssertTrue(vm.affectedAgentNames.isEmpty)
+        XCTAssertTrue(vm.providers.isEmpty)
+    }
+}

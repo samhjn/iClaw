@@ -69,7 +69,7 @@ struct SettingsView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            vm.deleteProvider(provider)
+                            vm.confirmDeleteProvider(provider)
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -91,7 +91,7 @@ struct SettingsView: View {
                             }
                         }
                         Button(role: .destructive) {
-                            vm.deleteProvider(provider)
+                            vm.confirmDeleteProvider(provider)
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -119,5 +119,27 @@ struct SettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .alert(L10n.Settings.deleteProviderTitle, isPresented: Binding(
+            get: { vm.providerToDelete != nil },
+            set: { if !$0 { vm.providerToDelete = nil; vm.affectedAgentNames = [] } }
+        )) {
+            Button(L10n.Common.delete, role: .destructive) {
+                if let provider = vm.providerToDelete {
+                    vm.deleteProvider(provider)
+                }
+            }
+            Button(L10n.Common.cancel, role: .cancel) {
+                vm.providerToDelete = nil
+                vm.affectedAgentNames = []
+            }
+        } message: {
+            if vm.affectedAgentNames.isEmpty {
+                Text(L10n.Settings.deleteProviderMessage)
+            } else {
+                Text(L10n.Settings.deleteProviderAffectedMessage(
+                    vm.affectedAgentNames.joined(separator: ", ")
+                ))
+            }
+        }
     }
 }

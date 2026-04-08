@@ -267,6 +267,9 @@
 "settings.title" = "设置";
 "settings.llmProviders" = "LLM 服务商";
 "settings.addProvider" = "添加服务商";
+"settings.deleteProviderTitle" = "删除服务商";
+"settings.deleteProviderMessage" = "此服务商将被永久删除，此操作无法撤销。";
+"settings.deleteProviderAffectedMessage" = "以下智能体正在使用此服务商，删除后将回退到默认服务商：%@";
 "settings.about" = "关于";
 "settings.version" = "版本";
 "settings.build" = "构建";

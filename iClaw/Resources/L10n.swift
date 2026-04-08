@@ -382,6 +382,9 @@ enum L10n {
         static var title: String { tr("settings.title") }
         static var llmProviders: String { tr("settings.llmProviders") }
         static var addProvider: String { tr("settings.addProvider") }
+        static var deleteProviderTitle: String { tr("settings.deleteProviderTitle") }
+        static var deleteProviderMessage: String { tr("settings.deleteProviderMessage") }
+        static func deleteProviderAffectedMessage(_ names: String) -> String { tr("settings.deleteProviderAffectedMessage", names) }
         static var about: String { tr("settings.about") }
         static var version: String { tr("settings.version") }
         static var build: String { tr("settings.build") }

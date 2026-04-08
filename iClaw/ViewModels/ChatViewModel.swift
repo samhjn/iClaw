@@ -136,13 +136,20 @@ final class ChatViewModel {
     /// Explicit stream-cancel closures keyed by session ID — survives ViewModel recreation.
     private static var activeStreamCancels: [UUID: @Sendable () -> Void] = [:]
 
-    #if DEBUG
-    /// Cancel and clear any active generation for the given session. Test-only.
-    static func _clearActiveGeneration(for sessionId: UUID) {
+    /// Cancel and clear any active generation for the given session.
+    /// Called before session/agent deletion to prevent writes to deleted objects.
+    static func cancelAndClearGeneration(for sessionId: UUID) {
+        activeStreamCancels[sessionId]?()
+        activeStreamCancels.removeValue(forKey: sessionId)
         activeGenerations[sessionId]?.cancel()
         activeGenerations.removeValue(forKey: sessionId)
-        activeStreamCancels.removeValue(forKey: sessionId)
         dismissedSessions.remove(sessionId)
+    }
+
+    #if DEBUG
+    /// Cancel and clear any active generation for the given session. Test-only alias.
+    static func _clearActiveGeneration(for sessionId: UUID) {
+        cancelAndClearGeneration(for: sessionId)
     }
 
     /// Whether a generation is active for the session. Test-only.

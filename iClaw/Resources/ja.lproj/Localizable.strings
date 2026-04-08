@@ -266,6 +266,9 @@
 "settings.title" = "設定";
 "settings.llmProviders" = "LLM プロバイダー";
 "settings.addProvider" = "プロバイダーを追加";
+"settings.deleteProviderTitle" = "プロバイダーを削除";
+"settings.deleteProviderMessage" = "このプロバイダーは完全に削除されます。この操作は元に戻せません。";
+"settings.deleteProviderAffectedMessage" = "以下のエージェントがこのプロバイダーを使用しています。削除後はデフォルトのプロバイダーにフォールバックします：%@";
 "settings.about" = "このアプリについて";
 "settings.version" = "バージョン";
 "settings.build" = "ビルド";

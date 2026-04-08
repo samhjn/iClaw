@@ -148,6 +148,8 @@ final class SessionListViewModel {
     }
 
     func deleteSession(_ session: Session) {
+        cancelActiveGeneration(for: session)
+        SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: session.id)
         modelContext.delete(session)
         try? modelContext.save()
         fetchSessions()
@@ -156,9 +158,20 @@ final class SessionListViewModel {
     func deleteSessionAtOffsets(_ offsets: IndexSet) {
         for index in offsets {
             let session = sessions[index]
+            cancelActiveGeneration(for: session)
+            SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: session.id)
             modelContext.delete(session)
         }
         try? modelContext.save()
         fetchSessions()
+    }
+
+    /// Cancel any active ChatViewModel generation for the session before deletion.
+    private func cancelActiveGeneration(for session: Session) {
+        guard session.isActive else { return }
+        ChatViewModel.cancelAndClearGeneration(for: session.id)
+        session.isActive = false
+        session.isCompressingContext = false
+        session.pendingStreamingContent = nil
     }
 }
