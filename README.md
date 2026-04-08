@@ -34,7 +34,7 @@ Most AI chat apps are just chat boxes. **iClaw is different** — it's a full-bl
 | **Personas** | Single conversation | Multiple agents, each with independent personality & memory |
 | **Code Execution** | Not supported | Built-in JavaScript interpreters |
 | **Web Automation** | Not supported | In-App Browser with agent-driven automation |
-| **Context** | Long conversations lose context | Auto-compression + summary injection — never forgets |
+| **Context** | Long conversations lose context | Auto-compression + summary injection + session RAG — never forgets |
 | **Extensibility** | Closed | Skill system + Cron jobs + Sub-agents |
 | **Privacy** | Cloud-stored | All data stays on-device via SwiftData |
 
@@ -82,7 +82,18 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 - Session-centric interaction design
 - SwiftData persistence — your data is safe and never lost
 - **Auto context compression** — when token limits are exceeded, older messages are compressed and summaries are injected into system prompts
-- RAG-ready data model, prepared for cross-session retrieval
+
+### 🔍 Session RAG & Search
+Agents don't just chat — they **remember**. iClaw includes a built-in Retrieval-Augmented Generation (RAG) framework that turns past sessions into a searchable knowledge base, so agents can recall and reason about prior conversations.
+
+- **On-device vector embeddings** — powered by Apple's NaturalLanguage framework (sentence-level with word-vector fallback), all computed locally with zero cloud dependency
+- **Hybrid search** — vector similarity search (cosine, threshold >0.3) with automatic keyword fallback, ensuring results are always available even without embeddings
+- **Agent-callable tools** — two function-calling tools exposed to agents:
+  - `search_sessions` — semantic search across an agent's session history
+  - `recall_session` — retrieve and paginate through a specific session's messages (token-aware, max 4 000 tokens)
+- **Automatic context injection** — related sessions are discovered at session start and injected into the system prompt, so agents have relevant history without being asked
+- **Background indexing** — embeddings are lazily backfilled on app launch in batched, CPU-throttled passes so the UI stays smooth
+- **Privacy & ownership** — embeddings stay on-device; each agent can only search its own sessions; the current session is auto-excluded to prevent self-reference
 
 ### 🔌 Multi-Provider LLM Support
 - Compatible with any **OpenAI API**-compatible endpoint
@@ -103,6 +114,7 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 - `save_code` / `load_code` / `list_code` — manage code snippets
 - `create_sub_agent` / `message_sub_agent` — sub-agent lifecycle management
 - `schedule_cron` / `unschedule_cron` — scheduled task management
+- `search_sessions` / `recall_session` — session RAG & cross-session retrieval
 - `browser_*` — 9 browser automation tools (see In-App Browser section above)
 
 ### 📦 Skill System
