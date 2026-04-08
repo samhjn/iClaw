@@ -41,10 +41,24 @@ final class AgentViewModel {
 
     func deleteAgent(_ agent: Agent) {
         let agentId = agent.id
+        cancelAllActiveGenerations(for: agent)
         modelContext.delete(agent)
         try? modelContext.save()
         AgentFileManager.shared.cleanupAgentFiles(agentId: agentId)
         fetchAgents()
+    }
+
+    /// Cancel active ChatViewModel generations for all sessions under this agent
+    /// (including sub-agent sessions) before cascade deletion.
+    private func cancelAllActiveGenerations(for agent: Agent) {
+        for session in agent.sessions where session.isActive {
+            ChatViewModel.cancelAndClearGeneration(for: session.id)
+            session.isActive = false
+            session.pendingStreamingContent = nil
+        }
+        for subAgent in agent.subAgents {
+            cancelAllActiveGenerations(for: subAgent)
+        }
     }
 
     func renameAgent(_ agent: Agent, to newName: String) {

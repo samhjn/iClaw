@@ -266,6 +266,9 @@
 "settings.title" = "설정";
 "settings.llmProviders" = "LLM 제공자";
 "settings.addProvider" = "제공자 추가";
+"settings.deleteProviderTitle" = "제공자 삭제";
+"settings.deleteProviderMessage" = "이 제공자가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
+"settings.deleteProviderAffectedMessage" = "다음 에이전트가 이 제공자를 사용 중이며, 삭제 후 기본 제공자로 전환됩니다: %@";
 "settings.about" = "정보";
 "settings.version" = "버전";
 "settings.build" = "빌드";

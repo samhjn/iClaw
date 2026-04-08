@@ -6,6 +6,12 @@ import Observation
 final class SettingsViewModel {
     var providers: [LLMProvider] = []
 
+    /// Set by the View to trigger a deletion confirmation alert.
+    var providerToDelete: LLMProvider?
+
+    /// Names of agents that reference the provider pending deletion (for the alert message).
+    var affectedAgentNames: [String] = []
+
     private(set) var modelContext: ModelContext
 
     init(modelContext: ModelContext) {
@@ -47,6 +53,25 @@ final class SettingsViewModel {
         fetchProviders()
     }
 
+    /// Returns the names of agents that reference this provider (as primary, fallback, or sub-agent default).
+    func agentNamesUsing(provider: LLMProvider) -> [String] {
+        let providerId = provider.id.uuidString
+        let agents = (try? modelContext.fetch(FetchDescriptor<Agent>())) ?? []
+        return agents.compactMap { agent in
+            let usesPrimary = agent.primaryProviderIdRaw == providerId
+            let usesFallback = agent.fallbackProviderIdsRaw?.contains(providerId) == true
+            let usesSubAgent = agent.subAgentProviderIdRaw == providerId
+            guard usesPrimary || usesFallback || usesSubAgent else { return nil }
+            return agent.name
+        }
+    }
+
+    /// Prepare for provider deletion: populate affectedAgentNames and set providerToDelete.
+    func confirmDeleteProvider(_ provider: LLMProvider) {
+        affectedAgentNames = agentNamesUsing(provider: provider)
+        providerToDelete = provider
+    }
+
     func deleteProvider(_ provider: LLMProvider) {
         let wasDefault = provider.isDefault
         modelContext.delete(provider)
@@ -57,6 +82,8 @@ final class SettingsViewModel {
             try? modelContext.save()
             fetchProviders()
         }
+        providerToDelete = nil
+        affectedAgentNames = []
     }
 
     func updateProvider(_ provider: LLMProvider) {

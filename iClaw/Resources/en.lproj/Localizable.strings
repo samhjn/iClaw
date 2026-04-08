@@ -267,6 +267,9 @@
 "settings.title" = "Settings";
 "settings.llmProviders" = "LLM Providers";
 "settings.addProvider" = "Add Provider";
+"settings.deleteProviderTitle" = "Delete Provider";
+"settings.deleteProviderMessage" = "This provider will be permanently deleted. This cannot be undone.";
+"settings.deleteProviderAffectedMessage" = "The following agents use this provider and will fall back to the default provider after deletion: %@";
 "settings.about" = "About";
 "settings.version" = "Version";
 "settings.build" = "Build";
