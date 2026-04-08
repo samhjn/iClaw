@@ -26,13 +26,26 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate
 
+      - name: Determine Simulator
+        run: |
+          SIMULATOR=$(xcrun simctl list devices available \
+            | grep -oE 'iPhone [0-9]+' \
+            | sort -t ' ' -k2 -n \
+            | tail -1)
+          if [ -z "$SIMULATOR" ]; then
+            echo "::error::No available iPhone simulator found"
+            exit 1
+          fi
+          echo "Using simulator: $SIMULATOR"
+          echo "SIMULATOR=$SIMULATOR" >> "$GITHUB_ENV"
+
       - name: Build and Test
         run: |
           xcodebuild test \
             -project iClaw.xcodeproj \
             -scheme iClaw \
             -testPlan iClaw \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "platform=iOS Simulator,name=$SIMULATOR,OS=latest" \
             -resultBundlePath TestResults \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
