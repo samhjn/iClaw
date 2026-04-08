@@ -232,6 +232,11 @@ struct FileInfo: Identifiable {
 
     var id: String { name }
 
+    var isTextPreviewable: Bool {
+        let ext = (name as NSString).pathExtension.lowercased()
+        return TextFilePreviewCoordinator.textExtensions.contains(ext)
+    }
+
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }

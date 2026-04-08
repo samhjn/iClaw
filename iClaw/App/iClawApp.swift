@@ -161,6 +161,11 @@ struct iClawApp: App {
                let image = UIImage(data: data) {
                 ImagePreviewCoordinator.shared.show(image)
             }
+        } else if TextFilePreviewCoordinator.textExtensions.contains(ext) {
+            if let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: filename),
+               let text = String(data: data, encoding: .utf8) {
+                TextFilePreviewCoordinator.shared.show(content: text, filename: filename)
+            }
         } else {
             let fileURL = AgentFileManager.shared.fileURL(agentId: agentId, name: filename)
             guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
