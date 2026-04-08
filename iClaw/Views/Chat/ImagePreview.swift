@@ -226,7 +226,19 @@ private struct ImagePreviewOverlay: View {
     private var magnificationGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                scale = max(0.5, lastScale * value.magnification)
+                let newScale = max(0.5, lastScale * value.magnification)
+
+                // Pinch center relative to the view center
+                let anchorX = (value.startAnchor.x - 0.5) * viewportSize.width
+                let anchorY = (value.startAnchor.y - 0.5) * viewportSize.height
+
+                // Adjust offset so the image point under the fingers stays stationary
+                let ratio = newScale / lastScale
+                panOffset = CGSize(
+                    width: anchorX * (1 - ratio) + lastPanOffset.width * ratio,
+                    height: anchorY * (1 - ratio) + lastPanOffset.height * ratio
+                )
+                scale = newScale
             }
             .onEnded { _ in
                 let clamped = max(1.0, min(scale, 5.0))
