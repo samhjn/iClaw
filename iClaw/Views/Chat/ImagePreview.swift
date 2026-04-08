@@ -187,15 +187,18 @@ private struct ImagePreviewOverlay: View {
                         width: lastPanOffset.width + value.translation.width,
                         height: lastPanOffset.height + value.translation.height
                     )
-                    panOffset = clampedOffset(raw, for: scale)
+                    panOffset = rubberBandOffset(raw, for: scale)
                 } else {
                     dismissTranslation = value.translation
                 }
             }
             .onEnded { value in
                 if scale > 1 {
-                    panOffset = clampedOffset(panOffset, for: scale)
-                    lastPanOffset = panOffset
+                    let clamped = clampedOffset(panOffset, for: scale)
+                    withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
+                        panOffset = clamped
+                    }
+                    lastPanOffset = clamped
                     return
                 }
 
@@ -291,6 +294,28 @@ private struct ImagePreviewOverlay: View {
             width: min(max(offset.width, -maxX), maxX),
             height: min(max(offset.height, -maxY), maxY)
         )
+    }
+
+    /// Applies rubber-band damping when panning beyond the allowed limits.
+    private func rubberBandOffset(_ offset: CGSize, for currentScale: CGFloat) -> CGSize {
+        let fitted = fittedImageSize()
+        let maxX = max((fitted.width * currentScale - viewportSize.width) / 2, 0)
+        let maxY = max((fitted.height * currentScale - viewportSize.height) / 2, 0)
+        return CGSize(
+            width: rubberBand(offset.width, limit: maxX),
+            height: rubberBand(offset.height, limit: maxY)
+        )
+    }
+
+    /// Rubber-band formula: within `limit` moves freely; beyond it, excess is
+    /// damped logarithmically so the user feels resistance.
+    private func rubberBand(_ value: CGFloat, limit: CGFloat) -> CGFloat {
+        let clamped = min(max(value, -limit), limit)
+        let excess = value - clamped
+        guard excess != 0 else { return value }
+        let dim: CGFloat = 200 // controls how "stretchy" the band feels
+        let dampened = dim * (1 - exp(-abs(excess) / dim))
+        return clamped + dampened * (excess > 0 ? 1 : -1)
     }
 
     private func flashToast(_ message: String) {
