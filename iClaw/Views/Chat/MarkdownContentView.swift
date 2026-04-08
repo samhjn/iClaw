@@ -869,28 +869,55 @@ private struct MarkdownTableView: View {
         hasBuilt = true
     }
 
+    /// Strip markdown inline syntax characters for width measurement.
+    private static func stripInlineMarkdown(_ text: String) -> String {
+        var s = text
+        s = s.replacingOccurrences(of: "***", with: "")
+        s = s.replacingOccurrences(of: "___", with: "")
+        s = s.replacingOccurrences(of: "**", with: "")
+        s = s.replacingOccurrences(of: "__", with: "")
+        s = s.replacingOccurrences(of: "~~", with: "")
+        s = s.replacingOccurrences(of: "`", with: "")
+        // Strip link/image syntax: [text](url) → text, ![alt](url) → alt
+        while let open = s.range(of: "![") ?? s.range(of: "[") {
+            let isImage = s[open].first == "!"
+            let afterBracket = s[open.upperBound...]
+            guard let close = afterBracket.firstIndex(of: "]") else { break }
+            let inner = String(afterBracket[afterBracket.startIndex..<close])
+            let afterClose = s[s.index(after: close)...]
+            if afterClose.hasPrefix("("), let paren = afterClose.firstIndex(of: ")") {
+                let replacement = isImage ? inner : inner
+                s.replaceSubrange(open.lowerBound...paren, with: replacement)
+            } else {
+                break
+            }
+        }
+        return s
+    }
+
     private func measureColumnWidths() -> [CGFloat] {
         let font = UIFont.preferredFont(forTextStyle: .caption1)
         let boldFont = UIFont.boldSystemFont(ofSize: font.pointSize)
         let padding = Self.cellPaddingH * 2
         let screenWidth = UIScreen.main.bounds.width
-        let maxTableWidth = screenWidth - 32  // leave some margin
+        let maxTableWidth = screenWidth - 32
 
         var widths = (0..<table.headers.count).map { col -> CGFloat in
-            let headerSize = NSAttributedString(string: table.headers[col], attributes: [.font: boldFont]).size()
+            let headerText = Self.stripInlineMarkdown(table.headers[col])
+            let headerSize = NSAttributedString(string: headerText, attributes: [.font: boldFont]).size()
             var maxWidth = headerSize.width
 
             let rowsToMeasure = min(table.rows.count, 30)
             for rowIdx in 0..<rowsToMeasure {
                 if col < table.rows[rowIdx].count {
-                    let cellSize = NSAttributedString(string: table.rows[rowIdx][col], attributes: [.font: font]).size()
+                    let cellText = Self.stripInlineMarkdown(table.rows[rowIdx][col])
+                    let cellSize = NSAttributedString(string: cellText, attributes: [.font: boldFont]).size()
                     maxWidth = max(maxWidth, cellSize.width)
                 }
             }
             return max(Self.minColWidth, min(ceil(maxWidth) + padding, Self.maxColWidth))
         }
 
-        // Proportionally shrink columns if total width exceeds screen width
         let totalWidth = widths.reduce(0, +)
         if totalWidth > maxTableWidth && totalWidth > 0 {
             let scale = maxTableWidth / totalWidth
