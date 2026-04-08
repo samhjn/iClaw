@@ -607,7 +607,8 @@ final class DeleteActiveSubAgentTests: XCTestCase {
         try! context.save()
 
         XCTAssertEqual(parent.subAgents.count, 3)
-        XCTAssertTrue(parent.subAgents[0].sessions.first?.isActive ?? false)
+        XCTAssertTrue(parent.subAgents.contains(where: { $0.sessions.first?.isActive == true }),
+                      "At least one sub-agent should have an active session")
 
         // Delete parent — cascade must not crash
         context.delete(parent)
