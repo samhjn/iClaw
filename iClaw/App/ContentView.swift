@@ -44,5 +44,6 @@ struct ContentView: View {
                 .tag(Tab.settings)
         }
         .imagePreviewOverlay()
+        .textFilePreviewOverlay()
     }
 }

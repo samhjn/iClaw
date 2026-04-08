@@ -184,6 +184,9 @@ private struct FileRowView: View {
             if file.isImage, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
                let img = UIImage(data: data) {
                 ImagePreviewCoordinator.shared.show(img)
+            } else if file.isTextPreviewable, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
+                      let text = String(data: data, encoding: .utf8) {
+                TextFilePreviewCoordinator.shared.show(content: text, filename: file.name)
             }
         } label: {
             HStack(spacing: 12) {
