@@ -74,14 +74,19 @@ final class SettingsViewModel {
 
     func deleteProvider(_ provider: LLMProvider) {
         let wasDefault = provider.isDefault
+        // Identify the successor BEFORE deleting so we can promote it
+        // in the same save transaction.  Two separate save+fetch cycles
+        // caused a UICollectionView batch-update race (the first fetch
+        // triggers a "delete row" animation; the second save fires a
+        // SwiftData observation notification that re-enters SwiftUI's
+        // layout while the animation is still in flight → crash).
+        let successor: LLMProvider? = wasDefault
+            ? providers.first { $0.id != provider.id }
+            : nil
+        successor?.isDefault = true
         modelContext.delete(provider)
         try? modelContext.save()
         fetchProviders()
-        if wasDefault, let first = providers.first {
-            first.isDefault = true
-            try? modelContext.save()
-            fetchProviders()
-        }
         providerToDelete = nil
         affectedAgentNames = []
     }

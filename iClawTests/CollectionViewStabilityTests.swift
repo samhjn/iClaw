@@ -119,7 +119,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
         context.insert(assistantMsg)
         session.messages.append(assistantMsg)
         try! context.save()
-        vm.loadMessages()
+        vm.loadMessages(immediate: true)
 
         let snapshotBefore = silentFilteredMessages(from: vm.messages)
         XCTAssertEqual(snapshotBefore.count, 2) // user + assistant
@@ -132,7 +132,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
         }
         // Single loadMessages() after batch — mirrors processToolCalls behavior
         try! context.save()
-        vm.loadMessages()
+        vm.loadMessages(immediate: true)
 
         let snapshotAfter = silentFilteredMessages(from: vm.messages)
         // Tool messages should still be hidden; only user + assistant visible
@@ -162,7 +162,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
         // Call loadMessages() rapidly many times — each call should produce the same result
         var counts: [Int] = []
         for _ in 0..<20 {
-            vm.loadMessages()
+            vm.loadMessages(immediate: true)
             counts.append(vm.messages.count)
         }
 
@@ -219,7 +219,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
         context.insert(toolMsg)
         session.messages.append(toolMsg)
         try! context.save()
-        vm.loadMessages()
+        vm.loadMessages(immediate: true)
 
         // Still 1 visible in silent mode
         XCTAssertEqual(silentFilteredMessages(from: vm.messages).count, 1)
@@ -314,7 +314,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
         context.insert(msg)
         session.messages.append(msg)
         try! context.save()
-        vm.loadMessages()
+        vm.loadMessages(immediate: true)
 
         XCTAssertEqual(vm.messages.count, 1)
         XCTAssertEqual(vm.messages.first?.content, "hello")
@@ -335,9 +335,9 @@ final class DisplayMessageFilteringTests: XCTestCase {
 
         let vm = ChatViewModel(session: session, modelContext: context)
         let count1 = vm.messages.count
-        vm.loadMessages()
+        vm.loadMessages(immediate: true)
         let count2 = vm.messages.count
-        vm.loadMessages()
+        vm.loadMessages(immediate: true)
         let count3 = vm.messages.count
 
         XCTAssertEqual(count1, count2)
@@ -389,7 +389,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
             session.messages.append(toolMsg)
         }
         try! context.save()
-        vm.loadMessages() // Single load after batch
+        vm.loadMessages(immediate: true) // Single load after batch
 
         // Post-batch snapshot
         let postBatchFiltered = silentFilteredMessages(from: vm.messages)
@@ -426,7 +426,7 @@ final class DisplayMessageFilteringTests: XCTestCase {
             context.insert(toolMsg)
             session.messages.append(toolMsg)
             try! context.save()
-            vm.loadMessages()
+            vm.loadMessages(immediate: true)
             filteredCounts.append(silentFilteredMessages(from: vm.messages).count)
         }
 

@@ -1258,3 +1258,364 @@ final class DeletionFixVerificationTests: XCTestCase {
         XCTAssertTrue(vm.providers.isEmpty)
     }
 }
+
+// =============================================================================
+// MARK: - LLM Provider Modification & Deletion (Batch-Update Safety)
+// =============================================================================
+//
+// The UICollectionView crash (_Bug_Detected_In_Client_Of_UICollectionView_
+// Invalid_Number_Of_Items_In_Section) was triggered when deleteProvider()
+// performed two separate save+fetchProviders cycles for a default provider.
+// The first cycle queued a "delete row" batch-update animation; the second
+// modelContext.save() fired a SwiftData @Model notification that re-entered
+// SwiftUI's layout while the animation was still in flight.
+//
+// These tests verify that all SettingsViewModel mutations leave the
+// providers list in a consistent state after a single save+fetch, and that
+// the default-promotion logic works atomically.
+
+final class LLMProviderModificationTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        context = ModelContext(container)
+    }
+
+    override func tearDown() {
+        container = nil
+        context = nil
+        super.tearDown()
+    }
+
+    // MARK: - Delete Default Provider (the crash scenario)
+
+    /// Deleting the default provider must promote the next provider to default
+    /// in a single save transaction (no double save+fetch).
+    @MainActor
+    func testDeleteDefaultProviderPromotesSuccessorAtomically() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "Alpha", endpoint: "https://a.com", apiKey: "k1", modelName: "m1")
+        vm.addProvider(name: "Beta", endpoint: "https://b.com", apiKey: "k2", modelName: "m2")
+        vm.addProvider(name: "Gamma", endpoint: "https://c.com", apiKey: "k3", modelName: "m3")
+
+        XCTAssertEqual(vm.providers.count, 3)
+        XCTAssertTrue(vm.providers[0].isDefault, "First added should be default")
+
+        let defaultProvider = vm.providers[0]
+        vm.deleteProvider(defaultProvider)
+
+        XCTAssertEqual(vm.providers.count, 2)
+        let defaults = vm.providers.filter(\.isDefault)
+        XCTAssertEqual(defaults.count, 1, "Exactly one provider should be default after deletion")
+    }
+
+    /// Deleting the only provider (which is the default) should leave an empty list
+    /// with no crash and no leftover default.
+    @MainActor
+    func testDeleteOnlyDefaultProviderLeavesEmptyList() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "Solo", endpoint: "https://x.com", apiKey: "", modelName: "m1")
+
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertTrue(vm.providers[0].isDefault)
+
+        vm.deleteProvider(vm.providers[0])
+
+        XCTAssertTrue(vm.providers.isEmpty)
+    }
+
+    /// Deleting a non-default provider should not change which provider is default.
+    @MainActor
+    func testDeleteNonDefaultProviderKeepsExistingDefault() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "Default", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "Other", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+
+        XCTAssertTrue(vm.providers[0].isDefault)
+        let nonDefault = vm.providers[1]
+        XCTAssertFalse(nonDefault.isDefault)
+
+        vm.deleteProvider(nonDefault)
+
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertTrue(vm.providers[0].isDefault)
+        XCTAssertEqual(vm.providers[0].name, "Default")
+    }
+
+    /// After deleting the default, the promoted successor should persist across
+    /// a fresh ViewModel creation (proving it was saved, not just in-memory).
+    @MainActor
+    func testDeleteDefaultProviderPersistsSuccessorAcrossVMRecreation() {
+        let vm1 = SettingsViewModel(modelContext: context)
+        vm1.addProvider(name: "First", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm1.addProvider(name: "Second", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        vm1.deleteProvider(vm1.providers[0])
+
+        // Create a fresh ViewModel from the same context
+        let vm2 = SettingsViewModel(modelContext: context)
+        XCTAssertEqual(vm2.providers.count, 1)
+        XCTAssertTrue(vm2.providers[0].isDefault,
+                      "Successor default must persist across ViewModel recreations")
+        XCTAssertEqual(vm2.providers[0].name, "Second")
+    }
+
+    // MARK: - Provider list consistency across mutations
+
+    /// providers array identity (IDs) must be stable after each mutation —
+    /// no duplicates, no stale entries.
+    @MainActor
+    func testProviderIdsUniqueAfterMultipleMutations() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "A", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "B", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        vm.addProvider(name: "C", endpoint: "https://c.com", apiKey: "", modelName: "m3")
+
+        // Delete middle provider
+        let middle = vm.providers[1]
+        vm.deleteProvider(middle)
+
+        let ids = vm.providers.map(\.id)
+        XCTAssertEqual(Set(ids).count, ids.count, "No duplicate IDs after deletion")
+        XCTAssertEqual(ids.count, 2)
+
+        // Add another
+        vm.addProvider(name: "D", endpoint: "https://d.com", apiKey: "", modelName: "m4")
+        let ids2 = vm.providers.map(\.id)
+        XCTAssertEqual(Set(ids2).count, ids2.count, "No duplicate IDs after add")
+        XCTAssertEqual(ids2.count, 3)
+    }
+
+    /// Exactly one default must exist at all times (when providers are non-empty).
+    @MainActor
+    func testExactlyOneDefaultAfterEachMutation() {
+        let vm = SettingsViewModel(modelContext: context)
+
+        vm.addProvider(name: "A", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after first add")
+
+        vm.addProvider(name: "B", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after second add")
+
+        vm.setDefault(vm.providers[1])
+        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after setDefault")
+
+        vm.deleteProvider(vm.providers.first { $0.isDefault }!)
+        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after deleting default")
+
+        vm.deleteProvider(vm.providers[0])
+        XCTAssertTrue(vm.providers.isEmpty, "Empty after deleting all")
+    }
+
+    // MARK: - setDefault
+
+    /// setDefault should make exactly one provider default, clearing others.
+    @MainActor
+    func testSetDefaultClearsOtherDefaults() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "A", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "B", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        vm.addProvider(name: "C", endpoint: "https://c.com", apiKey: "", modelName: "m3")
+
+        let target = vm.providers[2]
+        vm.setDefault(target)
+
+        for p in vm.providers {
+            if p.id == target.id {
+                XCTAssertTrue(p.isDefault, "\(p.name) should be default")
+            } else {
+                XCTAssertFalse(p.isDefault, "\(p.name) should NOT be default")
+            }
+        }
+    }
+
+    /// Calling setDefault on the already-default provider is a no-op.
+    @MainActor
+    func testSetDefaultOnCurrentDefaultIsIdempotent() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "Only", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        let provider = vm.providers[0]
+        XCTAssertTrue(provider.isDefault)
+
+        vm.setDefault(provider)
+
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertTrue(vm.providers[0].isDefault)
+    }
+
+    // MARK: - Delete provider used by Agent (dangling reference safety)
+
+    /// Deleting a provider that's an Agent's primary doesn't cascade-delete the agent.
+    @MainActor
+    func testDeleteProviderUsedAsAgentPrimaryDoesNotDeleteAgent() {
+        let provider = LLMProvider(name: "Targeted", isDefault: true)
+        context.insert(provider)
+
+        let agent = Agent(name: "MyAgent")
+        agent.primaryProviderId = provider.id
+        context.insert(agent)
+        try! context.save()
+
+        let vm = SettingsViewModel(modelContext: context)
+        vm.deleteProvider(provider)
+
+        let agents = (try? context.fetch(FetchDescriptor<Agent>())) ?? []
+        XCTAssertEqual(agents.count, 1, "Agent must survive provider deletion")
+        XCTAssertEqual(agents[0].name, "MyAgent")
+        // Agent still holds the dangling UUID — this is expected;
+        // ModelRouter falls back to the global default at resolve time.
+        XCTAssertNotNil(agents[0].primaryProviderId)
+    }
+
+    /// Deleting a provider used in an Agent's fallback chain doesn't crash.
+    @MainActor
+    func testDeleteProviderInFallbackChainDoesNotCrash() {
+        let primary = LLMProvider(name: "Primary", isDefault: true)
+        context.insert(primary)
+        let fallback = LLMProvider(name: "Fallback")
+        context.insert(fallback)
+        let fallbackId = fallback.id  // Capture before deletion
+
+        let agent = Agent(name: "Agent")
+        agent.primaryProviderId = primary.id
+        agent.fallbackProviderIds = [fallbackId]
+        context.insert(agent)
+        try! context.save()
+
+        let vm = SettingsViewModel(modelContext: context)
+        vm.deleteProvider(fallback)
+
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertEqual(vm.providers[0].name, "Primary")
+        // Agent's fallback chain still references the deleted ID — ModelRouter handles this
+        XCTAssertEqual(agent.fallbackProviderIds, [fallbackId])
+    }
+
+    /// Deleting the default provider that multiple agents reference should
+    /// still result in exactly one new default.
+    @MainActor
+    func testDeleteDefaultProviderReferencedByMultipleAgents() {
+        let provider = LLMProvider(name: "Shared", isDefault: true)
+        context.insert(provider)
+        let backup = LLMProvider(name: "Backup")
+        context.insert(backup)
+
+        for i in 0..<5 {
+            let agent = Agent(name: "Agent\(i)")
+            agent.primaryProviderId = provider.id
+            context.insert(agent)
+        }
+        try! context.save()
+
+        let vm = SettingsViewModel(modelContext: context)
+        vm.deleteProvider(provider)
+
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertTrue(vm.providers[0].isDefault)
+        XCTAssertEqual(vm.providers[0].name, "Backup")
+
+        let agents = (try? context.fetch(FetchDescriptor<Agent>())) ?? []
+        XCTAssertEqual(agents.count, 5, "All agents must survive provider deletion")
+    }
+
+    // MARK: - Model toggle & default model change
+
+    /// toggleModel should add/remove models without affecting the provider list count.
+    @MainActor
+    func testToggleModelDoesNotAffectProviderCount() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "Test", endpoint: "https://a.com", apiKey: "", modelName: "base-model")
+
+        let provider = vm.providers[0]
+        let countBefore = vm.providers.count
+
+        vm.toggleModel("extra-model", enabled: true, for: provider)
+        XCTAssertEqual(vm.providers.count, countBefore)
+        XCTAssertTrue(provider.enabledModels.contains("extra-model"))
+
+        vm.toggleModel("extra-model", enabled: false, for: provider)
+        XCTAssertEqual(vm.providers.count, countBefore)
+        XCTAssertFalse(provider.enabledModels.contains("extra-model"))
+    }
+
+    /// setDefaultModel should swap the default without changing provider count.
+    @MainActor
+    func testSetDefaultModelPreservesProviderList() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "Test", endpoint: "https://a.com", apiKey: "", modelName: "old-default")
+
+        let provider = vm.providers[0]
+        vm.toggleModel("new-default", enabled: true, for: provider)
+        vm.setDefaultModel("new-default", for: provider)
+
+        XCTAssertEqual(provider.modelName, "new-default")
+        XCTAssertTrue(provider.enabledModels.contains("old-default"),
+                      "Old default should be kept in the enabled list")
+        XCTAssertEqual(vm.providers.count, 1, "Provider list count unchanged")
+    }
+
+    // MARK: - Rapid mutations (simulating the batch-update race window)
+
+    /// Rapidly adding and deleting providers should not leave inconsistent state.
+    @MainActor
+    func testRapidAddDeleteCyclesProduceConsistentState() {
+        let vm = SettingsViewModel(modelContext: context)
+
+        for i in 0..<10 {
+            vm.addProvider(name: "P\(i)", endpoint: "https://\(i).com", apiKey: "", modelName: "m\(i)")
+        }
+        XCTAssertEqual(vm.providers.count, 10)
+
+        // Delete every other provider
+        let toDelete = stride(from: 0, to: 10, by: 2).map { vm.providers[$0] }
+        for provider in toDelete {
+            vm.deleteProvider(provider)
+        }
+
+        XCTAssertEqual(vm.providers.count, 5)
+        let ids = vm.providers.map(\.id)
+        XCTAssertEqual(Set(ids).count, 5, "No duplicates after rapid deletions")
+        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1,
+                       "Exactly one default after rapid deletions")
+    }
+
+    /// Rapidly switching defaults should always end with exactly one default.
+    @MainActor
+    func testRapidSetDefaultAlwaysLeavesOneDefault() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "A", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "B", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        vm.addProvider(name: "C", endpoint: "https://c.com", apiKey: "", modelName: "m3")
+
+        for _ in 0..<20 {
+            let random = vm.providers.randomElement()!
+            vm.setDefault(random)
+            XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1,
+                           "Must have exactly one default at all times")
+        }
+    }
+
+    /// Delete all providers one by one (always deleting the current default).
+    @MainActor
+    func testDeleteAllProvidersOneByOneAlwaysDeletingDefault() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "A", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "B", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        vm.addProvider(name: "C", endpoint: "https://c.com", apiKey: "", modelName: "m3")
+
+        while !vm.providers.isEmpty {
+            let current = vm.providers.first { $0.isDefault }!
+            vm.deleteProvider(current)
+            if !vm.providers.isEmpty {
+                XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1,
+                               "Must promote a successor when default is deleted")
+            }
+        }
+        XCTAssertTrue(vm.providers.isEmpty)
+    }
+}
