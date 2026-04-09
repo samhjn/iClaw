@@ -420,6 +420,8 @@ enum L10n {
         static var remoteModels: String { tr("provider.remoteModels") }
         static var remoteModelsFooter: String { tr("provider.remoteModelsFooter") }
         static func maxTokens(_ value: Int) -> String { tr("provider.maxTokens", value) }
+        static func thinkingBudget(_ value: Int) -> String { tr("provider.thinkingBudget", value) }
+        static var thinkingBudgetFooter: String { tr("provider.thinkingBudgetFooter") }
         static var parameters: String { tr("provider.parameters") }
         static var supportsVision: String { tr("provider.supportsVision") }
         static var supportsVisionFooter: String { tr("provider.supportsVisionFooter") }

@@ -301,6 +301,8 @@
 "provider.remoteModels" = "원격 모델";
 "provider.remoteModelsFooter" = "API 엔드포인트에서 모델을 가져온 다음 필요한 모델을 활성화하세요.";
 "provider.maxTokens" = "최대 토큰: %d";
+"provider.thinkingBudget" = "사고 예산: %d";
+"provider.thinkingBudgetFooter" = "확장 사고/추론의 토큰 예산입니다. max_tokens는 이 값보다 크도록 자동 조정됩니다.";
 "provider.parameters" = "매개변수";
 "provider.supportsVision" = "비전 지원";
 "provider.supportsVisionFooter" = "이 모델이 이미지 입력을 지원하는 경우 활성화하세요 (예: GPT-4o, Claude 3.5 Sonnet)";

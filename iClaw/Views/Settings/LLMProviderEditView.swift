@@ -11,6 +11,7 @@ struct LLMProviderEditView: View {
     @State private var apiKey: String = ""
     @State private var modelName: String = "gpt-5.4"
     @State private var maxTokens: Int = 4096
+    @State private var thinkingBudget: Int = 10000
     @State private var temperature: Double = 0.7
     @State private var apiStyle: APIStyle = .openAI
 
@@ -78,6 +79,7 @@ struct LLMProviderEditView: View {
                 apiKey = p.apiKey
                 modelName = p.modelName
                 maxTokens = p.maxTokens
+                thinkingBudget = p.thinkingBudget
                 temperature = p.temperature
                 apiStyle = APIStyle(rawValue: p.apiStyleRaw) ?? .openAI
                 enabledModels = Set(p.enabledModels)
@@ -379,15 +381,26 @@ struct LLMProviderEditView: View {
         }
     }
 
+    private var anyModelSupportsReasoning: Bool {
+        modelCapabilities.values.contains { $0.supportsReasoning }
+    }
+
     private var parametersSection: some View {
         Section {
             Stepper(L10n.Provider.maxTokens(maxTokens), value: $maxTokens, in: 256...128000, step: 256)
+            if anyModelSupportsReasoning {
+                Stepper(L10n.Provider.thinkingBudget(thinkingBudget), value: $thinkingBudget, in: 1024...128000, step: 1024)
+            }
             HStack {
                 Text("Temperature: \(temperature, specifier: "%.2f")")
                 Slider(value: $temperature, in: 0...2, step: 0.05)
             }
         } header: {
             Text(L10n.Provider.parameters)
+        } footer: {
+            if anyModelSupportsReasoning {
+                Text(L10n.Provider.thinkingBudgetFooter)
+            }
         }
     }
 
@@ -459,6 +472,7 @@ struct LLMProviderEditView: View {
             p.apiKey = apiKey
             p.modelName = modelName
             p.maxTokens = maxTokens
+            p.thinkingBudget = thinkingBudget
             p.temperature = temperature
             // Write raw stored properties directly (not through computed setters)
             p.apiStyleRaw = apiStyle.rawValue
@@ -483,6 +497,7 @@ struct LLMProviderEditView: View {
                 temperature: temperature
             )
             // Write raw stored properties directly
+            provider.thinkingBudget = thinkingBudget
             provider.apiStyleRaw = apiStyle.rawValue
             provider.modelCapabilitiesJSON = capsJSON
 
