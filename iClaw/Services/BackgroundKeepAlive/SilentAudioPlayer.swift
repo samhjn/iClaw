@@ -51,7 +51,7 @@ final class SilentAudioPlayer {
     // MARK: - WAV Generation
 
     /// Generates a minimal 1-second silent 16-bit mono WAV in memory.
-    static func generateSilentWAV() -> Data? {
+    nonisolated static func generateSilentWAV() -> Data? {
         let sampleRate: UInt32 = 8000
         let numSamples: UInt32 = sampleRate   // 1 second
         let bitsPerSample: UInt16 = 16

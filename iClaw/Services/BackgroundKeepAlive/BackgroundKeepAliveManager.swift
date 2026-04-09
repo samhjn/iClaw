@@ -20,7 +20,7 @@ enum BackgroundKeepAliveMode: String, CaseIterable, Identifiable {
 @MainActor
 final class BackgroundKeepAliveManager {
 
-    static let modeKey = "backgroundKeepAliveMode"
+    nonisolated static let modeKey = "backgroundKeepAliveMode"
 
     private let silentPlayer = SilentAudioPlayer()
     private let liveActivityManager = CronLiveActivityManager()
