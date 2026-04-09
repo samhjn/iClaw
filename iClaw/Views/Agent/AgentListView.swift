@@ -88,6 +88,7 @@ struct AgentListView: View {
                         .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+                    }
                 }
                 .contextMenu {
                     Button {
