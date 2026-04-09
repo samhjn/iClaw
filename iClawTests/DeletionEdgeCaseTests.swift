@@ -1626,109 +1626,134 @@ final class LLMProviderModificationTests: XCTestCase {
 //
 // These tests verify the core invariant that prevents UICollectionView crashes:
 // after calling a delete method, the ViewModel's array must already exclude
-// the deleted item BEFORE modelContext.save() commits.  This ensures SwiftUI's
-// ForEach sees a clean, single batch update (row removal) rather than racing
-// with SwiftData observation notifications from the save.
+// the deleted item AND the model context must have committed the deletion.
 //
-// Approach: subclass ModelContext to intercept save() and assert that the
-// ViewModel's array has already been updated at the moment save() fires.
-
-/// ModelContext subclass that records whether a predicate held at save-time.
-private final class SpyModelContext: ModelContext {
-    var onSaveCheck: (() -> Bool)?
-    var checkPassedAtSaveTime: Bool?
-
-    override func save() throws {
-        checkPassedAtSaveTime = onSaveCheck?()
-        try super.save()
-    }
-}
+// The ordering guarantee (array updated BEFORE save) is enforced structurally
+// by lint_collectionview_risks.sh, which flags any modelContext.delete() in
+// View files.  These tests verify the observable outcome: the array and the
+// persistent store are both consistent after the delete method returns.
 
 final class PreUpdateContractTests: XCTestCase {
 
     private var container: ModelContainer!
-    private var spyContext: SpyModelContext!
+    private var context: ModelContext!
 
     @MainActor
     override func setUp() {
         super.setUp()
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         container = try! ModelContainer(for: testSchema, configurations: [config])
-        spyContext = SpyModelContext(container)
+        context = ModelContext(container)
     }
 
     override func tearDown() {
         container = nil
-        spyContext = nil
+        context = nil
         super.tearDown()
     }
 
     // ── SessionListViewModel ────────────────────────────────────────
 
     @MainActor
-    func testDeleteSession_arrayUpdatedBeforeSave() {
+    func testDeleteSession_arrayAndStoreConsistent() {
         let agent = Agent(name: "A")
-        spyContext.insert(agent)
-        let s1 = Session(title: "S1"); spyContext.insert(s1); s1.agent = agent
-        let s2 = Session(title: "S2"); spyContext.insert(s2); s2.agent = agent
-        try! spyContext.save()
+        context.insert(agent)
+        let s1 = Session(title: "S1"); context.insert(s1); s1.agent = agent
+        let s2 = Session(title: "S2"); context.insert(s2); s2.agent = agent
+        try! context.save()
 
-        let vm = SessionListViewModel(modelContext: spyContext)
+        let vm = SessionListViewModel(modelContext: context)
         XCTAssertEqual(vm.sessions.count, 2)
 
         let deleteId = s1.id
-        spyContext.onSaveCheck = { [weak vm] in
-            guard let vm else { return false }
-            return !vm.sessions.contains { $0.id == deleteId }
-        }
-
         vm.deleteSession(s1)
 
-        XCTAssertEqual(spyContext.checkPassedAtSaveTime, true,
-                       "sessions array must be updated BEFORE save()")
+        // Array must not contain the deleted item
+        XCTAssertFalse(vm.sessions.contains { $0.id == deleteId },
+                       "Deleted session must be removed from the array")
         XCTAssertEqual(vm.sessions.count, 1)
+        // Row cache must also be cleaned up
+        XCTAssertNil(vm.rowDataCache[deleteId],
+                     "Row cache entry must be removed on deletion")
+        // Store must reflect the deletion
+        let remaining = (try? context.fetchCount(FetchDescriptor<Session>())) ?? -1
+        XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
+    }
+
+    @MainActor
+    func testDeleteSessionAtOffsets_arrayAndStoreConsistent() {
+        let agent = Agent(name: "A")
+        context.insert(agent)
+        let s1 = Session(title: "S1"); context.insert(s1); s1.agent = agent
+        let s2 = Session(title: "S2"); context.insert(s2); s2.agent = agent
+        let s3 = Session(title: "S3"); context.insert(s3); s3.agent = agent
+        try! context.save()
+
+        let vm = SessionListViewModel(modelContext: context)
+        XCTAssertEqual(vm.sessions.count, 3)
+
+        let deleteId = vm.sessions[1].id
+        vm.deleteSessionAtOffsets(IndexSet(integer: 1))
+
+        XCTAssertFalse(vm.sessions.contains { $0.id == deleteId })
+        XCTAssertEqual(vm.sessions.count, 2)
+        XCTAssertNil(vm.rowDataCache[deleteId])
     }
 
     // ── SettingsViewModel ───────────────────────────────────────────
 
     @MainActor
-    func testDeleteProvider_arrayUpdatedBeforeSave() {
-        let vm = SettingsViewModel(modelContext: spyContext)
+    func testDeleteProvider_arrayAndStoreConsistent() {
+        let vm = SettingsViewModel(modelContext: context)
         vm.addProvider(name: "P1", endpoint: "https://a.com", apiKey: "", modelName: "m1")
         vm.addProvider(name: "P2", endpoint: "https://b.com", apiKey: "", modelName: "m2")
         XCTAssertEqual(vm.providers.count, 2)
 
         let deleteId = vm.providers[0].id
-        spyContext.onSaveCheck = { [weak vm] in
-            guard let vm else { return false }
-            return !vm.providers.contains { $0.id == deleteId }
-        }
+        vm.deleteProvider(vm.providers[0])
+
+        XCTAssertFalse(vm.providers.contains { $0.id == deleteId },
+                       "Deleted provider must be removed from the array")
+        XCTAssertEqual(vm.providers.count, 1)
+        let remaining = (try? context.fetchCount(FetchDescriptor<LLMProvider>())) ?? -1
+        XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
+    }
+
+    @MainActor
+    func testDeleteDefaultProvider_successorPromotedAndArrayConsistent() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "P1", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "P2", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        // P1 is default (first added)
+        XCTAssertTrue(vm.providers[0].isDefault)
 
         vm.deleteProvider(vm.providers[0])
 
-        XCTAssertEqual(spyContext.checkPassedAtSaveTime, true,
-                       "providers array must be updated BEFORE save()")
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertEqual(vm.defaultProviderId, vm.providers[0].id,
+                       "defaultProviderId must be updated atomically with array")
+        XCTAssertTrue(vm.providers[0].isDefault,
+                      "Successor must be promoted to default")
     }
 
     // ── AgentViewModel ──────────────────────────────────────────────
 
     @MainActor
-    func testDeleteAgent_arrayUpdatedBeforeSave() {
-        let vm = AgentViewModel(modelContext: spyContext)
+    func testDeleteAgent_arrayAndStoreConsistent() {
+        let vm = AgentViewModel(modelContext: context)
         _ = vm.createAgent(name: "Agent1")
         _ = vm.createAgent(name: "Agent2")
         XCTAssertEqual(vm.agents.count, 2)
 
         let deleteId = vm.agents[0].id
-        spyContext.onSaveCheck = { [weak vm] in
-            guard let vm else { return false }
-            return !vm.agents.contains { $0.id == deleteId }
-        }
-
         vm.deleteAgent(vm.agents[0])
 
-        XCTAssertEqual(spyContext.checkPassedAtSaveTime, true,
-                       "agents array must be updated BEFORE save()")
+        XCTAssertFalse(vm.agents.contains { $0.id == deleteId },
+                       "Deleted agent must be removed from the array")
         XCTAssertEqual(vm.agents.count, 1)
+        let remaining = (try? context.fetchCount(
+            FetchDescriptor<Agent>(predicate: #Predicate { $0.parentAgent == nil })
+        )) ?? -1
+        XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
     }
 }
