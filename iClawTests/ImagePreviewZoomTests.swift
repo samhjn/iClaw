@@ -176,6 +176,155 @@ final class ImagePreviewZoomTests: XCTestCase {
         XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
     }
 
+    func testZoomAnchorScreenPositionStaysFixedForWideImage() {
+        // Same invariant as above but for a very wide (16:1) image
+        let fitted = CGSize(width: 400, height: 25)
+        let lastScale: CGFloat = 1.0
+        let newScale: CGFloat = 4.0
+        let lastPan: CGSize = .zero
+        let ux: CGFloat = 0.75
+        let uy: CGFloat = 0.9
+
+        let p = CGSize(
+            width: (ux - 0.5) * fitted.width,
+            height: (uy - 0.5) * fitted.height
+        )
+
+        let newOffset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: ux, anchorUnitY: uy,
+            fittedSize: fitted,
+            lastScale: lastScale, newScale: newScale,
+            lastPanOffset: lastPan
+        )
+
+        let beforeX = p.width * lastScale + lastPan.width
+        let beforeY = p.height * lastScale + lastPan.height
+        let afterX = p.width * newScale + newOffset.width
+        let afterY = p.height * newScale + newOffset.height
+
+        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
+        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+    }
+
+    func testZoomAnchorScreenPositionStaysFixedForTallImage() {
+        // Same invariant for a very tall (1:10) image
+        let fitted = CGSize(width: 80, height: 800)
+        let lastScale: CGFloat = 2.0
+        let newScale: CGFloat = 5.0
+        let lastPan = CGSize(width: -15, height: 60)
+        let ux: CGFloat = 0.1
+        let uy: CGFloat = 0.6
+
+        let p = CGSize(
+            width: (ux - 0.5) * fitted.width,
+            height: (uy - 0.5) * fitted.height
+        )
+
+        let newOffset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: ux, anchorUnitY: uy,
+            fittedSize: fitted,
+            lastScale: lastScale, newScale: newScale,
+            lastPanOffset: lastPan
+        )
+
+        let beforeX = p.width * lastScale + lastPan.width
+        let beforeY = p.height * lastScale + lastPan.height
+        let afterX = p.width * newScale + newOffset.width
+        let afterY = p.height * newScale + newOffset.height
+
+        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
+        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+    }
+
+    func testZoomAnchorWithExistingPanForNonSquareImage() {
+        // Off-center anchor + existing pan on a non-square fitted image
+        let fitted = CGSize(width: 400, height: 100)
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.25, anchorUnitY: 0.75,
+            fittedSize: fitted,
+            lastScale: 2.0, newScale: 3.0,
+            lastPanOffset: CGSize(width: 30, height: -10)
+        )
+        // p = (-100, 25); O = p * (2-3) + (30,-10) = (100,-25) + (30,-10) = (130,-35)
+        XCTAssertEqual(offset.width, 130, accuracy: accuracy)
+        XCTAssertEqual(offset.height, -35, accuracy: accuracy)
+    }
+
+    func testZoomAnchorZoomOutFullyResetsForNonSquareImage() {
+        // Zoom out to 1× from an off-center anchor should return to the
+        // correct resting offset (not necessarily zero if pan was non-zero).
+        let fitted = CGSize(width: 400, height: 100)
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.0, anchorUnitY: 1.0,
+            fittedSize: fitted,
+            lastScale: 3.0, newScale: 1.0,
+            lastPanOffset: CGSize(width: 400, height: 100)
+        )
+        // p = (-200, 50); O = p * (3-1) + (400,100) = (-400,100) + (400,100) = (0,200)
+        XCTAssertEqual(offset.width, 0, accuracy: accuracy)
+        XCTAssertEqual(offset.height, 200, accuracy: accuracy)
+    }
+
+    func testZoomAnchorMinimalScaleChange() {
+        // Very small scale delta shouldn't cause large offset jumps
+        let fitted = CGSize(width: 400, height: 100)
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.0, anchorUnitY: 0.0,
+            fittedSize: fitted,
+            lastScale: 1.0, newScale: 1.01,
+            lastPanOffset: .zero
+        )
+        // p = (-200, -50); delta = 1-1.01 = -0.01
+        // O = (-200 * -0.01, -50 * -0.01) = (2, 0.5)
+        XCTAssertEqual(offset.width, 2, accuracy: accuracy)
+        XCTAssertEqual(offset.height, 0.5, accuracy: accuracy)
+    }
+
+    // MARK: - Consecutive gesture simulation
+
+    func testConsecutiveZoomGesturesPreservePosition() {
+        // Simulate: pinch 1×→2× at anchor (0.3, 0.7), then a second
+        // pinch 2×→4× at anchor (0.6, 0.4).  The first anchor's screen
+        // position can drift, but the second anchor must stay fixed.
+        let fitted = CGSize(width: 400, height: 100)
+
+        // Gesture 1: 1× → 2×
+        let offset1 = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.3, anchorUnitY: 0.7,
+            fittedSize: fitted,
+            lastScale: 1.0, newScale: 2.0,
+            lastPanOffset: .zero
+        )
+        // After gesture 1, clamp offset (the overlay does this in .onEnded)
+        let clamped1 = ImagePreviewMath.clampedOffset(
+            offset1, scale: 2.0, fittedSize: fitted, viewportSize: viewport
+        )
+
+        // Gesture 2: 2× → 4× at a different anchor
+        let ux2: CGFloat = 0.6
+        let uy2: CGFloat = 0.4
+        let p2 = CGSize(
+            width: (ux2 - 0.5) * fitted.width,
+            height: (uy2 - 0.5) * fitted.height
+        )
+
+        let offset2 = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: ux2, anchorUnitY: uy2,
+            fittedSize: fitted,
+            lastScale: 2.0, newScale: 4.0,
+            lastPanOffset: clamped1
+        )
+
+        // Verify: p2's screen position is the same before and after gesture 2
+        let beforeX = p2.width * 2.0 + clamped1.width
+        let beforeY = p2.height * 2.0 + clamped1.height
+        let afterX = p2.width * 4.0 + offset2.width
+        let afterY = p2.height * 4.0 + offset2.height
+
+        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
+        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+    }
+
     // MARK: - Fitted Image Size
 
     func testFittedSizeWiderImage() {
@@ -253,6 +402,60 @@ final class ImagePreviewZoomTests: XCTestCase {
         XCTAssertEqual(result.height, -400, accuracy: accuracy)
     }
 
+    func testClampedOffsetForWideImageAtScale2() {
+        // Wide image fitted 400×100 in 400×800 viewport
+        let fitted = CGSize(width: 400, height: 100)
+        // scale 2: maxX=(800-400)/2=200, maxY=(200-800)/2 → clamp 0
+        let offset = CGSize(width: 300, height: 50)
+        let result = ImagePreviewMath.clampedOffset(
+            offset, scale: 2.0, fittedSize: fitted, viewportSize: viewport
+        )
+        XCTAssertEqual(result.width, 200, accuracy: accuracy)
+        XCTAssertEqual(result.height, 0, accuracy: accuracy) // can't pan vertically
+    }
+
+    func testClampedOffsetForWideImageNeedsHighScaleToAllowVerticalPan() {
+        // Wide image fitted 400×100 in 400×800 viewport
+        // Vertical pan only possible when 100 * scale > 800 → scale > 8
+        let fitted = CGSize(width: 400, height: 100)
+        let atScale8 = ImagePreviewMath.clampedOffset(
+            CGSize(width: 0, height: 50), scale: 8.0,
+            fittedSize: fitted, viewportSize: viewport
+        )
+        // 100*8=800, maxY=(800-800)/2=0 → still no vertical pan
+        XCTAssertEqual(atScale8.height, 0, accuracy: accuracy)
+
+        let atScale9 = ImagePreviewMath.clampedOffset(
+            CGSize(width: 0, height: 50), scale: 9.0,
+            fittedSize: fitted, viewportSize: viewport
+        )
+        // 100*9=900, maxY=(900-800)/2=50 → can pan up to 50
+        XCTAssertEqual(atScale9.height, 50, accuracy: accuracy)
+    }
+
+    func testClampedOffsetForTallImageAtScale2() {
+        // Tall image fitted 80×800 in 400×800 viewport
+        let fitted = CGSize(width: 80, height: 800)
+        // scale 2: maxX=(160-400)/2 → 0, maxY=(1600-800)/2=400
+        let offset = CGSize(width: 100, height: 500)
+        let result = ImagePreviewMath.clampedOffset(
+            offset, scale: 2.0, fittedSize: fitted, viewportSize: viewport
+        )
+        XCTAssertEqual(result.width, 0, accuracy: accuracy)  // can't pan horizontally
+        XCTAssertEqual(result.height, 400, accuracy: accuracy)
+    }
+
+    func testClampedOffsetNegativeValues() {
+        let fitted = CGSize(width: 400, height: 400)
+        // scale 2: maxX=(800-400)/2=200, maxY=(800-800)/2=0
+        let result = ImagePreviewMath.clampedOffset(
+            CGSize(width: -300, height: -100), scale: 2.0,
+            fittedSize: fitted, viewportSize: viewport
+        )
+        XCTAssertEqual(result.width, -200, accuracy: accuracy)
+        XCTAssertEqual(result.height, 0, accuracy: accuracy)
+    }
+
     // MARK: - Rubber Band
 
     func testRubberBandWithinLimitReturnsValue() {
@@ -293,5 +496,81 @@ final class ImagePreviewZoomTests: XCTestCase {
         // asymptote (limit + 200) than small excess
         XCTAssertGreaterThan(large, small)
         XCTAssertLessThanOrEqual(large, 100 + 200) // asymptote is limit + dim(200)
+    }
+
+    func testRubberBandAtExactLimit() {
+        let result = ImagePreviewMath.rubberBand(100, limit: 100)
+        XCTAssertEqual(result, 100, accuracy: accuracy)
+    }
+
+    func testRubberBandAtExactNegativeLimit() {
+        let result = ImagePreviewMath.rubberBand(-100, limit: 100)
+        XCTAssertEqual(result, -100, accuracy: accuracy)
+    }
+
+    // MARK: - Fitted Size + Anchor Integration
+
+    func testFittedSizeSquareImageOnPortraitViewport() {
+        // 1:1 image on 400×800 viewport → fitted 400×400
+        let imageSize = CGSize(width: 600, height: 600)
+        let fitted = ImagePreviewMath.fittedImageSize(imageSize: imageSize, viewportSize: viewport)
+        XCTAssertEqual(fitted.width, 400, accuracy: accuracy)
+        XCTAssertEqual(fitted.height, 400, accuracy: accuracy)
+    }
+
+    func testFullPipelineWideImage() {
+        // End-to-end: image (1600×200) on viewport (400×800)
+        // 1. Compute fitted size
+        let imageSize = CGSize(width: 1600, height: 200)
+        let fitted = ImagePreviewMath.fittedImageSize(imageSize: imageSize, viewportSize: viewport)
+        XCTAssertEqual(fitted.width, 400, accuracy: accuracy)
+        XCTAssertEqual(fitted.height, 50, accuracy: accuracy)
+
+        // 2. Zoom 1×→3× at anchor (0.25, 0.75)
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.25, anchorUnitY: 0.75,
+            fittedSize: fitted,
+            lastScale: 1.0, newScale: 3.0,
+            lastPanOffset: .zero
+        )
+        // p = (-100, 12.5); O = p * (1-3) = (200, -25)
+        XCTAssertEqual(offset.width, 200, accuracy: accuracy)
+        XCTAssertEqual(offset.height, -25, accuracy: accuracy)
+
+        // 3. Clamp: scale 3, fitted 400×50, viewport 400×800
+        // maxX = (1200-400)/2 = 400, maxY = (150-800)/2 → 0
+        let clamped = ImagePreviewMath.clampedOffset(
+            offset, scale: 3.0, fittedSize: fitted, viewportSize: viewport
+        )
+        XCTAssertEqual(clamped.width, 200, accuracy: accuracy) // within 400 bound
+        XCTAssertEqual(clamped.height, 0, accuracy: accuracy)  // clamped to 0
+    }
+
+    func testFullPipelineTallImage() {
+        // End-to-end: image (100×2000) on viewport (400×800)
+        let imageSize = CGSize(width: 100, height: 2000)
+        let fitted = ImagePreviewMath.fittedImageSize(imageSize: imageSize, viewportSize: viewport)
+        // aspect = 0.05, viewAspect = 0.5 → fits height: w = 800*0.05 = 40, h = 800
+        XCTAssertEqual(fitted.width, 40, accuracy: accuracy)
+        XCTAssertEqual(fitted.height, 800, accuracy: accuracy)
+
+        // Zoom 1×→2× at anchor (0.5, 0.25)
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.5, anchorUnitY: 0.25,
+            fittedSize: fitted,
+            lastScale: 1.0, newScale: 2.0,
+            lastPanOffset: .zero
+        )
+        // p = (0, -200); O = (0, -200)*(1-2) = (0, 200)
+        XCTAssertEqual(offset.width, 0, accuracy: accuracy)
+        XCTAssertEqual(offset.height, 200, accuracy: accuracy)
+
+        // Clamp: scale 2, fitted 40×800, viewport 400×800
+        // maxX = (80-400)/2 → 0, maxY = (1600-800)/2 = 400
+        let clamped = ImagePreviewMath.clampedOffset(
+            offset, scale: 2.0, fittedSize: fitted, viewportSize: viewport
+        )
+        XCTAssertEqual(clamped.width, 0, accuracy: accuracy)
+        XCTAssertEqual(clamped.height, 200, accuracy: accuracy) // within 400 bound
     }
 }
