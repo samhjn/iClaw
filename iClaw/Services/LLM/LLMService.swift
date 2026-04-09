@@ -565,8 +565,12 @@ final class LLMService: @unchecked Sendable {
         }
 
         var thinking: AnthropicThinking? = nil
+        var maxTokens = provider.maxTokens
         if caps.supportsReasoning {
-            thinking = .enabled(budget: max(provider.maxTokens, 10000))
+            let budgetTokens = max(provider.maxTokens, 10000)
+            thinking = .enabled(budget: budgetTokens)
+            // Anthropic requires max_tokens > budget_tokens
+            maxTokens = max(maxTokens, budgetTokens + 1)
         }
 
         // Anthropic requires temperature to be exactly 1 when extended thinking is enabled
@@ -574,7 +578,7 @@ final class LLMService: @unchecked Sendable {
 
         return AnthropicRequest(
             model: model,
-            maxTokens: provider.maxTokens,
+            maxTokens: maxTokens,
             system: systemBlocks.isEmpty ? nil : systemBlocks,
             messages: anthropicMessages,
             tools: anthropicTools,
