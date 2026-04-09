@@ -251,7 +251,14 @@ private struct ChatContentView: View {
                 }
                 .scrollPosition(id: $scrollPosition, anchor: .center)
                 .onChange(of: vm.messages, initial: true) {
-                    displayMessages = filteredMessages()
+                    let updated = filteredMessages()
+                    // Only assign when the identity list actually changed;
+                    // skipping no-op reassignments avoids kicking off a
+                    // UICollectionView batch update with a zero diff that
+                    // can race with an in-flight animation completion.
+                    if updated.map(\.id) != displayMessages.map(\.id) {
+                        displayMessages = updated
+                    }
                 }
                 .onChange(of: vm.isVerbose) {
                     displayMessages = filteredMessages()

@@ -101,6 +101,9 @@ final class ChatViewModel {
     private var compressionMonitorTask: Task<Void, Never>?
     private var monitoringTask: Task<Void, Never>?
     private var cancelled = false
+    /// Coalescing flag: when true a deferred `loadMessages` dispatch is already
+    /// queued on the main queue and further calls are no-ops until it fires.
+    private var loadMessagesScheduled = false
     /// Images returned by tool calls (e.g. from sub-agents) to be attached
     /// to the next final assistant message for display in the chat UI.
     private var pendingToolImageAttachments: [ImageAttachment] = []
@@ -184,7 +187,12 @@ final class ChatViewModel {
             self.pendingImages = images
             Self.cachedPendingImages[session.id] = images
         }
-        loadMessages()
+        // Load messages synchronously during init so subsequent recovery
+        // methods see the current message list immediately.
+        messages = session.sortedMessages
+        migrateInlineImages()
+        refreshCompressionStats()
+
         checkActiveSessionLock()
         recoverStaleActiveState()
         recoverCompressionState()
@@ -195,10 +203,33 @@ final class ChatViewModel {
         initialScrollTarget = session.lastViewedMessageId
     }
 
-    func loadMessages() {
-        messages = session.sortedMessages
-        migrateInlineImages()
-        refreshCompressionStats()
+    /// Reload messages from the persistent session.
+    ///
+    /// By default, multiple calls within the same main-queue drain cycle are
+    /// coalesced into a single update.  This prevents SwiftUI's internal
+    /// `UpdateCoalescingCollectionView` from receiving a batch-update while
+    /// the item count is still changing, which would otherwise crash with
+    /// `_Bug_Detected_In_Client_Of_UICollectionView_Invalid_Number_Of_Items_In_Section`.
+    ///
+    /// Pass `immediate: true` to bypass coalescing and reload synchronously
+    /// (used in unit tests that assert on `messages` right after the call).
+    func loadMessages(immediate: Bool = false) {
+        if immediate {
+            loadMessagesScheduled = false
+            messages = session.sortedMessages
+            migrateInlineImages()
+            refreshCompressionStats()
+            return
+        }
+        guard !loadMessagesScheduled else { return }
+        loadMessagesScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.loadMessagesScheduled = false
+            self.messages = self.session.sortedMessages
+            self.migrateInlineImages()
+            self.refreshCompressionStats()
+        }
     }
 
     /// One-time migration: extract inline base64 images from existing assistant messages
