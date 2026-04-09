@@ -1619,3 +1619,116 @@ final class LLMProviderModificationTests: XCTestCase {
         XCTAssertTrue(vm.providers.isEmpty)
     }
 }
+
+// =============================================================================
+// MARK: - Pre-Update Contract Tests
+// =============================================================================
+//
+// These tests verify the core invariant that prevents UICollectionView crashes:
+// after calling a delete method, the ViewModel's array must already exclude
+// the deleted item BEFORE modelContext.save() commits.  This ensures SwiftUI's
+// ForEach sees a clean, single batch update (row removal) rather than racing
+// with SwiftData observation notifications from the save.
+//
+// Approach: subclass ModelContext to intercept save() and assert that the
+// ViewModel's array has already been updated at the moment save() fires.
+
+/// ModelContext subclass that records whether a predicate held at save-time.
+private final class SpyModelContext: ModelContext {
+    var onSaveCheck: (() -> Bool)?
+    var checkPassedAtSaveTime: Bool?
+
+    override func save() throws {
+        checkPassedAtSaveTime = onSaveCheck?()
+        try super.save()
+    }
+}
+
+final class PreUpdateContractTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var spyContext: SpyModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        spyContext = SpyModelContext(container)
+    }
+
+    override func tearDown() {
+        container = nil
+        spyContext = nil
+        super.tearDown()
+    }
+
+    // ── SessionListViewModel ────────────────────────────────────────
+
+    @MainActor
+    func testDeleteSession_arrayUpdatedBeforeSave() {
+        let agent = Agent(name: "A")
+        spyContext.insert(agent)
+        let s1 = Session(title: "S1"); spyContext.insert(s1); s1.agent = agent
+        let s2 = Session(title: "S2"); spyContext.insert(s2); s2.agent = agent
+        try! spyContext.save()
+
+        let vm = SessionListViewModel(modelContext: spyContext)
+        XCTAssertEqual(vm.sessions.count, 2)
+
+        let deleteId = s1.id
+        spyContext.onSaveCheck = { [weak vm] in
+            guard let vm else { return false }
+            return !vm.sessions.contains { $0.id == deleteId }
+        }
+
+        vm.deleteSession(s1)
+
+        XCTAssertEqual(spyContext.checkPassedAtSaveTime, true,
+                       "sessions array must be updated BEFORE save()")
+        XCTAssertEqual(vm.sessions.count, 1)
+    }
+
+    // ── SettingsViewModel ───────────────────────────────────────────
+
+    @MainActor
+    func testDeleteProvider_arrayUpdatedBeforeSave() {
+        let vm = SettingsViewModel(modelContext: spyContext)
+        vm.addProvider(name: "P1", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "P2", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        XCTAssertEqual(vm.providers.count, 2)
+
+        let deleteId = vm.providers[0].id
+        spyContext.onSaveCheck = { [weak vm] in
+            guard let vm else { return false }
+            return !vm.providers.contains { $0.id == deleteId }
+        }
+
+        vm.deleteProvider(vm.providers[0])
+
+        XCTAssertEqual(spyContext.checkPassedAtSaveTime, true,
+                       "providers array must be updated BEFORE save()")
+    }
+
+    // ── AgentViewModel ──────────────────────────────────────────────
+
+    @MainActor
+    func testDeleteAgent_arrayUpdatedBeforeSave() {
+        let vm = AgentViewModel(modelContext: spyContext)
+        _ = vm.createAgent(name: "Agent1")
+        _ = vm.createAgent(name: "Agent2")
+        XCTAssertEqual(vm.agents.count, 2)
+
+        let deleteId = vm.agents[0].id
+        spyContext.onSaveCheck = { [weak vm] in
+            guard let vm else { return false }
+            return !vm.agents.contains { $0.id == deleteId }
+        }
+
+        vm.deleteAgent(vm.agents[0])
+
+        XCTAssertEqual(spyContext.checkPassedAtSaveTime, true,
+                       "agents array must be updated BEFORE save()")
+        XCTAssertEqual(vm.agents.count, 1)
+    }
+}
