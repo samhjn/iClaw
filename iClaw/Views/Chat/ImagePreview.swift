@@ -141,6 +141,14 @@ private struct ImagePreviewOverlay: View {
     @State private var isDismissing = false
     @State private var toastMessage: String?
     @State private var viewportSize: CGSize = .zero
+    /// True while a `MagnifyGesture` is active — suppresses the drag
+    /// gesture from overwriting `panOffset` during a pinch.
+    @State private var isMagnifying = false
+    /// Snapshot of `DragGesture.Value.translation` taken continuously while
+    /// magnifying.  When the pinch ends but the drag continues (one finger
+    /// still down), we subtract this baseline so the remaining single-finger
+    /// drag starts from zero rather than including the pre-pinch movement.
+    @State private var dragBaseline: CGSize = .zero
 
     private var dismissProgress: CGFloat {
         guard !isDismissing else { return 1 }
@@ -254,17 +262,35 @@ private struct ImagePreviewOverlay: View {
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 6)
             .onChanged { value in
+                // While magnifying, record the drag's cumulative translation
+                // as a baseline so the post-pinch single-finger drag doesn't
+                // include the pre-pinch movement.
+                if isMagnifying {
+                    dragBaseline = value.translation
+                    return
+                }
+
+                let delta = CGSize(
+                    width: value.translation.width - dragBaseline.width,
+                    height: value.translation.height - dragBaseline.height
+                )
+
                 if scale > 1 {
                     let raw = CGSize(
-                        width: lastPanOffset.width + value.translation.width,
-                        height: lastPanOffset.height + value.translation.height
+                        width: lastPanOffset.width + delta.width,
+                        height: lastPanOffset.height + delta.height
                     )
                     panOffset = rubberBandOffset(raw, for: scale)
                 } else {
-                    dismissTranslation = value.translation
+                    dismissTranslation = delta
                 }
             }
             .onEnded { value in
+                let savedBaseline = dragBaseline
+                dragBaseline = .zero
+
+                if isMagnifying { return }
+
                 if scale > 1 {
                     let clamped = clampedOffset(panOffset, for: scale)
                     withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
@@ -275,9 +301,10 @@ private struct ImagePreviewOverlay: View {
                 }
 
                 let vy = value.predictedEndTranslation.height - value.translation.height
-                if abs(dismissTranslation.height) > 100 || abs(vy) > 600 {
+                let dismissH = value.translation.height - savedBaseline.height
+                if abs(dismissH) > 100 || abs(vy) > 600 {
                     isDismissing = true
-                    let flyY: CGFloat = dismissTranslation.height > 0 ? 600 : -600
+                    let flyY: CGFloat = dismissH > 0 ? 600 : -600
                     withAnimation(.easeOut(duration: 0.15)) {
                         dismissTranslation = CGSize(
                             width: dismissTranslation.width,
@@ -298,6 +325,12 @@ private struct ImagePreviewOverlay: View {
     private var magnificationGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
+                if !isMagnifying {
+                    isMagnifying = true
+                    // Cancel any in-progress / animating dismiss state so it
+                    // doesn't bleed into the zoom (background opacity, controls).
+                    dismissTranslation = .zero
+                }
                 let newScale = max(0.5, lastScale * value.magnification)
                 panOffset = ImagePreviewMath.zoomAnchorOffset(
                     anchorUnitX: value.startAnchor.x,
@@ -310,6 +343,7 @@ private struct ImagePreviewOverlay: View {
                 scale = newScale
             }
             .onEnded { _ in
+                isMagnifying = false
                 let clamped = max(1.0, min(scale, 5.0))
                 withAnimation(.interpolatingSpring(stiffness: 300, damping: 28)) {
                     scale = clamped
