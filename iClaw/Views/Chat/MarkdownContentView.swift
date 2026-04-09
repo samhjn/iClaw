@@ -899,6 +899,8 @@ private struct MarkdownTableView: View {
         let font = UIFont.preferredFont(forTextStyle: .caption1)
         let boldFont = UIFont.boldSystemFont(ofSize: font.pointSize)
         let padding = Self.cellPaddingH * 2
+        // Small buffer to account for UIKit/SwiftUI font metric differences
+        let measureBuffer: CGFloat = 4
         let screenWidth = UIScreen.main.bounds.width
         let maxTableWidth = screenWidth - 32
 
@@ -915,7 +917,7 @@ private struct MarkdownTableView: View {
                     maxWidth = max(maxWidth, cellSize.width)
                 }
             }
-            return max(Self.minColWidth, min(ceil(maxWidth) + padding, Self.maxColWidth))
+            return max(Self.minColWidth, min(ceil(maxWidth) + padding + measureBuffer, Self.maxColWidth))
         }
 
         let totalWidth = widths.reduce(0, +)
@@ -924,13 +926,13 @@ private struct MarkdownTableView: View {
             let scale = maxTableWidth / totalWidth
             widths = widths.map { max(Self.minColWidth, floor($0 * scale)) }
         } else if totalWidth < maxTableWidth && totalWidth > 0 {
-            // Scale up to fill available width, capping each column at maxColWidth
+            // Distribute extra space proportionally so wider columns get more
             let extraSpace = maxTableWidth - totalWidth
-            let expandable = widths.enumerated().filter { $0.element < Self.maxColWidth }
-            if !expandable.isEmpty {
-                let perColumn = extraSpace / CGFloat(expandable.count)
-                for (idx, w) in expandable {
-                    widths[idx] = min(w + perColumn, Self.maxColWidth)
+            let expandableTotal = widths.filter { $0 < Self.maxColWidth }.reduce(0, +)
+            if expandableTotal > 0 {
+                for idx in widths.indices where widths[idx] < Self.maxColWidth {
+                    let share = extraSpace * (widths[idx] / expandableTotal)
+                    widths[idx] = min(widths[idx] + share, Self.maxColWidth)
                 }
             }
         }
