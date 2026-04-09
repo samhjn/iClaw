@@ -894,6 +894,8 @@ enum TableWidthCalculator {
         s = s.replacingOccurrences(of: "___", with: "")
         s = s.replacingOccurrences(of: "**", with: "")
         s = s.replacingOccurrences(of: "__", with: "")
+        s = s.replacingOccurrences(of: "*", with: "")
+        s = s.replacingOccurrences(of: "_", with: "")
         s = s.replacingOccurrences(of: "~~", with: "")
         s = s.replacingOccurrences(of: "`", with: "")
         // Strip link/image syntax: [text](url) → text, ![alt](url) → alt
