@@ -88,16 +88,6 @@ final class SettingsViewModel {
             ?? providers.first?.id
 
         // ── 2. Just delete — no cross-model mutation ────────────────
-        // Don't promote a successor (successor.isDefault = true) here.
-        // That @Model write fires SwiftData observation across all
-        // mounted views (TabView keeps every tab alive), causing
-        // UICollectionView batch-update conflicts.
-        //
-        // Instead, resolve the default lazily at use time:
-        // - ModelRouter.fetchGlobalDefault() already falls back to the
-        //   first provider when none has isDefault.
-        // - fetchProviders() falls back defaultProviderId to first.
-        // - The next setDefault() call will mark the chosen provider.
         modelContext.delete(provider)
         try? modelContext.save()
         fetchProviders()
