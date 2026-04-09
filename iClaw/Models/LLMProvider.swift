@@ -145,6 +145,7 @@ final class LLMProvider {
     var modelName: String
     var isDefault: Bool
     var maxTokens: Int
+    var thinkingBudget: Int = 10000
     var temperature: Double
     var createdAt: Date
 
@@ -268,6 +269,7 @@ final class LLMProvider {
         self.modelName = modelName
         self.isDefault = isDefault
         self.maxTokens = maxTokens
+        self.thinkingBudget = 10000
         self.temperature = temperature
         self.createdAt = Date()
         self.enabledModelsRaw = nil

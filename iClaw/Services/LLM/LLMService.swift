@@ -567,7 +567,7 @@ final class LLMService: @unchecked Sendable {
         var thinking: AnthropicThinking? = nil
         var maxTokens = provider.maxTokens
         if caps.supportsReasoning {
-            let budgetTokens = max(provider.maxTokens, 10000)
+            let budgetTokens = provider.thinkingBudget
             thinking = .enabled(budget: budgetTokens)
             // Anthropic requires max_tokens > budget_tokens
             maxTokens = max(maxTokens, budgetTokens + 1)

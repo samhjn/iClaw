@@ -301,6 +301,8 @@
 "provider.remoteModels" = "リモートモデル";
 "provider.remoteModelsFooter" = "APIエンドポイントからモデルを取得し、必要なものを有効にします。";
 "provider.maxTokens" = "最大トークン数：%d";
+"provider.thinkingBudget" = "思考バジェット：%d";
+"provider.thinkingBudgetFooter" = "拡張思考/推論のトークンバジェット。max_tokensはこの値より大きくなるように自動調整されます。";
 "provider.parameters" = "パラメータ";
 "provider.supportsVision" = "ビジョン対応";
 "provider.supportsVisionFooter" = "このモデルが画像入力に対応している場合は有効にしてください（例：GPT-4o、Claude 3.5 Sonnet）";

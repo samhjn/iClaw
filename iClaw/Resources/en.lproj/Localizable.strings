@@ -302,6 +302,8 @@
 "provider.remoteModels" = "Remote Models";
 "provider.remoteModelsFooter" = "Fetch models from the API endpoint, then enable the ones you need.";
 "provider.maxTokens" = "Max Tokens: %d";
+"provider.thinkingBudget" = "Thinking Budget: %d";
+"provider.thinkingBudgetFooter" = "Token budget for extended thinking / reasoning. max_tokens is automatically adjusted to be larger than this value.";
 "provider.parameters" = "Parameters";
 "provider.supportsVision" = "Supports Vision";
 "provider.supportsVisionFooter" = "Enable if this model supports image inputs (e.g. GPT-4o, Claude 3.5 Sonnet)";

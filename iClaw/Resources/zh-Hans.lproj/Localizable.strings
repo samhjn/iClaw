@@ -302,6 +302,8 @@
 "provider.remoteModels" = "远程模型";
 "provider.remoteModelsFooter" = "从 API 接口获取模型列表，然后启用你需要的模型。";
 "provider.maxTokens" = "最大 Tokens：%d";
+"provider.thinkingBudget" = "思考预算：%d";
+"provider.thinkingBudgetFooter" = "扩展思考/推理的 Token 预算。max_tokens 会自动调整为大于此值。";
 "provider.parameters" = "参数";
 "provider.supportsVision" = "支持视觉";
 "provider.supportsVisionFooter" = "如果此模型支持图片输入请启用（如 GPT-4o、Claude 3.5 Sonnet）";
