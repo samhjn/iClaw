@@ -864,17 +864,20 @@ private struct MarkdownTableView: View {
                         width: columnWidths[colIdx],
                         alignment: Alignment(horizontal: alignment.horizontal, vertical: .center)
                     )
+                    .overlay(alignment: .trailing) {
+                        if colIdx < columnWidths.count - 1 {
+                            Rectangle()
+                                .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
+                                .frame(width: 0.5)
+                        }
+                    }
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) {
                         popoverCell = PopoverCell(text: cellText)
                     }
-                if colIdx < columnWidths.count - 1 {
-                    Rectangle()
-                        .fill(isUserMessage ? Color.white.opacity(0.1) : Color(.systemGray5))
-                        .frame(width: 0.5)
-                }
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func buildIfNeeded() {
