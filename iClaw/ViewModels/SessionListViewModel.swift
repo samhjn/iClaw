@@ -3,6 +3,10 @@ import SwiftData
 import Observation
 
 struct SessionRowData {
+    let title: String
+    let isActive: Bool
+    let updatedAt: Date
+    let agentName: String?
     let messageCount: Int
     let previewContent: String?
     let isStreaming: Bool
@@ -94,6 +98,10 @@ final class SessionListViewModel {
                 return ChatViewModel.hasCachedInput(for: session.id)
             }()
             cache[session.id] = SessionRowData(
+                title: session.title,
+                isActive: session.isActive,
+                updatedAt: session.updatedAt,
+                agentName: session.agent?.name,
                 messageCount: session.messages.count,
                 previewContent: preview,
                 isStreaming: isStreaming,
@@ -148,21 +156,45 @@ final class SessionListViewModel {
     }
 
     func deleteSession(_ session: Session) {
+        // ── 1. Update view state FIRST ──────────────────────────────
+        // Remove from the ForEach arrays before any @Model mutation or
+        // save().  This lets SwiftUI apply a single, clean batch update
+        // (row removal) before SwiftData fires observation notifications
+        // that could trigger conflicting batch updates → crash.
+        let deletedId = session.id
+        sessions = sessions.filter { $0.id != deletedId }
+        allSessions = allSessions.filter { $0.id != deletedId }
+        rowDataCache.removeValue(forKey: deletedId)
+
+        // ── 2. Cancel and persist ───────────────────────────────────
         cancelActiveGeneration(for: session)
-        SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: session.id)
+        SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: deletedId)
         modelContext.delete(session)
         try? modelContext.save()
+
+        // ── 3. Re-sync ─────────────────────────────────────────────
         fetchSessions()
     }
 
     func deleteSessionAtOffsets(_ offsets: IndexSet) {
-        for index in offsets {
-            let session = sessions[index]
+        // Collect sessions to delete before modifying the array.
+        let toDelete = offsets.map { sessions[$0] }
+
+        // 1. Update view state FIRST.
+        let deletedIds = Set(toDelete.map(\.id))
+        sessions = sessions.filter { !deletedIds.contains($0.id) }
+        allSessions = allSessions.filter { !deletedIds.contains($0.id) }
+        for id in deletedIds { rowDataCache.removeValue(forKey: id) }
+
+        // 2. Cancel and persist.
+        for session in toDelete {
             cancelActiveGeneration(for: session)
             SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: session.id)
             modelContext.delete(session)
         }
         try? modelContext.save()
+
+        // 3. Re-sync.
         fetchSessions()
     }
 

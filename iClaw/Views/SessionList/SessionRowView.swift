@@ -1,38 +1,36 @@
 import SwiftUI
 
+/// Displays a session row using only pre-computed `SessionRowData`.
+/// Reading @Model properties directly (session.isActive, session.title, etc.)
+/// would register SwiftData observation tracking, causing the List's
+/// UICollectionView to receive conflicting batch updates when the auto-refresh
+/// timer and ChatViewModel-driven model changes fire in the same render cycle.
 struct SessionRowView: View {
-    let session: Session
-    var rowData: SessionRowData?
+    let rowData: SessionRowData
 
     var body: some View {
-        let isActive = session.isActive
-        let messageCount = rowData?.messageCount ?? 0
-        let previewContent = rowData?.previewContent
-        let isStreaming = rowData?.isStreaming ?? false
-        let hasDraft = rowData?.hasDraft ?? false
-
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                if isActive {
+                if rowData.isActive {
                     PulsingDot()
                 }
-                Text(session.title)
+                Text(rowData.title)
                     .font(.headline)
                     .lineLimit(1)
                 Spacer()
-                Text(session.updatedAt, style: .relative)
+                Text(rowData.updatedAt, style: .relative)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
             HStack {
-                if let agentName = session.agent?.name {
+                if let agentName = rowData.agentName {
                     Label(agentName, systemImage: "cpu")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                if isActive {
+                if rowData.isActive {
                     Text(L10n.Common.active)
                         .font(.caption2)
                         .foregroundStyle(.white)
@@ -41,7 +39,7 @@ struct SessionRowView: View {
                         .background(Capsule().fill(.green))
                 }
 
-                if hasDraft && !isActive {
+                if rowData.hasDraft && !rowData.isActive {
                     Text(L10n.Sessions.draft)
                         .font(.caption2)
                         .foregroundStyle(.orange)
@@ -52,15 +50,15 @@ struct SessionRowView: View {
 
                 Spacer()
 
-                Text(L10n.Sessions.messagesCount(messageCount))
+                Text(L10n.Sessions.messagesCount(rowData.messageCount))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
-            if let content = previewContent {
+            if let content = rowData.previewContent {
                 Text(content)
                     .font(.subheadline)
-                    .foregroundStyle(isStreaming ? .primary : .secondary)
+                    .foregroundStyle(rowData.isStreaming ? .primary : .secondary)
                     .lineLimit(2)
             }
         }

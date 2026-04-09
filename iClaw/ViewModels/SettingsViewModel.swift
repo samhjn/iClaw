@@ -90,6 +90,12 @@ final class SettingsViewModel {
         // lets SwiftUI apply a single, clean batch update (row removal)
         // before SwiftData fires observation notifications that could
         // trigger conflicting batch updates → crash.
+        //
+        // NOTE: AgentModelConfigView previously used @Query for
+        // allProviders, which auto-fired on save() and caused a
+        // complex multi-section batch update that conflicted with this
+        // List's update.  That @Query has been replaced with @State +
+        // onAppear to break the cross-view observation chain.
         providers = providers.filter { $0.id != provider.id }
         if wasDefault {
             defaultProviderId = successor?.id
@@ -98,6 +104,9 @@ final class SettingsViewModel {
         // ── 2. Persist ──────────────────────────────────────────────
         // The ForEach no longer contains the deleted row, so @Model
         // observation from these mutations won't re-enter the list.
+        // The View reads vm.defaultProviderId (not provider.isDefault),
+        // so the successor mutation doesn't trigger a conflicting row
+        // re-render through SwiftData per-property observation.
         successor?.isDefault = true
         modelContext.delete(provider)
         try? modelContext.save()
