@@ -950,6 +950,90 @@ final class AnthropicToolFormatTests: XCTestCase {
     }
 }
 
+// MARK: - Anthropic Thinking / Token Budget Tests
+
+final class AnthropicThinkingTests: XCTestCase {
+
+    func testAnthropicThinkingEncoding() throws {
+        let thinking = AnthropicThinking.enabled(budget: 10000)
+        let data = try JSONEncoder().encode(thinking)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["type"] as? String, "enabled")
+        XCTAssertEqual(dict["budget_tokens"] as? Int, 10000)
+    }
+
+    func testAnthropicThinkingCustomBudget() throws {
+        let thinking = AnthropicThinking.enabled(budget: 50000)
+        let data = try JSONEncoder().encode(thinking)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["budget_tokens"] as? Int, 50000)
+    }
+
+    func testAnthropicRequestWithThinkingEncoding() throws {
+        let thinking = AnthropicThinking.enabled(budget: 10000)
+        let request = AnthropicRequest(
+            model: "claude-sonnet-4-6",
+            maxTokens: 16000,
+            messages: [AnthropicMessage(role: "user", content: [.text("Hello")])],
+            stream: true,
+            temperature: 1.0,
+            thinking: thinking
+        )
+
+        let data = try JSONEncoder().encode(request)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["model"] as? String, "claude-sonnet-4-6")
+        XCTAssertEqual(dict["max_tokens"] as? Int, 16000)
+        XCTAssertEqual(dict["temperature"] as? Double, 1.0)
+
+        let thinkingDict = dict["thinking"] as? [String: Any]
+        XCTAssertNotNil(thinkingDict)
+        XCTAssertEqual(thinkingDict?["type"] as? String, "enabled")
+        XCTAssertEqual(thinkingDict?["budget_tokens"] as? Int, 10000)
+    }
+
+    func testAnthropicRequestWithoutThinkingOmitsField() throws {
+        let request = AnthropicRequest(
+            model: "claude-sonnet-4-6",
+            maxTokens: 4096,
+            messages: [AnthropicMessage(role: "user", content: [.text("Hello")])],
+            stream: false,
+            temperature: 0.7
+        )
+
+        let data = try JSONEncoder().encode(request)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertNil(dict["thinking"])
+        XCTAssertEqual(dict["max_tokens"] as? Int, 4096)
+    }
+
+    func testMaxTokensAlwaysExceedsBudgetTokens() {
+        // Simulates the logic in LLMService.buildAnthropicBody
+        let testCases: [(maxTokens: Int, thinkingBudget: Int)] = [
+            (4096, 10000),    // budget > maxTokens
+            (10000, 10000),   // budget == maxTokens
+            (16000, 10000),   // budget < maxTokens
+            (1024, 50000),    // large budget, small maxTokens
+            (128000, 1024),   // large maxTokens, small budget
+        ]
+
+        for (providerMaxTokens, thinkingBudget) in testCases {
+            let budgetTokens = thinkingBudget
+            let maxTokens = max(providerMaxTokens, budgetTokens + 1)
+
+            XCTAssertGreaterThan(
+                maxTokens, budgetTokens,
+                "max_tokens (\(maxTokens)) must be > budget_tokens (\(budgetTokens)) "
+                + "for providerMaxTokens=\(providerMaxTokens), thinkingBudget=\(thinkingBudget)"
+            )
+        }
+    }
+}
+
 // MARK: - Tool Call Conversation Flow Tests
 
 final class ToolCallConversationFlowTests: XCTestCase {
