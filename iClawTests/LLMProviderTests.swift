@@ -34,6 +34,7 @@ final class LLMProviderTests: XCTestCase {
         XCTAssertEqual(provider.modelName, "gpt-5.4")
         XCTAssertFalse(provider.isDefault)
         XCTAssertEqual(provider.maxTokens, 4096)
+        XCTAssertEqual(provider.thinkingBudget, 10000)
         XCTAssertEqual(provider.temperature, 0.7)
         XCTAssertEqual(provider.apiStyle, .openAI)
         XCTAssertTrue(provider.apiKey.isEmpty)
@@ -355,6 +356,35 @@ final class LLMProviderTests: XCTestCase {
         provider.cachedModelList = []
         XCTAssertTrue(provider.cachedModelList.isEmpty)
         XCTAssertNil(provider.cachedModelListRaw)
+    }
+
+    // MARK: - Thinking Budget
+
+    @MainActor
+    func testThinkingBudgetDefault() {
+        let provider = LLMProvider(name: "Test")
+        XCTAssertEqual(provider.thinkingBudget, 10000)
+    }
+
+    @MainActor
+    func testThinkingBudgetCustomValue() {
+        let provider = LLMProvider(name: "Test")
+        provider.thinkingBudget = 25000
+        XCTAssertEqual(provider.thinkingBudget, 25000)
+    }
+
+    @MainActor
+    func testThinkingBudgetPersistence() throws {
+        let provider = LLMProvider(name: "Budget Test")
+        provider.thinkingBudget = 50000
+        context.insert(provider)
+        try context.save()
+
+        let fetchDescriptor = FetchDescriptor<LLMProvider>(
+            predicate: #Predicate { $0.name == "Budget Test" }
+        )
+        let fetched = try context.fetch(fetchDescriptor)
+        XCTAssertEqual(fetched.first?.thinkingBudget, 50000)
     }
 
     // MARK: - SwiftData Persistence
