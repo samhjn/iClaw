@@ -727,6 +727,7 @@ private struct MarkdownTableView: View {
     @State private var hasBuilt = false
     @State private var showAll = false
     @State private var popoverCell: PopoverCell?
+    @State private var containerWidth: CGFloat = 0
 
     private struct PopoverCell: Identifiable {
         let id = UUID()
@@ -735,7 +736,7 @@ private struct MarkdownTableView: View {
 
     private static let maxCollapsedRows = 10
     private static let cellPaddingH: CGFloat = 8
-    private static let cellPaddingV: CGFloat = 6
+    private static let cellPaddingV: CGFloat = 4
     private static let minColWidth: CGFloat = 50
     private static let maxColWidth: CGFloat = 280
 
@@ -797,6 +798,23 @@ private struct MarkdownTableView: View {
             }
             .onAppear { buildIfNeeded() }
             .onChange(of: table) { _, _ in rebuild() }
+            .background(
+                GeometryReader { geo in
+                    Color.clear.onChange(of: geo.size.width) { _, newW in
+                        if newW > 0 && newW != containerWidth {
+                            containerWidth = newW
+                            rebuild()
+                        }
+                    }
+                    .onAppear {
+                        let w = geo.size.width
+                        if w > 0 && w != containerWidth {
+                            containerWidth = w
+                            rebuild()
+                        }
+                    }
+                }
+            )
             .sheet(item: $popoverCell) { cell in
                 NavigationStack {
                     ScrollView {
@@ -818,8 +836,15 @@ private struct MarkdownTableView: View {
                 .presentationDragIndicator(.visible)
             }
         } else {
-            Color.clear.frame(height: 1)
-                .onAppear { buildIfNeeded() }
+            GeometryReader { geo in
+                Color.clear.onAppear {
+                    if geo.size.width > 0 {
+                        containerWidth = geo.size.width
+                    }
+                    buildIfNeeded()
+                }
+            }
+            .frame(height: 1)
         }
     }
 
@@ -874,11 +899,14 @@ private struct MarkdownTableView: View {
     }
 
     private func measureColumnWidths() -> [CGFloat] {
-        TableWidthCalculator.measureColumnWidths(
+        // Use actual container width if measured, otherwise fall back to screen width
+        let maxWidth: CGFloat? = containerWidth > 0 ? containerWidth : nil
+        return TableWidthCalculator.measureColumnWidths(
             for: table,
             cellPaddingH: Self.cellPaddingH,
             minColWidth: Self.minColWidth,
-            maxColWidth: Self.maxColWidth
+            maxColWidth: Self.maxColWidth,
+            maxTableWidth: maxWidth
         )
     }
 }

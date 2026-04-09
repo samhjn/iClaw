@@ -427,4 +427,60 @@ final class ColumnWidthCalculationTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(widths[0], 50)
         XCTAssertLessThanOrEqual(widths[0], 280)
     }
+
+    // MARK: - Realistic container width (accounting for chat bubble padding)
+
+    func testRealisticContainerWidthProducesAdequateColumns() {
+        // Simulate actual available width inside a chat bubble:
+        // iPhone 15 (393pt) - ChatView padding (32) - Spacer (48) - bubble padding (24) ≈ 289pt
+        let table = MarkdownTable(
+            headers: ["#", "景点", "特色"],
+            alignments: [.leading, .leading, .leading],
+            rows: [["13", "**长田漾湿地公园**", "湿地生态公园，亲近自然"]]
+        )
+
+        let realisticWidth: CGFloat = 289
+        let widths = TableWidthCalculator.measureColumnWidths(
+            for: table,
+            maxTableWidth: realisticWidth
+        )
+
+        let totalWidth = widths.reduce(0, +)
+        XCTAssertGreaterThan(totalWidth, realisticWidth * 0.90,
+                             "Table should fill most of the container at realistic width")
+
+        // Each column should still be wide enough for its content
+        let font = UIFont.preferredFont(forTextStyle: .caption1)
+        let boldFont = UIFont.boldSystemFont(ofSize: font.pointSize)
+        let contents = ["13", "长田漾湿地公园", "湿地生态公园，亲近自然"]
+        for (idx, text) in contents.enumerated() {
+            let textWidth = NSAttributedString(
+                string: text,
+                attributes: [.font: boldFont]
+            ).size().width
+            let requiredWidth = ceil(textWidth) + 16 // padding
+            XCTAssertGreaterThanOrEqual(
+                widths[idx], requiredWidth,
+                "Column \(idx) at realistic width should fit '\(text)' (need \(requiredWidth), got \(widths[idx]))"
+            )
+        }
+    }
+
+    func testVeryNarrowContainerScalesDown() {
+        let table = MarkdownTable(
+            headers: ["#", "景点", "特色"],
+            alignments: [.leading, .leading, .leading],
+            rows: [["13", "**长田漾湿地公园**", "湿地生态公园，亲近自然"]]
+        )
+
+        // Very narrow (e.g., iPad slide-over or small widget)
+        let narrowWidth: CGFloat = 180
+        let widths = TableWidthCalculator.measureColumnWidths(
+            for: table,
+            maxTableWidth: narrowWidth
+        )
+
+        XCTAssertEqual(widths.count, 3)
+        XCTAssertTrue(widths.allSatisfy { $0 >= 50 }, "All columns should meet minimum width")
+    }
 }
