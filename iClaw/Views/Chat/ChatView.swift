@@ -156,7 +156,7 @@ private struct ChatDisplayModeMenu: View {
 }
 
 @Observable
-private final class ChatScrollState {
+final class ChatScrollState {
     var isNearBottom = true
     weak var scrollView: UIScrollView?
 }
@@ -616,7 +616,7 @@ private func tokenColor(for ratio: Double) -> Color {
 
 // MARK: - Scroll Offset Observer
 
-private struct ScrollViewOffsetObserver: UIViewRepresentable {
+struct ScrollViewOffsetObserver: UIViewRepresentable {
     let scrollState: ChatScrollState
 
     func makeUIView(context: Context) -> UIView {
