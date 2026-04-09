@@ -99,6 +99,26 @@ final class MarkdownTableParsingTests: XCTestCase {
         XCTAssertEqual(table.rows[0][2], "", "Missing cell should be empty string")
     }
 
+    func testSingleRowChineseTableParsedCorrectly() {
+        // This is the exact table that triggered the height inflation bug.
+        // Tables with only 1 data row were most affected because the
+        // ScrollView's proposed height was split between fewer rows.
+        let md = """
+        | # | 景点 | 特色 |
+        |---|------|------|
+        | 13 | **长田漾湿地公园** | 湿地生态公园，亲近自然 |
+        """
+        let view = MarkdownContentView(md, isUser: false)
+        let blocks = view.parseBlocks()
+
+        XCTAssertEqual(blocks.count, 1)
+        guard case .table(let table) = blocks.first else {
+            XCTFail("Expected a table block"); return
+        }
+        XCTAssertEqual(table.headers.count, 3)
+        XCTAssertEqual(table.rows.count, 1, "Should have exactly 1 data row")
+    }
+
     func testTableWithBoldAndInlineMarkdown() {
         let md = """
         | Feature | Status |
@@ -469,6 +489,63 @@ final class ColumnWidthCalculationTests: XCTestCase {
             )
         }
     }
+
+    // MARK: - Row count should not affect column widths
+
+    func testSingleRowTableSameWidthsAsMultiRowTable() {
+        // The height inflation bug only affected tables with few rows because
+        // the ScrollView's proposed height was split among fewer HStack rows,
+        // causing each Rectangle separator to expand more. Verify that the
+        // column width calculation itself is independent of row count.
+        let singleRowTable = MarkdownTable(
+            headers: ["#", "景点", "特色"],
+            alignments: [.leading, .leading, .leading],
+            rows: [["13", "**长田漾湿地公园**", "湿地生态公园，亲近自然"]]
+        )
+
+        let multiRowTable = MarkdownTable(
+            headers: ["#", "景点", "特色"],
+            alignments: [.leading, .leading, .leading],
+            rows: [
+                ["13", "**长田漾湿地公园**", "湿地生态公园，亲近自然"],
+                ["14", "**西湖**", "世界文化遗产"],
+                ["15", "**千岛湖**", "天下第一秀水"],
+                ["16", "**灵隐寺**", "千年古刹"],
+                ["17", "**钱塘江**", "观潮胜地"],
+            ]
+        )
+
+        let maxW: CGFloat = 289
+        let singleWidths = TableWidthCalculator.measureColumnWidths(for: singleRowTable, maxTableWidth: maxW)
+        let multiWidths = TableWidthCalculator.measureColumnWidths(for: multiRowTable, maxTableWidth: maxW)
+
+        // Column widths should be the same — row count must not affect width calculation
+        // (The multi-row table has the same max-width content in each column)
+        XCTAssertEqual(singleWidths.count, multiWidths.count)
+        for i in 0..<singleWidths.count {
+            XCTAssertEqual(singleWidths[i], multiWidths[i], accuracy: 1,
+                           "Column \(i) width should be the same regardless of row count")
+        }
+    }
+
+    func testSingleRowTableFillsAvailableWidth() {
+        // Single-row tables were most affected by the height bug.
+        // Ensure they still get proper column width expansion.
+        let table = MarkdownTable(
+            headers: ["Name", "Value"],
+            alignments: [.leading, .leading],
+            rows: [["key", "val"]]
+        )
+
+        let maxW: CGFloat = 300
+        let widths = TableWidthCalculator.measureColumnWidths(for: table, maxTableWidth: maxW)
+        let total = widths.reduce(0, +)
+
+        XCTAssertGreaterThan(total, maxW * 0.90,
+                             "Single-row table should still fill available width")
+    }
+
+    // MARK: - Narrow container scale-down
 
     func testVeryNarrowContainerScalesDown() {
         let table = MarkdownTable(
