@@ -6,6 +6,11 @@ import Observation
 final class SettingsViewModel {
     var providers: [LLMProvider] = []
 
+    /// UUID of the current default provider.  The View reads this instead of
+    /// `provider.isDefault` so that `@Model` property mutations during
+    /// deletion don't trigger premature SwiftUI row invalidation.
+    var defaultProviderId: UUID?
+
     /// Set by the View to trigger a deletion confirmation alert.
     var providerToDelete: LLMProvider?
 
@@ -24,6 +29,7 @@ final class SettingsViewModel {
             sortBy: [SortDescriptor(\.createdAt)]
         )
         providers = (try? modelContext.fetch(descriptor)) ?? []
+        defaultProviderId = providers.first(where: \.isDefault)?.id
     }
 
     func addProvider(
