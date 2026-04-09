@@ -257,4 +257,103 @@ final class TextFilePreviewTests: XCTestCase {
             XCTAssertNil(text, "Non-UTF-8 data should fail to decode")
         }
     }
+
+    // MARK: - Coordinator rapid open/close
+
+    @MainActor
+    func testCoordinatorRapidShowCloseCycles() {
+        let coordinator = TextFilePreviewCoordinator.shared
+
+        for i in 0..<5 {
+            coordinator.show(content: "cycle \(i)", filename: "test\(i).txt")
+            XCTAssertTrue(coordinator.isPresented)
+            XCTAssertEqual(coordinator.content, "cycle \(i)")
+
+            coordinator.close(animated: false)
+            XCTAssertFalse(coordinator.isPresented)
+        }
+    }
+
+    @MainActor
+    func testCoordinatorShowOverwritesPreviousContent() {
+        let coordinator = TextFilePreviewCoordinator.shared
+
+        coordinator.show(content: "first", filename: "a.txt")
+        XCTAssertEqual(coordinator.content, "first")
+        XCTAssertEqual(coordinator.filename, "a.txt")
+        XCTAssertFalse(coordinator.isMarkdown)
+
+        // Show a new file without closing the first
+        coordinator.show(content: "# Second", filename: "b.md")
+        XCTAssertTrue(coordinator.isPresented)
+        XCTAssertEqual(coordinator.content, "# Second")
+        XCTAssertEqual(coordinator.filename, "b.md")
+        XCTAssertTrue(coordinator.isMarkdown)
+
+        coordinator.close(animated: false)
+    }
+
+    @MainActor
+    func testCoordinatorCloseIsIdempotent() {
+        let coordinator = TextFilePreviewCoordinator.shared
+        coordinator.show(content: "test", filename: "test.txt")
+
+        coordinator.close(animated: false)
+        XCTAssertFalse(coordinator.isPresented)
+
+        // Closing again should not crash or change state
+        coordinator.close(animated: false)
+        XCTAssertFalse(coordinator.isPresented)
+    }
+
+    // MARK: - Markdown detection edge cases
+
+    @MainActor
+    func testCoordinatorNonMarkdownExtensionsTreatedAsPlainText() {
+        let coordinator = TextFilePreviewCoordinator.shared
+        let plainExts = ["txt", "json", "swift", "py", "html", "css", "yaml", "log"]
+        for ext in plainExts {
+            coordinator.show(content: "# heading", filename: "file.\(ext)")
+            XCTAssertFalse(coordinator.isMarkdown,
+                           ".\(ext) should not be treated as markdown even if content has markdown syntax")
+            coordinator.close(animated: false)
+        }
+    }
+
+    @MainActor
+    func testCoordinatorEmptyContent() {
+        let coordinator = TextFilePreviewCoordinator.shared
+        coordinator.show(content: "", filename: "empty.txt")
+
+        XCTAssertTrue(coordinator.isPresented)
+        XCTAssertEqual(coordinator.content, "")
+        XCTAssertEqual(coordinator.filename, "empty.txt")
+
+        coordinator.close(animated: false)
+    }
+
+    @MainActor
+    func testCoordinatorLargeContent() {
+        let coordinator = TextFilePreviewCoordinator.shared
+        let largeContent = String(repeating: "Line of text\n", count: 10_000)
+        coordinator.show(content: largeContent, filename: "large.log")
+
+        XCTAssertTrue(coordinator.isPresented)
+        XCTAssertEqual(coordinator.content?.count, largeContent.count)
+
+        coordinator.close(animated: false)
+    }
+
+    @MainActor
+    func testCoordinatorUnicodeFilenameAndContent() {
+        let coordinator = TextFilePreviewCoordinator.shared
+        coordinator.show(content: "你好世界 🌍\nこんにちは", filename: "笔记.md")
+
+        XCTAssertTrue(coordinator.isPresented)
+        XCTAssertTrue(coordinator.isMarkdown)
+        XCTAssertEqual(coordinator.content, "你好世界 🌍\nこんにちは")
+        XCTAssertEqual(coordinator.filename, "笔记.md")
+
+        coordinator.close(animated: false)
+    }
 }

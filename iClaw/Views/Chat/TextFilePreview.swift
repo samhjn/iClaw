@@ -87,35 +87,31 @@ private struct TextFilePreviewOverlay: View {
     @State private var toastMessage: String?
 
     var body: some View {
-        GeometryReader { _ in
-            ZStack {
-                Color(.systemBackground)
-                    .ignoresSafeArea()
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    header
-                    Divider()
-                    fileContent
-                }
+            VStack(spacing: 0) {
+                header
+                Divider()
+                fileContent
+            }
 
-                if let message = toastMessage {
-                    VStack {
-                        Spacer()
-                        Text(message)
-                            .font(.callout)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Capsule().fill(.black.opacity(0.7)))
-                            .padding(.bottom, 48)
-                    }
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
+            if let message = toastMessage {
+                VStack {
+                    Spacer()
+                    Text(message)
+                        .font(.callout)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(.black.opacity(0.7)))
+                        .padding(.bottom, 48)
                 }
+                .transition(.opacity)
+                .allowsHitTesting(false)
             }
         }
-        .ignoresSafeArea()
-        .statusBar(hidden: true)
     }
 
     // MARK: - Header
