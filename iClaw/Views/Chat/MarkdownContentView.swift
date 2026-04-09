@@ -869,8 +869,26 @@ private struct MarkdownTableView: View {
         hasBuilt = true
     }
 
-    /// Strip markdown inline syntax characters for width measurement.
     private static func stripInlineMarkdown(_ text: String) -> String {
+        TableWidthCalculator.stripInlineMarkdown(text)
+    }
+
+    private func measureColumnWidths() -> [CGFloat] {
+        TableWidthCalculator.measureColumnWidths(
+            for: table,
+            cellPaddingH: Self.cellPaddingH,
+            minColWidth: Self.minColWidth,
+            maxColWidth: Self.maxColWidth
+        )
+    }
+}
+
+// MARK: - Table Width Calculator (testable)
+
+enum TableWidthCalculator {
+
+    /// Strip markdown inline syntax characters for width measurement.
+    static func stripInlineMarkdown(_ text: String) -> String {
         var s = text
         s = s.replacingOccurrences(of: "***", with: "")
         s = s.replacingOccurrences(of: "___", with: "")
@@ -895,44 +913,49 @@ private struct MarkdownTableView: View {
         return s
     }
 
-    private func measureColumnWidths() -> [CGFloat] {
+    static func measureColumnWidths(
+        for table: MarkdownTable,
+        cellPaddingH: CGFloat = 8,
+        minColWidth: CGFloat = 50,
+        maxColWidth: CGFloat = 280,
+        maxTableWidth: CGFloat? = nil
+    ) -> [CGFloat] {
         let font = UIFont.preferredFont(forTextStyle: .caption1)
         let boldFont = UIFont.boldSystemFont(ofSize: font.pointSize)
-        let padding = Self.cellPaddingH * 2
+        let padding = cellPaddingH * 2
         // Small buffer to account for UIKit/SwiftUI font metric differences
         let measureBuffer: CGFloat = 4
-        let screenWidth = UIScreen.main.bounds.width
-        let maxTableWidth = screenWidth - 32
+        let effectiveMaxTableWidth = maxTableWidth ?? (UIScreen.main.bounds.width - 32)
 
         var widths = (0..<table.headers.count).map { col -> CGFloat in
-            let headerText = Self.stripInlineMarkdown(table.headers[col])
+            let headerText = stripInlineMarkdown(table.headers[col])
             let headerSize = NSAttributedString(string: headerText, attributes: [.font: boldFont]).size()
             var maxWidth = headerSize.width
 
             let rowsToMeasure = min(table.rows.count, 30)
             for rowIdx in 0..<rowsToMeasure {
                 if col < table.rows[rowIdx].count {
-                    let cellText = Self.stripInlineMarkdown(table.rows[rowIdx][col])
+                    let cellText = stripInlineMarkdown(table.rows[rowIdx][col])
                     let cellSize = NSAttributedString(string: cellText, attributes: [.font: boldFont]).size()
                     maxWidth = max(maxWidth, cellSize.width)
                 }
             }
-            return max(Self.minColWidth, min(ceil(maxWidth) + padding + measureBuffer, Self.maxColWidth))
+            return max(minColWidth, min(ceil(maxWidth) + padding + measureBuffer, maxColWidth))
         }
 
         let totalWidth = widths.reduce(0, +)
-        if totalWidth > maxTableWidth && totalWidth > 0 {
+        if totalWidth > effectiveMaxTableWidth && totalWidth > 0 {
             // Scale down to fit screen
-            let scale = maxTableWidth / totalWidth
-            widths = widths.map { max(Self.minColWidth, floor($0 * scale)) }
-        } else if totalWidth < maxTableWidth && totalWidth > 0 {
+            let scale = effectiveMaxTableWidth / totalWidth
+            widths = widths.map { max(minColWidth, floor($0 * scale)) }
+        } else if totalWidth < effectiveMaxTableWidth && totalWidth > 0 {
             // Distribute extra space proportionally so wider columns get more
-            let extraSpace = maxTableWidth - totalWidth
-            let expandableTotal = widths.filter { $0 < Self.maxColWidth }.reduce(0, +)
+            let extraSpace = effectiveMaxTableWidth - totalWidth
+            let expandableTotal = widths.filter { $0 < maxColWidth }.reduce(0, +)
             if expandableTotal > 0 {
-                for idx in widths.indices where widths[idx] < Self.maxColWidth {
+                for idx in widths.indices where widths[idx] < maxColWidth {
                     let share = extraSpace * (widths[idx] / expandableTotal)
-                    widths[idx] = min(widths[idx] + share, Self.maxColWidth)
+                    widths[idx] = min(widths[idx] + share, maxColWidth)
                 }
             }
         }
