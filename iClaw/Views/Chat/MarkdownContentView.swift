@@ -920,8 +920,19 @@ private struct MarkdownTableView: View {
 
         let totalWidth = widths.reduce(0, +)
         if totalWidth > maxTableWidth && totalWidth > 0 {
+            // Scale down to fit screen
             let scale = maxTableWidth / totalWidth
             widths = widths.map { max(Self.minColWidth, floor($0 * scale)) }
+        } else if totalWidth < maxTableWidth && totalWidth > 0 {
+            // Scale up to fill available width, capping each column at maxColWidth
+            let extraSpace = maxTableWidth - totalWidth
+            let expandable = widths.enumerated().filter { $0.element < Self.maxColWidth }
+            if !expandable.isEmpty {
+                let perColumn = extraSpace / CGFloat(expandable.count)
+                for (idx, w) in expandable {
+                    widths[idx] = min(w + perColumn, Self.maxColWidth)
+                }
+            }
         }
 
         return widths
