@@ -51,7 +51,7 @@ final class SilentAudioPlayer {
     // MARK: - WAV Generation
 
     /// Generates a minimal 1-second silent 16-bit mono WAV in memory.
-    private static func generateSilentWAV() -> Data? {
+    static func generateSilentWAV() -> Data? {
         let sampleRate: UInt32 = 8000
         let numSamples: UInt32 = sampleRate   // 1 second
         let bitsPerSample: UInt16 = 16
@@ -90,11 +90,9 @@ final class SilentAudioPlayer {
 
 private extension Data {
     mutating func appendLE(_ value: UInt16) {
-        var v = value.littleEndian
-        append(contentsOf: withUnsafeBytes(of: &v) { Array($0) })
+        Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }
     }
     mutating func appendLE(_ value: UInt32) {
-        var v = value.littleEndian
-        append(contentsOf: withUnsafeBytes(of: &v) { Array($0) })
+        Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }
     }
 }
