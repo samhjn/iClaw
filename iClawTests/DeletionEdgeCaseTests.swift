@@ -1479,10 +1479,11 @@ final class LLMProviderModificationTests: XCTestCase {
         context.insert(primary)
         let fallback = LLMProvider(name: "Fallback")
         context.insert(fallback)
+        let fallbackId = fallback.id  // Capture before deletion
 
         let agent = Agent(name: "Agent")
         agent.primaryProviderId = primary.id
-        agent.fallbackProviderIds = [fallback.id]
+        agent.fallbackProviderIds = [fallbackId]
         context.insert(agent)
         try! context.save()
 
@@ -1492,7 +1493,7 @@ final class LLMProviderModificationTests: XCTestCase {
         XCTAssertEqual(vm.providers.count, 1)
         XCTAssertEqual(vm.providers[0].name, "Primary")
         // Agent's fallback chain still references the deleted ID — ModelRouter handles this
-        XCTAssertEqual(agent.fallbackProviderIds, [fallback.id])
+        XCTAssertEqual(agent.fallbackProviderIds, [fallbackId])
     }
 
     /// Deleting the default provider that multiple agents reference should
