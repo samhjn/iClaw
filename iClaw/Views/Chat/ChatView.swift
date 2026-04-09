@@ -167,8 +167,12 @@ private struct ChatContentView: View {
     @State private var hasRestoredScroll = false
     @State private var forceScrollToBottom = false
     @State private var scrollState = ChatScrollState()
+    @State private var displayMessages: [Message] = []
 
-    private var displayMessages: [Message] {
+    /// Compute the filtered message list from current view-model state.
+    /// The result is stored in `displayMessages` (`@State`) so that SwiftUI
+    /// always has a stable snapshot during collection-view batch updates.
+    private func filteredMessages() -> [Message] {
         if vm.isVerbose { return vm.messages }
         return vm.messages.filter { msg in
             if msg.role == .tool { return false }
@@ -246,6 +250,12 @@ private struct ChatContentView: View {
                     .background(ScrollViewOffsetObserver(scrollState: scrollState))
                 }
                 .scrollPosition(id: $scrollPosition, anchor: .center)
+                .onChange(of: vm.messages, initial: true) {
+                    displayMessages = filteredMessages()
+                }
+                .onChange(of: vm.isVerbose) {
+                    displayMessages = filteredMessages()
+                }
                 .onAppear {
                     if !hasRestoredScroll {
                         hasRestoredScroll = true
