@@ -56,9 +56,10 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastScale: 1.0, newScale: 2.0,
             lastPanOffset: existing
         )
-        // Center anchor: p = (0, 0); O = 0 + existing = existing
-        XCTAssertEqual(offset.width, 50, accuracy: accuracy)
-        XCTAssertEqual(offset.height, -30, accuracy: accuracy)
+        // Center anchor: layoutPos = (0,0); ratio = 2
+        // O = 0*(1-2) + existing*2 = existing*2
+        XCTAssertEqual(offset.width, 100, accuracy: accuracy)
+        XCTAssertEqual(offset.height, -60, accuracy: accuracy)
     }
 
     func testZoomOutTowardsScale1ReducesOffset() {
@@ -144,8 +145,10 @@ final class ImagePreviewZoomTests: XCTestCase {
     }
 
     func testZoomAnchorScreenPositionStaysFixed() {
-        // Verify: screen position of the anchor doesn't change after zoom.
-        // screen_pos = p * scale + offset  (must be constant)
+        // The anchor's screen position (= layoutPos) must not change.
+        // layoutPos = (ux-0.5)*fitted (the touch point in screen space).
+        // The actual image point: p = (layoutPos - lastPan) / lastScale.
+        // Invariant: p * newScale + O_new == layoutPos.
         let fitted = CGSize(width: 300, height: 150)
         let lastScale: CGFloat = 1.5
         let newScale: CGFloat = 3.0
@@ -153,9 +156,13 @@ final class ImagePreviewZoomTests: XCTestCase {
         let anchorUX: CGFloat = 0.3
         let anchorUY: CGFloat = 0.8
 
-        let p = CGSize(
+        let layoutPos = CGSize(
             width: (anchorUX - 0.5) * fitted.width,
             height: (anchorUY - 0.5) * fitted.height
+        )
+        let pReal = CGSize(
+            width: (layoutPos.width - lastPan.width) / lastScale,
+            height: (layoutPos.height - lastPan.height) / lastScale
         )
 
         let newOffset = ImagePreviewMath.zoomAnchorOffset(
@@ -165,19 +172,16 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastPanOffset: lastPan
         )
 
-        // screen_before = p * lastScale + lastPan
-        let beforeX = p.width * lastScale + lastPan.width
-        let beforeY = p.height * lastScale + lastPan.height
-        // screen_after = p * newScale + newOffset
-        let afterX = p.width * newScale + newOffset.width
-        let afterY = p.height * newScale + newOffset.height
+        let afterX = pReal.width * newScale + newOffset.width
+        let afterY = pReal.height * newScale + newOffset.height
 
-        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
-        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+        XCTAssertEqual(afterX, layoutPos.width, accuracy: accuracy)
+        XCTAssertEqual(afterY, layoutPos.height, accuracy: accuracy)
     }
 
     func testZoomAnchorScreenPositionStaysFixedForWideImage() {
-        // Same invariant as above but for a very wide (16:1) image
+        // Same invariant for a very wide (16:1) image at 1× (simplifies to
+        // p == layoutPos since lastScale=1 and lastPan=0).
         let fitted = CGSize(width: 400, height: 25)
         let lastScale: CGFloat = 1.0
         let newScale: CGFloat = 4.0
@@ -185,10 +189,11 @@ final class ImagePreviewZoomTests: XCTestCase {
         let ux: CGFloat = 0.75
         let uy: CGFloat = 0.9
 
-        let p = CGSize(
+        let layoutPos = CGSize(
             width: (ux - 0.5) * fitted.width,
             height: (uy - 0.5) * fitted.height
         )
+        let pReal = layoutPos // lastScale=1, lastPan=0
 
         let newOffset = ImagePreviewMath.zoomAnchorOffset(
             anchorUnitX: ux, anchorUnitY: uy,
@@ -197,17 +202,15 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastPanOffset: lastPan
         )
 
-        let beforeX = p.width * lastScale + lastPan.width
-        let beforeY = p.height * lastScale + lastPan.height
-        let afterX = p.width * newScale + newOffset.width
-        let afterY = p.height * newScale + newOffset.height
+        let afterX = pReal.width * newScale + newOffset.width
+        let afterY = pReal.height * newScale + newOffset.height
 
-        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
-        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+        XCTAssertEqual(afterX, layoutPos.width, accuracy: accuracy)
+        XCTAssertEqual(afterY, layoutPos.height, accuracy: accuracy)
     }
 
     func testZoomAnchorScreenPositionStaysFixedForTallImage() {
-        // Same invariant for a very tall (1:10) image
+        // Same invariant for a very tall (1:10) image already at 2× zoom.
         let fitted = CGSize(width: 80, height: 800)
         let lastScale: CGFloat = 2.0
         let newScale: CGFloat = 5.0
@@ -215,9 +218,13 @@ final class ImagePreviewZoomTests: XCTestCase {
         let ux: CGFloat = 0.1
         let uy: CGFloat = 0.6
 
-        let p = CGSize(
+        let layoutPos = CGSize(
             width: (ux - 0.5) * fitted.width,
             height: (uy - 0.5) * fitted.height
+        )
+        let pReal = CGSize(
+            width: (layoutPos.width - lastPan.width) / lastScale,
+            height: (layoutPos.height - lastPan.height) / lastScale
         )
 
         let newOffset = ImagePreviewMath.zoomAnchorOffset(
@@ -227,13 +234,11 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastPanOffset: lastPan
         )
 
-        let beforeX = p.width * lastScale + lastPan.width
-        let beforeY = p.height * lastScale + lastPan.height
-        let afterX = p.width * newScale + newOffset.width
-        let afterY = p.height * newScale + newOffset.height
+        let afterX = pReal.width * newScale + newOffset.width
+        let afterY = pReal.height * newScale + newOffset.height
 
-        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
-        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+        XCTAssertEqual(afterX, layoutPos.width, accuracy: accuracy)
+        XCTAssertEqual(afterY, layoutPos.height, accuracy: accuracy)
     }
 
     func testZoomAnchorWithExistingPanForNonSquareImage() {
@@ -245,14 +250,15 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastScale: 2.0, newScale: 3.0,
             lastPanOffset: CGSize(width: 30, height: -10)
         )
-        // p = (-100, 25); O = p * (2-3) + (30,-10) = (100,-25) + (30,-10) = (130,-35)
-        XCTAssertEqual(offset.width, 130, accuracy: accuracy)
-        XCTAssertEqual(offset.height, -35, accuracy: accuracy)
+        // layoutPos = (-100, 25); ratio = 1.5
+        // O = (-100)*(1-1.5) + 30*1.5 = 50+45 = 95
+        //     25*(1-1.5) + (-10)*1.5 = -12.5-15 = -27.5
+        XCTAssertEqual(offset.width, 95, accuracy: accuracy)
+        XCTAssertEqual(offset.height, -27.5, accuracy: accuracy)
     }
 
     func testZoomAnchorZoomOutFullyResetsForNonSquareImage() {
-        // Zoom out to 1× from an off-center anchor should return to the
-        // correct resting offset (not necessarily zero if pan was non-zero).
+        // Zoom out to 1× from an off-center anchor.
         let fitted = CGSize(width: 400, height: 100)
         let offset = ImagePreviewMath.zoomAnchorOffset(
             anchorUnitX: 0.0, anchorUnitY: 1.0,
@@ -260,9 +266,11 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastScale: 3.0, newScale: 1.0,
             lastPanOffset: CGSize(width: 400, height: 100)
         )
-        // p = (-200, 50); O = p * (3-1) + (400,100) = (-400,100) + (400,100) = (0,200)
+        // layoutPos = (-200, 50); ratio = 1/3
+        // O.w = -200*(1-1/3) + 400*(1/3) = -200*2/3 + 400/3 = -400/3+400/3 = 0
+        // O.h = 50*(1-1/3) + 100*(1/3) = 50*2/3 + 100/3 = 100/3+100/3 = 200/3
         XCTAssertEqual(offset.width, 0, accuracy: accuracy)
-        XCTAssertEqual(offset.height, 200, accuracy: accuracy)
+        XCTAssertEqual(offset.height, 200.0 / 3.0, accuracy: accuracy)
     }
 
     func testZoomAnchorMinimalScaleChange() {
@@ -337,8 +345,8 @@ final class ImagePreviewZoomTests: XCTestCase {
 
     func testConsecutiveZoomGesturesPreservePosition() {
         // Simulate: pinch 1×→2× at anchor (0.3, 0.7), then a second
-        // pinch 2×→4× at anchor (0.6, 0.4).  The first anchor's screen
-        // position can drift, but the second anchor must stay fixed.
+        // pinch 2×→4× at anchor (0.6, 0.4).  The second anchor's screen
+        // position (layoutPos2) must stay fixed.
         let fitted = CGSize(width: 400, height: 100)
 
         // Gesture 1: 1× → 2×
@@ -356,9 +364,13 @@ final class ImagePreviewZoomTests: XCTestCase {
         // Gesture 2: 2× → 4× at a different anchor
         let ux2: CGFloat = 0.6
         let uy2: CGFloat = 0.4
-        let p2 = CGSize(
+        let layoutPos2 = CGSize(
             width: (ux2 - 0.5) * fitted.width,
             height: (uy2 - 0.5) * fitted.height
+        )
+        let pReal2 = CGSize(
+            width: (layoutPos2.width - clamped1.width) / 2.0,
+            height: (layoutPos2.height - clamped1.height) / 2.0
         )
 
         let offset2 = ImagePreviewMath.zoomAnchorOffset(
@@ -368,14 +380,12 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastPanOffset: clamped1
         )
 
-        // Verify: p2's screen position is the same before and after gesture 2
-        let beforeX = p2.width * 2.0 + clamped1.width
-        let beforeY = p2.height * 2.0 + clamped1.height
-        let afterX = p2.width * 4.0 + offset2.width
-        let afterY = p2.height * 4.0 + offset2.height
+        // Verify: pReal2 * newScale + offset2 == layoutPos2
+        let afterX = pReal2.width * 4.0 + offset2.width
+        let afterY = pReal2.height * 4.0 + offset2.height
 
-        XCTAssertEqual(beforeX, afterX, accuracy: accuracy)
-        XCTAssertEqual(beforeY, afterY, accuracy: accuracy)
+        XCTAssertEqual(afterX, layoutPos2.width, accuracy: accuracy)
+        XCTAssertEqual(afterY, layoutPos2.height, accuracy: accuracy)
     }
 
     // MARK: - Fitted Image Size
@@ -614,7 +624,7 @@ final class ImagePreviewZoomTests: XCTestCase {
             lastScale: 1.0, newScale: 2.0,
             lastPanOffset: .zero
         )
-        // p = (0, -200); O = (0, -200)*(1-2) = (0, 200)
+        // layoutPos = (0, -200); ratio = 2; O = (0, -200)*(1-2) + 0 = (0, 200)
         XCTAssertEqual(offset.width, 0, accuracy: accuracy)
         XCTAssertEqual(offset.height, 200, accuracy: accuracy)
 
@@ -625,5 +635,90 @@ final class ImagePreviewZoomTests: XCTestCase {
         )
         XCTAssertEqual(clamped.width, 0, accuracy: accuracy)
         XCTAssertEqual(clamped.height, 200, accuracy: accuracy) // within 400 bound
+    }
+
+    // MARK: - Re-zoom from already-zoomed state
+
+    func testReZoomAtTopOfAlreadyZoomedImage() {
+        // The original bug: pinch at the top/bottom of a 2× zoomed image
+        // produced wrong centering.
+        // Image fitted 400×200, zoomed to 2×, panned to top (offset.y = -200).
+        let fitted = CGSize(width: 400, height: 200)
+        let lastScale: CGFloat = 2.0
+        let lastPan = CGSize(width: 0, height: -200)
+
+        // Touch at the center of the visible area.  At scale 2 with
+        // offset -200, the visible center's layoutPos.y should be:
+        //   p_center * lastScale + lastPan.y = 0 * 2 + (-200) = -200
+        // But layoutPos = (ux - 0.5) * fitted.h.  If user touches at
+        // ux = ..., we can reverse-engineer: ux = layoutPos/fitted + 0.5
+        //   ux_y = -200/200 + 0.5 = -0.5  (outside [0,1], meaning the
+        //   touch is at the layout-frame top edge, uy=0).
+        //
+        // A more realistic touch: user touches at uy=0.3 in the zoomed view.
+        let uy: CGFloat = 0.3
+        let layoutPosY = (uy - 0.5) * fitted.height  // = -40
+        let pReal = (layoutPosY - lastPan.height) / lastScale  // (-40 - (-200)) / 2 = 80
+
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.5, anchorUnitY: uy,
+            fittedSize: fitted,
+            lastScale: lastScale, newScale: 4.0,
+            lastPanOffset: lastPan
+        )
+
+        // Verify: pReal * 4 + O_new == layoutPos
+        let afterY = pReal * 4.0 + offset.height
+        XCTAssertEqual(afterY, layoutPosY, accuracy: accuracy)
+    }
+
+    func testReZoomAtBottomOfAlreadyZoomedImage() {
+        let fitted = CGSize(width: 400, height: 200)
+        let lastScale: CGFloat = 2.0
+        let lastPan = CGSize(width: 0, height: 200)  // panned to bottom
+
+        let uy: CGFloat = 0.7
+        let layoutPosY = (uy - 0.5) * fitted.height  // 40
+        let pReal = (layoutPosY - lastPan.height) / lastScale  // (40 - 200) / 2 = -80
+
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: 0.5, anchorUnitY: uy,
+            fittedSize: fitted,
+            lastScale: lastScale, newScale: 3.0,
+            lastPanOffset: lastPan
+        )
+
+        let afterY = pReal * 3.0 + offset.height
+        XCTAssertEqual(afterY, layoutPosY, accuracy: accuracy)
+    }
+
+    func testReZoomFromScale3WithLargePan() {
+        // Extreme case: 3× zoom, large pan, zoom to 5× at corner.
+        let fitted = CGSize(width: 400, height: 100)
+        let lastScale: CGFloat = 3.0
+        let lastPan = CGSize(width: -300, height: 0)
+        let ux: CGFloat = 0.1
+        let uy: CGFloat = 0.9
+
+        let layoutPos = CGSize(
+            width: (ux - 0.5) * fitted.width,
+            height: (uy - 0.5) * fitted.height
+        )
+        let pReal = CGSize(
+            width: (layoutPos.width - lastPan.width) / lastScale,
+            height: (layoutPos.height - lastPan.height) / lastScale
+        )
+
+        let offset = ImagePreviewMath.zoomAnchorOffset(
+            anchorUnitX: ux, anchorUnitY: uy,
+            fittedSize: fitted,
+            lastScale: lastScale, newScale: 5.0,
+            lastPanOffset: lastPan
+        )
+
+        let afterX = pReal.width * 5.0 + offset.width
+        let afterY = pReal.height * 5.0 + offset.height
+        XCTAssertEqual(afterX, layoutPos.width, accuracy: accuracy)
+        XCTAssertEqual(afterY, layoutPos.height, accuracy: accuracy)
     }
 }

@@ -65,7 +65,11 @@ enum ImagePreviewMath {
     ///
     /// `fittedSize` is the aspect-fitted image size (the Image view's frame),
     /// **not** the viewport size.  The gesture anchor is in the image view's
-    /// coordinate space, so we must convert via the fitted dimensions.
+    /// layout-frame coordinate space, so `(ux − 0.5) * fittedSize` gives the
+    /// touch's screen position relative to parent center (not the raw image
+    /// point).  To recover the actual image point we undo the current
+    /// transform: `p = (layoutPos − lastPanOffset) / lastScale`, yielding
+    /// the ratio-based formula below.
     static func zoomAnchorOffset(
         anchorUnitX: CGFloat,
         anchorUnitY: CGFloat,
@@ -74,15 +78,13 @@ enum ImagePreviewMath {
         newScale: CGFloat,
         lastPanOffset: CGSize
     ) -> CGSize {
-        // Point in image-view local coords (relative to center).
+        // layoutPos = touch screen position relative to parent center.
         let anchorX = (anchorUnitX - 0.5) * fittedSize.width
         let anchorY = (anchorUnitY - 0.5) * fittedSize.height
-        // Keep screen position of anchor constant:
-        //   p * lastScale + O_old  ==  p * newScale + O_new
-        //   ⟹  O_new = p * (lastScale − newScale) + O_old
+        let ratio = newScale / lastScale
         return CGSize(
-            width: anchorX * (lastScale - newScale) + lastPanOffset.width,
-            height: anchorY * (lastScale - newScale) + lastPanOffset.height
+            width: anchorX * (1 - ratio) + lastPanOffset.width * ratio,
+            height: anchorY * (1 - ratio) + lastPanOffset.height * ratio
         )
     }
 
