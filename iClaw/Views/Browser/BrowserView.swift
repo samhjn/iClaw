@@ -19,15 +19,17 @@ struct BrowserView: View {
                 }
                 addressBar
                 progressBar
-                WebViewRepresentable(webView: browser.webView)
-                    .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(!isLocked)
-                    .overlay {
-                        if isLocked {
-                            Color.black.opacity(0.04)
-                                .allowsHitTesting(false)
+                ZStack {
+                    WebViewRepresentable(webView: browser.webView)
+                        .allowsHitTesting(!isLocked)
+                        .overlay {
+                            if isLocked {
+                                Color.black.opacity(0.04)
+                                    .allowsHitTesting(false)
+                            }
                         }
-                    }
+                }
+                .ignoresSafeArea(edges: .bottom)
                 toolbar
             }
             .navigationTitle(L10n.Browser.title)
@@ -254,7 +256,11 @@ struct WebViewRepresentable: UIViewRepresentable {
     let webView: WKWebView
 
     func makeUIView(context: Context) -> WKWebView {
-        webView
+        // Prevent the web view's internal scroll view from feeding back into
+        // UIKit's safe-area-inset layout cycle, which can block the main thread
+        // long enough to trigger the 0x8BADF00D watchdog.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
