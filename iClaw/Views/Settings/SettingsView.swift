@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
     @State private var showAddProvider = false
     @State private var showDeleteConfirmation = false
+    @AppStorage(BackgroundKeepAliveManager.modeKey) private var keepAliveMode: String = BackgroundKeepAliveMode.off.rawValue
 
     var body: some View {
         NavigationStack {
@@ -106,6 +107,18 @@ struct SettingsView: View {
                 } label: {
                     Label(L10n.Settings.addProvider, systemImage: "plus")
                 }
+            }
+
+            Section {
+                Picker(L10n.Settings.backgroundKeepAlive, selection: $keepAliveMode) {
+                    Text(L10n.Settings.keepAliveOff).tag(BackgroundKeepAliveMode.off.rawValue)
+                    Text(L10n.Settings.keepAliveSilentAudio).tag(BackgroundKeepAliveMode.silentAudio.rawValue)
+                    Text(L10n.Settings.keepAliveLiveActivity).tag(BackgroundKeepAliveMode.liveActivity.rawValue)
+                }
+            } header: {
+                Text(L10n.Settings.backgroundExecution)
+            } footer: {
+                Text(L10n.Settings.backgroundKeepAliveFooter)
             }
 
             Section(L10n.Settings.about) {

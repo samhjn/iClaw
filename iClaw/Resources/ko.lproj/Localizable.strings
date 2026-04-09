@@ -280,6 +280,14 @@
 "settings.aboutDescription" = "iClaw는 LLM 에이전트와 상호작용하기 위한 오픈소스 iOS 클라이언트입니다. 멀티 프로바이더 모델 라우팅, 서브 에이전트, 브라우저 자동화, 코드 실행, cron 스케줄링, Apple 생태계 연동(캘린더, 미리 알림, 연락처, 건강, 지도 등)을 지원합니다.";
 "settings.sourceCode" = "소스 코드";
 "settings.license" = "MIT 라이선스에 따라 공개";
+"settings.backgroundExecution" = "백그라운드 실행";
+"settings.backgroundKeepAlive" = "유지 모드";
+"settings.backgroundKeepAliveFooter" = "cron 작업의 백그라운드 실행을 강화합니다. 무음 오디오는 무음 트랙을 재생하여 앱 일시 중단을 방지합니다. 라이브 활동은 Dynamic Island에 고정하여 가시성을 유지합니다. 둘 다 기본적으로 비활성화되어 있습니다.";
+"settings.keepAliveOff" = "끄기";
+"settings.keepAliveSilentAudio" = "무음 오디오";
+"settings.keepAliveLiveActivity" = "라이브 활동";
+"cronLiveActivity.running" = "cron 작업 실행 중…";
+"cronLiveActivity.done" = "모든 작업 완료";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "제공자 편집";

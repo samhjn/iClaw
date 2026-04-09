@@ -281,6 +281,14 @@
 "settings.aboutDescription" = "iClaw 是一款开源 iOS 客户端，用于与 LLM 智能体交互。支持多服务商模型路由、子智能体、浏览器自动化、代码执行、定时任务，以及 Apple 生态集成（日历、提醒事项、通讯录、健康、地图等）。";
 "settings.sourceCode" = "源代码";
 "settings.license" = "基于 MIT 许可证开源";
+"settings.backgroundExecution" = "后台执行";
+"settings.backgroundKeepAlive" = "保活模式";
+"settings.backgroundKeepAliveFooter" = "增强定时任务的后台执行。静默音频通过播放无声音轨防止应用被挂起。实时活动会固定在灵动岛上以保持可见。两者默认均关闭。";
+"settings.keepAliveOff" = "关闭";
+"settings.keepAliveSilentAudio" = "静默音频";
+"settings.keepAliveLiveActivity" = "实时活动";
+"cronLiveActivity.running" = "定时任务运行中…";
+"cronLiveActivity.done" = "所有任务已完成";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "编辑服务商";

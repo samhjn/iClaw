@@ -8,6 +8,7 @@ struct iClawApp: App {
     @State private var cronScheduler: CronScheduler?
     @State private var launchTaskManager: LaunchTaskManager
     private let bgTaskCoordinator: CronBGTaskCoordinator
+    private let keepAliveManager = BackgroundKeepAliveManager()
 
     init() {
         Self.installExceptionHandler()
@@ -107,8 +108,12 @@ struct iClawApp: App {
             switch newPhase {
             case .background:
                 cronScheduler?.pause()
+                keepAliveManager.activate(
+                    runningJobCount: cronScheduler?.runningJobIds.count ?? 0
+                )
             case .active:
                 cronScheduler?.resume()
+                keepAliveManager.deactivate()
             default:
                 break
             }
@@ -118,6 +123,7 @@ struct iClawApp: App {
     private func startCronScheduler() {
         guard cronScheduler == nil else { return }
         let scheduler = CronScheduler(modelContainer: modelContainer)
+        scheduler.keepAliveManager = keepAliveManager
         scheduler.start()
         cronScheduler = scheduler
         bgTaskCoordinator.scheduler = scheduler

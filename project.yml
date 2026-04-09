@@ -67,6 +67,33 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+    dependencies:
+      - target: iClawWidgets
+
+  iClawWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: iClawWidgets
+        excludes:
+          - Info.plist
+      - path: iClaw/Services/BackgroundKeepAlive/CronActivityAttributes.swift
+    settings:
+      base:
+        INFOPLIST_FILE: iClawWidgets/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.iclaw.app.widgets
+        MARKETING_VERSION: "1.0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_EMIT_LOC_STRINGS: "YES"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: "NO"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../../Frameworks"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: ActivityKit.framework
 
   iClawTests:
     type: bundle.unit-test
