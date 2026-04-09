@@ -6,6 +6,11 @@ import Observation
 final class SettingsViewModel {
     var providers: [LLMProvider] = []
 
+    /// UUID of the current default provider.  The View reads this instead of
+    /// `provider.isDefault` so that `@Model` property mutations during
+    /// deletion don't trigger premature SwiftUI row invalidation.
+    var defaultProviderId: UUID?
+
     /// Set by the View to trigger a deletion confirmation alert.
     var providerToDelete: LLMProvider?
 
@@ -24,6 +29,7 @@ final class SettingsViewModel {
             sortBy: [SortDescriptor(\.createdAt)]
         )
         providers = (try? modelContext.fetch(descriptor)) ?? []
+        defaultProviderId = providers.first(where: \.isDefault)?.id
     }
 
     func addProvider(
@@ -74,19 +80,33 @@ final class SettingsViewModel {
 
     func deleteProvider(_ provider: LLMProvider) {
         let wasDefault = provider.isDefault
-        // Identify the successor BEFORE deleting so we can promote it
-        // in the same save transaction.  Two separate save+fetch cycles
-        // caused a UICollectionView batch-update race (the first fetch
-        // triggers a "delete row" animation; the second save fires a
-        // SwiftData observation notification that re-enters SwiftUI's
-        // layout while the animation is still in flight → crash).
         let successor: LLMProvider? = wasDefault
             ? providers.first { $0.id != provider.id }
             : nil
+
+        // ── 1. Update the view state FIRST ──────────────────────────
+        // Remove the provider from the ForEach array and update the
+        // default badge before any @Model mutation or save().  This
+        // lets SwiftUI apply a single, clean batch update (row removal)
+        // before SwiftData fires observation notifications that could
+        // trigger conflicting batch updates → crash.
+        providers = providers.filter { $0.id != provider.id }
+        if wasDefault {
+            defaultProviderId = successor?.id
+        }
+
+        // ── 2. Persist ──────────────────────────────────────────────
+        // The ForEach no longer contains the deleted row, so @Model
+        // observation from these mutations won't re-enter the list.
         successor?.isDefault = true
         modelContext.delete(provider)
         try? modelContext.save()
+
+        // ── 3. Re-sync ─────────────────────────────────────────────
+        // fetchProviders() returns the same list we already set in
+        // step 1, so the ForEach sees no identity change.
         fetchProviders()
+
         providerToDelete = nil
         affectedAgentNames = []
     }

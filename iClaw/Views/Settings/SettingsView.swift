@@ -61,7 +61,7 @@ struct SettingsView: View {
                                     .foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            if provider.isDefault {
+                            if vm.defaultProviderId == provider.id {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
                             }
@@ -73,7 +73,7 @@ struct SettingsView: View {
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
-                        if !provider.isDefault {
+                        if vm.defaultProviderId != provider.id {
                             Button {
                                 vm.setDefault(provider)
                             } label: {
@@ -83,7 +83,7 @@ struct SettingsView: View {
                         }
                     }
                     .contextMenu {
-                        if !provider.isDefault {
+                        if vm.defaultProviderId != provider.id {
                             Button {
                                 vm.setDefault(provider)
                             } label: {
