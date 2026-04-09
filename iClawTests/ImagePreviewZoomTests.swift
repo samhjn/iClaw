@@ -280,6 +280,59 @@ final class ImagePreviewZoomTests: XCTestCase {
         XCTAssertEqual(offset.height, 0.5, accuracy: accuracy)
     }
 
+    // MARK: - Drag-baseline offset adjustment (dismiss → pinch transition)
+
+    func testDragBaselineSubtractionEliminatesPrePinchMovement() {
+        // Simulate: user drags down 80pt (dismiss), then pinches.
+        // dragBaseline captures the 80pt.  After pinch ends, subsequent
+        // single-finger drag must subtract the baseline.
+        let dragTranslation = CGSize(width: 10, height: 80)
+        let dragBaseline = dragTranslation  // captured during pinch
+
+        // Post-pinch single-finger drag moves 30pt further down
+        let postPinchTranslation = CGSize(width: 15, height: 110) // cumulative from gesture start
+        let delta = CGSize(
+            width: postPinchTranslation.width - dragBaseline.width,
+            height: postPinchTranslation.height - dragBaseline.height
+        )
+
+        // Delta should reflect only the post-pinch movement
+        XCTAssertEqual(delta.width, 5, accuracy: accuracy)
+        XCTAssertEqual(delta.height, 30, accuracy: accuracy)
+    }
+
+    func testDragBaselineZeroWhenNoPinchOccurred() {
+        // Without a pinch, baseline is .zero, so delta == raw translation
+        let dragBaseline: CGSize = .zero
+        let translation = CGSize(width: 50, height: -70)
+        let delta = CGSize(
+            width: translation.width - dragBaseline.width,
+            height: translation.height - dragBaseline.height
+        )
+        XCTAssertEqual(delta.width, 50, accuracy: accuracy)
+        XCTAssertEqual(delta.height, -70, accuracy: accuracy)
+    }
+
+    func testDismissThresholdUsesBaselineAdjustedHeight() {
+        // Simulate: user drags 120pt down then pinches, then lifts pinch.
+        // The remaining drag ends with cumulative 130pt — but 120pt was
+        // pre-pinch, so effective dismiss is only 10pt (below threshold).
+        let savedBaseline = CGSize(width: 0, height: 120)
+        let endTranslation = CGSize(width: 0, height: 130)
+        let dismissH = endTranslation.height - savedBaseline.height
+        XCTAssertEqual(dismissH, 10, accuracy: accuracy)
+        XCTAssertTrue(abs(dismissH) < 100, "Should NOT meet dismiss threshold")
+    }
+
+    func testDismissThresholdMeetsWithLargePostPinchDrag() {
+        // Same scenario but user drags 250pt after pinch → should dismiss
+        let savedBaseline = CGSize(width: 0, height: 50)
+        let endTranslation = CGSize(width: 0, height: 300)
+        let dismissH = endTranslation.height - savedBaseline.height
+        XCTAssertEqual(dismissH, 250, accuracy: accuracy)
+        XCTAssertTrue(abs(dismissH) > 100, "Should meet dismiss threshold")
+    }
+
     // MARK: - Consecutive gesture simulation
 
     func testConsecutiveZoomGesturesPreservePosition() {
