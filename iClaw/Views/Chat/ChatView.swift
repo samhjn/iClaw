@@ -508,7 +508,6 @@ private struct ChatContentView: View {
         .animation(.easeInOut(duration: 0.25), value: vm.canRetry)
         .animation(.easeInOut(duration: 0.25), value: vm.isLoading)
         .animation(.easeInOut(duration: 0.25), value: vm.errorMessage)
-        .animation(.easeInOut(duration: 0.2), value: vm.silentStatus)
     }
 
     @ViewBuilder
@@ -650,24 +649,50 @@ private struct ScrollViewOffsetObserver: UIViewRepresentable {
     final class Coordinator: NSObject {
         let scrollState: ChatScrollState
         private var offsetObservation: NSKeyValueObservation?
+        private var displayLink: CADisplayLink?
+        private var pendingNearBottom: Bool?
 
         init(scrollState: ChatScrollState) {
             self.scrollState = scrollState
         }
 
         func observe(_ scrollView: UIScrollView) {
+            // Use a CADisplayLink to coalesce contentOffset KVO updates into
+            // at most one state change per frame. This prevents a layout
+            // feedback loop where KVO → state change → view invalidation →
+            // layout → KVO would block the main thread (0x8BADF00D watchdog).
+            let link = CADisplayLink(target: self, selector: #selector(displayLinkFired))
+            link.add(to: .main, forMode: .common)
+            link.isPaused = true
+            displayLink = link
+
             offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
                 guard let self else { return }
                 let distance = max(0, sv.contentSize.height - sv.contentOffset.y - sv.bounds.height)
                 let threshold: CGFloat = (sv.isTracking || sv.isDragging) ? 50 : 200
                 let near = distance <= threshold
                 if near != self.scrollState.isNearBottom {
-                    DispatchQueue.main.async { self.scrollState.isNearBottom = near }
+                    self.pendingNearBottom = near
+                    self.displayLink?.isPaused = false
+                } else {
+                    self.pendingNearBottom = nil
                 }
             }
         }
 
-        deinit { offsetObservation?.invalidate() }
+        @objc private func displayLinkFired() {
+            displayLink?.isPaused = true
+            guard let near = pendingNearBottom else { return }
+            pendingNearBottom = nil
+            if near != scrollState.isNearBottom {
+                scrollState.isNearBottom = near
+            }
+        }
+
+        deinit {
+            offsetObservation?.invalidate()
+            displayLink?.invalidate()
+        }
     }
 }
 
