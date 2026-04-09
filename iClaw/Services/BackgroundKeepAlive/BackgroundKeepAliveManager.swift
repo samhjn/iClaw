@@ -21,21 +21,27 @@ enum BackgroundKeepAliveMode: String, CaseIterable, Identifiable {
 final class BackgroundKeepAliveManager {
 
     nonisolated static let modeKey = "backgroundKeepAliveMode"
+    nonisolated static let appGroupID = "group.com.iclaw.app"
 
     private let silentPlayer = SilentAudioPlayer()
     private let liveActivityManager = CronLiveActivityManager()
 
-    /// The currently configured mode (read from UserDefaults).
+    /// Shared UserDefaults accessible by both the main app and the widget extension.
+    private nonisolated static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: appGroupID) ?? .standard
+    }
+
+    /// The currently configured mode (read from shared App Group UserDefaults).
     var mode: BackgroundKeepAliveMode {
         get {
-            guard let raw = UserDefaults.standard.string(forKey: Self.modeKey),
+            guard let raw = Self.sharedDefaults.string(forKey: Self.modeKey),
                   let m = BackgroundKeepAliveMode(rawValue: raw) else {
                 return .off
             }
             return m
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: Self.modeKey)
+            Self.sharedDefaults.set(newValue.rawValue, forKey: Self.modeKey)
             // If the user just switched mode, tear down the previous strategy
             deactivate()
         }

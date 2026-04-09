@@ -192,7 +192,7 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
 
     override func tearDown() {
         // Clean up UserDefaults after each test
-        UserDefaults.standard.removeObject(forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.removeObject(forKey: testSuiteKey)
         super.tearDown()
     }
 
@@ -202,11 +202,15 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
         XCTAssertEqual(BackgroundKeepAliveManager.modeKey, "backgroundKeepAliveMode")
     }
 
+    func testAppGroupIDIsExpectedString() {
+        XCTAssertEqual(BackgroundKeepAliveManager.appGroupID, "group.com.iclaw.app")
+    }
+
     // MARK: Default Mode
 
     @MainActor
     func testDefaultModeIsOff() {
-        UserDefaults.standard.removeObject(forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.removeObject(forKey: testSuiteKey)
         let manager = BackgroundKeepAliveManager()
         XCTAssertEqual(manager.mode, .off)
     }
@@ -217,27 +221,27 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
     func testSetModePersistsToUserDefaults() {
         let manager = BackgroundKeepAliveManager()
         manager.mode = .silentAudio
-        let stored = UserDefaults.standard.string(forKey: testSuiteKey)
+        let stored = UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.string(forKey: testSuiteKey)
         XCTAssertEqual(stored, "silentAudio")
     }
 
     @MainActor
     func testModeReadsFromUserDefaults() {
-        UserDefaults.standard.set("liveActivity", forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.set("liveActivity", forKey: testSuiteKey)
         let manager = BackgroundKeepAliveManager()
         XCTAssertEqual(manager.mode, .liveActivity)
     }
 
     @MainActor
     func testInvalidStoredValueDefaultsToOff() {
-        UserDefaults.standard.set("garbage", forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.set("garbage", forKey: testSuiteKey)
         let manager = BackgroundKeepAliveManager()
         XCTAssertEqual(manager.mode, .off)
     }
 
     @MainActor
     func testMissingKeyDefaultsToOff() {
-        UserDefaults.standard.removeObject(forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.removeObject(forKey: testSuiteKey)
         let manager = BackgroundKeepAliveManager()
         XCTAssertEqual(manager.mode, .off)
     }
@@ -273,7 +277,7 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
 
     @MainActor
     func testActivateWithOffModeIsNoOp() {
-        UserDefaults.standard.removeObject(forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.removeObject(forKey: testSuiteKey)
         let manager = BackgroundKeepAliveManager()
         // Should not crash and should do nothing
         manager.activate(runningJobCount: 5)
@@ -283,7 +287,7 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
 
     @MainActor
     func testOnJobsChangedWithOffModeIsNoOp() {
-        UserDefaults.standard.removeObject(forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.removeObject(forKey: testSuiteKey)
         let manager = BackgroundKeepAliveManager()
         manager.onJobsChanged(runningCount: 3)
         manager.onJobsChanged(runningCount: 0)
@@ -295,7 +299,7 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
     func testSettingModeCallsDeactivate() {
         let manager = BackgroundKeepAliveManager()
         // Start in silentAudio mode
-        UserDefaults.standard.set("silentAudio", forKey: testSuiteKey)
+        UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID)!.set("silentAudio", forKey: testSuiteKey)
         // Switch to liveActivity — should deactivate previous
         manager.mode = .liveActivity
         // No crash, mode updated
