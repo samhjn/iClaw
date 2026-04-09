@@ -24,8 +24,7 @@ struct CronJobListView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            modelContext.delete(job)
-                            try? modelContext.save()
+                            deleteCronJob(job)
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -59,8 +58,7 @@ struct CronJobListView: View {
                             )
                         }
                         Button(role: .destructive) {
-                            modelContext.delete(job)
-                            try? modelContext.save()
+                            deleteCronJob(job)
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -101,6 +99,15 @@ struct CronJobListView: View {
         .sheet(isPresented: $showShortcutsGuide) {
             ShortcutsGuideView(cronJob: nil)
         }
+    }
+
+    /// Pre-remove the job from the relationship before modelContext
+    /// deletion so the ForEach batch update (row removal) is applied
+    /// before SwiftData observation fires from save().
+    private func deleteCronJob(_ job: CronJob) {
+        agent.cronJobs.removeAll { $0.id == job.id }
+        modelContext.delete(job)
+        try? modelContext.save()
     }
 
     private var sortedJobs: [CronJob] {

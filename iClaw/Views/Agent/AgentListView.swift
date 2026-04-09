@@ -75,18 +75,20 @@ struct AgentListView: View {
                 NavigationLink {
                     AgentDetailView(agent: agent, viewModel: vm)
                 } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(agent.name)
-                            .font(.headline)
-                        HStack(spacing: 12) {
-                            Label("\(agent.sessions.count)", systemImage: "bubble.left")
-                            Label("\(agent.activeSkills.count)", systemImage: "sparkles")
-                            Label("\(agent.cronJobs.count)", systemImage: "clock.badge")
+                    if let rowData = vm.rowDataCache[agent.id] {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(rowData.name)
+                                .font(.headline)
+                            HStack(spacing: 12) {
+                                Label("\(rowData.sessionCount)", systemImage: "bubble.left")
+                                Label("\(rowData.activeSkillCount)", systemImage: "sparkles")
+                                Label("\(rowData.cronJobCount)", systemImage: "clock.badge")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
                 .contextMenu {
                     Button {
