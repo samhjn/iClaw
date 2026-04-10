@@ -57,9 +57,20 @@ struct MessageBubbleView: View {
         return result
     }
 
-    /// True when the rendered content already references images inline via `attachment:N`.
+    /// True when the rendered content already references images inline via `attachment:N` or `agentfile://`.
     private var contentHasInlineImageRefs: Bool {
-        content.contains("attachment:")
+        content.contains("attachment:") || content.contains("agentfile://")
+    }
+
+    /// User message display content with `agentfile://` image refs stripped
+    /// (images are already shown in the grid via imageAttachmentsData).
+    private var userDisplayContent: String {
+        guard content.contains("agentfile://") else { return content }
+        let pattern = "\\n?!\\[[^\\]]*\\]\\(agentfile://[^)]+\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return content }
+        let range = NSRange(content.startIndex..., in: content)
+        return regex.stringByReplacingMatches(in: content, range: range, withTemplate: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static let imageMarkdownPattern = try! NSRegularExpression(
@@ -153,8 +164,8 @@ struct MessageBubbleView: View {
                 if !imageAttachments.isEmpty {
                     MessageImageGrid(images: imageAttachments)
                 }
-                if !content.isEmpty {
-                    Text(content)
+                if !userDisplayContent.isEmpty {
+                    Text(userDisplayContent)
                         .font(.body)
                         .padding(12)
                         .background(

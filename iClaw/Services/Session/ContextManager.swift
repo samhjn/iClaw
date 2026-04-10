@@ -85,7 +85,7 @@ final class ContextManager {
     /// from assistant messages into the next user message. Most LLM APIs only
     /// accept image content parts in user messages, so this ensures that
     /// assistant-generated images remain visible to subsequent models.
-    private func convertWithImageForwarding(_ msgs: [Message]) -> [LLMChatMessage] {
+    func convertWithImageForwarding(_ msgs: [Message]) -> [LLMChatMessage] {
         var result: [LLMChatMessage] = []
         var pendingImages: [ImageAttachment] = []
 
@@ -317,7 +317,7 @@ final class ContextManager {
 
     /// Strip inline image references (base64 data URIs and attachment:N refs) from content.
     /// `agentfile://` refs are kept since they are small, informative URLs (not raw base64).
-    private static func stripImageRefsForContext(_ content: String) -> String {
+    static func stripImageRefsForContext(_ content: String) -> String {
         var result = content
 
         if result.contains(";base64,") {

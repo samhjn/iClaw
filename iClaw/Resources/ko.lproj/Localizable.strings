@@ -318,6 +318,7 @@
 "provider.thinkingLevel" = "사고 레벨";
 "provider.thinkingLevelFooter" = "사고 레벨은 추론의 깊이를 제어합니다. budget_tokens(Anthropic) 또는 reasoning_effort(OpenAI)에 매핑됩니다. 에이전트별로 재정의할 수 있습니다.";
 "provider.perModelMaxTokens" = "최대 토큰 수 재정의";
+"provider.temperature" = "온도: %.2f";
 "provider.perModelTemperature" = "온도 재정의";
 "provider.parametersFooter" = "모든 모델의 기본값입니다. 위의 '활성화된 모델' 섹션에서 모델별로 재정의할 수 있습니다.";
 "provider.apiStyle" = "API 스타일";

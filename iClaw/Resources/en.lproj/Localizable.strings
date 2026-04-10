@@ -319,6 +319,7 @@
 "provider.thinkingLevel" = "Thinking Level";
 "provider.thinkingLevelFooter" = "Thinking level controls the depth of reasoning. Mapped to budget_tokens (Anthropic) or reasoning_effort (OpenAI). Can be overridden per agent.";
 "provider.perModelMaxTokens" = "Override Max Tokens";
+"provider.temperature" = "Temperature: %.2f";
 "provider.perModelTemperature" = "Override Temperature";
 "provider.parametersFooter" = "Default values for all models. Individual models can override these in the Enabled Models section above.";
 "provider.apiStyle" = "API Style";

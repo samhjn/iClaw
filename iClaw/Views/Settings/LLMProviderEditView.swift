@@ -485,7 +485,7 @@ struct LLMProviderEditView: View {
         Section {
             Stepper(L10n.Provider.maxTokens(maxTokens), value: $maxTokens, in: 256...128000, step: 256)
             HStack {
-                Text("Temperature: \(temperature, specifier: "%.2f")")
+                Text(L10n.Provider.temperature(temperature))
                 Slider(value: $temperature, in: 0...2, step: 0.05)
             }
         } header: {
