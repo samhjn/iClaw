@@ -1518,7 +1518,8 @@ final class LLMProviderModificationTests: XCTestCase {
         vm.deleteProvider(provider)
 
         XCTAssertEqual(vm.providers.count, 1)
-        XCTAssertTrue(vm.providers[0].isDefault)
+        XCTAssertEqual(vm.defaultProviderId, vm.providers[0].id,
+                       "defaultProviderId should fall back to remaining provider")
         XCTAssertEqual(vm.providers[0].name, "Backup")
 
         let agents = (try? context.fetch(FetchDescriptor<Agent>())) ?? []
