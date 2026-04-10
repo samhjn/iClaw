@@ -399,9 +399,6 @@ enum L10n {
         static var backgroundExecution: String { tr("settings.backgroundExecution") }
         static var backgroundKeepAlive: String { tr("settings.backgroundKeepAlive") }
         static var backgroundKeepAliveFooter: String { tr("settings.backgroundKeepAliveFooter") }
-        static var keepAliveOff: String { tr("settings.keepAliveOff") }
-        static var keepAliveSilentAudio: String { tr("settings.keepAliveSilentAudio") }
-        static var keepAliveLiveActivity: String { tr("settings.keepAliveLiveActivity") }
     }
 
     // MARK: - LLM Provider

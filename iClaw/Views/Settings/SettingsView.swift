@@ -6,7 +6,7 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
     @State private var showAddProvider = false
     @State private var showDeleteConfirmation = false
-    @AppStorage(BackgroundKeepAliveManager.modeKey) private var keepAliveMode: String = BackgroundKeepAliveMode.off.rawValue
+    @AppStorage(BackgroundKeepAliveManager.enabledKey) private var keepAliveEnabled = false
 
     var body: some View {
         NavigationStack {
@@ -110,11 +110,7 @@ struct SettingsView: View {
             }
 
             Section {
-                Picker(L10n.Settings.backgroundKeepAlive, selection: $keepAliveMode) {
-                    Text(L10n.Settings.keepAliveOff).tag(BackgroundKeepAliveMode.off.rawValue)
-                    Text(L10n.Settings.keepAliveSilentAudio).tag(BackgroundKeepAliveMode.silentAudio.rawValue)
-                    Text(L10n.Settings.keepAliveLiveActivity).tag(BackgroundKeepAliveMode.liveActivity.rawValue)
-                }
+                Toggle(L10n.Settings.backgroundKeepAlive, isOn: $keepAliveEnabled)
             } header: {
                 Text(L10n.Settings.backgroundExecution)
             } footer: {

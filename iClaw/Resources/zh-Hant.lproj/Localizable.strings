@@ -282,11 +282,8 @@
 "settings.sourceCode" = "原始碼";
 "settings.license" = "基於 MIT 授權條款開源";
 "settings.backgroundExecution" = "背景執行";
-"settings.backgroundKeepAlive" = "保活模式";
-"settings.backgroundKeepAliveFooter" = "增強排程任務的背景執行。靜默音訊透過播放無聲音軌防止應用程式被暫停。即時動態會釘選在動態島上以保持可見。兩者預設均為關閉。";
-"settings.keepAliveOff" = "關閉";
-"settings.keepAliveSilentAudio" = "靜默音訊";
-"settings.keepAliveLiveActivity" = "即時動態";
+"settings.backgroundKeepAlive" = "即時動態";
+"settings.backgroundKeepAliveFooter" = "排程任務執行時在動態島上釘選即時動態，保持應用程式可見且方便返回。預設為關閉。";
 "cronLiveActivity.running" = "排程任務執行中…";
 "cronLiveActivity.done" = "所有任務已完成";
 

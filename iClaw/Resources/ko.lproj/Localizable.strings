@@ -281,11 +281,8 @@
 "settings.sourceCode" = "소스 코드";
 "settings.license" = "MIT 라이선스에 따라 공개";
 "settings.backgroundExecution" = "백그라운드 실행";
-"settings.backgroundKeepAlive" = "유지 모드";
-"settings.backgroundKeepAliveFooter" = "cron 작업의 백그라운드 실행을 강화합니다. 무음 오디오는 무음 트랙을 재생하여 앱 일시 중단을 방지합니다. 라이브 활동은 Dynamic Island에 고정하여 가시성을 유지합니다. 둘 다 기본적으로 비활성화되어 있습니다.";
-"settings.keepAliveOff" = "끄기";
-"settings.keepAliveSilentAudio" = "무음 오디오";
-"settings.keepAliveLiveActivity" = "라이브 활동";
+"settings.backgroundKeepAlive" = "라이브 활동";
+"settings.backgroundKeepAliveFooter" = "cron 작업 실행 중 Dynamic Island에 라이브 활동을 고정하여 앱의 가시성을 유지합니다. 기본적으로 비활성화되어 있습니다.";
 "cronLiveActivity.running" = "cron 작업 실행 중…";
 "cronLiveActivity.done" = "모든 작업 완료";
 

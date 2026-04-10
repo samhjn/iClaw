@@ -282,11 +282,8 @@
 "settings.sourceCode" = "Source Code";
 "settings.license" = "Licensed under the MIT License";
 "settings.backgroundExecution" = "Background Execution";
-"settings.backgroundKeepAlive" = "Keep Alive Mode";
-"settings.backgroundKeepAliveFooter" = "Enhance background execution for cron jobs. Silent Audio plays an inaudible track to prevent app suspension. Live Activity pins to the Dynamic Island for visibility. Both are disabled by default.";
-"settings.keepAliveOff" = "Off";
-"settings.keepAliveSilentAudio" = "Silent Audio";
-"settings.keepAliveLiveActivity" = "Live Activity";
+"settings.backgroundKeepAlive" = "Live Activity";
+"settings.backgroundKeepAliveFooter" = "Pin a Live Activity to the Dynamic Island while cron jobs are running, keeping the app visible and easy to return to. Disabled by default.";
 "cronLiveActivity.running" = "Cron jobs running…";
 "cronLiveActivity.done" = "All jobs completed";
 
