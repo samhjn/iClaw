@@ -7,6 +7,7 @@ struct AgentFileBrowserView: View {
     @State private var files: [FileInfo] = []
     @State private var showDocumentPicker = false
     @State private var showDeleteConfirm: FileInfo?
+    @State private var showDeleteAlert = false
     @State private var errorMessage: String?
 
     private var agentId: UUID {
@@ -27,6 +28,7 @@ struct AgentFileBrowserView: View {
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 showDeleteConfirm = file
+                                showDeleteAlert = true
                             } label: {
                                 Label(L10n.Common.delete, systemImage: "trash")
                             }
@@ -39,6 +41,7 @@ struct AgentFileBrowserView: View {
                             }
                             Button(role: .destructive) {
                                 showDeleteConfirm = file
+                                showDeleteAlert = true
                             } label: {
                                 Label(L10n.Common.delete, systemImage: "trash")
                             }
@@ -63,10 +66,7 @@ struct AgentFileBrowserView: View {
                 importFiles(urls)
             }
         }
-        .alert(L10n.AgentFiles.deleteConfirmTitle, isPresented: Binding(
-            get: { showDeleteConfirm != nil },
-            set: { if !$0 { showDeleteConfirm = nil } }
-        )) {
+        .alert(L10n.AgentFiles.deleteConfirmTitle, isPresented: $showDeleteAlert) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let file = showDeleteConfirm {
                     deleteFile(file)

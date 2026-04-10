@@ -155,6 +155,7 @@ struct SubAgentListView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var renamingSubAgent: Agent?
     @State private var subAgentRenameText = ""
+    @State private var showRenameAlert = false
 
     var body: some View {
         List {
@@ -215,6 +216,7 @@ struct SubAgentListView: View {
                         Button {
                             subAgentRenameText = sub.name
                             renamingSubAgent = sub
+                            showRenameAlert = true
                         } label: {
                             Label(L10n.Agents.renameAgent, systemImage: "pencil")
                         }
@@ -229,10 +231,7 @@ struct SubAgentListView: View {
             }
         }
         .navigationTitle(L10n.AgentDetail.subAgentsTitle(parentAgent.subAgents.count))
-        .alert(L10n.Agents.renameAgent, isPresented: Binding(
-            get: { renamingSubAgent != nil },
-            set: { if !$0 { renamingSubAgent = nil } }
-        )) {
+        .alert(L10n.Agents.renameAgent, isPresented: $showRenameAlert) {
             TextField(L10n.Common.name, text: $subAgentRenameText)
             Button(L10n.Common.save) {
                 if let sub = renamingSubAgent {

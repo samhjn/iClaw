@@ -2,13 +2,21 @@ import Foundation
 import SwiftData
 import Observation
 
+/// Pre-computed row data — avoids @Model property reads in ForEach rows
+/// which register SwiftData observation that conflicts with batch updates.
+struct ProviderRowData {
+    let name: String
+    let modelName: String
+    let extraModelCount: Int
+    let endpoint: String
+}
+
 @Observable
 final class SettingsViewModel {
     var providers: [LLMProvider] = []
+    var providerRowCache: [UUID: ProviderRowData] = [:]
 
     /// UUID of the current default provider for display purposes.
-    /// Computed from `isDefault` when available, falling back to the
-    /// first provider.  The View reads this instead of `provider.isDefault`.
     var defaultProviderId: UUID?
 
     /// Set by the View to trigger a deletion confirmation alert.
@@ -29,10 +37,22 @@ final class SettingsViewModel {
             sortBy: [SortDescriptor(\.createdAt)]
         )
         providers = (try? modelContext.fetch(descriptor)) ?? []
-        // Fall back to first provider when none is marked default
-        // (e.g. after the default was deleted).
         defaultProviderId = providers.first(where: \.isDefault)?.id
             ?? providers.first?.id
+        rebuildRowCache()
+    }
+
+    private func rebuildRowCache() {
+        var cache: [UUID: ProviderRowData] = [:]
+        for p in providers {
+            cache[p.id] = ProviderRowData(
+                name: p.name,
+                modelName: p.modelName,
+                extraModelCount: p.enabledModels.count - 1,
+                endpoint: p.endpoint
+            )
+        }
+        providerRowCache = cache
     }
 
     func addProvider(
@@ -82,28 +102,23 @@ final class SettingsViewModel {
     }
 
     func deleteProvider(_ provider: LLMProvider) {
-        // ── 1. Update view state ────────────────────────────────────
-        providers = providers.filter { $0.id != provider.id }
+        // ── 1. Update ONLY ForEach-driving state ────────────────────
+        // Do NOT set providerToDelete = nil here. The alert's
+        // isPresented binding will clear it when SwiftUI dismisses
+        // the alert AFTER this action returns. Setting it inside
+        // deleteProvider() causes a re-entrant dispatchImmediately
+        // during the same render cycle → batch update conflict.
+        let deletedId = provider.id
+        providers = providers.filter { $0.id != deletedId }
+        providerRowCache.removeValue(forKey: deletedId)
         defaultProviderId = providers.first(where: \.isDefault)?.id
             ?? providers.first?.id
 
-        // ── 2. Just delete — no cross-model mutation ────────────────
-        // Don't promote a successor (successor.isDefault = true) here.
-        // That @Model write fires SwiftData observation across all
-        // mounted views (TabView keeps every tab alive), causing
-        // UICollectionView batch-update conflicts.
-        //
-        // Instead, resolve the default lazily at use time:
-        // - ModelRouter.fetchGlobalDefault() already falls back to the
-        //   first provider when none has isDefault.
-        // - fetchProviders() falls back defaultProviderId to first.
-        // - The next setDefault() call will mark the chosen provider.
-        modelContext.delete(provider)
-        try? modelContext.save()
-        fetchProviders()
-
-        providerToDelete = nil
-        affectedAgentNames = []
+        // ── 2. Defer model context work ─────────────────────────────
+        DispatchQueue.main.async { [modelContext] in
+            modelContext.delete(provider)
+            try? modelContext.save()
+        }
     }
 
     func updateProvider(_ provider: LLMProvider) {
