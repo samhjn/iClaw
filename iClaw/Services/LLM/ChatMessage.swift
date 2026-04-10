@@ -110,6 +110,7 @@ struct LLMChatMessage: Codable {
                 switch part {
                 case .text(let t): return t
                 case .imageURL(let url, _): return "\n![image](\(url))\n"
+                case .videoURL(let url): return "\n![video](\(url))\n"
                 }
             }.joined()
         } else {
@@ -403,6 +404,7 @@ struct LLMDelta: Codable {
                 switch part {
                 case .text(let t): return t
                 case .imageURL(let url, _): return "\n![image](\(url))\n"
+                case .videoURL(let url): return "\n![video](\(url))\n"
                 }
             }.joined()
         }
