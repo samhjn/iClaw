@@ -50,15 +50,25 @@ struct MessageBubbleView: View {
     private var imageAttachments: [ImageAttachment] {
         if let cached = cache.imageAttachments { return cached }
         let result: [ImageAttachment] = {
+            // Mirror ContextManager.convertWithImageForwarding: decode attachments + resolve agentfile refs.
+            var images: [ImageAttachment] = []
+
             if let data = message?.imageAttachmentsData,
-               let images = try? JSONDecoder().decode([ImageAttachment].self, from: data),
-               !images.isEmpty {
-                return images
+               let decoded = try? JSONDecoder().decode([ImageAttachment].self, from: data) {
+                images = decoded
             }
-            // Fallback: resolve agentfile:// refs from content (mirrors ContextManager behavior).
-            // Ensures images display even if imageAttachmentsData is lost.
-            guard let content = message?.content, content.contains("agentfile://") else { return [] }
-            return ContextManager.resolveAgentFileImages(from: content)
+
+            // Resolve agentfile:// refs from content and deduplicate.
+            if let content = message?.content, content.contains("agentfile://") {
+                let existingRefs = Set(images.compactMap(\.fileReference))
+                for img in ContextManager.resolveAgentFileImages(from: content) {
+                    if let ref = img.fileReference, !existingRefs.contains(ref) {
+                        images.append(img)
+                    }
+                }
+            }
+
+            return images
         }()
         cache.imageAttachments = result
         return result
