@@ -11,6 +11,23 @@ struct SessionRowData {
     let previewContent: String?
     let isStreaming: Bool
     let hasDraft: Bool
+
+    /// Fallback when the cache hasn't been populated yet for a session.
+    /// Avoids using `if let` inside ForEach, which causes conditional
+    /// content splits between two @Observable properties (sessions vs
+    /// rowDataCache) — leading to UICollectionView item count mismatches.
+    static func placeholder(for session: Session) -> SessionRowData {
+        SessionRowData(
+            title: session.title,
+            isActive: session.isActive,
+            updatedAt: session.updatedAt,
+            agentName: session.agent?.name,
+            messageCount: 0,
+            previewContent: nil,
+            isStreaming: false,
+            hasDraft: false
+        )
+    }
 }
 
 @Observable

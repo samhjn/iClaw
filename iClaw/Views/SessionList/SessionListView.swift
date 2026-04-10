@@ -107,16 +107,15 @@ struct SessionListView: View {
     private func sessionsList(_ vm: SessionListViewModel) -> some View {
         List(selection: $selectedSession) {
             ForEach(vm.sessions, id: \.id) { session in
-                if let rowData = vm.rowDataCache[session.id] {
-                    NavigationLink(value: session) {
-                        SessionRowView(rowData: rowData)
-                    }
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            vm.sessionToDelete = session
-                        } label: {
-                            Label(L10n.Common.delete, systemImage: "trash")
-                        }
+                NavigationLink(value: session) {
+                    SessionRowView(rowData: vm.rowDataCache[session.id]
+                        ?? SessionRowData.placeholder(for: session))
+                }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        vm.sessionToDelete = session
+                    } label: {
+                        Label(L10n.Common.delete, systemImage: "trash")
                     }
                 }
             }
