@@ -55,7 +55,8 @@ final class Message {
                 content: content,
                 toolCallsData: toolCallsData,
                 name: name,
-                imageAttachmentsData: nil
+                imageAttachmentsData: nil,
+                videoAttachmentsData: nil
             )
         }
     }
@@ -66,7 +67,8 @@ final class Message {
             content: content,
             toolCallsData: toolCallsData,
             name: name,
-            imageAttachmentsData: imageAttachmentsData
+            imageAttachmentsData: imageAttachmentsData,
+            videoAttachmentsData: videoAttachmentsData
         )
     }
 
@@ -139,7 +141,8 @@ final class Message {
         content: String?,
         toolCallsData: Data?,
         name: String?,
-        imageAttachmentsData: Data?
+        imageAttachmentsData: Data?,
+        videoAttachmentsData: Data?
     ) -> Int {
         let overhead = 4
         var total = overhead
