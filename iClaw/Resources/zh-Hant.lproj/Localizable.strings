@@ -314,6 +314,7 @@
 "provider.parameters" = "參數";
 "provider.supportsVision" = "支援視覺";
 "provider.supportsVisionFooter" = "如果此模型支援圖片輸入請啟用（如 GPT-4o、Claude 3.5 Sonnet）";
+"provider.supportsVideoInput" = "支援視訊輸入";
 "provider.supportsToolUse" = "支援工具呼叫";
 "provider.supportsToolUseFooter" = "如果此模型不支援函式呼叫/工具使用請關閉（部分 OpenRouter 模型）";
 "provider.supportsImageGeneration" = "圖片生成";

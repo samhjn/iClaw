@@ -314,6 +314,7 @@
 "provider.parameters" = "Parameters";
 "provider.supportsVision" = "Supports Vision";
 "provider.supportsVisionFooter" = "Enable if this model supports image inputs (e.g. GPT-4o, Claude 3.5 Sonnet)";
+"provider.supportsVideoInput" = "Supports Video Input";
 "provider.supportsToolUse" = "Supports Tool Use";
 "provider.supportsToolUseFooter" = "Disable if this model does not support function calling / tool use (some OpenRouter models)";
 "provider.supportsImageGeneration" = "Image Generation";

@@ -462,7 +462,7 @@ enum ToolDefinitions {
 
     static let attachMediaTool = ToolDefinitionBuilder.build(
         name: "attach_media",
-        description: "Attach a file from the agent's folder as multimodal content in the conversation. The attached file becomes visible to the LLM for analysis. Currently supports image files (jpg, png, gif, webp, heic, bmp, tiff). Future support planned for audio and video.",
+        description: "Attach a media file from the agent's folder as multimodal content in the conversation. The attached file becomes visible to the LLM for analysis. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm). Audio support planned.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("The filename to attach (e.g. 'photo.jpg', 'chart.png')"),
             "modality": ToolDefinitionBuilder.enumParam("Media type (auto-detected from extension if omitted)", values: ["image", "audio", "video"])

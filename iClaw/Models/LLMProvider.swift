@@ -95,6 +95,8 @@ struct ModelCapabilities: Codable, Equatable {
     var supportsVision: Bool = false
     var supportsToolUse: Bool = true
     var imageGenerationMode: ImageGenMode = .none
+    /// Whether this model supports video input (e.g. Gemini 2+, Qwen-VL).
+    var supportsVideoInput: Bool = false
     /// Legacy flag kept for backward compatibility with existing persisted data.
     /// New code should use `thinkingLevel` instead.
     var supportsReasoning: Bool = false
@@ -114,18 +116,20 @@ struct ModelCapabilities: Codable, Equatable {
     static let `default` = ModelCapabilities()
 
     enum CodingKeys: String, CodingKey {
-        case supportsVision, supportsToolUse, imageGenerationMode, supportsReasoning, thinkingLevel
+        case supportsVision, supportsToolUse, imageGenerationMode, supportsVideoInput
+        case supportsReasoning, thinkingLevel
         case maxTokens, temperature
         case _legacyImageGen = "supportsImageGeneration"
     }
 
     init(supportsVision: Bool = false, supportsToolUse: Bool = true,
-         imageGenerationMode: ImageGenMode = .none, supportsReasoning: Bool = false,
-         thinkingLevel: ThinkingLevel = .off,
+         imageGenerationMode: ImageGenMode = .none, supportsVideoInput: Bool = false,
+         supportsReasoning: Bool = false, thinkingLevel: ThinkingLevel = .off,
          maxTokens: Int? = nil, temperature: Double? = nil) {
         self.supportsVision = supportsVision
         self.supportsToolUse = supportsToolUse
         self.imageGenerationMode = imageGenerationMode
+        self.supportsVideoInput = supportsVideoInput
         self.supportsReasoning = supportsReasoning
         self.thinkingLevel = thinkingLevel
         self.maxTokens = maxTokens
@@ -145,6 +149,7 @@ struct ModelCapabilities: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         supportsVision = try c.decodeIfPresent(Bool.self, forKey: .supportsVision) ?? false
         supportsToolUse = try c.decodeIfPresent(Bool.self, forKey: .supportsToolUse) ?? true
+        supportsVideoInput = try c.decodeIfPresent(Bool.self, forKey: .supportsVideoInput) ?? false
         supportsReasoning = try c.decodeIfPresent(Bool.self, forKey: .supportsReasoning) ?? false
         // ImageGenMode: try new enum first, fall back to legacy bool
         if let mode = try? c.decodeIfPresent(ImageGenMode.self, forKey: .imageGenerationMode) {
@@ -169,6 +174,7 @@ struct ModelCapabilities: Codable, Equatable {
         try container.encode(supportsVision, forKey: .supportsVision)
         try container.encode(supportsToolUse, forKey: .supportsToolUse)
         try container.encode(imageGenerationMode, forKey: .imageGenerationMode)
+        try container.encode(supportsVideoInput, forKey: .supportsVideoInput)
         try container.encode(supportsReasoning, forKey: .supportsReasoning)
         try container.encode(thinkingLevel, forKey: .thinkingLevel)
         try container.encodeIfPresent(maxTokens, forKey: .maxTokens)
@@ -190,6 +196,7 @@ struct ModelCapabilities: Codable, Equatable {
                 supportsVision: true,
                 supportsToolUse: false,
                 imageGenerationMode: .chatInline,
+                supportsVideoInput: true,
                 supportsReasoning: false
             )
         }
@@ -204,11 +211,14 @@ struct ModelCapabilities: Codable, Equatable {
             )
         }
 
+        let videoCapable = inferVideoInput(base)
+
         if inferVision(base) {
             return ModelCapabilities(
                 supportsVision: true,
                 supportsToolUse: true,
                 imageGenerationMode: .none,
+                supportsVideoInput: videoCapable,
                 supportsReasoning: false
             )
         }
@@ -225,6 +235,23 @@ struct ModelCapabilities: Codable, Equatable {
             || name.hasPrefix("sd3")
             || name.hasPrefix("sdxl")
             || name.contains("imagen")
+    }
+
+    /// Detect models that support video input.
+    /// Gemini 2+, Qwen-VL/Omni support video natively.
+    private static func inferVideoInput(_ name: String) -> Bool {
+        // Gemini 2+ supports video input
+        if name.hasPrefix("gemini-") {
+            let rest = name.dropFirst(7)
+            if let digit = rest.first, let num = digit.wholeNumberValue, num >= 2 {
+                return true
+            }
+        }
+        // Qwen-VL and Qwen-Omni support video
+        if name.contains("qwen") && (name.contains("-vl") || name.contains("-omni")) {
+            return true
+        }
+        return false
     }
 
     // MARK: - Private inference helpers

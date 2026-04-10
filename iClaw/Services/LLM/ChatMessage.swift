@@ -5,15 +5,21 @@ import Foundation
 enum ContentPart: Codable {
     case text(String)
     case imageURL(url: String, detail: String?)
+    case videoURL(url: String)
 
     enum CodingKeys: String, CodingKey {
         case type, text
         case imageUrl = "image_url"
+        case videoUrl = "video_url"
     }
 
     struct ImageURLPayload: Codable {
         let url: String
         var detail: String?
+    }
+
+    struct VideoURLPayload: Codable {
+        let url: String
     }
 
     func encode(to encoder: Encoder) throws {
@@ -25,6 +31,9 @@ enum ContentPart: Codable {
         case .imageURL(let url, let detail):
             try container.encode("image_url", forKey: .type)
             try container.encode(ImageURLPayload(url: url, detail: detail), forKey: .imageUrl)
+        case .videoURL(let url):
+            try container.encode("video_url", forKey: .type)
+            try container.encode(VideoURLPayload(url: url), forKey: .videoUrl)
         }
     }
 
@@ -35,6 +44,9 @@ enum ContentPart: Codable {
         case "image_url":
             let payload = try container.decode(ImageURLPayload.self, forKey: .imageUrl)
             self = .imageURL(url: payload.url, detail: payload.detail)
+        case "video_url":
+            let payload = try container.decode(VideoURLPayload.self, forKey: .videoUrl)
+            self = .videoURL(url: payload.url)
         default:
             let text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
             self = .text(text)
@@ -141,6 +153,20 @@ struct LLMChatMessage: Codable {
         var parts: [ContentPart] = [.text(text)]
         for img in images {
             parts.append(.imageURL(url: img.base64DataURI, detail: "auto"))
+        }
+        return LLMChatMessage(role: "user", content: text, contentParts: parts)
+    }
+
+    /// Create a user message with mixed media (images + videos).
+    static func userWithMedia(_ text: String, images: [ImageAttachment], videos: [VideoAttachment]) -> LLMChatMessage {
+        var parts: [ContentPart] = [.text(text)]
+        for img in images {
+            parts.append(.imageURL(url: img.base64DataURI, detail: "auto"))
+        }
+        for vid in videos {
+            if let dataURI = vid.base64DataURI {
+                parts.append(.videoURL(url: dataURI))
+            }
         }
         return LLMChatMessage(role: "user", content: text, contentParts: parts)
     }

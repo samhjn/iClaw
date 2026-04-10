@@ -432,6 +432,7 @@ enum L10n {
         static var thinkingBudgetFooter: String { tr("provider.thinkingBudgetFooter") }
         static var parameters: String { tr("provider.parameters") }
         static var supportsVision: String { tr("provider.supportsVision") }
+        static var supportsVideoInput: String { tr("provider.supportsVideoInput") }
         static var supportsVisionFooter: String { tr("provider.supportsVisionFooter") }
         static var supportsToolUse: String { tr("provider.supportsToolUse") }
         static var supportsToolUseFooter: String { tr("provider.supportsToolUseFooter") }

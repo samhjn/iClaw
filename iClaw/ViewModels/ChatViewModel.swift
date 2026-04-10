@@ -107,6 +107,7 @@ final class ChatViewModel {
     /// Images returned by tool calls (e.g. from sub-agents) to be attached
     /// to the next final assistant message for display in the chat UI.
     private var pendingToolImageAttachments: [ImageAttachment] = []
+    private var pendingToolVideoAttachments: [VideoAttachment] = []
 
     /// Survives ViewModel recreation caused by SwiftData-triggered view re-renders.
     private static var cachedErrors: [UUID: String] = [:]
@@ -619,13 +620,13 @@ final class ChatViewModel {
 
             for await chunk in stream {
             if Task.isCancelled || cancelled {
-                if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
+                if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty || !pendingToolVideoAttachments.isEmpty {
                     let partialMsg = Message(
                         role: .assistant,
                         content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted
                     )
                     partialMsg.extractAndStoreInlineImages(agentId: agentId)
-                    attachPendingToolImages(to: partialMsg)
+                    attachPendingToolMedia(to: partialMsg)
                     modelContext.insert(partialMsg)
                     session.messages.append(partialMsg)
                     session.updatedAt = Date()
@@ -668,13 +669,13 @@ final class ChatViewModel {
             session.pendingStreamingContent = nil
 
             if Task.isCancelled || cancelled {
-                if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty {
+                if !fullContent.isEmpty || !pendingToolImageAttachments.isEmpty || !pendingToolVideoAttachments.isEmpty {
                     let partialMsg = Message(
                         role: .assistant,
                         content: fullContent.isEmpty ? nil : fullContent + L10n.Chat.aborted
                     )
                     partialMsg.extractAndStoreInlineImages(agentId: agentId)
-                    attachPendingToolImages(to: partialMsg)
+                    attachPendingToolMedia(to: partialMsg)
                     modelContext.insert(partialMsg)
                     session.messages.append(partialMsg)
                     session.updatedAt = Date()
@@ -716,16 +717,16 @@ final class ChatViewModel {
                 let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent)
                 assistantMsg.thinkingContent = combinedThinking
                 assistantMsg.extractAndStoreInlineImages(agentId: agentId)
-                attachPendingToolImages(to: assistantMsg)
+                attachPendingToolMedia(to: assistantMsg)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
                 session.updatedAt = Date()
                 try? modelContext.save()
                 loadMessages()
-            } else if !pendingToolImageAttachments.isEmpty {
+            } else if !pendingToolImageAttachments.isEmpty || !pendingToolVideoAttachments.isEmpty {
                 let assistantMsg = Message(role: .assistant, content: nil)
-                attachPendingToolImages(to: assistantMsg)
+                attachPendingToolMedia(to: assistantMsg)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
                 session.messages.append(assistantMsg)
@@ -743,6 +744,7 @@ final class ChatViewModel {
             }
             canRetry = true
             pendingToolImageAttachments = []
+            pendingToolVideoAttachments = []
         }
     }
 
@@ -850,6 +852,13 @@ final class ChatViewModel {
                 }
                 pendingToolImageAttachments.append(contentsOf: images)
             }
+            if let videos = result.videoAttachments, !videos.isEmpty {
+                if let data = try? JSONEncoder().encode(videos) {
+                    toolMsg.videoAttachmentsData = data
+                    toolMsg.recalculateTokenEstimate()
+                }
+                pendingToolVideoAttachments.append(contentsOf: videos)
+            }
             modelContext.insert(toolMsg)
             session.messages.append(toolMsg)
         }
@@ -863,23 +872,36 @@ final class ChatViewModel {
 
         if Task.isCancelled || cancelled {
             pendingToolImageAttachments = []
+            pendingToolVideoAttachments = []
             return
         }
 
         await generateResponse()
     }
 
-    /// Merge any images accumulated from tool calls into the given assistant message.
-    private func attachPendingToolImages(to message: Message) {
-        guard !pendingToolImageAttachments.isEmpty else { return }
+    /// Merge any images and videos accumulated from tool calls into the given assistant message.
+    private func attachPendingToolMedia(to message: Message) {
+        guard !pendingToolImageAttachments.isEmpty || !pendingToolVideoAttachments.isEmpty else { return }
 
-        let existing: [ImageAttachment] = message.imageAttachmentsData.flatMap {
-            try? JSONDecoder().decode([ImageAttachment].self, from: $0)
-        } ?? []
-        let all = existing + pendingToolImageAttachments
-        message.imageAttachmentsData = try? JSONEncoder().encode(all)
+        if !pendingToolImageAttachments.isEmpty {
+            let existing: [ImageAttachment] = message.imageAttachmentsData.flatMap {
+                try? JSONDecoder().decode([ImageAttachment].self, from: $0)
+            } ?? []
+            let all = existing + pendingToolImageAttachments
+            message.imageAttachmentsData = try? JSONEncoder().encode(all)
+            pendingToolImageAttachments = []
+        }
+
+        if !pendingToolVideoAttachments.isEmpty {
+            let existing: [VideoAttachment] = message.videoAttachmentsData.flatMap {
+                try? JSONDecoder().decode([VideoAttachment].self, from: $0)
+            } ?? []
+            let all = existing + pendingToolVideoAttachments
+            message.videoAttachmentsData = try? JSONEncoder().encode(all)
+            pendingToolVideoAttachments = []
+        }
+
         message.recalculateTokenEstimate()
-        pendingToolImageAttachments = []
     }
 
     /// Compress context if active tokens exceed the threshold.
@@ -1358,23 +1380,26 @@ final class ChatViewModel {
 
     // MARK: - Modality Stripping
 
-    /// Removes image content parts from context messages when the target model
-    /// lacks vision support. Also strips `agentfile://` image refs from text content
-    /// (replacing with `[Image: description]`). Returns the number of images that were stripped.
+    /// Removes image and/or video content parts from context messages when the target model
+    /// lacks vision or video support. Also strips `agentfile://` image refs from text content
+    /// (replacing with `[Image: description]`). Returns the number of media parts that were stripped.
     @discardableResult
     static func stripUnsupportedModalities(
         from messages: inout [LLMChatMessage],
         capabilities: ModelCapabilities
     ) -> Int {
-        guard !capabilities.supportsVision else { return 0 }
+        // If the model supports both vision and video, nothing to strip
+        let needsImageStrip = !capabilities.supportsVision
+        let needsVideoStrip = !capabilities.supportsVideoInput
+        guard needsImageStrip || needsVideoStrip else { return 0 }
 
         var strippedCount = 0
         var indicesToRemove: [Int] = []
         for i in messages.indices {
             var didModify = false
 
-            // Strip agentfile:// image refs from text content
-            if let content = messages[i].content, content.contains("agentfile://") {
+            // Strip agentfile:// image refs from text content when vision unsupported
+            if needsImageStrip, let content = messages[i].content, content.contains("agentfile://") {
                 let stripped = ContextManager.stripAgentFileImageRefs(content)
                 if stripped != content {
                     messages[i] = LLMChatMessage(
@@ -1390,19 +1415,31 @@ final class ChatViewModel {
             }
 
             guard let parts = messages[i].contentParts else { continue }
-            let imageCount = parts.filter { if case .imageURL = $0 { return true }; return false }.count
-            guard imageCount > 0 else { continue }
-            strippedCount += imageCount
+            let imageCount = needsImageStrip ? parts.filter({ if case .imageURL = $0 { return true }; return false }).count : 0
+            let videoCount = needsVideoStrip ? parts.filter({ if case .videoURL = $0 { return true }; return false }).count : 0
+            let totalStripped = imageCount + videoCount
+            guard totalStripped > 0 else { continue }
+            strippedCount += totalStripped
+
+            // Filter out unsupported parts, keeping the rest
+            let filteredParts = parts.filter { part in
+                if needsImageStrip, case .imageURL = part { return false }
+                if needsVideoStrip, case .videoURL = part { return false }
+                return true
+            }
 
             let hasTextContent = !(messages[i].content ?? "").isEmpty
             let hasToolCalls = messages[i].toolCalls != nil
-            if !hasTextContent && !hasToolCalls && messages[i].toolCallId == nil {
+            let hasRemainingParts = !filteredParts.isEmpty && filteredParts.contains(where: {
+                if case .text = $0 { return false }; return true
+            })
+            if !hasTextContent && !hasToolCalls && messages[i].toolCallId == nil && !hasRemainingParts {
                 indicesToRemove.append(i)
             } else {
                 messages[i] = LLMChatMessage(
                     role: messages[i].role,
                     content: messages[i].content,
-                    contentParts: nil,
+                    contentParts: hasRemainingParts ? filteredParts : nil,
                     toolCalls: messages[i].toolCalls,
                     toolCallId: messages[i].toolCallId,
                     name: messages[i].name

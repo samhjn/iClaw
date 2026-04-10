@@ -203,6 +203,7 @@ struct LLMProviderEditView: View {
         DisclosureGroup {
             let binding = capabilitiesBinding(for: model)
             Toggle(L10n.Provider.supportsVision, isOn: binding.supportsVision)
+            Toggle(L10n.Provider.supportsVideoInput, isOn: binding.supportsVideoInput)
             Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
             Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
                 ForEach(ImageGenMode.allCases, id: \.self) { mode in
@@ -228,6 +229,7 @@ struct LLMProviderEditView: View {
                     HStack(spacing: 4) {
                         let c = modelCapabilities[model] ?? .default
                         if c.supportsVision { capBadge("eye", color: .green) }
+                        if c.supportsVideoInput { capBadge("video", color: .green) }
                         if c.supportsToolUse { capBadge("wrench", color: .blue) }
                         if c.thinkingLevel.isEnabled { thinkingLevelBadge(c.thinkingLevel) }
                         if c.imageGenerationMode == .chatInline { capBadge("paintbrush", color: .orange) }
@@ -285,6 +287,14 @@ struct LLMProviderEditView: View {
                 set: { newVal in
                     var caps = modelCapabilities[model] ?? .default
                     caps.supportsVision = newVal
+                    modelCapabilities[model] = caps
+                }
+            ),
+            supportsVideoInput: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsVideoInput },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.supportsVideoInput = newVal
                     modelCapabilities[model] = caps
                 }
             ),
@@ -643,6 +653,7 @@ struct LLMProviderEditView: View {
 /// Helper to bundle multiple Bool bindings for model capabilities.
 private struct CapabilitiesBindings {
     let supportsVision: Binding<Bool>
+    let supportsVideoInput: Binding<Bool>
     let supportsToolUse: Binding<Bool>
     let imageGenerationMode: Binding<ImageGenMode>
 }

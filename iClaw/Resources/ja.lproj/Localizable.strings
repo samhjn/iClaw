@@ -313,6 +313,7 @@
 "provider.parameters" = "パラメータ";
 "provider.supportsVision" = "ビジョン対応";
 "provider.supportsVisionFooter" = "このモデルが画像入力に対応している場合は有効にしてください（例：GPT-4o、Claude 3.5 Sonnet）";
+"provider.supportsVideoInput" = "動画入力対応";
 "provider.supportsToolUse" = "ツール使用対応";
 "provider.supportsToolUseFooter" = "このモデルが関数呼び出し/ツール使用に対応していない場合は無効にしてください（一部の OpenRouter モデル）";
 "provider.supportsImageGeneration" = "画像生成";

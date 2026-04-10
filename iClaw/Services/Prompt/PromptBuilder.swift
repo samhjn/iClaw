@@ -157,7 +157,7 @@ final class PromptBuilder {
             - `file_write`: Create or overwrite a file (`encoding: "base64"` for binary data)
             - `file_delete`: Delete a file from the folder
             - `file_info`: Get file metadata (size, dates, image detection)
-            - `attach_media`: Attach an image file from your folder into the conversation so you can see and analyze it
+            - `attach_media`: Attach a media file from your folder into the conversation so you can see and analyze it. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm).
             - Files persist across sessions. Sub-agents share the parent agent's file folder.
             - Generated images are automatically saved here. Users can also upload files via the UI.
 

@@ -5,10 +5,12 @@ import SwiftData
 struct ToolCallResult {
     let text: String
     let imageAttachments: [ImageAttachment]?
+    let videoAttachments: [VideoAttachment]?
 
-    init(_ text: String, imageAttachments: [ImageAttachment]? = nil) {
+    init(_ text: String, imageAttachments: [ImageAttachment]? = nil, videoAttachments: [VideoAttachment]? = nil) {
         self.text = text
         self.imageAttachments = imageAttachments
+        self.videoAttachments = videoAttachments
     }
 
     static let cancelled = ToolCallResult("[Cancelled] Operation was cancelled.")

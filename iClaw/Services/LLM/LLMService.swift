@@ -511,6 +511,9 @@ final class LLMService: @unchecked Sendable {
                             if let parsed = parseBase64DataURI(url) {
                                 blocks.append(.image(mediaType: parsed.mediaType, data: parsed.data))
                             }
+                        case .videoURL:
+                            // Anthropic API does not support video input; skip silently.
+                            break
                         }
                     }
                 } else if let content = msg.content, !content.isEmpty {
@@ -547,6 +550,8 @@ final class LLMService: @unchecked Sendable {
                             if let parsed = parseBase64DataURI(url) {
                                 blocks.append(.image(mediaType: parsed.mediaType, data: parsed.data))
                             }
+                        case .videoURL:
+                            break
                         }
                     }
                     block = .toolResultRich(toolUseId: toolUseId, blocks: blocks)

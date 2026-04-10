@@ -313,6 +313,7 @@
 "provider.parameters" = "매개변수";
 "provider.supportsVision" = "비전 지원";
 "provider.supportsVisionFooter" = "이 모델이 이미지 입력을 지원하는 경우 활성화하세요 (예: GPT-4o, Claude 3.5 Sonnet)";
+"provider.supportsVideoInput" = "동영상 입력 지원";
 "provider.supportsToolUse" = "도구 사용 지원";
 "provider.supportsToolUseFooter" = "이 모델이 함수 호출/도구 사용을 지원하지 않는 경우 비활성화하세요 (일부 OpenRouter 모델)";
 "provider.supportsImageGeneration" = "이미지 생성";
