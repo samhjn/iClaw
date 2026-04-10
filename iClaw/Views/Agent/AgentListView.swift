@@ -75,13 +75,14 @@ struct AgentListView: View {
                 NavigationLink {
                     AgentDetailView(agent: agent, viewModel: vm)
                 } label: {
+                    let rowData = vm.rowDataCache[agent.id]
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(agent.name)
+                        Text(rowData?.name ?? agent.name)
                             .font(.headline)
                         HStack(spacing: 12) {
-                            Label("\(agent.sessions.count)", systemImage: "bubble.left")
-                            Label("\(agent.activeSkills.count)", systemImage: "sparkles")
-                            Label("\(agent.cronJobs.count)", systemImage: "clock.badge")
+                            Label("\(rowData?.sessionCount ?? 0)", systemImage: "bubble.left")
+                            Label("\(rowData?.activeSkillCount ?? 0)", systemImage: "sparkles")
+                            Label("\(rowData?.cronJobCount ?? 0)", systemImage: "clock.badge")
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)

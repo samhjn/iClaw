@@ -22,7 +22,11 @@ struct ProviderModel: Identifiable, Hashable {
 struct AgentModelConfigView: View {
     @Bindable var agent: Agent
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \LLMProvider.name) private var allProviders: [LLMProvider]
+    /// Providers are loaded into @State instead of @Query so that
+    /// external saves (e.g. provider deletion on the Settings tab)
+    /// don't auto-fire a complex multi-section List batch update
+    /// while another List is mid-update → UICollectionView crash.
+    @State private var allProviders: [LLMProvider] = []
 
     /// Only show models that are explicitly enabled by the user.
     private var allProviderModels: [ProviderModel] {
@@ -57,6 +61,12 @@ struct AgentModelConfigView: View {
         }
         .navigationTitle(L10n.ModelConfig.title)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { refreshProviders() }
+    }
+
+    private func refreshProviders() {
+        let descriptor = FetchDescriptor<LLMProvider>(sortBy: [SortDescriptor(\.name)])
+        allProviders = (try? modelContext.fetch(descriptor)) ?? []
     }
 
     // MARK: - Primary model

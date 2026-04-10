@@ -2,9 +2,20 @@ import Foundation
 import SwiftData
 import Observation
 
+/// Pre-computed row data for the agent list, avoiding direct @Model
+/// relationship reads (sessions.count, activeSkills.count, cronJobs.count)
+/// that would register SwiftData observation in the List's ForEach rows.
+struct AgentRowData {
+    let name: String
+    let sessionCount: Int
+    let activeSkillCount: Int
+    let cronJobCount: Int
+}
+
 @Observable
 final class AgentViewModel {
     var agents: [Agent] = []
+    var rowDataCache: [UUID: AgentRowData] = [:]
     var agentToDelete: Agent?
 
     private var modelContext: ModelContext
@@ -20,6 +31,21 @@ final class AgentViewModel {
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
         agents = (try? modelContext.fetch(descriptor)) ?? []
+        rebuildRowDataCache()
+    }
+
+    private func rebuildRowDataCache() {
+        var cache: [UUID: AgentRowData] = [:]
+        cache.reserveCapacity(agents.count)
+        for agent in agents {
+            cache[agent.id] = AgentRowData(
+                name: agent.name,
+                sessionCount: agent.sessions.count,
+                activeSkillCount: agent.activeSkills.count,
+                cronJobCount: agent.cronJobs.count
+            )
+        }
+        rowDataCache = cache
     }
 
     func createAgent(name: String) -> Agent {
@@ -41,10 +67,17 @@ final class AgentViewModel {
 
     func deleteAgent(_ agent: Agent) {
         let agentId = agent.id
+
+        // ── 1. Update view state FIRST ──────────────────────────────
+        agents = agents.filter { $0.id != agentId }
+
+        // ── 2. Cancel, persist, cleanup ─────────────────────────────
         cancelAllActiveGenerations(for: agent)
         modelContext.delete(agent)
         try? modelContext.save()
         AgentFileManager.shared.cleanupAgentFiles(agentId: agentId)
+
+        // ── 3. Re-sync ─────────────────────────────────────────────
         fetchAgents()
     }
 

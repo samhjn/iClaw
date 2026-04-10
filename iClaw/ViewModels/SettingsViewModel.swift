@@ -6,9 +6,9 @@ import Observation
 final class SettingsViewModel {
     var providers: [LLMProvider] = []
 
-    /// UUID of the current default provider.  The View reads this instead of
-    /// `provider.isDefault` so that `@Model` property mutations during
-    /// deletion don't trigger premature SwiftUI row invalidation.
+    /// UUID of the current default provider for display purposes.
+    /// Computed from `isDefault` when available, falling back to the
+    /// first provider.  The View reads this instead of `provider.isDefault`.
     var defaultProviderId: UUID?
 
     /// Set by the View to trigger a deletion confirmation alert.
@@ -29,7 +29,10 @@ final class SettingsViewModel {
             sortBy: [SortDescriptor(\.createdAt)]
         )
         providers = (try? modelContext.fetch(descriptor)) ?? []
+        // Fall back to first provider when none is marked default
+        // (e.g. after the default was deleted).
         defaultProviderId = providers.first(where: \.isDefault)?.id
+            ?? providers.first?.id
     }
 
     func addProvider(
@@ -79,32 +82,24 @@ final class SettingsViewModel {
     }
 
     func deleteProvider(_ provider: LLMProvider) {
-        let wasDefault = provider.isDefault
-        let successor: LLMProvider? = wasDefault
-            ? providers.first { $0.id != provider.id }
-            : nil
-
-        // ── 1. Update the view state FIRST ──────────────────────────
-        // Remove the provider from the ForEach array and update the
-        // default badge before any @Model mutation or save().  This
-        // lets SwiftUI apply a single, clean batch update (row removal)
-        // before SwiftData fires observation notifications that could
-        // trigger conflicting batch updates → crash.
+        // ── 1. Update view state ────────────────────────────────────
         providers = providers.filter { $0.id != provider.id }
-        if wasDefault {
-            defaultProviderId = successor?.id
-        }
+        defaultProviderId = providers.first(where: \.isDefault)?.id
+            ?? providers.first?.id
 
-        // ── 2. Persist ──────────────────────────────────────────────
-        // The ForEach no longer contains the deleted row, so @Model
-        // observation from these mutations won't re-enter the list.
-        successor?.isDefault = true
+        // ── 2. Just delete — no cross-model mutation ────────────────
+        // Don't promote a successor (successor.isDefault = true) here.
+        // That @Model write fires SwiftData observation across all
+        // mounted views (TabView keeps every tab alive), causing
+        // UICollectionView batch-update conflicts.
+        //
+        // Instead, resolve the default lazily at use time:
+        // - ModelRouter.fetchGlobalDefault() already falls back to the
+        //   first provider when none has isDefault.
+        // - fetchProviders() falls back defaultProviderId to first.
+        // - The next setDefault() call will mark the chosen provider.
         modelContext.delete(provider)
         try? modelContext.save()
-
-        // ── 3. Re-sync ─────────────────────────────────────────────
-        // fetchProviders() returns the same list we already set in
-        // step 1, so the ForEach sees no identity change.
         fetchProviders()
 
         providerToDelete = nil

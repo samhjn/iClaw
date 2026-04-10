@@ -328,9 +328,9 @@ final class DeleteActiveProviderTests: XCTestCase {
         XCTAssertEqual(chain[1].provider.name, "Fallback2")
     }
 
-    /// SettingsViewModel.deleteProvider correctly reassigns default.
+    /// SettingsViewModel.deleteProvider resolves default lazily.
     @MainActor
-    func testDeleteDefaultProviderReassignsDefault() {
+    func testDeleteDefaultProviderFallsBackToFirstProvider() {
         let vm = SettingsViewModel(modelContext: context)
         vm.addProvider(name: "First", endpoint: "https://a.com", apiKey: "", modelName: "m1")
         vm.addProvider(name: "Second", endpoint: "https://b.com", apiKey: "", modelName: "m2")
@@ -341,8 +341,8 @@ final class DeleteActiveProviderTests: XCTestCase {
         vm.deleteProvider(vm.providers[0])
 
         XCTAssertEqual(vm.providers.count, 1)
-        XCTAssertTrue(vm.providers[0].isDefault,
-                      "Remaining provider should become default after default deleted")
+        XCTAssertEqual(vm.defaultProviderId, vm.providers[0].id,
+                       "defaultProviderId should fall back to the remaining provider")
     }
 
     // MARK: - State-Consistency: agent with deleted provider
@@ -1295,10 +1295,10 @@ final class LLMProviderModificationTests: XCTestCase {
 
     // MARK: - Delete Default Provider (the crash scenario)
 
-    /// Deleting the default provider must promote the next provider to default
-    /// in a single save transaction (no double save+fetch).
+    /// Deleting the default provider must resolve defaultProviderId to
+    /// a remaining provider (lazy fallback, no cross-model mutation).
     @MainActor
-    func testDeleteDefaultProviderPromotesSuccessorAtomically() {
+    func testDeleteDefaultProviderResolvesDefaultLazily() {
         let vm = SettingsViewModel(modelContext: context)
         vm.addProvider(name: "Alpha", endpoint: "https://a.com", apiKey: "k1", modelName: "m1")
         vm.addProvider(name: "Beta", endpoint: "https://b.com", apiKey: "k2", modelName: "m2")
@@ -1311,8 +1311,8 @@ final class LLMProviderModificationTests: XCTestCase {
         vm.deleteProvider(defaultProvider)
 
         XCTAssertEqual(vm.providers.count, 2)
-        let defaults = vm.providers.filter(\.isDefault)
-        XCTAssertEqual(defaults.count, 1, "Exactly one provider should be default after deletion")
+        XCTAssertNotNil(vm.defaultProviderId,
+                        "defaultProviderId should fall back to a remaining provider")
     }
 
     /// Deleting the only provider (which is the default) should leave an empty list
@@ -1348,10 +1348,10 @@ final class LLMProviderModificationTests: XCTestCase {
         XCTAssertEqual(vm.providers[0].name, "Default")
     }
 
-    /// After deleting the default, the promoted successor should persist across
-    /// a fresh ViewModel creation (proving it was saved, not just in-memory).
+    /// After deleting the default, a fresh ViewModel should resolve
+    /// defaultProviderId to the remaining provider via lazy fallback.
     @MainActor
-    func testDeleteDefaultProviderPersistsSuccessorAcrossVMRecreation() {
+    func testDeleteDefaultProviderFallbackPersistsAcrossVMRecreation() {
         let vm1 = SettingsViewModel(modelContext: context)
         vm1.addProvider(name: "First", endpoint: "https://a.com", apiKey: "", modelName: "m1")
         vm1.addProvider(name: "Second", endpoint: "https://b.com", apiKey: "", modelName: "m2")
@@ -1360,8 +1360,8 @@ final class LLMProviderModificationTests: XCTestCase {
         // Create a fresh ViewModel from the same context
         let vm2 = SettingsViewModel(modelContext: context)
         XCTAssertEqual(vm2.providers.count, 1)
-        XCTAssertTrue(vm2.providers[0].isDefault,
-                      "Successor default must persist across ViewModel recreations")
+        XCTAssertEqual(vm2.defaultProviderId, vm2.providers[0].id,
+                       "defaultProviderId must resolve to remaining provider")
         XCTAssertEqual(vm2.providers[0].name, "Second")
     }
 
@@ -1391,25 +1391,27 @@ final class LLMProviderModificationTests: XCTestCase {
         XCTAssertEqual(ids2.count, 3)
     }
 
-    /// Exactly one default must exist at all times (when providers are non-empty).
+    /// defaultProviderId must always resolve when providers are non-empty.
     @MainActor
-    func testExactlyOneDefaultAfterEachMutation() {
+    func testDefaultProviderIdResolvedAfterEachMutation() {
         let vm = SettingsViewModel(modelContext: context)
 
         vm.addProvider(name: "A", endpoint: "https://a.com", apiKey: "", modelName: "m1")
-        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after first add")
+        XCTAssertNotNil(vm.defaultProviderId, "Default resolved after first add")
 
         vm.addProvider(name: "B", endpoint: "https://b.com", apiKey: "", modelName: "m2")
-        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after second add")
+        XCTAssertNotNil(vm.defaultProviderId, "Default resolved after second add")
 
         vm.setDefault(vm.providers[1])
-        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after setDefault")
+        XCTAssertEqual(vm.defaultProviderId, vm.providers[1].id, "Default matches after setDefault")
 
-        vm.deleteProvider(vm.providers.first { $0.isDefault }!)
-        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1, "One default after deleting default")
+        let defaultId = vm.defaultProviderId!
+        vm.deleteProvider(vm.providers.first { $0.id == defaultId }!)
+        XCTAssertNotNil(vm.defaultProviderId, "Default resolved after deleting default")
 
         vm.deleteProvider(vm.providers[0])
         XCTAssertTrue(vm.providers.isEmpty, "Empty after deleting all")
+        XCTAssertNil(vm.defaultProviderId, "No default when empty")
     }
 
     // MARK: - setDefault
@@ -1516,7 +1518,8 @@ final class LLMProviderModificationTests: XCTestCase {
         vm.deleteProvider(provider)
 
         XCTAssertEqual(vm.providers.count, 1)
-        XCTAssertTrue(vm.providers[0].isDefault)
+        XCTAssertEqual(vm.defaultProviderId, vm.providers[0].id,
+                       "defaultProviderId should fall back to remaining provider")
         XCTAssertEqual(vm.providers[0].name, "Backup")
 
         let agents = (try? context.fetch(FetchDescriptor<Agent>())) ?? []
@@ -1580,8 +1583,8 @@ final class LLMProviderModificationTests: XCTestCase {
         XCTAssertEqual(vm.providers.count, 5)
         let ids = vm.providers.map(\.id)
         XCTAssertEqual(Set(ids).count, 5, "No duplicates after rapid deletions")
-        XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1,
-                       "Exactly one default after rapid deletions")
+        XCTAssertNotNil(vm.defaultProviderId,
+                        "defaultProviderId must resolve after rapid deletions")
     }
 
     /// Rapidly switching defaults should always end with exactly one default.
@@ -1600,7 +1603,7 @@ final class LLMProviderModificationTests: XCTestCase {
         }
     }
 
-    /// Delete all providers one by one (always deleting the current default).
+    /// Delete all providers one by one (always deleting the resolved default).
     @MainActor
     func testDeleteAllProvidersOneByOneAlwaysDeletingDefault() {
         let vm = SettingsViewModel(modelContext: context)
@@ -1609,13 +1612,150 @@ final class LLMProviderModificationTests: XCTestCase {
         vm.addProvider(name: "C", endpoint: "https://c.com", apiKey: "", modelName: "m3")
 
         while !vm.providers.isEmpty {
-            let current = vm.providers.first { $0.isDefault }!
+            let currentId = vm.defaultProviderId!
+            let current = vm.providers.first { $0.id == currentId }!
             vm.deleteProvider(current)
             if !vm.providers.isEmpty {
-                XCTAssertEqual(vm.providers.filter(\.isDefault).count, 1,
-                               "Must promote a successor when default is deleted")
+                XCTAssertNotNil(vm.defaultProviderId,
+                                "defaultProviderId must resolve when providers remain")
             }
         }
         XCTAssertTrue(vm.providers.isEmpty)
+    }
+}
+
+// =============================================================================
+// MARK: - Pre-Update Contract Tests
+// =============================================================================
+//
+// These tests verify the core invariant that prevents UICollectionView crashes:
+// after calling a delete method, the ViewModel's array must already exclude
+// the deleted item AND the model context must have committed the deletion.
+//
+// The ordering guarantee (array updated BEFORE save) is enforced structurally
+// by lint_collectionview_risks.sh, which flags any modelContext.delete() in
+// View files.  These tests verify the observable outcome: the array and the
+// persistent store are both consistent after the delete method returns.
+
+final class PreUpdateContractTests: XCTestCase {
+
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try! ModelContainer(for: testSchema, configurations: [config])
+        context = ModelContext(container)
+    }
+
+    override func tearDown() {
+        container = nil
+        context = nil
+        super.tearDown()
+    }
+
+    // ── SessionListViewModel ────────────────────────────────────────
+
+    @MainActor
+    func testDeleteSession_arrayAndStoreConsistent() {
+        let agent = Agent(name: "A")
+        context.insert(agent)
+        let s1 = Session(title: "S1"); context.insert(s1); s1.agent = agent
+        let s2 = Session(title: "S2"); context.insert(s2); s2.agent = agent
+        try! context.save()
+
+        let vm = SessionListViewModel(modelContext: context)
+        XCTAssertEqual(vm.sessions.count, 2)
+
+        let deleteId = s1.id
+        vm.deleteSession(s1)
+
+        // Array must not contain the deleted item
+        XCTAssertFalse(vm.sessions.contains { $0.id == deleteId },
+                       "Deleted session must be removed from the array")
+        XCTAssertEqual(vm.sessions.count, 1)
+        // Row cache must also be cleaned up
+        XCTAssertNil(vm.rowDataCache[deleteId],
+                     "Row cache entry must be removed on deletion")
+        // Store must reflect the deletion
+        let remaining = (try? context.fetchCount(FetchDescriptor<Session>())) ?? -1
+        XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
+    }
+
+    @MainActor
+    func testDeleteSessionAtOffsets_arrayAndStoreConsistent() {
+        let agent = Agent(name: "A")
+        context.insert(agent)
+        let s1 = Session(title: "S1"); context.insert(s1); s1.agent = agent
+        let s2 = Session(title: "S2"); context.insert(s2); s2.agent = agent
+        let s3 = Session(title: "S3"); context.insert(s3); s3.agent = agent
+        try! context.save()
+
+        let vm = SessionListViewModel(modelContext: context)
+        XCTAssertEqual(vm.sessions.count, 3)
+
+        let deleteId = vm.sessions[1].id
+        vm.deleteSessionAtOffsets(IndexSet(integer: 1))
+
+        XCTAssertFalse(vm.sessions.contains { $0.id == deleteId })
+        XCTAssertEqual(vm.sessions.count, 2)
+        XCTAssertNil(vm.rowDataCache[deleteId])
+    }
+
+    // ── SettingsViewModel ───────────────────────────────────────────
+
+    @MainActor
+    func testDeleteProvider_arrayAndStoreConsistent() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "P1", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "P2", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        XCTAssertEqual(vm.providers.count, 2)
+
+        let deleteId = vm.providers[0].id
+        vm.deleteProvider(vm.providers[0])
+
+        XCTAssertFalse(vm.providers.contains { $0.id == deleteId },
+                       "Deleted provider must be removed from the array")
+        XCTAssertEqual(vm.providers.count, 1)
+        let remaining = (try? context.fetchCount(FetchDescriptor<LLMProvider>())) ?? -1
+        XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
+    }
+
+    @MainActor
+    func testDeleteDefaultProvider_defaultIdFallsBackAndArrayConsistent() {
+        let vm = SettingsViewModel(modelContext: context)
+        vm.addProvider(name: "P1", endpoint: "https://a.com", apiKey: "", modelName: "m1")
+        vm.addProvider(name: "P2", endpoint: "https://b.com", apiKey: "", modelName: "m2")
+        // P1 is default (first added)
+        XCTAssertTrue(vm.providers[0].isDefault)
+
+        vm.deleteProvider(vm.providers[0])
+
+        XCTAssertEqual(vm.providers.count, 1)
+        XCTAssertEqual(vm.defaultProviderId, vm.providers[0].id,
+                       "defaultProviderId must fall back to remaining provider")
+    }
+
+    // ── AgentViewModel ──────────────────────────────────────────────
+
+    @MainActor
+    func testDeleteAgent_arrayAndStoreConsistent() {
+        let vm = AgentViewModel(modelContext: context)
+        _ = vm.createAgent(name: "Agent1")
+        _ = vm.createAgent(name: "Agent2")
+        XCTAssertEqual(vm.agents.count, 2)
+
+        let deleteId = vm.agents[0].id
+        vm.deleteAgent(vm.agents[0])
+
+        XCTAssertFalse(vm.agents.contains { $0.id == deleteId },
+                       "Deleted agent must be removed from the array")
+        XCTAssertEqual(vm.agents.count, 1)
+        let remaining = (try? context.fetchCount(
+            FetchDescriptor<Agent>(predicate: #Predicate { $0.parentAgent == nil })
+        )) ?? -1
+        XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
     }
 }
