@@ -109,7 +109,7 @@ struct SessionListView: View {
             ForEach(vm.sessions, id: \.id) { session in
                 NavigationLink(value: session) {
                     SessionRowView(rowData: vm.rowDataCache[session.id]
-                        ?? SessionRowData.placeholder(for: session))
+                        ?? .empty)
                 }
                 .contextMenu {
                     Button(role: .destructive) {

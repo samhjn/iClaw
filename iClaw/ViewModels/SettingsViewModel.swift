@@ -90,7 +90,11 @@ final class SettingsViewModel {
         // ── 2. Just delete — no cross-model mutation ────────────────
         modelContext.delete(provider)
         try? modelContext.save()
-        fetchProviders()
+        // Do NOT call fetchProviders() here. The array is already
+        // correct from step 1. @Observable fires for every property
+        // set (even no-op), so a redundant fetchProviders() creates a
+        // second render cycle that races with the first batch update's
+        // animation completion → UICollectionView item count mismatch.
 
         providerToDelete = nil
         affectedAgentNames = []

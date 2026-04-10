@@ -77,7 +77,7 @@ struct AgentListView: View {
                 } label: {
                     let rowData = vm.rowDataCache[agent.id]
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(rowData?.name ?? agent.name)
+                        Text(rowData?.name ?? "")
                             .font(.headline)
                         HStack(spacing: 12) {
                             Label("\(rowData?.sessionCount ?? 0)", systemImage: "bubble.left")

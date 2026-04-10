@@ -76,9 +76,7 @@ final class AgentViewModel {
         modelContext.delete(agent)
         try? modelContext.save()
         AgentFileManager.shared.cleanupAgentFiles(agentId: agentId)
-
-        // ── 3. Re-sync ─────────────────────────────────────────────
-        fetchAgents()
+        // No fetchAgents() — array is already correct from step 1.
     }
 
     /// Cancel active ChatViewModel generations for all sessions under this agent

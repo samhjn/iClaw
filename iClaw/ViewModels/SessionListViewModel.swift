@@ -16,18 +16,19 @@ struct SessionRowData {
     /// Avoids using `if let` inside ForEach, which causes conditional
     /// content splits between two @Observable properties (sessions vs
     /// rowDataCache) — leading to UICollectionView item count mismatches.
-    static func placeholder(for session: Session) -> SessionRowData {
-        SessionRowData(
-            title: session.title,
-            isActive: session.isActive,
-            updatedAt: session.updatedAt,
-            agentName: session.agent?.name,
-            messageCount: 0,
-            previewContent: nil,
-            isStreaming: false,
-            hasDraft: false
-        )
-    }
+    /// Empty placeholder — avoids @Model property reads inside ForEach.
+    /// The cache is always in sync with the sessions array (both set
+    /// in fetchSessions), so this should never be visible in practice.
+    static let empty = SessionRowData(
+        title: "",
+        isActive: false,
+        updatedAt: .distantPast,
+        agentName: nil,
+        messageCount: 0,
+        previewContent: nil,
+        isStreaming: false,
+        hasDraft: false
+    )
 }
 
 @Observable
@@ -188,9 +189,7 @@ final class SessionListViewModel {
         SessionVectorStore(modelContext: modelContext).deleteEmbedding(for: deletedId)
         modelContext.delete(session)
         try? modelContext.save()
-
-        // ── 3. Re-sync ─────────────────────────────────────────────
-        fetchSessions()
+        // No fetchSessions() — array is already correct from step 1.
     }
 
     func deleteSessionAtOffsets(_ offsets: IndexSet) {
@@ -210,9 +209,7 @@ final class SessionListViewModel {
             modelContext.delete(session)
         }
         try? modelContext.save()
-
-        // 3. Re-sync.
-        fetchSessions()
+        // No fetchSessions() — array is already correct from step 1.
     }
 
     /// Cancel any active ChatViewModel generation for the session before deletion.
