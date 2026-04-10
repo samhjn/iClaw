@@ -50,8 +50,25 @@ struct MessageBubbleView: View {
     private var imageAttachments: [ImageAttachment] {
         if let cached = cache.imageAttachments { return cached }
         let result: [ImageAttachment] = {
-            guard let data = message?.imageAttachmentsData else { return [] }
-            return (try? JSONDecoder().decode([ImageAttachment].self, from: data)) ?? []
+            // Mirror ContextManager.convertWithImageForwarding: decode attachments + resolve agentfile refs.
+            var images: [ImageAttachment] = []
+
+            if let data = message?.imageAttachmentsData,
+               let decoded = try? JSONDecoder().decode([ImageAttachment].self, from: data) {
+                images = decoded
+            }
+
+            // Resolve agentfile:// refs from content and deduplicate.
+            if let content = message?.content, content.contains("agentfile://") {
+                let existingRefs = Set(images.compactMap(\.fileReference))
+                for img in ContextManager.resolveAgentFileImages(from: content) {
+                    if let ref = img.fileReference, !existingRefs.contains(ref) {
+                        images.append(img)
+                    }
+                }
+            }
+
+            return images
         }()
         cache.imageAttachments = result
         return result
@@ -254,56 +271,48 @@ private struct CachedImageCell: View {
     let attachment: ImageAttachment
     let isSingle: Bool
 
-    @State private var resolved: UIImage?
-    @State private var deleted = false
-    @State private var hasResolved = false
-
     private var maxW: CGFloat { isSingle ? 240 : 140 }
     private var maxH: CGFloat { isSingle ? 240 : 140 }
 
     var body: some View {
-        Group {
-            if deleted {
-                ZStack {
-                    if let thumb = attachment.thumbnailImage {
-                        Image(uiImage: thumb)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .blur(radius: 3)
-                    } else {
-                        Color(.systemGray5)
-                    }
-                    Color.black.opacity(0.5)
-                    VStack(spacing: 4) {
-                        Image(systemName: "trash.slash")
-                            .font(.title3)
-                        Text(L10n.Chat.imageDeleted)
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(.white)
+        if attachment.isFileDeleted {
+            ZStack {
+                if let thumb = attachment.thumbnailImage {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .blur(radius: 3)
+                } else {
+                    Color(.systemGray5)
                 }
+                Color.black.opacity(0.5)
+                VStack(spacing: 4) {
+                    Image(systemName: "trash.slash")
+                        .font(.title3)
+                    Text(L10n.Chat.imageDeleted)
+                        .font(.caption2)
+                }
+                .foregroundStyle(.white)
+            }
+            .frame(maxWidth: maxW, maxHeight: maxH)
+            .frame(minHeight: 60)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if let uiImage = attachment.uiImage {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: maxW, maxHeight: maxH)
-                .frame(minHeight: 60)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else if let uiImage = resolved {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: maxW, maxHeight: maxH)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        ImagePreviewCoordinator.shared.show(uiImage)
-                    }
-            }
-        }
-        .onAppear {
-            guard !hasResolved else { return }
-            hasResolved = true
-            deleted = attachment.isFileDeleted
-            if !deleted {
-                resolved = attachment.uiImage
-            }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    ImagePreviewCoordinator.shared.show(uiImage)
+                }
+        } else if let thumb = attachment.thumbnailImage {
+            Image(uiImage: thumb)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: maxW, maxHeight: maxH)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 }
