@@ -18,6 +18,8 @@ final class CronScheduler {
     private let modelContainer: ModelContainer
     private var timer: Timer?
     private let executor: CronExecutor
+    /// Optional keep-alive manager; set by the app to receive job-count updates.
+    var keepAliveManager: BackgroundKeepAliveManager?
 
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -143,6 +145,7 @@ final class CronScheduler {
 
         runningJobIds.insert(jobId)
         runningAgentIds.insert(agentId)
+        keepAliveManager?.onJobsChanged(runningCount: runningJobIds.count)
 
         let executor = self.executor
         let container = self.modelContainer
@@ -174,6 +177,7 @@ final class CronScheduler {
     private func releaseLocks(jobId: UUID, agentId: UUID) {
         runningJobIds.remove(jobId)
         runningAgentIds.remove(agentId)
+        keepAliveManager?.onJobsChanged(runningCount: runningJobIds.count)
     }
 
     private func updateNextRunDates() async {

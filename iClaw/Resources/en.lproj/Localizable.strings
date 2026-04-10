@@ -281,6 +281,11 @@
 "settings.aboutDescription" = "iClaw is an open-source iOS client for interacting with LLM agents. It supports multi-provider model routing, sub-agents, browser automation, code execution, cron scheduling, and Apple ecosystem integration (Calendar, Reminders, Contacts, Health, Maps, and more).";
 "settings.sourceCode" = "Source Code";
 "settings.license" = "Licensed under the MIT License";
+"settings.backgroundExecution" = "Background Execution";
+"settings.backgroundKeepAlive" = "Live Activity";
+"settings.backgroundKeepAliveFooter" = "Pin a Live Activity to the Dynamic Island while cron jobs are running, keeping the app visible and easy to return to. Disabled by default.";
+"cronLiveActivity.running" = "Cron jobs running…";
+"cronLiveActivity.done" = "All jobs completed";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "Edit Provider";

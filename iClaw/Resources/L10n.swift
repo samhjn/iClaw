@@ -396,6 +396,9 @@ enum L10n {
         static var aboutDescription: String { tr("settings.aboutDescription") }
         static var sourceCode: String { tr("settings.sourceCode") }
         static var license: String { tr("settings.license") }
+        static var backgroundExecution: String { tr("settings.backgroundExecution") }
+        static var backgroundKeepAlive: String { tr("settings.backgroundKeepAlive") }
+        static var backgroundKeepAliveFooter: String { tr("settings.backgroundKeepAliveFooter") }
     }
 
     // MARK: - LLM Provider

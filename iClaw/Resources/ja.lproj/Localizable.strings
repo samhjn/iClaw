@@ -280,6 +280,11 @@
 "settings.aboutDescription" = "iClaw は LLM エージェントと対話するためのオープンソース iOS クライアントです。マルチプロバイダーモデルルーティング、サブエージェント、ブラウザ自動化、コード実行、cron スケジューリング、Apple エコシステム連携（カレンダー、リマインダー、連絡先、ヘルスケア、マップなど）に対応しています。";
 "settings.sourceCode" = "ソースコード";
 "settings.license" = "MIT ライセンスに基づき公開";
+"settings.backgroundExecution" = "バックグラウンド実行";
+"settings.backgroundKeepAlive" = "ライブアクティビティ";
+"settings.backgroundKeepAliveFooter" = "cronジョブの実行中にDynamic Islandにライブアクティビティを固定し、アプリの可視性を維持します。デフォルトでは無効です。";
+"cronLiveActivity.running" = "cronジョブ実行中…";
+"cronLiveActivity.done" = "すべてのジョブが完了";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "プロバイダーを編集";
