@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: SettingsViewModel?
     @State private var showAddProvider = false
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -70,6 +71,7 @@ struct SettingsView: View {
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             vm.confirmDeleteProvider(provider)
+                            showDeleteConfirmation = true
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -92,6 +94,7 @@ struct SettingsView: View {
                         }
                         Button(role: .destructive) {
                             vm.confirmDeleteProvider(provider)
+                            showDeleteConfirmation = true
                         } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -119,14 +122,17 @@ struct SettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .alert(L10n.Settings.deleteProviderTitle, isPresented: Binding(
-            get: { vm.providerToDelete != nil },
-            set: { if !$0 { vm.providerToDelete = nil; vm.affectedAgentNames = [] } }
-        )) {
+        // Use a plain @State bool — NOT a custom Binding derived from
+        // @Observable state. Custom bindings trigger dispatchImmediately
+        // during alert dismissal, re-entering the render cycle and
+        // crashing the UICollectionView batch update.
+        .alert(L10n.Settings.deleteProviderTitle, isPresented: $showDeleteConfirmation) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let provider = vm.providerToDelete {
                     vm.deleteProvider(provider)
                 }
+                vm.providerToDelete = nil
+                vm.affectedAgentNames = []
             }
             Button(L10n.Common.cancel, role: .cancel) {
                 vm.providerToDelete = nil
