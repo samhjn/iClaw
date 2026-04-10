@@ -1357,6 +1357,9 @@ final class LLMProviderModificationTests: XCTestCase {
         vm1.addProvider(name: "Second", endpoint: "https://b.com", apiKey: "", modelName: "m2")
         vm1.deleteProvider(vm1.providers[0])
 
+        // Persistence is deferred — drain the run loop before re-fetching
+        RunLoop.main.run(until: Date())
+
         // Create a fresh ViewModel from the same context
         let vm2 = SettingsViewModel(modelContext: context)
         XCTAssertEqual(vm2.providers.count, 1)
@@ -1716,9 +1719,13 @@ final class PreUpdateContractTests: XCTestCase {
         let deleteId = vm.providers[0].id
         vm.deleteProvider(vm.providers[0])
 
+        // Array is updated synchronously
         XCTAssertFalse(vm.providers.contains { $0.id == deleteId },
                        "Deleted provider must be removed from the array")
         XCTAssertEqual(vm.providers.count, 1)
+
+        // Persistence is deferred — drain the run loop
+        RunLoop.main.run(until: Date())
         let remaining = (try? context.fetchCount(FetchDescriptor<LLMProvider>())) ?? -1
         XCTAssertEqual(remaining, 1, "Store must have committed the deletion")
     }

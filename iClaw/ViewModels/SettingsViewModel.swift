@@ -82,22 +82,23 @@ final class SettingsViewModel {
     }
 
     func deleteProvider(_ provider: LLMProvider) {
-        // ── 1. Update view state ────────────────────────────────────
+        // ── 1. Update ALL @Observable state synchronously ───────────
+        // SwiftUI processes these as a single batch update (row removal).
+        providerToDelete = nil
+        affectedAgentNames = []
         providers = providers.filter { $0.id != provider.id }
         defaultProviderId = providers.first(where: \.isDefault)?.id
             ?? providers.first?.id
 
-        // ── 2. Just delete — no cross-model mutation ────────────────
-        modelContext.delete(provider)
-        try? modelContext.save()
-        // Do NOT call fetchProviders() here. The array is already
-        // correct from step 1. @Observable fires for every property
-        // set (even no-op), so a redundant fetchProviders() creates a
-        // second render cycle that races with the first batch update's
-        // animation completion → UICollectionView item count mismatch.
-
-        providerToDelete = nil
-        affectedAgentNames = []
+        // ── 2. Defer model context work to the next run-loop turn ───
+        // modelContext.delete() + save() fires SwiftData observation
+        // that re-enters SwiftUI's render cycle while the batch update
+        // from step 1 is still in flight → item count mismatch crash.
+        // Deferring ensures the batch update commits before save() fires.
+        DispatchQueue.main.async { [modelContext] in
+            modelContext.delete(provider)
+            try? modelContext.save()
+        }
     }
 
     func updateProvider(_ provider: LLMProvider) {
