@@ -102,21 +102,19 @@ final class SettingsViewModel {
     }
 
     func deleteProvider(_ provider: LLMProvider) {
-        // ── 1. Update ALL @Observable state synchronously ───────────
-        // SwiftUI processes these as a single batch update (row removal).
+        // ── 1. Update ONLY ForEach-driving state ────────────────────
+        // Do NOT set providerToDelete = nil here. The alert's
+        // isPresented binding will clear it when SwiftUI dismisses
+        // the alert AFTER this action returns. Setting it inside
+        // deleteProvider() causes a re-entrant dispatchImmediately
+        // during the same render cycle → batch update conflict.
         let deletedId = provider.id
-        providerToDelete = nil
-        affectedAgentNames = []
         providers = providers.filter { $0.id != deletedId }
         providerRowCache.removeValue(forKey: deletedId)
         defaultProviderId = providers.first(where: \.isDefault)?.id
             ?? providers.first?.id
 
-        // ── 2. Defer model context work to the next run-loop turn ───
-        // modelContext.delete() + save() fires SwiftData observation
-        // that re-enters SwiftUI's render cycle while the batch update
-        // from step 1 is still in flight → item count mismatch crash.
-        // Deferring ensures the batch update commits before save() fires.
+        // ── 2. Defer model context work ─────────────────────────────
         DispatchQueue.main.async { [modelContext] in
             modelContext.delete(provider)
             try? modelContext.save()
