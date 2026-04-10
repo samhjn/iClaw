@@ -61,6 +61,9 @@ enum ToolDefinitions {
             fileInfoTool,
             attachMediaTool,
 
+            // Image Generation
+            generateImageTool,
+
             // Apple Ecosystem — Calendar
             calendarListCalendarsTool,
             calendarCreateEventTool,
@@ -459,7 +462,7 @@ enum ToolDefinitions {
 
     static let attachMediaTool = ToolDefinitionBuilder.build(
         name: "attach_media",
-        description: "Attach a file from the agent's folder as multimodal content in the conversation. The attached file becomes visible to the LLM for analysis. Currently supports image files (jpg, png, gif, webp, heic, bmp, tiff). Future support planned for audio and video.",
+        description: "Attach a media file from the agent's folder as multimodal content in the conversation. The attached file becomes visible to the LLM for analysis. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm). Audio support planned.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("The filename to attach (e.g. 'photo.jpg', 'chart.png')"),
             "modality": ToolDefinitionBuilder.enumParam("Media type (auto-detected from extension if omitted)", values: ["image", "audio", "video"])
@@ -1036,5 +1039,19 @@ enum ToolDefinitions {
             "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
         ],
         required: ["bpm"]
+    )
+
+    // MARK: - Image Generation
+
+    static let generateImageTool = ToolDefinitionBuilder.build(
+        name: "generate_image",
+        description: "Generate images using AI image generation models. Use this when the user asks you to create, draw, or generate images. Returns the generated image(s) as attachments in the conversation.",
+        properties: [
+            "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the image to generate. Be specific about style, composition, colors, and subject matter."),
+            "size": ToolDefinitionBuilder.stringParam("Image size. Common values: 1024x1024, 1792x1024, 1024x1792. Optional, defaults to model default."),
+            "quality": ToolDefinitionBuilder.enumParam("Image quality level. Optional.", values: ["standard", "hd"]),
+            "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1.")
+        ],
+        required: ["prompt"]
     )
 }

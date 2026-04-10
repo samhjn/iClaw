@@ -181,6 +181,10 @@
 "modelConfig.thinkingLevel" = "사고 레벨";
 "modelConfig.thinkingLevelUseModelDefault" = "모델 기본값 사용";
 "modelConfig.thinkingLevelFooter" = "이 에이전트의 모델 기본 사고 레벨을 재정의합니다. 높은 레벨은 더 많은 토큰을 소비하지만 더 깊은 추론을 생성합니다.";
+"modelConfig.imageProvider" = "이미지 생성 모델";
+"modelConfig.imageProviderNone" = "비활성화";
+"modelConfig.imageGenerationHeader" = "이미지 생성";
+"modelConfig.imageProviderFooter" = "generate_image 도구에서 사용할 모델을 선택하세요. 이미지 생성 기능이 있는 모델만 표시됩니다. 설정하면 에이전트가 도구 호출을 통해 이미지를 생성할 수 있습니다.";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "예약 작업";
@@ -314,10 +318,14 @@
 "provider.parameters" = "매개변수";
 "provider.supportsVision" = "비전 지원";
 "provider.supportsVisionFooter" = "이 모델이 이미지 입력을 지원하는 경우 활성화하세요 (예: GPT-4o, Claude 3.5 Sonnet)";
+"provider.supportsVideoInput" = "동영상 입력 지원";
 "provider.supportsToolUse" = "도구 사용 지원";
 "provider.supportsToolUseFooter" = "이 모델이 함수 호출/도구 사용을 지원하지 않는 경우 비활성화하세요 (일부 OpenRouter 모델)";
-"provider.supportsImageGeneration" = "이미지 생성 지원";
+"provider.supportsImageGeneration" = "이미지 생성";
 "provider.supportsImageGenerationFooter" = "이미지를 생성할 수 있는 모델에 활성화하세요 (예: Gemini 2.5 Flash Image / Nano Banana). API에 modalities 매개변수를 전송합니다.";
+"provider.imageGenMode.none" = "없음";
+"provider.imageGenMode.chatInline" = "채팅 인라인";
+"provider.imageGenMode.dedicatedAPI" = "전용 API";
 "provider.supportsReasoning" = "추론 지원";
 "provider.supportsReasoningFooter" = "확장 사고/추론을 지원하는 모델에 활성화하세요 (예: Claude 확장 사고, DeepSeek R1, o1/o3). 사고 과정이 캡처되어 표시됩니다.";
 "provider.thinkingLevel" = "사고 레벨";
@@ -513,6 +521,7 @@
 "toolPermissions.config" = "설정";
 "toolPermissions.model" = "모델";
 "toolPermissions.files" = "파일";
+"toolPermissions.imageGeneration" = "이미지 생성";
 "toolPermissions.appleSection" = "Apple 생태계";
 "toolPermissions.agentSection" = "에이전트 기능";
 "agentDetail.toolPermissions" = "도구 권한";

@@ -147,12 +147,31 @@ struct FileTools {
             return ToolCallResult("[Error] Audio modality is not yet supported. Currently only image files can be attached.")
 
         case "video":
-            return ToolCallResult("[Error] Video modality is not yet supported. Currently only image files can be attached.")
+            guard Self.supportedVideoExtensions.contains(ext) else {
+                return ToolCallResult("[Error] Unsupported video format '.\(ext)'. Supported: mp4, mov, m4v, webm.")
+            }
+            do {
+                _ = try fm.readFile(agentId: agentId, name: name)
+                let ref = AgentFileManager.makeFileReference(agentId: agentId, filename: name)
+                guard let attachment = VideoAttachment.from(fileReference: ref) else {
+                    return ToolCallResult("[Error] Failed to read video metadata from '\(name)'.")
+                }
+                return ToolCallResult(
+                    "Video '\(name)' (\(attachment.width)x\(attachment.height), \(attachment.durationString), \(attachment.fileSizeString)) attached to conversation.",
+                    videoAttachments: [attachment]
+                )
+            } catch {
+                return ToolCallResult("[Error] \(error.localizedDescription)")
+            }
 
         default:
-            return ToolCallResult("[Error] Unknown modality '\(modality)'. Supported: image. Planned: audio, video.")
+            return ToolCallResult("[Error] Unknown modality '\(modality)'. Supported: image, video. Planned: audio.")
         }
     }
+
+    private static let supportedVideoExtensions: Set<String> = [
+        "mp4", "mov", "m4v", "webm"
+    ]
 
     private func detectModality(ext: String) -> String {
         if Self.supportedImageExtensions.contains(ext) { return "image" }

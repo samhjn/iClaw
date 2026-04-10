@@ -162,7 +162,7 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?
     ) async throws -> LLMChatResponse {
         let caps = effectiveCapabilities
-        let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let modalities: [String]? = caps.imageGenerationMode == .chatInline ? ["image", "text"] : nil
         let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
@@ -195,7 +195,7 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?
     ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let caps = effectiveCapabilities
-        let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let modalities: [String]? = caps.imageGenerationMode == .chatInline ? ["image", "text"] : nil
         let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
@@ -511,6 +511,9 @@ final class LLMService: @unchecked Sendable {
                             if let parsed = parseBase64DataURI(url) {
                                 blocks.append(.image(mediaType: parsed.mediaType, data: parsed.data))
                             }
+                        case .videoURL:
+                            // Anthropic API does not support video input; skip silently.
+                            break
                         }
                     }
                 } else if let content = msg.content, !content.isEmpty {
@@ -547,6 +550,8 @@ final class LLMService: @unchecked Sendable {
                             if let parsed = parseBase64DataURI(url) {
                                 blocks.append(.image(mediaType: parsed.mediaType, data: parsed.data))
                             }
+                        case .videoURL:
+                            break
                         }
                     }
                     block = .toolResultRich(toolUseId: toolUseId, blocks: blocks)

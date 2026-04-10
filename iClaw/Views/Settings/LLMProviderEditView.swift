@@ -203,8 +203,13 @@ struct LLMProviderEditView: View {
         DisclosureGroup {
             let binding = capabilitiesBinding(for: model)
             Toggle(L10n.Provider.supportsVision, isOn: binding.supportsVision)
+            Toggle(L10n.Provider.supportsVideoInput, isOn: binding.supportsVideoInput)
             Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
-            Toggle(L10n.Provider.supportsImageGeneration, isOn: binding.supportsImageGeneration)
+            Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
+                ForEach(ImageGenMode.allCases, id: \.self) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
             Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
                 ForEach(ThinkingLevel.allCases, id: \.self) { level in
                     Text(level.displayName).tag(level)
@@ -224,9 +229,11 @@ struct LLMProviderEditView: View {
                     HStack(spacing: 4) {
                         let c = modelCapabilities[model] ?? .default
                         if c.supportsVision { capBadge("eye", color: .green) }
+                        if c.supportsVideoInput { capBadge("video", color: .green) }
                         if c.supportsToolUse { capBadge("wrench", color: .blue) }
                         if c.thinkingLevel.isEnabled { thinkingLevelBadge(c.thinkingLevel) }
-                        if c.supportsImageGeneration { capBadge("paintbrush", color: .orange) }
+                        if c.imageGenerationMode == .chatInline { capBadge("paintbrush", color: .orange) }
+                        if c.imageGenerationMode == .dedicatedAPI { capBadge("photo", color: .orange) }
                     }
                 }
                 Spacer()
@@ -283,6 +290,14 @@ struct LLMProviderEditView: View {
                     modelCapabilities[model] = caps
                 }
             ),
+            supportsVideoInput: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsVideoInput },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.supportsVideoInput = newVal
+                    modelCapabilities[model] = caps
+                }
+            ),
             supportsToolUse: Binding(
                 get: { (modelCapabilities[model] ?? .default).supportsToolUse },
                 set: { newVal in
@@ -291,11 +306,11 @@ struct LLMProviderEditView: View {
                     modelCapabilities[model] = caps
                 }
             ),
-            supportsImageGeneration: Binding(
-                get: { (modelCapabilities[model] ?? .default).supportsImageGeneration },
+            imageGenerationMode: Binding(
+                get: { (modelCapabilities[model] ?? .default).imageGenerationMode },
                 set: { newVal in
                     var caps = modelCapabilities[model] ?? .default
-                    caps.supportsImageGeneration = newVal
+                    caps.imageGenerationMode = newVal
                     modelCapabilities[model] = caps
                 }
             )
@@ -638,6 +653,7 @@ struct LLMProviderEditView: View {
 /// Helper to bundle multiple Bool bindings for model capabilities.
 private struct CapabilitiesBindings {
     let supportsVision: Binding<Bool>
+    let supportsVideoInput: Binding<Bool>
     let supportsToolUse: Binding<Bool>
-    let supportsImageGeneration: Binding<Bool>
+    let imageGenerationMode: Binding<ImageGenMode>
 }

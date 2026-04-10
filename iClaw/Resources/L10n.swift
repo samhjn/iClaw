@@ -217,6 +217,7 @@ enum L10n {
         static var config: String { tr("toolPermissions.config") }
         static var model: String { tr("toolPermissions.model") }
         static var files: String { tr("toolPermissions.files") }
+        static var imageGeneration: String { tr("toolPermissions.imageGeneration") }
         static var appleSection: String { tr("toolPermissions.appleSection") }
         static var agentSection: String { tr("toolPermissions.agentSection") }
     }
@@ -285,6 +286,10 @@ enum L10n {
         static var thinkingLevel: String { tr("modelConfig.thinkingLevel") }
         static var thinkingLevelUseModelDefault: String { tr("modelConfig.thinkingLevelUseModelDefault") }
         static var thinkingLevelFooter: String { tr("modelConfig.thinkingLevelFooter") }
+        static var imageProvider: String { tr("modelConfig.imageProvider") }
+        static var imageProviderNone: String { tr("modelConfig.imageProviderNone") }
+        static var imageGenerationHeader: String { tr("modelConfig.imageGenerationHeader") }
+        static var imageProviderFooter: String { tr("modelConfig.imageProviderFooter") }
     }
 
     // MARK: - Cron Jobs
@@ -430,6 +435,7 @@ enum L10n {
         static var thinkingBudgetFooter: String { tr("provider.thinkingBudgetFooter") }
         static var parameters: String { tr("provider.parameters") }
         static var supportsVision: String { tr("provider.supportsVision") }
+        static var supportsVideoInput: String { tr("provider.supportsVideoInput") }
         static var supportsVisionFooter: String { tr("provider.supportsVisionFooter") }
         static var supportsToolUse: String { tr("provider.supportsToolUse") }
         static var supportsToolUseFooter: String { tr("provider.supportsToolUseFooter") }
@@ -447,6 +453,9 @@ enum L10n {
         static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
         static var modelCapabilities: String { tr("provider.modelCapabilities") }
         static var presets: String { tr("provider.presets") }
+        static var imageGenModeNone: String { tr("provider.imageGenMode.none") }
+        static var imageGenModeChatInline: String { tr("provider.imageGenMode.chatInline") }
+        static var imageGenModeDedicatedAPI: String { tr("provider.imageGenMode.dedicatedAPI") }
     }
 
     // MARK: - Skills

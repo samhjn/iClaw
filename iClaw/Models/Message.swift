@@ -19,6 +19,7 @@ final class Message {
     var name: String?
     var thinkingContent: String?
     var imageAttachmentsData: Data?
+    var videoAttachmentsData: Data?
     var timestamp: Date
     var tokenEstimate: Int
 
@@ -54,7 +55,8 @@ final class Message {
                 content: content,
                 toolCallsData: toolCallsData,
                 name: name,
-                imageAttachmentsData: nil
+                imageAttachmentsData: nil,
+                videoAttachmentsData: nil
             )
         }
     }
@@ -65,7 +67,8 @@ final class Message {
             content: content,
             toolCallsData: toolCallsData,
             name: name,
-            imageAttachmentsData: imageAttachmentsData
+            imageAttachmentsData: imageAttachmentsData,
+            videoAttachmentsData: videoAttachmentsData
         )
     }
 
@@ -138,7 +141,8 @@ final class Message {
         content: String?,
         toolCallsData: Data?,
         name: String?,
-        imageAttachmentsData: Data?
+        imageAttachmentsData: Data?,
+        videoAttachmentsData: Data?
     ) -> Int {
         let overhead = 4
         var total = overhead
@@ -172,6 +176,11 @@ final class Message {
             for img in images {
                 total += TokenEstimator.estimateImageTokens(width: img.width, height: img.height)
             }
+        }
+
+        if let vidData = videoAttachmentsData,
+           let videos = try? JSONDecoder().decode([VideoAttachment].self, from: vidData) {
+            total += videos.count * 1000
         }
 
         return total

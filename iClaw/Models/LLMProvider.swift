@@ -72,11 +72,31 @@ enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
     }
 }
 
+/// Image generation mode for a model.
+enum ImageGenMode: String, Codable, CaseIterable {
+    /// Model does not support image generation.
+    case none
+    /// Generates images inline via chat completions with `modalities: ["image","text"]` (e.g. Gemini Image).
+    case chatInline
+    /// Generates images via dedicated `/images/generations` endpoint (e.g. DALL-E, FLUX, SD3).
+    case dedicatedAPI
+
+    var displayName: String {
+        switch self {
+        case .none: return L10n.Provider.imageGenModeNone
+        case .chatInline: return L10n.Provider.imageGenModeChatInline
+        case .dedicatedAPI: return L10n.Provider.imageGenModeDedicatedAPI
+        }
+    }
+}
+
 /// Per-model capability flags and parameter overrides.
 struct ModelCapabilities: Codable, Equatable {
     var supportsVision: Bool = false
     var supportsToolUse: Bool = true
-    var supportsImageGeneration: Bool = false
+    var imageGenerationMode: ImageGenMode = .none
+    /// Whether this model supports video input (e.g. Gemini 2+, Qwen-VL).
+    var supportsVideoInput: Bool = false
     /// Legacy flag kept for backward compatibility with existing persisted data.
     /// New code should use `thinkingLevel` instead.
     var supportsReasoning: Bool = false
@@ -87,33 +107,59 @@ struct ModelCapabilities: Codable, Equatable {
     /// Per-model temperature override. `nil` = use provider default.
     var temperature: Double? = nil
 
+    /// Backward-compatible computed property.
+    var supportsImageGeneration: Bool {
+        get { imageGenerationMode != .none }
+        set { imageGenerationMode = newValue ? .chatInline : .none }
+    }
+
     static let `default` = ModelCapabilities()
 
     enum CodingKeys: String, CodingKey {
-        case supportsVision, supportsToolUse, supportsImageGeneration, supportsReasoning, thinkingLevel
+        case supportsVision, supportsToolUse, imageGenerationMode, supportsVideoInput
+        case supportsReasoning, thinkingLevel
         case maxTokens, temperature
+        case _legacyImageGen = "supportsImageGeneration"
     }
 
     init(supportsVision: Bool = false, supportsToolUse: Bool = true,
-         supportsImageGeneration: Bool = false, supportsReasoning: Bool = false,
-         thinkingLevel: ThinkingLevel = .off,
+         imageGenerationMode: ImageGenMode = .none, supportsVideoInput: Bool = false,
+         supportsReasoning: Bool = false, thinkingLevel: ThinkingLevel = .off,
          maxTokens: Int? = nil, temperature: Double? = nil) {
         self.supportsVision = supportsVision
         self.supportsToolUse = supportsToolUse
-        self.supportsImageGeneration = supportsImageGeneration
+        self.imageGenerationMode = imageGenerationMode
+        self.supportsVideoInput = supportsVideoInput
         self.supportsReasoning = supportsReasoning
         self.thinkingLevel = thinkingLevel
         self.maxTokens = maxTokens
         self.temperature = temperature
     }
 
+    /// Legacy init for backward compatibility with callers using the old Bool parameter.
+    init(supportsVision: Bool, supportsToolUse: Bool,
+         supportsImageGeneration: Bool, supportsReasoning: Bool) {
+        self.supportsVision = supportsVision
+        self.supportsToolUse = supportsToolUse
+        self.imageGenerationMode = supportsImageGeneration ? .chatInline : .none
+        self.supportsReasoning = supportsReasoning
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         supportsVision = try c.decodeIfPresent(Bool.self, forKey: .supportsVision) ?? false
         supportsToolUse = try c.decodeIfPresent(Bool.self, forKey: .supportsToolUse) ?? true
-        supportsImageGeneration = try c.decodeIfPresent(Bool.self, forKey: .supportsImageGeneration) ?? false
+        supportsVideoInput = try c.decodeIfPresent(Bool.self, forKey: .supportsVideoInput) ?? false
         supportsReasoning = try c.decodeIfPresent(Bool.self, forKey: .supportsReasoning) ?? false
-        // Migration: if thinkingLevel is absent but supportsReasoning is true, default to .medium
+        // ImageGenMode: try new enum first, fall back to legacy bool
+        if let mode = try? c.decodeIfPresent(ImageGenMode.self, forKey: .imageGenerationMode) {
+            imageGenerationMode = mode
+        } else if let legacy = try? c.decodeIfPresent(Bool.self, forKey: ._legacyImageGen), legacy {
+            imageGenerationMode = .chatInline
+        } else {
+            imageGenerationMode = .none
+        }
+        // ThinkingLevel: migration from supportsReasoning bool
         if let level = try c.decodeIfPresent(ThinkingLevel.self, forKey: .thinkingLevel) {
             thinkingLevel = level
         } else {
@@ -123,33 +169,89 @@ struct ModelCapabilities: Codable, Equatable {
         temperature = try c.decodeIfPresent(Double.self, forKey: .temperature)
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(supportsVision, forKey: .supportsVision)
+        try container.encode(supportsToolUse, forKey: .supportsToolUse)
+        try container.encode(imageGenerationMode, forKey: .imageGenerationMode)
+        try container.encode(supportsVideoInput, forKey: .supportsVideoInput)
+        try container.encode(supportsReasoning, forKey: .supportsReasoning)
+        try container.encode(thinkingLevel, forKey: .thinkingLevel)
+        try container.encodeIfPresent(maxTokens, forKey: .maxTokens)
+        try container.encodeIfPresent(temperature, forKey: .temperature)
+    }
+
     /// Infer default capabilities from a model name.
     ///
     /// Vision: GPT-4+, Claude 3.5+, Qwen-VL/Omni/3.5+, Gemini 2+
-    /// Image generation (no tool use): gemini-*-image-* models
+    /// Image generation (chatInline): gemini-*-image-* models
+    /// Image generation (dedicatedAPI): dall-e-*, gpt-image-*, flux-*, sd3-*, sdxl-*
     static func inferred(from modelName: String) -> ModelCapabilities {
         let base = modelName.split(separator: "/").last.map { String($0).lowercased() }
             ?? modelName.lowercased()
 
+        // Gemini image models: chatInline mode (no tool use)
         if base.contains("gemini") && base.contains("image") {
             return ModelCapabilities(
                 supportsVision: true,
                 supportsToolUse: false,
-                supportsImageGeneration: true,
+                imageGenerationMode: .chatInline,
+                supportsVideoInput: true,
                 supportsReasoning: false
             )
         }
+
+        // Dedicated image generation models
+        if inferDedicatedImageGen(base) {
+            return ModelCapabilities(
+                supportsVision: false,
+                supportsToolUse: false,
+                imageGenerationMode: .dedicatedAPI,
+                supportsReasoning: false
+            )
+        }
+
+        let videoCapable = inferVideoInput(base)
 
         if inferVision(base) {
             return ModelCapabilities(
                 supportsVision: true,
                 supportsToolUse: true,
-                supportsImageGeneration: false,
+                imageGenerationMode: .none,
+                supportsVideoInput: videoCapable,
                 supportsReasoning: false
             )
         }
 
         return .default
+    }
+
+    /// Detect models that use the dedicated /images/generations API.
+    private static func inferDedicatedImageGen(_ name: String) -> Bool {
+        name.hasPrefix("dall-e")
+            || name.hasPrefix("gpt-image")
+            || name.hasPrefix("flux")
+            || name.hasPrefix("stable-diffusion")
+            || name.hasPrefix("sd3")
+            || name.hasPrefix("sdxl")
+            || name.contains("imagen")
+    }
+
+    /// Detect models that support video input.
+    /// Gemini 2+, Qwen-VL/Omni support video natively.
+    private static func inferVideoInput(_ name: String) -> Bool {
+        // Gemini 2+ supports video input
+        if name.hasPrefix("gemini-") {
+            let rest = name.dropFirst(7)
+            if let digit = rest.first, let num = digit.wholeNumberValue, num >= 2 {
+                return true
+            }
+        }
+        // Qwen-VL and Qwen-Omni support video
+        if name.contains("qwen") && (name.contains("-vl") || name.contains("-omni")) {
+            return true
+        }
+        return false
     }
 
     // MARK: - Private inference helpers
@@ -332,7 +434,7 @@ final class LLMProvider {
         return ModelCapabilities(
             supportsVision: supportsVision,
             supportsToolUse: supportsToolUse,
-            supportsImageGeneration: supportsImageGeneration,
+            imageGenerationMode: supportsImageGeneration ? .chatInline : .none,
             supportsReasoning: false
         )
     }

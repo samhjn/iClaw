@@ -5,10 +5,12 @@ import SwiftData
 struct ToolCallResult {
     let text: String
     let imageAttachments: [ImageAttachment]?
+    let videoAttachments: [VideoAttachment]?
 
-    init(_ text: String, imageAttachments: [ImageAttachment]? = nil) {
+    init(_ text: String, imageAttachments: [ImageAttachment]? = nil, videoAttachments: [VideoAttachment]? = nil) {
         self.text = text
         self.imageAttachments = imageAttachments
+        self.videoAttachments = videoAttachments
     }
 
     static let cancelled = ToolCallResult("[Cancelled] Operation was cancelled.")
@@ -214,6 +216,12 @@ final class FunctionCallRouter {
         case "attach_media":
             return FileTools(agent: agent).attachMedia(arguments: arguments)
 
+        // --- Image Generation ---
+        case "generate_image":
+            let result = try await generateImage(arguments: arguments)
+            try Task.checkCancellation()
+            return result
+
         // --- Browser ---
         case "browser_navigate":
             return try await runAsync { await self.browserTools.navigate(arguments: arguments) }
@@ -359,6 +367,46 @@ final class FunctionCallRouter {
         let text = try await work()
         try Task.checkCancellation()
         return ToolCallResult(text)
+    }
+
+    // MARK: - Image Generation
+
+    private func generateImage(arguments: [String: Any]) async throws -> ToolCallResult {
+        guard let prompt = arguments["prompt"] as? String, !prompt.isEmpty else {
+            return ToolCallResult("[Error] Missing required parameter: prompt")
+        }
+
+        guard let imageProviderId = agent.imageProviderId else {
+            return ToolCallResult("[Error] No image generation provider configured for this agent. Please configure one in Agent Settings → Model → Image Generation.")
+        }
+
+        let router = ModelRouter(modelContext: modelContext)
+        guard let provider = router.providerById(imageProviderId) else {
+            return ToolCallResult("[Error] Image generation provider not found. It may have been deleted.")
+        }
+
+        let modelOverride = agent.imageModelNameOverride
+        let effectiveModel = modelOverride ?? provider.modelName
+
+        let n = (arguments["n"] as? Int) ?? 1
+        let size = arguments["size"] as? String
+        let quality = arguments["quality"] as? String
+
+        let service = ImageGenerationService(provider: provider, modelName: effectiveModel)
+        let (images, revisedPrompt) = try await service.generate(
+            prompt: prompt,
+            n: min(max(n, 1), 4),
+            size: size,
+            quality: quality,
+            agentId: AgentFileManager.shared.resolveAgentId(for: agent)
+        )
+
+        var resultText = "Generated \(images.count) image\(images.count == 1 ? "" : "s") successfully."
+        if let revised = revisedPrompt {
+            resultText += "\nRevised prompt: \(revised)"
+        }
+
+        return ToolCallResult(resultText, imageAttachments: images)
     }
 
     // MARK: - Private
