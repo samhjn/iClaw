@@ -67,8 +67,6 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
-        com.apple.security.application-groups:
-          - group.com.iclaw.app
     dependencies:
       - target: iClawWidgets
 
@@ -94,11 +92,6 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         SKIP_INSTALL: "YES"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../../Frameworks"
-    entitlements:
-      path: iClawWidgets/iClawWidgets.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.com.iclaw.app
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework

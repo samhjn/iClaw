@@ -6,8 +6,7 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
     @State private var showAddProvider = false
     @State private var showDeleteConfirmation = false
-    @AppStorage(BackgroundKeepAliveManager.modeKey, store: UserDefaults(suiteName: BackgroundKeepAliveManager.appGroupID))
-    private var keepAliveMode: String = BackgroundKeepAliveMode.off.rawValue
+    @AppStorage(BackgroundKeepAliveManager.modeKey) private var keepAliveMode: String = BackgroundKeepAliveMode.off.rawValue
 
     var body: some View {
         NavigationStack {
