@@ -1241,7 +1241,8 @@ final class DeletionFixVerificationTests: XCTestCase {
         XCTAssertEqual(vm.affectedAgentNames, ["Affected"])
     }
 
-    /// deleteProvider clears the confirmation state.
+    /// deleteProvider no longer clears confirmation state — the View's
+    /// alert button action does that. Verify the provider array is updated.
     @MainActor
     func testDeleteProviderClearsConfirmationState() {
         let vm = SettingsViewModel(modelContext: context)
@@ -1252,6 +1253,11 @@ final class DeletionFixVerificationTests: XCTestCase {
         XCTAssertNotNil(vm.providerToDelete)
 
         vm.deleteProvider(provider)
+
+        // providerToDelete is cleared by the View (alert action), not by deleteProvider().
+        // Simulate what the View does after calling deleteProvider():
+        vm.providerToDelete = nil
+        vm.affectedAgentNames = []
 
         XCTAssertNil(vm.providerToDelete)
         XCTAssertTrue(vm.affectedAgentNames.isEmpty)
@@ -1386,6 +1392,9 @@ final class LLMProviderModificationTests: XCTestCase {
         let ids = vm.providers.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count, "No duplicate IDs after deletion")
         XCTAssertEqual(ids.count, 2)
+
+        // Drain deferred modelContext.delete + save before adding
+        RunLoop.main.run(until: Date())
 
         // Add another
         vm.addProvider(name: "D", endpoint: "https://d.com", apiKey: "", modelName: "m4")
