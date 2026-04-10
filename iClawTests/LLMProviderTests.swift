@@ -156,42 +156,6 @@ final class LLMProviderTests: XCTestCase {
     }
 
     @MainActor
-    func testCapabilitiesAutoInferForUnknownModel() {
-        // Provider with vision=false (default), no per-model caps stored.
-        // A recognizable model name should auto-infer vision support
-        // instead of falling back to provider-level supportsVision=false.
-        let provider = LLMProvider(name: "OpenRouter")
-        XCTAssertFalse(provider.supportsVision)
-
-        // OpenRouter-style model names with provider prefix
-        let claudeCaps = provider.capabilities(for: "anthropic/claude-sonnet-4-6")
-        XCTAssertTrue(claudeCaps.supportsVision,
-                       "claude-sonnet-4-6 should auto-infer vision support")
-
-        let gptCaps = provider.capabilities(for: "openai/gpt-4o")
-        XCTAssertTrue(gptCaps.supportsVision,
-                       "gpt-4o should auto-infer vision support")
-
-        // Unrecognizable model still falls back to provider level
-        let unknownCaps = provider.capabilities(for: "custom/my-model")
-        XCTAssertFalse(unknownCaps.supportsVision,
-                        "Unknown model should fall back to provider-level supportsVision")
-    }
-
-    @MainActor
-    func testCapabilitiesExplicitOverridesInference() {
-        // Explicit per-model caps should take priority over auto-inference
-        let provider = LLMProvider(name: "Test")
-        let explicitCaps = ModelCapabilities(supportsVision: false, supportsToolUse: false)
-        provider.setCapabilities(explicitCaps, for: "anthropic/claude-sonnet-4-6")
-
-        let caps = provider.capabilities(for: "anthropic/claude-sonnet-4-6")
-        XCTAssertFalse(caps.supportsVision,
-                        "Explicit per-model caps should override auto-inference")
-        XCTAssertFalse(caps.supportsToolUse)
-    }
-
-    @MainActor
     func testModelCapabilitiesCodableRoundTrip() throws {
         let caps = ModelCapabilities(
             supportsVision: true,

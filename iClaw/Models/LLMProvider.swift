@@ -320,7 +320,7 @@ final class LLMProvider {
         }
     }
 
-    /// Get capabilities for a specific model, with auto-inference and provider-level fallback.
+    /// Get capabilities for a specific model, with provider-level fallback.
     /// Reads directly from the raw JSON to avoid computed property issues with SwiftData.
     func capabilities(for model: String) -> ModelCapabilities {
         if let json = modelCapabilitiesJSON,
@@ -328,12 +328,6 @@ final class LLMProvider {
            let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data),
            let caps = dict[model] {
             return caps
-        }
-        // Auto-infer from model name (e.g. Claude 3.5+, GPT-4+ → vision)
-        // before falling back to provider-level defaults which may be stale.
-        let inferred = ModelCapabilities.inferred(from: model)
-        if inferred != .default {
-            return inferred
         }
         return ModelCapabilities(
             supportsVision: supportsVision,
