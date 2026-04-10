@@ -8,6 +8,8 @@ struct AgentListView: View {
     @State private var newAgentName = ""
     @State private var renamingAgent: Agent?
     @State private var renamingText = ""
+    @State private var showRenameAlert = false
+    @State private var showDeleteAlert = false
 
     var body: some View {
         NavigationStack {
@@ -93,11 +95,13 @@ struct AgentListView: View {
                     Button {
                         renamingText = agent.name
                         renamingAgent = agent
+                        showRenameAlert = true
                     } label: {
                         Label(L10n.Agents.renameAgent, systemImage: "pencil")
                     }
                     Button(role: .destructive) {
                         vm.agentToDelete = agent
+                        showDeleteAlert = true
                     } label: {
                         Label(L10n.Common.delete, systemImage: "trash")
                     }
@@ -106,13 +110,11 @@ struct AgentListView: View {
             .onDelete { offsets in
                 guard let first = offsets.first else { return }
                 vm.agentToDelete = vm.agents[first]
+                showDeleteAlert = true
             }
         }
         .listStyle(.insetGrouped)
-        .alert(L10n.Agents.renameAgent, isPresented: Binding(
-            get: { renamingAgent != nil },
-            set: { if !$0 { renamingAgent = nil } }
-        )) {
+        .alert(L10n.Agents.renameAgent, isPresented: $showRenameAlert) {
             TextField(L10n.Common.name, text: $renamingText)
             Button(L10n.Common.save) {
                 if let agent = renamingAgent {
@@ -127,15 +129,12 @@ struct AgentListView: View {
                 renamingAgent = nil
             }
         }
-        .alert(L10n.Chat.deleteAgentTitle, isPresented: Binding(
-            get: { vm.agentToDelete != nil },
-            set: { if !$0 { vm.agentToDelete = nil } }
-        )) {
+        .alert(L10n.Chat.deleteAgentTitle, isPresented: $showDeleteAlert) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let agent = vm.agentToDelete {
                     vm.deleteAgent(agent)
-                    vm.agentToDelete = nil
                 }
+                vm.agentToDelete = nil
             }
             Button(L10n.Common.cancel, role: .cancel) {
                 vm.agentToDelete = nil

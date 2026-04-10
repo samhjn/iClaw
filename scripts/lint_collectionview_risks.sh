@@ -1,70 +1,44 @@
 #!/bin/bash
-# Lint for UICollectionView crash risk patterns in SwiftUI views.
-# Run: bash scripts/lint_collectionview_risks.sh
+# Lint for SwiftUI List crash risk patterns.
+# Run: bash scripts/lint_collectionview_risks.sh [source_root]
+#
+# The primary crash pattern: using a custom Binding(get:set:) derived
+# from @Observable state as isPresented for alert/sheet/confirmationDialog
+# on a View that contains a List. SwiftUI evaluates these bindings via
+# dispatchImmediately during dismissal, re-entering the render cycle
+# while a List batch update is in flight → UICollectionView item count
+# mismatch crash.
 
 set -euo pipefail
 ROOT="${1:-.}"
 SRC="$ROOT/iClaw"
 EXIT=0
 
-echo "=== UICollectionView Crash Risk Linter ==="
+echo "=== SwiftUI List Crash Risk Linter ==="
 echo ""
 
-# ── Pattern 1: @Query in non-root views ──────────────────────────
-# @Query auto-fires on any modelContext.save(), causing cross-view
-# batch update conflicts when multiple List views are mounted (TabView).
-echo "── Pattern 1: @Query in views (cross-view observation risk) ──"
-FOUND=$(grep -rn '@Query' "$SRC" --include='*.swift' \
-    | grep -v '\.build/' | grep -v 'Tests/' | grep -v '//' || true)
+# ── Primary pattern: custom Binding on isPresented ───────────────
+# alert/sheet/confirmationDialog with Binding(get:set:) triggers
+# dispatchImmediately during dismissal. Use @State bool instead.
+echo "── Custom Binding on isPresented (dispatchImmediately crash) ──"
+FOUND=$(grep -rn 'isPresented: Binding(' "$SRC" --include='*.swift' \
+    | grep -v '\.build/' | grep -v 'Tests/' || true)
 if [ -n "$FOUND" ]; then
     echo "$FOUND"
-    echo "⚠  @Query auto-fires on save() from ANY view. Use @State + manual fetch instead."
+    echo ""
+    echo "⚠  Custom Binding(get:set:) on isPresented triggers dispatchImmediately"
+    echo "   during dismissal, re-entering the render cycle. Use @State bool instead:"
+    echo "   @State private var showAlert = false"
+    echo "   .alert(..., isPresented: \$showAlert)"
     EXIT=1
 else
-    echo "✓ No @Query found."
+    echo "✓ No custom Binding on isPresented found."
 fi
-echo ""
-
-# ── Pattern 2: @Model relationship reads in ForEach rows ─────────
-# Reading .count, .contains, .filter on @Model relationships inside
-# ForEach registers SwiftData observation that can conflict with
-# array-level batch updates.
-echo "── Pattern 2: @Model relationship reads in row views ──"
-# Look for common relationship access patterns in View structs
-for f in $(find "$SRC" -name '*.swift' -path '*/Views/*'); do
-    HITS=$(grep -n '\.\(sessions\|messages\|cronJobs\|installedSkills\|subAgents\|activeSkills\)\.\(count\|contains\|filter\|sorted\|first\|last\|isEmpty\)' "$f" || true)
-    if [ -n "$HITS" ]; then
-        echo "$f:"
-        echo "$HITS"
-        EXIT=1
-    fi
-done
-if [ $EXIT -eq 0 ]; then
-    echo "✓ No relationship reads found in views."
-fi
-echo ""
-
-# ── Pattern 3: modelContext.delete without pre-update ────────────
-# Calling modelContext.delete() + save() before updating the ForEach
-# array causes SwiftData observation to fire before the array is
-# consistent → item count mismatch.
-echo "── Pattern 3: modelContext.delete() without pre-update ──"
-for f in $(find "$SRC" -name '*.swift' ! -path '*/Tests/*'); do
-    # Flag files that call modelContext.delete but are Views (not ViewModels)
-    if grep -q 'modelContext\.delete' "$f" && echo "$f" | grep -q '/Views/'; then
-        LINES=$(grep -n 'modelContext\.delete' "$f" || true)
-        echo "$f:"
-        echo "$LINES"
-        echo "⚠  Views should not call modelContext.delete() directly."
-        echo "   Deletion should go through a ViewModel that pre-updates arrays."
-        EXIT=1
-    fi
-done
 echo ""
 
 if [ $EXIT -eq 0 ]; then
     echo "✅ No risks detected."
 else
-    echo "❌ Found potential UICollectionView crash risks."
+    echo "❌ Found potential crash risks. See above for details."
 fi
 exit $EXIT

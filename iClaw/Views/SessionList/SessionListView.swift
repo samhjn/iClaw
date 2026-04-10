@@ -10,6 +10,7 @@ struct SessionListView: View {
     @State private var searchText = ""
     @State private var isSearchActive = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var showDeleteSessionAlert = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -114,6 +115,7 @@ struct SessionListView: View {
                 .contextMenu {
                     Button(role: .destructive) {
                         vm.sessionToDelete = session
+                        showDeleteSessionAlert = true
                     } label: {
                         Label(L10n.Common.delete, systemImage: "trash")
                     }
@@ -122,24 +124,22 @@ struct SessionListView: View {
             .onDelete { offsets in
                 guard let first = offsets.first else { return }
                 vm.sessionToDelete = vm.sessions[first]
+                showDeleteSessionAlert = true
             }
         }
         .listStyle(.insetGrouped)
         .refreshable {
             vm.fetchSessions()
         }
-        .alert(L10n.Chat.deleteSessionTitle, isPresented: Binding(
-            get: { vm.sessionToDelete != nil },
-            set: { if !$0 { vm.sessionToDelete = nil } }
-        )) {
+        .alert(L10n.Chat.deleteSessionTitle, isPresented: $showDeleteSessionAlert) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let session = vm.sessionToDelete {
                     if selectedSession?.id == session.id {
                         selectedSession = nil
                     }
                     vm.deleteSession(session)
-                    vm.sessionToDelete = nil
                 }
+                vm.sessionToDelete = nil
             }
             Button(L10n.Common.cancel, role: .cancel) {
                 vm.sessionToDelete = nil
