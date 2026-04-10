@@ -38,17 +38,17 @@ struct SettingsView: View {
                     NavigationLink {
                         LLMProviderEditView(viewModel: vm, existingProvider: provider)
                     } label: {
+                        let row = vm.providerRowCache[provider.id]
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(provider.name)
+                                Text(row?.name ?? "")
                                     .font(.headline)
                                 HStack(spacing: 4) {
-                                    Text(provider.modelName)
+                                    Text(row?.modelName ?? "")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
-                                    let extraCount = provider.enabledModels.count - 1
-                                    if extraCount > 0 {
-                                        Text("+\(extraCount)")
+                                    if let extra = row?.extraModelCount, extra > 0 {
+                                        Text("+\(extra)")
                                             .font(.caption2)
                                             .foregroundStyle(.white)
                                             .padding(.horizontal, 5)
@@ -56,7 +56,7 @@ struct SettingsView: View {
                                             .background(Capsule().fill(.blue.opacity(0.7)))
                                     }
                                 }
-                                Text(provider.endpoint)
+                                Text(row?.endpoint ?? "")
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
