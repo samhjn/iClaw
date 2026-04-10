@@ -51,8 +51,18 @@ final class Agent {
     /// nil = all tools enabled (backward compatible default).
     var appleToolPermissionsRaw: String?
 
+    /// Per-agent thinking level override. nil = use model default from capabilities.
+    var thinkingLevelOverrideRaw: String?
+
     /// Display mode: true = verbose (show CoT & tool calls), false = silent (hide them).
     var isVerbose: Bool = true
+
+    /// Thinking level override resolved from raw storage.
+    /// nil = use the model's default thinking level from capabilities.
+    var thinkingLevelOverride: ThinkingLevel? {
+        get { thinkingLevelOverrideRaw.flatMap { ThinkingLevel(rawValue: $0) } }
+        set { thinkingLevelOverrideRaw = newValue?.rawValue }
+    }
 
     var createdAt: Date
     var updatedAt: Date
@@ -185,6 +195,7 @@ final class Agent {
         self.subAgentType = nil
         self.allowedModelIdsRaw = nil
         self.appleToolPermissionsRaw = nil
+        self.thinkingLevelOverrideRaw = nil
         self.createdAt = Date()
         self.updatedAt = Date()
     }

@@ -190,12 +190,15 @@ struct LLMChatRequest: Codable {
     var maxTokens: Int?
     var temperature: Double?
     var modalities: [String]?
+    /// OpenAI reasoning_effort parameter for o-series / reasoning models.
+    var reasoningEffort: String?
 
     enum CodingKeys: String, CodingKey {
         case model, messages, tools, stream, temperature, modalities
         case toolChoice = "tool_choice"
         case streamOptions = "stream_options"
         case maxTokens = "max_tokens"
+        case reasoningEffort = "reasoning_effort"
     }
 }
 

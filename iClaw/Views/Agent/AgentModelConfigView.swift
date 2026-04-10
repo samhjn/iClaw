@@ -53,6 +53,7 @@ struct AgentModelConfigView: View {
     var body: some View {
         List {
             primarySection
+            thinkingLevelSection
             fallbackSection
             subAgentSection
             modelWhitelistSection
@@ -124,6 +125,35 @@ struct AgentModelConfigView: View {
                         }
                     }
                 }
+                agent.updatedAt = Date()
+                try? modelContext.save()
+            }
+        )
+    }
+
+    // MARK: - Thinking level override
+
+    @ViewBuilder
+    private var thinkingLevelSection: some View {
+        Section {
+            Picker(L10n.ModelConfig.thinkingLevel, selection: thinkingLevelBinding) {
+                Text(L10n.ModelConfig.thinkingLevelUseModelDefault).tag("" as String)
+                ForEach(ThinkingLevel.allCases, id: \.self) { level in
+                    Text(level.displayName).tag(level.rawValue)
+                }
+            }
+        } header: {
+            Text(L10n.ModelConfig.thinkingLevel)
+        } footer: {
+            Text(L10n.ModelConfig.thinkingLevelFooter)
+        }
+    }
+
+    private var thinkingLevelBinding: Binding<String> {
+        Binding(
+            get: { agent.thinkingLevelOverride?.rawValue ?? "" },
+            set: { newValue in
+                agent.thinkingLevelOverride = newValue.isEmpty ? nil : ThinkingLevel(rawValue: newValue)
                 agent.updatedAt = Date()
                 try? modelContext.save()
             }
@@ -607,6 +637,20 @@ struct AgentModelConfigView: View {
                                 Text(L10n.ModelConfig.noToolUse(effectiveModel))
                                     .font(.caption2)
                                     .foregroundStyle(.orange)
+                            }
+                            let resolvedLevel = agent.thinkingLevelOverride ?? caps.thinkingLevel
+                            if resolvedLevel.isEnabled {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "brain")
+                                        .font(.system(size: 9))
+                                    Text(resolvedLevel.displayName)
+                                        .font(.caption2)
+                                    if agent.thinkingLevelOverride != nil {
+                                        Text("(\(L10n.ModelConfig.override))")
+                                            .font(.caption2)
+                                    }
+                                }
+                                .foregroundStyle(.purple)
                             }
                         }
 

@@ -179,6 +179,9 @@
 "modelConfig.whitelistStaleWarning" = "%d 条白名单条目引用了已删除的服务商/模型";
 "modelConfig.whitelistMissingPrimary" = "主模型不在白名单中 - 智能体将无法发送消息";
 "modelConfig.whitelistMissingSubAgent" = "子智能体默认模型不在白名单中";
+"modelConfig.thinkingLevel" = "思考等级";
+"modelConfig.thinkingLevelUseModelDefault" = "使用模型默认";
+"modelConfig.thinkingLevelFooter" = "覆盖此智能体的模型默认思考等级。更高等级消耗更多 Token，但能产生更深入的推理。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定时任务";
@@ -313,6 +316,11 @@
 "provider.supportsImageGenerationFooter" = "为能生成图片的模型启用（如 Gemini 2.5 Flash Image / Nano Banana），将向 API 发送 modalities 参数";
 "provider.supportsReasoning" = "支持推理";
 "provider.supportsReasoningFooter" = "为支持扩展思考/推理的模型启用（如 Claude 扩展思考、DeepSeek R1、o1/o3）。思考过程将被捕获并显示。";
+"provider.thinkingLevel" = "思考等级";
+"provider.thinkingLevelFooter" = "思考等级控制推理深度。映射为 budget_tokens（Anthropic）或 reasoning_effort（OpenAI）。可在智能体级别覆盖。";
+"provider.perModelMaxTokens" = "覆盖最大 Token 数";
+"provider.perModelTemperature" = "覆盖温度";
+"provider.parametersFooter" = "所有模型的默认值。可在上方「已启用模型」中为单个模型分别覆盖。";
 "provider.apiStyle" = "API 风格";
 "provider.apiStyleFooter" = "OpenAI：兼容 OpenAI 的 chat/completions 接口。Anthropic：原生 Anthropic Messages API，支持扩展思考。";
 "provider.modelCapabilities" = "模型能力";

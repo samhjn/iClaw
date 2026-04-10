@@ -37,6 +37,7 @@ final class StreamCancelState: @unchecked Sendable {
 final class LLMService: @unchecked Sendable {
     let provider: LLMProvider
     private let modelNameOverride: String?
+    private let thinkingLevelOverride: ThinkingLevel?
 
     private var baseURL: String { provider.endpoint }
     private var apiKey: String { provider.apiKey }
@@ -48,9 +49,25 @@ final class LLMService: @unchecked Sendable {
         provider.capabilities(for: model)
     }
 
-    init(provider: LLMProvider, modelNameOverride: String? = nil) {
+    /// Effective thinking level: agent override > model default from capabilities.
+    var effectiveThinkingLevel: ThinkingLevel {
+        thinkingLevelOverride ?? effectiveCapabilities.thinkingLevel
+    }
+
+    /// Effective max tokens: per-model override > provider default.
+    var effectiveMaxTokens: Int {
+        effectiveCapabilities.maxTokens ?? provider.maxTokens
+    }
+
+    /// Effective temperature: per-model override > provider default.
+    var effectiveTemperature: Double {
+        effectiveCapabilities.temperature ?? provider.temperature
+    }
+
+    init(provider: LLMProvider, modelNameOverride: String? = nil, thinkingLevelOverride: ThinkingLevel? = nil) {
         self.provider = provider
         self.modelNameOverride = modelNameOverride
+        self.thinkingLevelOverride = thinkingLevelOverride
     }
 
     // MARK: - Fetch available models
@@ -146,15 +163,17 @@ final class LLMService: @unchecked Sendable {
     ) async throws -> LLMChatResponse {
         let caps = effectiveCapabilities
         let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
             messages: messages,
             tools: tools?.isEmpty == true ? nil : tools,
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: false,
-            maxTokens: provider.maxTokens,
-            temperature: provider.temperature,
-            modalities: modalities
+            maxTokens: effectiveMaxTokens,
+            temperature: effectiveTemperature,
+            modalities: modalities,
+            reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
         let urlRequest = try buildOpenAIRequest(body: request)
@@ -177,6 +196,7 @@ final class LLMService: @unchecked Sendable {
     ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let caps = effectiveCapabilities
         let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -184,9 +204,10 @@ final class LLMService: @unchecked Sendable {
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: true,
             streamOptions: LLMStreamOptions(includeUsage: true),
-            maxTokens: provider.maxTokens,
-            temperature: provider.temperature,
-            modalities: modalities
+            maxTokens: effectiveMaxTokens,
+            temperature: effectiveTemperature,
+            modalities: modalities,
+            reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
         let urlRequest = try buildOpenAIRequest(body: request)
@@ -564,17 +585,18 @@ final class LLMService: @unchecked Sendable {
             }
         }
 
+        let thinkingLevel = effectiveThinkingLevel
         var thinking: AnthropicThinking? = nil
-        var maxTokens = provider.maxTokens
-        if caps.supportsReasoning {
-            let budgetTokens = provider.thinkingBudget
+        var maxTokens = effectiveMaxTokens
+        if thinkingLevel.isEnabled {
+            let budgetTokens = thinkingLevel.anthropicBudgetTokens
             thinking = .enabled(budget: budgetTokens)
             // Anthropic requires max_tokens > budget_tokens
             maxTokens = max(maxTokens, budgetTokens + 1)
         }
 
         // Anthropic requires temperature to be exactly 1 when extended thinking is enabled
-        let temperature = thinking != nil ? 1.0 : provider.temperature
+        let temperature = thinking != nil ? 1.0 : effectiveTemperature
 
         return AnthropicRequest(
             model: model,

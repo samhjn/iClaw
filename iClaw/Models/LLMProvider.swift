@@ -14,14 +14,114 @@ enum APIStyle: String, Codable, CaseIterable {
     }
 }
 
-/// Per-model capability flags.
+/// Thinking / reasoning intensity level.
+///
+/// Maps to provider-specific parameters:
+/// - Anthropic: `thinking.budget_tokens`
+/// - OpenAI: `reasoning_effort`
+enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
+    case off = "off"
+    case low = "low"
+    case medium = "medium"
+    case high = "high"
+
+    var displayName: String {
+        switch self {
+        case .off: return "Off"
+        case .low: return "Low"
+        case .medium: return "Medium"
+        case .high: return "High"
+        }
+    }
+
+    /// Anthropic `budget_tokens` for this level.
+    var anthropicBudgetTokens: Int {
+        switch self {
+        case .off: return 0
+        case .low: return 2048
+        case .medium: return 10240
+        case .high: return 32768
+        }
+    }
+
+    /// OpenAI `reasoning_effort` value, or nil when thinking is off.
+    var openAIReasoningEffort: String? {
+        switch self {
+        case .off: return nil
+        case .low: return "low"
+        case .medium: return "medium"
+        case .high: return "high"
+        }
+    }
+
+    var isEnabled: Bool { self != .off }
+
+    // MARK: Comparable
+
+    private var sortOrder: Int {
+        switch self {
+        case .off: return 0
+        case .low: return 1
+        case .medium: return 2
+        case .high: return 3
+        }
+    }
+
+    static func < (lhs: ThinkingLevel, rhs: ThinkingLevel) -> Bool {
+        lhs.sortOrder < rhs.sortOrder
+    }
+}
+
+/// Per-model capability flags and parameter overrides.
 struct ModelCapabilities: Codable, Equatable {
     var supportsVision: Bool = false
     var supportsToolUse: Bool = true
     var supportsImageGeneration: Bool = false
+    /// Legacy flag kept for backward compatibility with existing persisted data.
+    /// New code should use `thinkingLevel` instead.
     var supportsReasoning: Bool = false
+    /// The default thinking level for this model. `.off` means no thinking support.
+    var thinkingLevel: ThinkingLevel = .off
+    /// Per-model max output tokens override. `nil` = use provider default.
+    var maxTokens: Int? = nil
+    /// Per-model temperature override. `nil` = use provider default.
+    var temperature: Double? = nil
 
     static let `default` = ModelCapabilities()
+
+    enum CodingKeys: String, CodingKey {
+        case supportsVision, supportsToolUse, supportsImageGeneration, supportsReasoning, thinkingLevel
+        case maxTokens, temperature
+    }
+
+    init(supportsVision: Bool = false, supportsToolUse: Bool = true,
+         supportsImageGeneration: Bool = false, supportsReasoning: Bool = false,
+         thinkingLevel: ThinkingLevel = .off,
+         maxTokens: Int? = nil, temperature: Double? = nil) {
+        self.supportsVision = supportsVision
+        self.supportsToolUse = supportsToolUse
+        self.supportsImageGeneration = supportsImageGeneration
+        self.supportsReasoning = supportsReasoning
+        self.thinkingLevel = thinkingLevel
+        self.maxTokens = maxTokens
+        self.temperature = temperature
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        supportsVision = try c.decodeIfPresent(Bool.self, forKey: .supportsVision) ?? false
+        supportsToolUse = try c.decodeIfPresent(Bool.self, forKey: .supportsToolUse) ?? true
+        supportsImageGeneration = try c.decodeIfPresent(Bool.self, forKey: .supportsImageGeneration) ?? false
+        supportsReasoning = try c.decodeIfPresent(Bool.self, forKey: .supportsReasoning) ?? false
+        // Migration: if thinkingLevel is absent but supportsReasoning is true, default to .medium
+        if let level = try c.decodeIfPresent(ThinkingLevel.self, forKey: .thinkingLevel) {
+            thinkingLevel = level
+        } else {
+            thinkingLevel = supportsReasoning ? .medium : .off
+        }
+        maxTokens = try c.decodeIfPresent(Int.self, forKey: .maxTokens)
+        temperature = try c.decodeIfPresent(Double.self, forKey: .temperature)
+    }
 
     /// Infer default capabilities from a model name.
     ///
