@@ -319,6 +319,7 @@
 "provider.thinkingLevel" = "思考等级";
 "provider.thinkingLevelFooter" = "思考等级控制推理深度。映射为 budget_tokens（Anthropic）或 reasoning_effort（OpenAI）。可在智能体级别覆盖。";
 "provider.perModelMaxTokens" = "覆盖最大 Token 数";
+"provider.temperature" = "温度：%.2f";
 "provider.perModelTemperature" = "覆盖温度";
 "provider.parametersFooter" = "所有模型的默认值。可在上方「已启用模型」中为单个模型分别覆盖。";
 "provider.apiStyle" = "API 风格";

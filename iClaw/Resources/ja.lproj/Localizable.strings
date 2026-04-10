@@ -318,6 +318,7 @@
 "provider.thinkingLevel" = "思考レベル";
 "provider.thinkingLevelFooter" = "思考レベルは推論の深さを制御します。budget_tokens（Anthropic）またはreasoning_effort（OpenAI）にマッピングされます。エージェントごとに上書き可能です。";
 "provider.perModelMaxTokens" = "最大トークン数を上書き";
+"provider.temperature" = "温度：%.2f";
 "provider.perModelTemperature" = "温度を上書き";
 "provider.parametersFooter" = "全モデルのデフォルト値です。上の「有効なモデル」セクションでモデルごとに上書きできます。";
 "provider.apiStyle" = "APIスタイル";

@@ -460,7 +460,16 @@ final class ChatViewModel {
         Self.cachedPendingImages.removeValue(forKey: session.id)
         session.draftImagesData = nil
 
-        let userMessage = Message(role: .user, content: text)
+        // Embed agentfile:// refs into message content so images are part of the
+        // file/ref system and visible in the AI context via resolveAgentFileImages.
+        var messageContent = text
+        for img in finalImages {
+            if let ref = img.fileReference {
+                messageContent += "\n![image](\(ref))"
+            }
+        }
+
+        let userMessage = Message(role: .user, content: messageContent)
         userMessage.imageAttachmentsData = imageData
         if imageData != nil { userMessage.recalculateTokenEstimate() }
         modelContext.insert(userMessage)
