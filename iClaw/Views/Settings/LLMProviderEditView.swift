@@ -210,6 +210,7 @@ struct LLMProviderEditView: View {
                     Text(level.displayName).tag(level)
                 }
             }
+            perModelParametersView(for: model)
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -338,6 +339,77 @@ struct LLMProviderEditView: View {
         .background(.purple.opacity(0.1), in: Capsule())
     }
 
+    /// Per-model maxTokens / temperature overrides (nil = use provider default).
+    @ViewBuilder
+    private func perModelParametersView(for model: String) -> some View {
+        let caps = modelCapabilities[model] ?? .default
+        let hasMaxTokensOverride = caps.maxTokens != nil
+        let hasTempOverride = caps.temperature != nil
+
+        // Max Tokens override
+        HStack {
+            Toggle(isOn: Binding(
+                get: { hasMaxTokensOverride },
+                set: { enabled in
+                    var c = modelCapabilities[model] ?? .default
+                    c.maxTokens = enabled ? maxTokens : nil
+                    modelCapabilities[model] = c
+                }
+            )) {
+                Text(L10n.Provider.perModelMaxTokens)
+            }
+        }
+        if hasMaxTokensOverride {
+            Stepper(
+                L10n.Provider.maxTokens(caps.maxTokens ?? maxTokens),
+                value: Binding(
+                    get: { caps.maxTokens ?? maxTokens },
+                    set: { newVal in
+                        var c = modelCapabilities[model] ?? .default
+                        c.maxTokens = newVal
+                        modelCapabilities[model] = c
+                    }
+                ),
+                in: 256...128000,
+                step: 256
+            )
+        }
+
+        // Temperature override
+        HStack {
+            Toggle(isOn: Binding(
+                get: { hasTempOverride },
+                set: { enabled in
+                    var c = modelCapabilities[model] ?? .default
+                    c.temperature = enabled ? temperature : nil
+                    modelCapabilities[model] = c
+                }
+            )) {
+                Text(L10n.Provider.perModelTemperature)
+            }
+        }
+        if hasTempOverride {
+            HStack {
+                Text("\(caps.temperature ?? temperature, specifier: "%.2f")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, alignment: .trailing)
+                Slider(
+                    value: Binding(
+                        get: { caps.temperature ?? temperature },
+                        set: { newVal in
+                            var c = modelCapabilities[model] ?? .default
+                            c.temperature = newVal
+                            modelCapabilities[model] = c
+                        }
+                    ),
+                    in: 0...2,
+                    step: 0.05
+                )
+            }
+        }
+    }
+
     private var remoteModelsSection: some View {
         Section {
             Button {
@@ -419,9 +491,7 @@ struct LLMProviderEditView: View {
         } header: {
             Text(L10n.Provider.parameters)
         } footer: {
-            if anyModelHasThinking {
-                Text(L10n.Provider.thinkingLevelFooter)
-            }
+            Text(L10n.Provider.parametersFooter)
         }
     }
 

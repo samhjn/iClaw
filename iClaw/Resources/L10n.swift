@@ -436,6 +436,9 @@ enum L10n {
         static var supportsReasoningFooter: String { tr("provider.supportsReasoningFooter") }
         static var thinkingLevel: String { tr("provider.thinkingLevel") }
         static var thinkingLevelFooter: String { tr("provider.thinkingLevelFooter") }
+        static var perModelMaxTokens: String { tr("provider.perModelMaxTokens") }
+        static var perModelTemperature: String { tr("provider.perModelTemperature") }
+        static var parametersFooter: String { tr("provider.parametersFooter") }
         static var apiStyle: String { tr("provider.apiStyle") }
         static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
         static var modelCapabilities: String { tr("provider.modelCapabilities") }

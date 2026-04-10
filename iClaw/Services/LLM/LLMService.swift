@@ -54,6 +54,16 @@ final class LLMService: @unchecked Sendable {
         thinkingLevelOverride ?? effectiveCapabilities.thinkingLevel
     }
 
+    /// Effective max tokens: per-model override > provider default.
+    var effectiveMaxTokens: Int {
+        effectiveCapabilities.maxTokens ?? provider.maxTokens
+    }
+
+    /// Effective temperature: per-model override > provider default.
+    var effectiveTemperature: Double {
+        effectiveCapabilities.temperature ?? provider.temperature
+    }
+
     init(provider: LLMProvider, modelNameOverride: String? = nil, thinkingLevelOverride: ThinkingLevel? = nil) {
         self.provider = provider
         self.modelNameOverride = modelNameOverride
@@ -160,8 +170,8 @@ final class LLMService: @unchecked Sendable {
             tools: tools?.isEmpty == true ? nil : tools,
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: false,
-            maxTokens: provider.maxTokens,
-            temperature: provider.temperature,
+            maxTokens: effectiveMaxTokens,
+            temperature: effectiveTemperature,
             modalities: modalities,
             reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
@@ -194,8 +204,8 @@ final class LLMService: @unchecked Sendable {
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: true,
             streamOptions: LLMStreamOptions(includeUsage: true),
-            maxTokens: provider.maxTokens,
-            temperature: provider.temperature,
+            maxTokens: effectiveMaxTokens,
+            temperature: effectiveTemperature,
             modalities: modalities,
             reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
@@ -577,7 +587,7 @@ final class LLMService: @unchecked Sendable {
 
         let thinkingLevel = effectiveThinkingLevel
         var thinking: AnthropicThinking? = nil
-        var maxTokens = provider.maxTokens
+        var maxTokens = effectiveMaxTokens
         if thinkingLevel.isEnabled {
             let budgetTokens = thinkingLevel.anthropicBudgetTokens
             thinking = .enabled(budget: budgetTokens)
@@ -586,7 +596,7 @@ final class LLMService: @unchecked Sendable {
         }
 
         // Anthropic requires temperature to be exactly 1 when extended thinking is enabled
-        let temperature = thinking != nil ? 1.0 : provider.temperature
+        let temperature = thinking != nil ? 1.0 : effectiveTemperature
 
         return AnthropicRequest(
             model: model,

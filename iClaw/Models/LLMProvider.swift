@@ -72,7 +72,7 @@ enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
     }
 }
 
-/// Per-model capability flags.
+/// Per-model capability flags and parameter overrides.
 struct ModelCapabilities: Codable, Equatable {
     var supportsVision: Bool = false
     var supportsToolUse: Bool = true
@@ -82,21 +82,29 @@ struct ModelCapabilities: Codable, Equatable {
     var supportsReasoning: Bool = false
     /// The default thinking level for this model. `.off` means no thinking support.
     var thinkingLevel: ThinkingLevel = .off
+    /// Per-model max output tokens override. `nil` = use provider default.
+    var maxTokens: Int? = nil
+    /// Per-model temperature override. `nil` = use provider default.
+    var temperature: Double? = nil
 
     static let `default` = ModelCapabilities()
 
     enum CodingKeys: String, CodingKey {
         case supportsVision, supportsToolUse, supportsImageGeneration, supportsReasoning, thinkingLevel
+        case maxTokens, temperature
     }
 
     init(supportsVision: Bool = false, supportsToolUse: Bool = true,
          supportsImageGeneration: Bool = false, supportsReasoning: Bool = false,
-         thinkingLevel: ThinkingLevel = .off) {
+         thinkingLevel: ThinkingLevel = .off,
+         maxTokens: Int? = nil, temperature: Double? = nil) {
         self.supportsVision = supportsVision
         self.supportsToolUse = supportsToolUse
         self.supportsImageGeneration = supportsImageGeneration
         self.supportsReasoning = supportsReasoning
         self.thinkingLevel = thinkingLevel
+        self.maxTokens = maxTokens
+        self.temperature = temperature
     }
 
     init(from decoder: Decoder) throws {
@@ -111,6 +119,8 @@ struct ModelCapabilities: Codable, Equatable {
         } else {
             thinkingLevel = supportsReasoning ? .medium : .off
         }
+        maxTokens = try c.decodeIfPresent(Int.self, forKey: .maxTokens)
+        temperature = try c.decodeIfPresent(Double.self, forKey: .temperature)
     }
 
     /// Infer default capabilities from a model name.

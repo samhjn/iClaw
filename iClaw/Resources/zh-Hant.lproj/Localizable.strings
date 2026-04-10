@@ -318,6 +318,9 @@
 "provider.supportsReasoningFooter" = "為支援擴展思考/推理的模型啟用（如 Claude 擴展思考、DeepSeek R1、o1/o3）。思考過程將被擷取並顯示。";
 "provider.thinkingLevel" = "思考等級";
 "provider.thinkingLevelFooter" = "思考等級控制推理深度。對應為 budget_tokens（Anthropic）或 reasoning_effort（OpenAI）。可在智能體層級覆蓋。";
+"provider.perModelMaxTokens" = "覆蓋最大 Token 數";
+"provider.perModelTemperature" = "覆蓋溫度";
+"provider.parametersFooter" = "所有模型的預設值。可在上方「已啟用模型」中為單一模型分別覆蓋。";
 "provider.apiStyle" = "API 風格";
 "provider.apiStyleFooter" = "OpenAI：相容 OpenAI 的 chat/completions 介面。Anthropic：原生 Anthropic Messages API，支援擴展思考。";
 "provider.modelCapabilities" = "模型能力";

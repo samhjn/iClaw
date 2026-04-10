@@ -317,6 +317,9 @@
 "provider.supportsReasoningFooter" = "확장 사고/추론을 지원하는 모델에 활성화하세요 (예: Claude 확장 사고, DeepSeek R1, o1/o3). 사고 과정이 캡처되어 표시됩니다.";
 "provider.thinkingLevel" = "사고 레벨";
 "provider.thinkingLevelFooter" = "사고 레벨은 추론의 깊이를 제어합니다. budget_tokens(Anthropic) 또는 reasoning_effort(OpenAI)에 매핑됩니다. 에이전트별로 재정의할 수 있습니다.";
+"provider.perModelMaxTokens" = "최대 토큰 수 재정의";
+"provider.perModelTemperature" = "온도 재정의";
+"provider.parametersFooter" = "모든 모델의 기본값입니다. 위의 '활성화된 모델' 섹션에서 모델별로 재정의할 수 있습니다.";
 "provider.apiStyle" = "API 스타일";
 "provider.apiStyleFooter" = "OpenAI: OpenAI 호환 chat/completions 엔드포인트. Anthropic: 네이티브 Anthropic Messages API, 확장 사고 지원.";
 "provider.modelCapabilities" = "모델 기능";
