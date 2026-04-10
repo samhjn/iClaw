@@ -179,6 +179,9 @@
 "modelConfig.whitelistStaleWarning" = "%d whitelist entry(s) reference deleted providers/models";
 "modelConfig.whitelistMissingPrimary" = "Primary model is not in the whitelist — agent will fail to send messages";
 "modelConfig.whitelistMissingSubAgent" = "Sub-agent default model is not in the whitelist";
+"modelConfig.thinkingLevel" = "Thinking Level";
+"modelConfig.thinkingLevelUseModelDefault" = "Use Model Default";
+"modelConfig.thinkingLevelFooter" = "Override the model's default thinking level for this agent. Higher levels use more tokens but produce deeper reasoning.";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "Cron Jobs";
@@ -313,6 +316,8 @@
 "provider.supportsImageGenerationFooter" = "Enable for models that can generate images (e.g. Gemini 2.5 Flash Image / Nano Banana). Sends modalities parameter to the API.";
 "provider.supportsReasoning" = "Supports Reasoning";
 "provider.supportsReasoningFooter" = "Enable for models with extended thinking / reasoning (e.g. Claude with extended thinking, DeepSeek R1, o1/o3). Thinking output will be captured and displayed.";
+"provider.thinkingLevel" = "Thinking Level";
+"provider.thinkingLevelFooter" = "Thinking level controls the depth of reasoning. Mapped to budget_tokens (Anthropic) or reasoning_effort (OpenAI). Can be overridden per agent.";
 "provider.apiStyle" = "API Style";
 "provider.apiStyleFooter" = "OpenAI: OpenAI-compatible chat/completions endpoint. Anthropic: Native Anthropic Messages API with extended thinking support.";
 "provider.modelCapabilities" = "Model Capabilities";

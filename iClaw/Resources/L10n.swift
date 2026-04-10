@@ -282,6 +282,9 @@ enum L10n {
         static func whitelistStaleWarning(_ count: Int) -> String { tr("modelConfig.whitelistStaleWarning", count) }
         static var whitelistMissingPrimary: String { tr("modelConfig.whitelistMissingPrimary") }
         static var whitelistMissingSubAgent: String { tr("modelConfig.whitelistMissingSubAgent") }
+        static var thinkingLevel: String { tr("modelConfig.thinkingLevel") }
+        static var thinkingLevelUseModelDefault: String { tr("modelConfig.thinkingLevelUseModelDefault") }
+        static var thinkingLevelFooter: String { tr("modelConfig.thinkingLevelFooter") }
     }
 
     // MARK: - Cron Jobs
@@ -431,6 +434,8 @@ enum L10n {
         static var supportsImageGenerationFooter: String { tr("provider.supportsImageGenerationFooter") }
         static var supportsReasoning: String { tr("provider.supportsReasoning") }
         static var supportsReasoningFooter: String { tr("provider.supportsReasoningFooter") }
+        static var thinkingLevel: String { tr("provider.thinkingLevel") }
+        static var thinkingLevelFooter: String { tr("provider.thinkingLevelFooter") }
         static var apiStyle: String { tr("provider.apiStyle") }
         static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
         static var modelCapabilities: String { tr("provider.modelCapabilities") }

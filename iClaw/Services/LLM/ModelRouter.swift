@@ -130,6 +130,7 @@ final class ModelRouter {
         guard !chain.isEmpty else { throw emptyChainError(for: agent) }
 
         failoverOccurred = false
+        let agentThinkingOverride = agent.thinkingLevelOverride
 
         for (index, entry) in chain.enumerated() {
             do {
@@ -137,7 +138,7 @@ final class ModelRouter {
                 let effectiveModel = entry.modelName ?? entry.provider.modelName
                 let caps = entry.provider.capabilities(for: effectiveModel)
                 let effectiveTools = caps.supportsToolUse ? tools : nil
-                let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
+                let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName, thinkingLevelOverride: agentThinkingOverride)
                 let (stream, cancel) = try await service.chatCompletionStream(messages: messages, tools: effectiveTools)
                 let providerName = "\(entry.provider.name) (\(effectiveModel))"
                 lastUsedProviderName = providerName
@@ -167,6 +168,7 @@ final class ModelRouter {
         guard !chain.isEmpty else { throw emptyChainError(for: agent) }
 
         failoverOccurred = false
+        let agentThinkingOverride = agent.thinkingLevelOverride
 
         for (index, entry) in chain.enumerated() {
             do {
@@ -174,7 +176,7 @@ final class ModelRouter {
                 let effectiveModel = entry.modelName ?? entry.provider.modelName
                 let caps = entry.provider.capabilities(for: effectiveModel)
                 let effectiveTools = caps.supportsToolUse ? tools : nil
-                let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName)
+                let service = LLMService(provider: entry.provider, modelNameOverride: entry.modelName, thinkingLevelOverride: agentThinkingOverride)
                 let response = try await service.chatCompletion(messages: messages, tools: effectiveTools)
                 let providerName = "\(entry.provider.name) (\(effectiveModel))"
                 lastUsedProviderName = providerName

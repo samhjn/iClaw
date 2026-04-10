@@ -37,6 +37,7 @@ final class StreamCancelState: @unchecked Sendable {
 final class LLMService: @unchecked Sendable {
     let provider: LLMProvider
     private let modelNameOverride: String?
+    private let thinkingLevelOverride: ThinkingLevel?
 
     private var baseURL: String { provider.endpoint }
     private var apiKey: String { provider.apiKey }
@@ -48,9 +49,15 @@ final class LLMService: @unchecked Sendable {
         provider.capabilities(for: model)
     }
 
-    init(provider: LLMProvider, modelNameOverride: String? = nil) {
+    /// Effective thinking level: agent override > model default from capabilities.
+    var effectiveThinkingLevel: ThinkingLevel {
+        thinkingLevelOverride ?? effectiveCapabilities.thinkingLevel
+    }
+
+    init(provider: LLMProvider, modelNameOverride: String? = nil, thinkingLevelOverride: ThinkingLevel? = nil) {
         self.provider = provider
         self.modelNameOverride = modelNameOverride
+        self.thinkingLevelOverride = thinkingLevelOverride
     }
 
     // MARK: - Fetch available models
@@ -146,6 +153,7 @@ final class LLMService: @unchecked Sendable {
     ) async throws -> LLMChatResponse {
         let caps = effectiveCapabilities
         let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -154,7 +162,8 @@ final class LLMService: @unchecked Sendable {
             stream: false,
             maxTokens: provider.maxTokens,
             temperature: provider.temperature,
-            modalities: modalities
+            modalities: modalities,
+            reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
         let urlRequest = try buildOpenAIRequest(body: request)
@@ -177,6 +186,7 @@ final class LLMService: @unchecked Sendable {
     ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let caps = effectiveCapabilities
         let modalities: [String]? = caps.supportsImageGeneration ? ["image", "text"] : nil
+        let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -186,7 +196,8 @@ final class LLMService: @unchecked Sendable {
             streamOptions: LLMStreamOptions(includeUsage: true),
             maxTokens: provider.maxTokens,
             temperature: provider.temperature,
-            modalities: modalities
+            modalities: modalities,
+            reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
         let urlRequest = try buildOpenAIRequest(body: request)
@@ -564,10 +575,11 @@ final class LLMService: @unchecked Sendable {
             }
         }
 
+        let thinkingLevel = effectiveThinkingLevel
         var thinking: AnthropicThinking? = nil
         var maxTokens = provider.maxTokens
-        if caps.supportsReasoning {
-            let budgetTokens = provider.thinkingBudget
+        if thinkingLevel.isEnabled {
+            let budgetTokens = thinkingLevel.anthropicBudgetTokens
             thinking = .enabled(budget: budgetTokens)
             // Anthropic requires max_tokens > budget_tokens
             maxTokens = max(maxTokens, budgetTokens + 1)

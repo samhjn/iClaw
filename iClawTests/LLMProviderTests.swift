@@ -168,6 +168,88 @@ final class LLMProviderTests: XCTestCase {
         XCTAssertEqual(decoded, caps)
     }
 
+    // MARK: - Thinking Level
+
+    func testThinkingLevelDefaults() {
+        let caps = ModelCapabilities.default
+        XCTAssertEqual(caps.thinkingLevel, .off)
+        XCTAssertFalse(caps.thinkingLevel.isEnabled)
+    }
+
+    func testThinkingLevelExplicitValue() {
+        let caps = ModelCapabilities(supportsReasoning: true, thinkingLevel: .high)
+        XCTAssertEqual(caps.thinkingLevel, .high)
+        XCTAssertTrue(caps.thinkingLevel.isEnabled)
+    }
+
+    func testThinkingLevelCodableRoundTrip() throws {
+        for level in ThinkingLevel.allCases {
+            let caps = ModelCapabilities(thinkingLevel: level)
+            let data = try JSONEncoder().encode(caps)
+            let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: data)
+            XCTAssertEqual(decoded.thinkingLevel, level,
+                           "ThinkingLevel.\(level.rawValue) should survive encode/decode")
+        }
+    }
+
+    func testThinkingLevelMigrationFromLegacyData() throws {
+        // Simulate old persisted JSON that has supportsReasoning but no thinkingLevel key
+        let legacyJSON = """
+        {"supportsVision":false,"supportsToolUse":true,"supportsImageGeneration":false,"supportsReasoning":true}
+        """
+        let data = legacyJSON.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: data)
+        XCTAssertEqual(decoded.thinkingLevel, .medium,
+                       "Legacy supportsReasoning=true should migrate to .medium")
+        XCTAssertTrue(decoded.supportsReasoning)
+    }
+
+    func testThinkingLevelMigrationNoReasoning() throws {
+        let legacyJSON = """
+        {"supportsVision":true,"supportsToolUse":true,"supportsImageGeneration":false,"supportsReasoning":false}
+        """
+        let data = legacyJSON.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: data)
+        XCTAssertEqual(decoded.thinkingLevel, .off,
+                       "Legacy supportsReasoning=false should stay .off")
+    }
+
+    func testThinkingLevelComparable() {
+        XCTAssertTrue(ThinkingLevel.off < ThinkingLevel.low)
+        XCTAssertTrue(ThinkingLevel.low < ThinkingLevel.medium)
+        XCTAssertTrue(ThinkingLevel.medium < ThinkingLevel.high)
+        XCTAssertFalse(ThinkingLevel.high < ThinkingLevel.off)
+    }
+
+    func testThinkingLevelAnthropicBudget() {
+        XCTAssertEqual(ThinkingLevel.off.anthropicBudgetTokens, 0)
+        XCTAssertEqual(ThinkingLevel.low.anthropicBudgetTokens, 2048)
+        XCTAssertEqual(ThinkingLevel.medium.anthropicBudgetTokens, 10240)
+        XCTAssertEqual(ThinkingLevel.high.anthropicBudgetTokens, 32768)
+    }
+
+    func testThinkingLevelOpenAIReasoningEffort() {
+        XCTAssertNil(ThinkingLevel.off.openAIReasoningEffort)
+        XCTAssertEqual(ThinkingLevel.low.openAIReasoningEffort, "low")
+        XCTAssertEqual(ThinkingLevel.medium.openAIReasoningEffort, "medium")
+        XCTAssertEqual(ThinkingLevel.high.openAIReasoningEffort, "high")
+    }
+
+    @MainActor
+    func testThinkingLevelPerModelPersistence() {
+        let provider = LLMProvider(name: "Test")
+        let caps = ModelCapabilities(
+            supportsVision: true,
+            supportsReasoning: true,
+            thinkingLevel: .high
+        )
+        provider.setCapabilities(caps, for: "claude-opus-4-6")
+
+        let retrieved = provider.capabilities(for: "claude-opus-4-6")
+        XCTAssertEqual(retrieved.thinkingLevel, .high)
+        XCTAssertTrue(retrieved.supportsReasoning)
+    }
+
     // MARK: - Inferred Capabilities
 
     func testInferredCapabilities_GPTFamily() {

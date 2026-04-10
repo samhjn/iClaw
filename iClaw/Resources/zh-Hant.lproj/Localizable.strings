@@ -179,6 +179,9 @@
 "modelConfig.whitelistStaleWarning" = "%d 條白名單條目引用了已刪除的服務商/模型";
 "modelConfig.whitelistMissingPrimary" = "主模型不在白名單中 - 智能體將無法傳送訊息";
 "modelConfig.whitelistMissingSubAgent" = "子智能體預設模型不在白名單中";
+"modelConfig.thinkingLevel" = "思考等級";
+"modelConfig.thinkingLevelUseModelDefault" = "使用模型預設";
+"modelConfig.thinkingLevelFooter" = "覆蓋此智能體的模型預設思考等級。更高等級消耗更多 Token，但能產生更深入的推理。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "排程任務";
@@ -313,6 +316,8 @@
 "provider.supportsImageGenerationFooter" = "為能生成圖片的模型啟用（如 Gemini 2.5 Flash Image / Nano Banana），將向 API 傳送 modalities 參數";
 "provider.supportsReasoning" = "支援推理";
 "provider.supportsReasoningFooter" = "為支援擴展思考/推理的模型啟用（如 Claude 擴展思考、DeepSeek R1、o1/o3）。思考過程將被擷取並顯示。";
+"provider.thinkingLevel" = "思考等級";
+"provider.thinkingLevelFooter" = "思考等級控制推理深度。對應為 budget_tokens（Anthropic）或 reasoning_effort（OpenAI）。可在智能體層級覆蓋。";
 "provider.apiStyle" = "API 風格";
 "provider.apiStyleFooter" = "OpenAI：相容 OpenAI 的 chat/completions 介面。Anthropic：原生 Anthropic Messages API，支援擴展思考。";
 "provider.modelCapabilities" = "模型能力";

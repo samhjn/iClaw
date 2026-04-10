@@ -204,8 +204,12 @@ struct LLMProviderEditView: View {
             let binding = capabilitiesBinding(for: model)
             Toggle(L10n.Provider.supportsVision, isOn: binding.supportsVision)
             Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
-            Toggle(L10n.Provider.supportsReasoning, isOn: binding.supportsReasoning)
             Toggle(L10n.Provider.supportsImageGeneration, isOn: binding.supportsImageGeneration)
+            Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
+                ForEach(ThinkingLevel.allCases, id: \.self) { level in
+                    Text(level.displayName).tag(level)
+                }
+            }
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -220,7 +224,7 @@ struct LLMProviderEditView: View {
                         let c = modelCapabilities[model] ?? .default
                         if c.supportsVision { capBadge("eye", color: .green) }
                         if c.supportsToolUse { capBadge("wrench", color: .blue) }
-                        if c.supportsReasoning { capBadge("brain", color: .purple) }
+                        if c.thinkingLevel.isEnabled { thinkingLevelBadge(c.thinkingLevel) }
                         if c.supportsImageGeneration { capBadge("paintbrush", color: .orange) }
                     }
                 }
@@ -286,14 +290,6 @@ struct LLMProviderEditView: View {
                     modelCapabilities[model] = caps
                 }
             ),
-            supportsReasoning: Binding(
-                get: { (modelCapabilities[model] ?? .default).supportsReasoning },
-                set: { newVal in
-                    var caps = modelCapabilities[model] ?? .default
-                    caps.supportsReasoning = newVal
-                    modelCapabilities[model] = caps
-                }
-            ),
             supportsImageGeneration: Binding(
                 get: { (modelCapabilities[model] ?? .default).supportsImageGeneration },
                 set: { newVal in
@@ -305,6 +301,20 @@ struct LLMProviderEditView: View {
         )
     }
 
+    /// ThinkingLevel binding for a specific model.
+    private func thinkingLevelBinding(for model: String) -> Binding<ThinkingLevel> {
+        Binding(
+            get: { (modelCapabilities[model] ?? .default).thinkingLevel },
+            set: { newVal in
+                var caps = modelCapabilities[model] ?? .default
+                caps.thinkingLevel = newVal
+                // Keep legacy flag in sync
+                caps.supportsReasoning = newVal.isEnabled
+                modelCapabilities[model] = caps
+            }
+        )
+    }
+
     @ViewBuilder
     private func capBadge(_ systemName: String, color: Color) -> some View {
         Image(systemName: systemName)
@@ -312,6 +322,20 @@ struct LLMProviderEditView: View {
             .foregroundStyle(color)
             .padding(3)
             .background(color.opacity(0.1), in: Circle())
+    }
+
+    @ViewBuilder
+    private func thinkingLevelBadge(_ level: ThinkingLevel) -> some View {
+        HStack(spacing: 1) {
+            Image(systemName: "brain")
+                .font(.system(size: 9))
+            Text(level.displayName.prefix(1))
+                .font(.system(size: 7, weight: .bold))
+        }
+        .foregroundStyle(.purple)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .background(.purple.opacity(0.1), in: Capsule())
     }
 
     private var remoteModelsSection: some View {
@@ -381,16 +405,13 @@ struct LLMProviderEditView: View {
         }
     }
 
-    private var anyModelSupportsReasoning: Bool {
-        modelCapabilities.values.contains { $0.supportsReasoning }
+    private var anyModelHasThinking: Bool {
+        modelCapabilities.values.contains { $0.thinkingLevel.isEnabled }
     }
 
     private var parametersSection: some View {
         Section {
             Stepper(L10n.Provider.maxTokens(maxTokens), value: $maxTokens, in: 256...128000, step: 256)
-            if anyModelSupportsReasoning {
-                Stepper(L10n.Provider.thinkingBudget(thinkingBudget), value: $thinkingBudget, in: 1024...128000, step: 1024)
-            }
             HStack {
                 Text("Temperature: \(temperature, specifier: "%.2f")")
                 Slider(value: $temperature, in: 0...2, step: 0.05)
@@ -398,8 +419,8 @@ struct LLMProviderEditView: View {
         } header: {
             Text(L10n.Provider.parameters)
         } footer: {
-            if anyModelSupportsReasoning {
-                Text(L10n.Provider.thinkingBudgetFooter)
+            if anyModelHasThinking {
+                Text(L10n.Provider.thinkingLevelFooter)
             }
         }
     }
@@ -417,6 +438,7 @@ struct LLMProviderEditView: View {
                 modelName = "claude-sonnet-4-6"
                 apiStyle = .anthropic
                 enableModel("claude-sonnet-4-6")
+                modelCapabilities["claude-sonnet-4-6"]?.thinkingLevel = .medium
                 modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
             }
             Button("DeepSeek") {
@@ -547,6 +569,5 @@ struct LLMProviderEditView: View {
 private struct CapabilitiesBindings {
     let supportsVision: Binding<Bool>
     let supportsToolUse: Binding<Bool>
-    let supportsReasoning: Binding<Bool>
     let supportsImageGeneration: Binding<Bool>
 }

@@ -178,6 +178,9 @@
 "modelConfig.whitelistStaleWarning" = "%d 件のホワイトリストエントリが削除されたプロバイダー/モデルを参照しています";
 "modelConfig.whitelistMissingPrimary" = "プライマリモデルがホワイトリストにありません — メッセージ送信に失敗します";
 "modelConfig.whitelistMissingSubAgent" = "サブエージェントのデフォルトモデルがホワイトリストにありません";
+"modelConfig.thinkingLevel" = "思考レベル";
+"modelConfig.thinkingLevelUseModelDefault" = "モデルのデフォルトを使用";
+"modelConfig.thinkingLevelFooter" = "このエージェントのモデルデフォルト思考レベルを上書きします。高いレベルはより多くのトークンを消費しますが、より深い推論を生成します。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定期タスク";
@@ -312,6 +315,8 @@
 "provider.supportsImageGenerationFooter" = "画像を生成できるモデルで有効にしてください（例：Gemini 2.5 Flash Image / Nano Banana）。APIにmodalitiesパラメータを送信します。";
 "provider.supportsReasoning" = "推論対応";
 "provider.supportsReasoningFooter" = "拡張思考/推論に対応するモデルで有効にしてください（例：Claude拡張思考、DeepSeek R1、o1/o3）。思考過程がキャプチャされ表示されます。";
+"provider.thinkingLevel" = "思考レベル";
+"provider.thinkingLevelFooter" = "思考レベルは推論の深さを制御します。budget_tokens（Anthropic）またはreasoning_effort（OpenAI）にマッピングされます。エージェントごとに上書き可能です。";
 "provider.apiStyle" = "APIスタイル";
 "provider.apiStyleFooter" = "OpenAI：OpenAI互換のchat/completionsエンドポイント。Anthropic：ネイティブAnthropic Messages API、拡張思考対応。";
 "provider.modelCapabilities" = "モデル機能";
