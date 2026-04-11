@@ -20,6 +20,11 @@ extension BGTaskScheduler: BGTaskRegistering {}
 /// Separating these two phases prevents the `BGTaskScheduler` assertion failure
 /// that occurs when `register(forTaskWithIdentifier:)` is called after launch.
 final class CronBGTaskCoordinator: @unchecked Sendable {
+    /// Process-wide flag preventing duplicate `BGTaskScheduler` registration.
+    /// SwiftUI may recreate the `App` struct (and thus this coordinator) during
+    /// view updates, so an instance-level guard alone is not sufficient.
+    private static var _hasRegistered = false
+
     private(set) var isRegistered = false
     var scheduler: CronScheduler?
     private let registrar: any BGTaskRegistering
@@ -28,12 +33,23 @@ final class CronBGTaskCoordinator: @unchecked Sendable {
         self.registrar = registrar
     }
 
+    #if DEBUG
+    /// Reset the process-wide registration flag. **Test-only.**
+    static func resetRegistrationStateForTesting() {
+        _hasRegistered = false
+    }
+    #endif
+
     /// Register the cron background refresh task.
     ///
     /// - Returns: `false` if already registered or if the system rejected the registration.
     @discardableResult
     func registerCronTask() -> Bool {
         guard !isRegistered else { return false }
+        guard !Self._hasRegistered else {
+            isRegistered = true
+            return false
+        }
 
         let identifier = CronScheduler.bgTaskIdentifier
         let registered = registrar.register(
@@ -54,6 +70,9 @@ final class CronBGTaskCoordinator: @unchecked Sendable {
         }
 
         isRegistered = registered
+        if registered {
+            Self._hasRegistered = true
+        }
         if !registered {
             print("[BGTaskCoordinator] Registration failed for '\(identifier)'. "
                   + "Verify BGTaskSchedulerPermittedIdentifiers in Info.plist.")
