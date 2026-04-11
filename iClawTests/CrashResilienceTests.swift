@@ -295,6 +295,16 @@ final class ImagePreviewCoordinatorTests: XCTestCase {
 
 final class BGTaskRegistrationLoggingTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
+    }
+
+    override func tearDown() {
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
+        super.tearDown()
+    }
+
     private final class MockRegistrar: BGTaskRegistering, @unchecked Sendable {
         var shouldSucceed = true
         private(set) var registerCallCount = 0

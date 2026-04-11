@@ -64,6 +64,11 @@ final class BGTaskIdentifierTests: XCTestCase {
 
 final class BGTaskRegistrationLifecycleTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
+    }
+
     override func tearDown() {
         CronBGTaskCoordinator.resetRegistrationStateForTesting()
         super.tearDown()
@@ -168,6 +173,7 @@ final class BGTaskSeparationTests: XCTestCase {
     @MainActor
     override func setUp() {
         super.setUp()
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
         let schema = Schema([Agent.self, LLMProvider.self, Session.self, AgentConfig.self,
                              CodeSnippet.self, CronJob.self, InstalledSkill.self, Skill.self,
                              Message.self, SessionEmbedding.self])
@@ -286,6 +292,11 @@ final class BGTaskSeparationTests: XCTestCase {
 // MARK: - Handler Safety Tests
 
 final class BGTaskHandlerSafetyTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
+    }
 
     override func tearDown() {
         CronBGTaskCoordinator.resetRegistrationStateForTesting()
