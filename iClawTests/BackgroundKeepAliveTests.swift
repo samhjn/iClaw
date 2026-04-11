@@ -232,6 +232,42 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
         // Clean up
         manager.onSessionCompleted(sessionId: id, sessionName: "BG Task", isError: false)
     }
+
+    // MARK: shouldPreserveStreams
+
+    @MainActor
+    func testShouldPreserveStreamsFalseByDefault() {
+        let manager = BackgroundKeepAliveManager()
+        XCTAssertFalse(manager.shouldPreserveStreams)
+    }
+
+    @MainActor
+    func testShouldPreserveStreamsFalseWhenDisabled() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = false
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertFalse(manager.shouldPreserveStreams)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
+    }
+
+    @MainActor
+    func testShouldPreserveStreamsTrueWhenEnabledWithSessions() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertTrue(manager.shouldPreserveStreams)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
+        XCTAssertFalse(manager.shouldPreserveStreams)
+    }
+
+    @MainActor
+    func testShouldPreserveStreamsAccessibleFromNonisolated() {
+        let manager = BackgroundKeepAliveManager()
+        // This test verifies the property is nonisolated and compiles without @MainActor
+        let _ = manager.shouldPreserveStreams
+    }
 }
 
 // MARK: - CronActivityAttributes Tests

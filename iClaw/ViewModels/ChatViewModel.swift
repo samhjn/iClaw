@@ -155,7 +155,9 @@ final class ChatViewModel {
         dismissedSessions.remove(sessionId)
         if wasActive {
             let name = activeSessionNames.removeValue(forKey: sessionId) ?? ""
-            keepAliveManager?.onSessionCompleted(sessionId: sessionId, sessionName: name, isError: false)
+            Task { @MainActor in
+                keepAliveManager?.onSessionCompleted(sessionId: sessionId, sessionName: name, isError: false)
+            }
         }
     }
 
@@ -417,7 +419,9 @@ final class ChatViewModel {
         generationTask = task
         Self.activeGenerations[session.id] = task
         Self.activeSessionNames[session.id] = session.title
-        Self.keepAliveManager?.onSessionStarted(sessionId: session.id, sessionName: session.title)
+        let sid = session.id
+        let sname = session.title
+        Task { @MainActor in Self.keepAliveManager?.onSessionStarted(sessionId: sid, sessionName: sname) }
     }
 
     /// Strips partial/aborted assistant messages from the tail of the session
@@ -507,7 +511,9 @@ final class ChatViewModel {
         generationTask = task
         Self.activeGenerations[session.id] = task
         Self.activeSessionNames[session.id] = session.title
-        Self.keepAliveManager?.onSessionStarted(sessionId: session.id, sessionName: session.title)
+        let sid = session.id
+        let sname = session.title
+        Task { @MainActor in Self.keepAliveManager?.onSessionStarted(sessionId: sid, sessionName: sname) }
     }
 
     private var generationDepth = 0
@@ -1118,8 +1124,7 @@ final class ChatViewModel {
     /// continue. Otherwise, streams are cancelled to free the main thread for
     /// the system's exit signal.
     func prepareForBackground() {
-        if let manager = Self.keepAliveManager,
-           manager.isEnabled, manager.hasActiveSessions {
+        if Self.keepAliveManager?.shouldPreserveStreams == true {
             // Keep-alive active — let the generation continue in the background
             return
         }

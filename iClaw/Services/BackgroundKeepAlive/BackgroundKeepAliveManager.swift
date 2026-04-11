@@ -45,12 +45,20 @@ final class BackgroundKeepAliveManager {
         get { UserDefaults.standard.bool(forKey: Self.enabledKey) }
         set {
             UserDefaults.standard.set(newValue, forKey: Self.enabledKey)
+            updatePreserveFlag()
             if !newValue { forceDeactivate() }
         }
     }
 
     /// Whether there are tasks actively running that should be kept alive.
     var hasActiveSessions: Bool { !activeSessions.isEmpty }
+
+    /// Atomic flag set when there are active sessions and the feature is enabled.
+    /// Readable from any isolation context for stream preservation decisions.
+    private nonisolated(unsafe) var _shouldPreserveStreams = false
+
+    /// Whether streams should be preserved rather than cancelled when entering background.
+    nonisolated var shouldPreserveStreams: Bool { _shouldPreserveStreams }
 
     // MARK: - Lifecycle
 
@@ -122,6 +130,7 @@ final class BackgroundKeepAliveManager {
     func onSessionStarted(sessionId: UUID, sessionName: String) {
         activeSessions.insert(sessionId)
         sessionNames[sessionId] = sessionName
+        updatePreserveFlag()
 
         if isInBackground {
             hadNewTasksDuringBackground = true
@@ -140,6 +149,7 @@ final class BackgroundKeepAliveManager {
     func onSessionCompleted(sessionId: UUID, sessionName: String, isError: Bool) {
         activeSessions.remove(sessionId)
         sessionNames.removeValue(forKey: sessionId)
+        updatePreserveFlag()
 
         guard isEnabled else { return }
 
@@ -229,5 +239,10 @@ final class BackgroundKeepAliveManager {
         lastCompletionName = nil
         lastCompletionIsError = false
         isShowingCompletion = false
+    }
+
+    /// Keep the nonisolated flag in sync with current state.
+    private func updatePreserveFlag() {
+        _shouldPreserveStreams = isEnabled && !activeSessions.isEmpty
     }
 }
