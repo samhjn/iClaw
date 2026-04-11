@@ -98,9 +98,11 @@ enum L10n {
         static var deleteAgentTitle: String { tr("chat.deleteAgentTitle") }
         static func deleteAgentMessage(_ name: String) -> String { tr("chat.deleteAgentMessage", name) }
         static var thinkingProcess: String { tr("chat.thinkingProcess") }
-        static var addImage: String { tr("chat.addImage") }
+        static var addMedia: String { tr("chat.addMedia") }
         static var photoLibrary: String { tr("chat.photoLibrary") }
+        static var videoLibrary: String { tr("chat.videoLibrary") }
         static var camera: String { tr("chat.camera") }
+        static var recordVideo: String { tr("chat.recordVideo") }
         static var pasteFromClipboard: String { tr("chat.pasteFromClipboard") }
         static var imagePlaceholder: String { tr("chat.imagePlaceholder") }
         static var saveImageToPhotos: String { tr("chat.saveImageToPhotos") }

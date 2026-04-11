@@ -137,12 +137,12 @@ struct InputBarView: View {
         .animation(.easeInOut(duration: 0.2), value: pendingImages.count)
         .animation(.easeInOut(duration: 0.2), value: pendingVideos.count)
         .animation(.easeInOut(duration: 0.2), value: canRetry)
-        .confirmationDialog(L10n.Chat.addImage, isPresented: $showImageSourcePicker) {
+        .confirmationDialog(L10n.Chat.addMedia, isPresented: $showImageSourcePicker) {
             Button(L10n.Chat.photoLibrary) {
                 showPhotoPicker = true
             }
             if !isVideoDisabled {
-                Button("Video from Library") {
+                Button(L10n.Chat.videoLibrary) {
                     showVideoPicker = true
                 }
             }
@@ -150,7 +150,7 @@ struct InputBarView: View {
                 showCamera = true
             }
             if !isVideoDisabled {
-                Button("Record Video") {
+                Button(L10n.Chat.recordVideo) {
                     showVideoCamera = true
                 }
             }
