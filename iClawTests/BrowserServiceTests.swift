@@ -48,6 +48,121 @@ final class BrowserErrorTests: XCTestCase {
     }
 }
 
+// MARK: - Selector Resolution
+
+@MainActor
+final class BrowserSelectorResolutionTests: XCTestCase {
+
+    func testStandardSelectorPassthrough() {
+        let service = BrowserService.shared
+        let result = service.resolveSelector("#submit-btn")
+        XCTAssertEqual(result, "document.querySelector('#submit-btn')")
+    }
+
+    func testStandardSelectorPassthroughAll() {
+        let service = BrowserService.shared
+        let result = service.resolveSelector(".item", all: true)
+        XCTAssertEqual(result, "document.querySelectorAll('.item')")
+    }
+
+    func testContainsSelectorDoubleQuotes() {
+        let service = BrowserService.shared
+        let result = service.resolveSelector("button:contains(\"Submit\")")
+        XCTAssertTrue(result.contains("querySelectorAll('button')"))
+        XCTAssertTrue(result.contains("indexOf('Submit')"))
+        XCTAssertTrue(result.contains(".find("))
+        XCTAssertTrue(result.hasSuffix(")||null"))
+    }
+
+    func testContainsSelectorSingleQuotes() {
+        let service = BrowserService.shared
+        let result = service.resolveSelector("button:contains('A类')")
+        XCTAssertTrue(result.contains("querySelectorAll('button')"))
+        XCTAssertTrue(result.contains("indexOf('A类')"))
+    }
+
+    func testContainsSelectorAll() {
+        let service = BrowserService.shared
+        let result = service.resolveSelector("li:contains(\"active\")", all: true)
+        XCTAssertTrue(result.contains("querySelectorAll('li')"))
+        XCTAssertTrue(result.contains(".filter("))
+        XCTAssertFalse(result.contains("||null"))
+    }
+
+    func testContainsSelectorWithCompoundBase() {
+        let service = BrowserService.shared
+        let result = service.resolveSelector("div.menu button:contains(\"OK\")")
+        XCTAssertTrue(result.contains("querySelectorAll('div.menu button')"))
+        XCTAssertTrue(result.contains("indexOf('OK')"))
+    }
+
+    func testContainsRegexDoesNotMatchPlainSelector() {
+        let regex = BrowserService.containsRegex
+        let selector = "button.primary"
+        let range = NSRange(selector.startIndex..., in: selector)
+        XCTAssertNil(regex.firstMatch(in: selector, range: range))
+    }
+
+    func testContainsRegexMatchesDoubleQuotes() {
+        let regex = BrowserService.containsRegex
+        let selector = "button:contains(\"text\")"
+        let range = NSRange(selector.startIndex..., in: selector)
+        XCTAssertNotNil(regex.firstMatch(in: selector, range: range))
+    }
+
+    func testContainsRegexMatchesSingleQuotes() {
+        let regex = BrowserService.containsRegex
+        let selector = "span:contains('hello')"
+        let range = NSRange(selector.startIndex..., in: selector)
+        XCTAssertNotNil(regex.firstMatch(in: selector, range: range))
+    }
+}
+
+// MARK: - JS Error Prefix
+
+final class BrowserJSErrorPrefixTests: XCTestCase {
+
+    func testErrorPrefixDetection() {
+        let prefix = "__ICLAW_JS_ERR__:"
+        let errorString = "\(prefix)SyntaxError: Unexpected token"
+        XCTAssertTrue(errorString.hasPrefix(prefix))
+        let msg = String(errorString.dropFirst(prefix.count))
+        XCTAssertEqual(msg, "SyntaxError: Unexpected token")
+    }
+
+    func testNormalStringDoesNotTriggerPrefix() {
+        let prefix = "__ICLAW_JS_ERR__:"
+        let normalResult = "{\"ok\":true,\"tag\":\"BUTTON\"}"
+        XCTAssertFalse(normalResult.hasPrefix(prefix))
+    }
+}
+
+// MARK: - JS Escape
+
+@MainActor
+final class BrowserJSEscapeTests: XCTestCase {
+
+    func testEscapeSimpleString() {
+        let service = BrowserService.shared
+        XCTAssertEqual(service.jsEscape("hello"), "'hello'")
+    }
+
+    func testEscapeSingleQuote() {
+        let service = BrowserService.shared
+        XCTAssertEqual(service.jsEscape("it's"), "'it\\'s'")
+    }
+
+    func testEscapeBackslash() {
+        let service = BrowserService.shared
+        XCTAssertEqual(service.jsEscape("a\\b"), "'a\\\\b'")
+    }
+
+    func testEscapeNewline() {
+        let service = BrowserService.shared
+        XCTAssertEqual(service.jsEscape("line1\nline2"), "'line1\\nline2'")
+    }
+}
+
 // MARK: - BrowserService Lock Mechanism
 
 @MainActor

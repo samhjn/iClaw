@@ -154,11 +154,48 @@ final class BrowserService: NSObject {
 
     // MARK: - JavaScript Execution
 
+    private static let jsErrorPrefix = "__ICLAW_JS_ERR__:"
+
     func executeJavaScript(_ script: String) async -> Result<String, BrowserError> {
+        // Wrap in try-catch to prevent errors from propagating to the
+        // host page's error boundaries (e.g. React ErrorBoundary).
+        let safeScript = "try { \(script) } catch(__iclaw_e) { '\(Self.jsErrorPrefix)' + String(__iclaw_e) }"
         do {
-            let result = try await webView.evaluateJavaScript(script)
+            let result = try await webView.evaluateJavaScript(safeScript)
             if let result = result {
-                return .success(String(describing: result))
+                let str = String(describing: result)
+                if str.hasPrefix(Self.jsErrorPrefix) {
+                    return .failure(.javaScriptError(String(str.dropFirst(Self.jsErrorPrefix.count))))
+                }
+                return .success(str)
+            }
+            return .success("(undefined)")
+        } catch {
+            return .failure(.javaScriptError(error.localizedDescription))
+        }
+    }
+
+    /// Execute user-provided JavaScript with `return` and `await` support.
+    /// Uses `callAsyncJavaScript` which wraps code in an async function body,
+    /// and includes try-catch for error isolation from the host page.
+    func executeUserJavaScript(_ code: String) async -> Result<String, BrowserError> {
+        let wrappedCode = """
+        try {
+            \(code)
+        } catch(__iclaw_e) {
+            return '\(Self.jsErrorPrefix)' + String(__iclaw_e);
+        }
+        """
+        do {
+            let result = try await webView.callAsyncJavaScript(
+                wrappedCode, arguments: [:], in: nil, in: .page
+            )
+            if let result = result {
+                let str = String(describing: result)
+                if str.hasPrefix(Self.jsErrorPrefix) {
+                    return .failure(.javaScriptError(String(str.dropFirst(Self.jsErrorPrefix.count))))
+                }
+                return .success(str)
             }
             return .success("(undefined)")
         } catch {
@@ -213,7 +250,7 @@ final class BrowserService: NSObject {
     func click(selector: String) async -> Result<String, BrowserError> {
         let script = """
         (function() {
-            const el = document.querySelector(\(jsEscape(selector)));
+            const el = \(resolveSelector(selector));
             if (!el) return JSON.stringify({error: 'Element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
             el.click();
             var r = JSON.stringify({ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 100)});
@@ -230,7 +267,7 @@ final class BrowserService: NSObject {
         let clearScript = clearFirst ? "el.value = '';" : ""
         let script = """
         (function() {
-            const el = document.querySelector(\(jsEscape(selector)));
+            const el = \(resolveSelector(selector));
             if (!el) return JSON.stringify({error: 'Element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
             el.focus();
             \(clearScript)
@@ -255,7 +292,7 @@ final class BrowserService: NSObject {
     func select(selector: String, value: String) async -> Result<String, BrowserError> {
         let script = """
         (function() {
-            const el = document.querySelector(\(jsEscape(selector)));
+            const el = \(resolveSelector(selector));
             if (!el || el.tagName !== 'SELECT') return JSON.stringify({error: 'SELECT element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
             el.value = \(jsEscape(value));
             el.dispatchEvent(new Event('change', {bubbles: true}));
@@ -277,7 +314,7 @@ final class BrowserService: NSObject {
         }
         let script = """
         (function() {
-            const els = document.querySelectorAll(\(jsEscape(selector)));
+            const els = \(resolveSelector(selector, all: true));
             if (els.length === 0) return JSON.stringify({error: 'No elements found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
             const results = [];
             els.forEach(function(el, i) {
@@ -308,7 +345,7 @@ final class BrowserService: NSObject {
     func waitForElement(selector: String, timeout: TimeInterval = 10) async -> Result<String, BrowserError> {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline, !Task.isCancelled {
-            let script = "document.querySelector(\(jsEscape(selector))) !== null"
+            let script = "(\(resolveSelector(selector))) !== null"
             let result = await executeJavaScript(script)
             if case .success(let value) = result, value == "1" || value == "true" {
                 return .success("Element found: \(selector)")
@@ -363,7 +400,36 @@ final class BrowserService: NSObject {
         }
     }
 
-    private func jsEscape(_ str: String) -> String {
+    // MARK: - Selector Resolution
+
+    /// Matches `:contains("text")` or `:contains('text')` pseudo-selectors.
+    static let containsRegex = try! NSRegularExpression(
+        pattern: #":contains\(([\"'])(.*?)\1\)"#
+    )
+
+    /// Convert a selector to a JS expression that evaluates to the matched element(s).
+    /// Handles `:contains("text")` by converting to querySelectorAll + textContent filter,
+    /// since `:contains()` is not a valid native CSS pseudo-selector.
+    func resolveSelector(_ selector: String, all: Bool = false) -> String {
+        let range = NSRange(selector.startIndex..., in: selector)
+        guard let match = Self.containsRegex.firstMatch(in: selector, range: range) else {
+            return all
+                ? "document.querySelectorAll(\(jsEscape(selector)))"
+                : "document.querySelector(\(jsEscape(selector)))"
+        }
+        let matchRange = Range(match.range, in: selector)!
+        let baseSelector = String(selector[..<matchRange.lowerBound])
+        let textRange = Range(match.range(at: 2), in: selector)!
+        let searchText = String(selector[textRange])
+
+        if all {
+            return "Array.from(document.querySelectorAll(\(jsEscape(baseSelector)))).filter(function(el){return (el.textContent||'').indexOf(\(jsEscape(searchText)))!==-1})"
+        } else {
+            return "Array.from(document.querySelectorAll(\(jsEscape(baseSelector)))).find(function(el){return (el.textContent||'').indexOf(\(jsEscape(searchText)))!==-1})||null"
+        }
+    }
+
+    func jsEscape(_ str: String) -> String {
         let escaped = str
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
