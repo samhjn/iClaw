@@ -68,18 +68,11 @@ final class BackgroundKeepAliveManager {
         hadNewTasksDuringBackground = false
         guard isEnabled else { return }
 
-        beginSystemBackgroundTask()
+        // Only start background keep-alive when there are active sessions
+        guard !activeSessions.isEmpty else { return }
 
-        if !activeSessions.isEmpty {
-            startOrUpdateActivity()
-        } else {
-            // No active tasks — start a keep-alive activity anyway
-            liveActivityManager.start(
-                activeAgentCount: 0,
-                sessionName: "",
-                statusText: L10n.LiveActivity.running
-            )
-        }
+        beginSystemBackgroundTask()
+        startOrUpdateActivity()
     }
 
     /// Called when the app returns to foreground.
