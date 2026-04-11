@@ -188,7 +188,7 @@ final class BrowserService: NSObject {
         """
         do {
             let result = try await webView.callAsyncJavaScript(
-                wrappedCode, arguments: [:], in: nil, in: .page
+                wrappedCode, arguments: [:], in: nil, contentWorld: .page
             )
             if let result = result {
                 let str = String(describing: result)
