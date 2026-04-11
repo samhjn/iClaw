@@ -109,6 +109,7 @@ enum L10n {
         static var imageSaved: String { tr("chat.imageSaved") }
         static var copyImage: String { tr("chat.copyImage") }
         static var imageDeleted: String { tr("chat.imageDeleted") }
+        static var videoDeleted: String { tr("chat.videoDeleted") }
         static func modalityStripped(_ count: Int, _ model: String) -> String { tr("chat.modalityStripped", count, model) }
         static func toolUseUnsupported(_ model: String) -> String { tr("chat.toolUseUnsupported", model) }
         static var exportSession: String { tr("chat.exportSession") }

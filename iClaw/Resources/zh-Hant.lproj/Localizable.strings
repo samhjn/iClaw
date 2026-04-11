@@ -73,6 +73,7 @@
 "chat.imageSaved" = "已儲存至相簿";
 "chat.copyImage" = "拷貝圖片";
 "chat.imageDeleted" = "圖片已刪除";
+"chat.videoDeleted" = "影片已刪除";
 "chat.modalityStripped" = "已暫時移除上下文中的 %d 張圖片 — %@ 不支援視覺能力";
 "chat.toolUseUnsupported" = "%@ 不支援工具呼叫 — 瀏覽器、子智能體、程式碼執行等功能將無法使用。";
 "chat.exportSession" = "匯出對話";

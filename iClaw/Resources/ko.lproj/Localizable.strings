@@ -73,6 +73,7 @@
 "chat.imageSaved" = "사진에 저장되었습니다";
 "chat.copyImage" = "이미지 복사";
 "chat.imageDeleted" = "이미지가 삭제되었습니다";
+"chat.videoDeleted" = "비디오가 삭제되었습니다";
 "chat.modalityStripped" = "컨텍스트에서 이미지 %d개 일시적으로 제외됨 — %@은(는) 비전을 지원하지 않습니다";
 "chat.toolUseUnsupported" = "%@은(는) 도구 사용을 지원하지 않습니다 — 브라우저, 서브 에이전트, 코드 실행 등의 기능을 사용할 수 없습니다";
 "chat.exportSession" = "세션 내보내기";
