@@ -1113,9 +1113,16 @@ final class ChatViewModel {
         try? modelContext.save()
     }
 
-    /// Prepare for app suspension/termination. Cancels active streams so the
-    /// main thread is free to handle the system's exit signal promptly.
+    /// Prepare for app suspension/termination. When keep-alive is enabled and
+    /// sessions are active, streams are preserved so background execution can
+    /// continue. Otherwise, streams are cancelled to free the main thread for
+    /// the system's exit signal.
     func prepareForBackground() {
+        if let manager = Self.keepAliveManager,
+           manager.isEnabled, manager.hasActiveSessions {
+            // Keep-alive active — let the generation continue in the background
+            return
+        }
         streamCancelAction?()
         Self.activeStreamCancels[session.id]?()
     }

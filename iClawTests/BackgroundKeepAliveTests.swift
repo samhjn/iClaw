@@ -165,6 +165,73 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
         manager.onSessionStarted(sessionId: id, sessionName: "Failing Task")
         manager.onSessionCompleted(sessionId: id, sessionName: "Failing Task", isError: true)
     }
+
+    // MARK: hasActiveSessions
+
+    @MainActor
+    func testHasActiveSessionsDefaultFalse() {
+        let manager = BackgroundKeepAliveManager()
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testHasActiveSessionsTrueAfterStart() {
+        let manager = BackgroundKeepAliveManager()
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertTrue(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testHasActiveSessionsFalseAfterComplete() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertTrue(manager.hasActiveSessions)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    // MARK: isInBackground
+
+    @MainActor
+    func testIsInBackgroundTracksLifecycle() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        XCTAssertFalse(manager.isInBackground)
+        manager.activate()
+        XCTAssertTrue(manager.isInBackground)
+        manager.onReturnToForeground()
+        XCTAssertFalse(manager.isInBackground)
+    }
+
+    // MARK: Background task starts when entering background with active sessions
+
+    @MainActor
+    func testActivateWithActiveSessionsDoesNotCrash() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Task")
+        manager.activate()
+        manager.onReturnToForeground()
+        manager.onSessionCompleted(sessionId: id, sessionName: "Task", isError: false)
+    }
+
+    @MainActor
+    func testNewSessionDuringBackgroundSetsFlag() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        manager.activate()
+        XCTAssertTrue(manager.isInBackground)
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "BG Task")
+        // Return to foreground — should keep activity since task started during background
+        manager.onReturnToForeground()
+        // Clean up
+        manager.onSessionCompleted(sessionId: id, sessionName: "BG Task", isError: false)
+    }
 }
 
 // MARK: - CronActivityAttributes Tests

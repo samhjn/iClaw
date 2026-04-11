@@ -1,10 +1,14 @@
 import Foundation
+import UIKit
 
 /// Orchestrates the Live Activity background keep-alive strategy based on
 /// the user's preference.
 ///
 /// Tracks all active sessions (chat generations, cron jobs, sub-agents) and
 /// manages the Dynamic Island / Lock Screen Live Activity accordingly.
+///
+/// Uses `UIApplication.beginBackgroundTask` alongside the Live Activity to
+/// request additional execution time from iOS when entering the background.
 ///
 /// The feature is persisted as a boolean in `UserDefaults` and is **off** by
 /// default.
@@ -24,7 +28,7 @@ final class BackgroundKeepAliveManager {
     /// Timer for rotating session names in the Dynamic Island.
     private var rotationTimer: Timer?
     /// Whether the app is currently in the background.
-    private var isInBackground = false
+    private(set) var isInBackground = false
     /// Whether any new tasks were started while the app was in background.
     private var hadNewTasksDuringBackground = false
     /// Name and error state of the last completed session (persists until new task starts).
@@ -32,6 +36,9 @@ final class BackgroundKeepAliveManager {
     private var lastCompletionIsError: Bool = false
     /// Whether we are currently showing a completion status.
     private var isShowingCompletion = false
+
+    /// System background task identifier for extending execution time.
+    private var bgTaskId: UIBackgroundTaskIdentifier = .invalid
 
     /// Whether the Live Activity keep-alive is enabled (read from UserDefaults).
     var isEnabled: Bool {
@@ -42,6 +49,9 @@ final class BackgroundKeepAliveManager {
         }
     }
 
+    /// Whether there are tasks actively running that should be kept alive.
+    var hasActiveSessions: Bool { !activeSessions.isEmpty }
+
     // MARK: - Lifecycle
 
     /// Called when the app moves to background.
@@ -49,6 +59,9 @@ final class BackgroundKeepAliveManager {
         isInBackground = true
         hadNewTasksDuringBackground = false
         guard isEnabled else { return }
+
+        beginSystemBackgroundTask()
+
         if !activeSessions.isEmpty {
             startOrUpdateActivity()
         } else {
@@ -65,6 +78,8 @@ final class BackgroundKeepAliveManager {
     func onReturnToForeground() {
         isInBackground = false
         stopRotationTimer()
+        endSystemBackgroundTask()
+
         if activeSessions.isEmpty && !hadNewTasksDuringBackground {
             // No tasks ran during background and nothing active now — dismiss
             liveActivityManager.stop()
@@ -77,7 +92,28 @@ final class BackgroundKeepAliveManager {
     private func forceDeactivate() {
         stopRotationTimer()
         liveActivityManager.stop()
+        endSystemBackgroundTask()
         clearCompletion()
+    }
+
+    // MARK: - System Background Task
+
+    /// Request additional background execution time from iOS.
+    private func beginSystemBackgroundTask() {
+        guard bgTaskId == .invalid else { return }
+        bgTaskId = UIApplication.shared.beginBackgroundTask(withName: "iClaw.agentKeepAlive") { [weak self] in
+            // System is about to expire our time — clean up
+            Task { @MainActor in
+                self?.endSystemBackgroundTask()
+            }
+        }
+    }
+
+    /// End the system background task if one is active.
+    private func endSystemBackgroundTask() {
+        guard bgTaskId != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(bgTaskId)
+        bgTaskId = .invalid
     }
 
     // MARK: - Session Tracking
@@ -89,6 +125,8 @@ final class BackgroundKeepAliveManager {
 
         if isInBackground {
             hadNewTasksDuringBackground = true
+            // Ensure we have a background task when new work starts in background
+            beginSystemBackgroundTask()
         }
 
         // Clear completion status when a new task starts
@@ -112,6 +150,11 @@ final class BackgroundKeepAliveManager {
             lastCompletionIsError = isError
             isShowingCompletion = true
             liveActivityManager.showCompletionStatus(sessionName: sessionName, isError: isError)
+
+            // No more work — release the background task
+            if isInBackground {
+                endSystemBackgroundTask()
+            }
         } else {
             // Other tasks still running — update the count
             startOrUpdateActivity()
