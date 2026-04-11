@@ -524,8 +524,6 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?,
         stream: Bool
     ) -> AnthropicRequest {
-        let caps = effectiveCapabilities
-
         var systemBlocks: [AnthropicSystemBlock] = []
         var anthropicMessages: [AnthropicMessage] = []
 

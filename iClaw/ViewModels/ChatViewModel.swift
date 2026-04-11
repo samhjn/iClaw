@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import Observation
 import UIKit
+import AVFoundation
 
 @Observable
 final class ChatViewModel {
