@@ -73,6 +73,7 @@
 "chat.imageSaved" = "已保存到相册";
 "chat.copyImage" = "拷贝图片";
 "chat.imageDeleted" = "图片已删除";
+"chat.videoDeleted" = "视频已删除";
 "chat.modalityStripped" = "已暂时移除上下文中的 %d 张图片 — %@ 不支持视觉能力";
 "chat.toolUseUnsupported" = "%@ 不支持工具调用 — 浏览器、子智能体、代码执行等功能将不可用。";
 "chat.exportSession" = "导出会话";

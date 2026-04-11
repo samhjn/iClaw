@@ -82,7 +82,7 @@ struct MessageBubbleView: View {
                   let decoded = try? JSONDecoder().decode([VideoAttachment].self, from: data) else {
                 return []
             }
-            return decoded.filter { !$0.isFileDeleted }
+            return decoded
         }()
         cache.videoAttachments = result
         return result
@@ -397,7 +397,7 @@ private struct VideoThumbnailCell: View {
                 VStack(spacing: 4) {
                     Image(systemName: "trash.slash")
                         .font(.title3)
-                    Text("Deleted")
+                    Text(L10n.Chat.videoDeleted)
                         .font(.caption2)
                 }
                 .foregroundStyle(.white)

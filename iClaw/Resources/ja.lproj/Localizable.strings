@@ -73,6 +73,7 @@
 "chat.imageSaved" = "写真に保存しました";
 "chat.copyImage" = "画像をコピー";
 "chat.imageDeleted" = "画像は削除されました";
+"chat.videoDeleted" = "動画は削除されました";
 "chat.modalityStripped" = "コンテキストから画像 %d 枚を一時的に除外しました — %@ はビジョンに対応していません";
 "chat.toolUseUnsupported" = "%@ はツール使用に対応していません — ブラウザ、サブエージェント、コード実行などの機能が利用できません。";
 "chat.exportSession" = "セッションを書き出す";
