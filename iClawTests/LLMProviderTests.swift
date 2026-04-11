@@ -371,6 +371,7 @@ final class LLMProviderTests: XCTestCase {
             "google/gemini-3.1-flash-lite-preview",
             "gemini-2.0-flash",
             "gemini-2.5-pro",
+            "gemini-1.5-pro",
         ]
         for model in visionModels {
             let caps = ModelCapabilities.inferred(from: model)
@@ -382,8 +383,8 @@ final class LLMProviderTests: XCTestCase {
                            "\(model): expected imageGen=false")
         }
 
-        let noVision = ModelCapabilities.inferred(from: "gemini-1.5-pro")
-        XCTAssertFalse(noVision.supportsVision, "gemini-1.5 should not have vision")
+        let noVision = ModelCapabilities.inferred(from: "gemini-1.0-pro")
+        XCTAssertFalse(noVision.supportsVision, "gemini-1.0 should not have vision")
     }
 
     func testInferredCapabilities_GeminiImageModels() {
