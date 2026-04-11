@@ -62,9 +62,11 @@
 "chat.deleteAgentTitle" = "エージェントを削除";
 "chat.deleteAgentMessage" = "エージェント「%@」とそのすべてのセッション、サブエージェント、データが完全に削除されます。この操作は元に戻せません。";
 "chat.thinkingProcess" = "思考プロセス";
-"chat.addImage" = "画像を追加";
+"chat.addMedia" = "メディアを追加";
 "chat.photoLibrary" = "写真ライブラリ";
+"chat.videoLibrary" = "ビデオライブラリ";
 "chat.camera" = "カメラ";
+"chat.recordVideo" = "ビデオを撮影";
 "chat.pasteFromClipboard" = "クリップボードから貼り付け";
 "chat.imagePlaceholder" = "[画像]";
 "chat.saveImageToPhotos" = "画像を保存";

@@ -62,9 +62,11 @@
 "chat.deleteAgentTitle" = "刪除智能體";
 "chat.deleteAgentMessage" = "智能體「%@」及其所有對話、子智能體和資料將被永久刪除，此操作無法撤銷。";
 "chat.thinkingProcess" = "思考過程";
-"chat.addImage" = "新增圖片";
+"chat.addMedia" = "新增媒體";
 "chat.photoLibrary" = "相簿";
+"chat.videoLibrary" = "影片庫";
 "chat.camera" = "拍照";
+"chat.recordVideo" = "錄製影片";
 "chat.pasteFromClipboard" = "從剪貼簿貼上";
 "chat.imagePlaceholder" = "[圖片]";
 "chat.saveImageToPhotos" = "儲存圖片";

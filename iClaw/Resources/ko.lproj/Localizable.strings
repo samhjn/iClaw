@@ -62,9 +62,11 @@
 "chat.deleteAgentTitle" = "에이전트 삭제";
 "chat.deleteAgentMessage" = "에이전트 \"%@\"와 모든 세션, 하위 에이전트 및 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
 "chat.thinkingProcess" = "사고 과정";
-"chat.addImage" = "이미지 추가";
+"chat.addMedia" = "미디어 추가";
 "chat.photoLibrary" = "사진 라이브러리";
+"chat.videoLibrary" = "비디오 라이브러리";
 "chat.camera" = "카메라";
+"chat.recordVideo" = "비디오 촬영";
 "chat.pasteFromClipboard" = "클립보드에서 붙여넣기";
 "chat.imagePlaceholder" = "[이미지]";
 "chat.saveImageToPhotos" = "이미지 저장";
