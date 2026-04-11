@@ -1319,31 +1319,34 @@ final class ChatViewModel {
             return
         }
 
-        // Check if preprocessing is needed (check raw file first)
-        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
-        let asset = AVURLAsset(url: url)
-        let duration = CMTimeGetSeconds(asset.duration)
-        let needsPreprocessing = fileSize > VideoAttachment.maxInlineFileSize || duration > VideoAttachment.maxDurationSeconds
-
-        if needsPreprocessing {
-            isProcessingVideo = true
-            videoValidationError = nil
-            Task {
-                do {
-                    let processedURL = try await VideoPreprocessor.preprocess(url: url)
-                    await MainActor.run {
-                        self.isProcessingVideo = false
-                        self.finalizeVideoAdd(from: processedURL, agentId: agentId)
-                    }
-                } catch {
-                    await MainActor.run {
-                        self.isProcessingVideo = false
-                        self.videoValidationError = "Video preprocessing failed: \(error.localizedDescription)"
-                    }
-                }
+        // All AVFoundation metadata loading is async; dispatch into a Task.
+        isProcessingVideo = true
+        videoValidationError = nil
+        let videoURL = url
+        Task { @MainActor in
+            let asset = AVURLAsset(url: videoURL)
+            let fileSize = (try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int64) ?? 0
+            let duration: TimeInterval
+            if let cmDuration = try? await asset.load(.duration) {
+                duration = CMTimeGetSeconds(cmDuration)
+            } else {
+                duration = 0
             }
-        } else {
-            finalizeVideoAdd(from: url, agentId: agentId)
+            let needsPreprocessing = fileSize > VideoAttachment.maxInlineFileSize || duration > VideoAttachment.maxDurationSeconds
+
+            if needsPreprocessing {
+                do {
+                    let processedURL = try await VideoPreprocessor.preprocess(url: videoURL)
+                    self.isProcessingVideo = false
+                    self.finalizeVideoAdd(from: processedURL, agentId: agentId)
+                } catch {
+                    self.isProcessingVideo = false
+                    self.videoValidationError = "Video preprocessing failed: \(error.localizedDescription)"
+                }
+            } else {
+                self.isProcessingVideo = false
+                self.finalizeVideoAdd(from: videoURL, agentId: agentId)
+            }
         }
     }
 
