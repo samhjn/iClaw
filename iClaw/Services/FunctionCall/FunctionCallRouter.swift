@@ -214,7 +214,7 @@ final class FunctionCallRouter {
         case "file_info":
             return ToolCallResult(FileTools(agent: agent).fileInfo(arguments: arguments))
         case "attach_media":
-            return FileTools(agent: agent).attachMedia(arguments: arguments)
+            return await FileTools(agent: agent).attachMedia(arguments: arguments)
 
         // --- Image Generation ---
         case "generate_image":

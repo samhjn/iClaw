@@ -1355,14 +1355,16 @@ final class ChatViewModel {
             return
         }
 
-        guard let attachment = VideoAttachment.from(data: data, filename: filename, agentId: agentId) else {
-            videoValidationError = "Failed to process video."
-            return
-        }
+        Task { @MainActor in
+            guard let attachment = await VideoAttachment.from(data: data, filename: filename, agentId: agentId) else {
+                videoValidationError = "Failed to process video."
+                return
+            }
 
-        videoValidationError = nil
-        pendingVideos.append(attachment)
-        persistDraftVideos()
+            videoValidationError = nil
+            pendingVideos.append(attachment)
+            persistDraftVideos()
+        }
     }
 
     func removeVideo(id: UUID) {

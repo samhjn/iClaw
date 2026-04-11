@@ -99,7 +99,7 @@ struct FileTools {
         "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "tif"
     ]
 
-    func attachMedia(arguments: [String: Any]) -> ToolCallResult {
+    func attachMedia(arguments: [String: Any]) async -> ToolCallResult {
         guard let name = arguments["name"] as? String, !name.isEmpty else {
             return ToolCallResult("[Error] Missing required parameter: name")
         }
@@ -153,7 +153,7 @@ struct FileTools {
             do {
                 _ = try fm.readFile(agentId: agentId, name: name)
                 let ref = AgentFileManager.makeFileReference(agentId: agentId, filename: name)
-                guard let attachment = VideoAttachment.from(fileReference: ref) else {
+                guard let attachment = await VideoAttachment.from(fileReference: ref) else {
                     return ToolCallResult("[Error] Failed to read video metadata from '\(name)'.")
                 }
                 return ToolCallResult(

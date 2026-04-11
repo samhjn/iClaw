@@ -37,12 +37,13 @@ final class VideoPreprocessor {
         options: Options = Options()
     ) async throws -> URL {
         let asset = AVURLAsset(url: url)
-        let duration = CMTimeGetSeconds(asset.duration)
+        let cmDuration = try await asset.load(.duration)
+        let duration = CMTimeGetSeconds(cmDuration)
 
         // Check if processing is actually needed
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
         let needsTrim = duration > options.maxDuration
-        let needsResize = needsResolution(asset: asset, maxResolution: options.maxResolution)
+        let needsResize = try await needsResolution(asset: asset, maxResolution: options.maxResolution)
         let needsSizeReduction = fileSize > options.maxFileSize
 
         if !needsTrim && !needsResize && !needsSizeReduction {
@@ -85,9 +86,12 @@ final class VideoPreprocessor {
     }
 
     /// Check if the video resolution exceeds the maximum.
-    private static func needsResolution(asset: AVAsset, maxResolution: Int) -> Bool {
-        guard let track = asset.tracks(withMediaType: .video).first else { return false }
-        let size = track.naturalSize.applying(track.preferredTransform)
+    private static func needsResolution(asset: AVAsset, maxResolution: Int) async throws -> Bool {
+        guard let tracks = try? await asset.loadTracks(withMediaType: .video),
+              let track = tracks.first else { return false }
+        let naturalSize = try await track.load(.naturalSize)
+        let transform = try await track.load(.preferredTransform)
+        let size = naturalSize.applying(transform)
         let w = Int(abs(size.width))
         let h = Int(abs(size.height))
         return max(w, h) > maxResolution
