@@ -287,9 +287,11 @@
 "settings.license" = "Licensed under the MIT License";
 "settings.backgroundExecution" = "Background Execution";
 "settings.backgroundKeepAlive" = "Live Activity";
-"settings.backgroundKeepAliveFooter" = "Pin a Live Activity to the Dynamic Island while cron jobs are running, keeping the app visible and easy to return to. Disabled by default.";
-"cronLiveActivity.running" = "Cron jobs running…";
-"cronLiveActivity.done" = "All jobs completed";
+"settings.backgroundKeepAliveFooter" = "Pin a Live Activity to the Dynamic Island while background tasks are running, keeping the app visible and easy to return to. Disabled by default.";
+"liveActivity.running" = "Tasks running…";
+"liveActivity.done" = "All tasks completed";
+"liveActivity.error" = "Task failed";
+"liveActivity.agentsRunning" = "%d Agent(s) running";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "Edit Provider";

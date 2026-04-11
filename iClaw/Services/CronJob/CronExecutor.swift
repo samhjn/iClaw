@@ -6,6 +6,8 @@ import UserNotifications
 @MainActor
 final class CronExecutor {
     private let modelContainer: ModelContainer
+    /// Optional keep-alive manager; set by the scheduler to receive session lifecycle events.
+    var keepAliveManager: BackgroundKeepAliveManager?
 
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -28,9 +30,13 @@ final class CronExecutor {
         session.messages.append(userMsg)
         try? context.save()
 
+        keepAliveManager?.onSessionStarted(sessionId: session.id, sessionName: sessionTitle)
+
+        var hadError = false
         defer {
             session.isActive = false
             try? context.save()
+            keepAliveManager?.onSessionCompleted(sessionId: session.id, sessionName: sessionTitle, isError: hadError)
         }
 
         let router = ModelRouter(modelContext: context)
@@ -41,11 +47,12 @@ final class CronExecutor {
             )
             context.insert(errorMsg)
             session.messages.append(errorMsg)
+            hadError = true
             finalizeJob(job, session: session, context: context)
             return
         }
 
-        await runAgentLoop(
+        hadError = await runAgentLoop(
             session: session,
             agent: agent,
             router: router,
@@ -59,13 +66,14 @@ final class CronExecutor {
 
     // MARK: - Agent execution loop (non-streaming, headless)
 
+    /// Returns `true` if the loop ended due to an error.
     private func runAgentLoop(
         session: Session,
         agent: Agent,
         router: ModelRouter,
         context: ModelContext,
         maxRounds: Int = 10
-    ) async {
+    ) async -> Bool {
         let promptBuilder = PromptBuilder()
         let contextManager = ContextManager()
         let fnRouter = FunctionCallRouter(agent: agent, modelContext: context, sessionId: session.id)
@@ -130,9 +138,10 @@ final class CronExecutor {
                 context.insert(errorMsg)
                 session.messages.append(errorMsg)
                 try? context.save()
-                break
+                return true
             }
         }
+        return false
     }
 
     // MARK: - Helpers

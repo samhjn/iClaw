@@ -406,6 +406,15 @@ enum L10n {
         static var backgroundKeepAliveFooter: String { tr("settings.backgroundKeepAliveFooter") }
     }
 
+    // MARK: - Live Activity
+
+    enum LiveActivity {
+        static var running: String { tr("liveActivity.running") }
+        static var done: String { tr("liveActivity.done") }
+        static var error: String { tr("liveActivity.error") }
+        static func agentsRunning(_ count: Int) -> String { tr("liveActivity.agentsRunning", count) }
+    }
+
     // MARK: - LLM Provider
 
     enum Provider {

@@ -139,15 +139,24 @@ final class ChatViewModel {
     private static var activeGenerations: [UUID: Task<Void, Never>] = [:]
     /// Explicit stream-cancel closures keyed by session ID — survives ViewModel recreation.
     private static var activeStreamCancels: [UUID: @Sendable () -> Void] = [:]
+    /// Optional keep-alive manager; set by the app to receive session lifecycle events.
+    static var keepAliveManager: BackgroundKeepAliveManager?
+    /// Maps active generation session IDs to their display names.
+    private static var activeSessionNames: [UUID: String] = [:]
 
     /// Cancel and clear any active generation for the given session.
     /// Called before session/agent deletion to prevent writes to deleted objects.
     static func cancelAndClearGeneration(for sessionId: UUID) {
         activeStreamCancels[sessionId]?()
         activeStreamCancels.removeValue(forKey: sessionId)
+        let wasActive = activeGenerations[sessionId] != nil
         activeGenerations[sessionId]?.cancel()
         activeGenerations.removeValue(forKey: sessionId)
         dismissedSessions.remove(sessionId)
+        if wasActive {
+            let name = activeSessionNames.removeValue(forKey: sessionId) ?? ""
+            keepAliveManager?.onSessionCompleted(sessionId: sessionId, sessionName: name, isError: false)
+        }
     }
 
     #if DEBUG
@@ -342,6 +351,7 @@ final class ChatViewModel {
         streamCancelAction = nil
         Self.activeStreamCancels.removeValue(forKey: session.id)
         generationTask?.cancel()
+        let wasActive = Self.activeGenerations[session.id] != nil
         Self.activeGenerations[session.id]?.cancel()
         generationTask = nil
         Self.activeGenerations.removeValue(forKey: session.id)
@@ -359,6 +369,10 @@ final class ChatViewModel {
         compressionMonitorTask?.cancel()
         compressionMonitorTask = nil
         BrowserService.shared.releaseLock(sessionId: session.id)
+        if wasActive {
+            let name = Self.activeSessionNames.removeValue(forKey: session.id) ?? session.title
+            Self.keepAliveManager?.onSessionCompleted(sessionId: session.id, sessionName: name, isError: true)
+        }
 
         let forceStopMsg = Message(
             role: .assistant,
@@ -402,6 +416,8 @@ final class ChatViewModel {
         let task = Task { await generateResponse() }
         generationTask = task
         Self.activeGenerations[session.id] = task
+        Self.activeSessionNames[session.id] = session.title
+        Self.keepAliveManager?.onSessionStarted(sessionId: session.id, sessionName: session.title)
     }
 
     /// Strips partial/aborted assistant messages from the tail of the session
@@ -490,6 +506,8 @@ final class ChatViewModel {
         let task = Task { await generateResponse() }
         generationTask = task
         Self.activeGenerations[session.id] = task
+        Self.activeSessionNames[session.id] = session.title
+        Self.keepAliveManager?.onSessionStarted(sessionId: session.id, sessionName: session.title)
     }
 
     private var generationDepth = 0
@@ -538,6 +556,13 @@ final class ChatViewModel {
                 }
                 try? modelContext.save()
                 BrowserService.shared.releaseLock(sessionId: session.id)
+
+                let sessionName = Self.activeSessionNames.removeValue(forKey: session.id) ?? session.title
+                Self.keepAliveManager?.onSessionCompleted(
+                    sessionId: session.id,
+                    sessionName: sessionName,
+                    isError: errorMessage != nil
+                )
 
                 // Update embedding after generation completes (handles continued sessions)
                 SessionVectorStore(modelContext: modelContext)

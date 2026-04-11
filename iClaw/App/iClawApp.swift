@@ -108,12 +108,10 @@ struct iClawApp: App {
             switch newPhase {
             case .background:
                 cronScheduler?.pause()
-                keepAliveManager.activate(
-                    runningJobCount: cronScheduler?.runningJobIds.count ?? 0
-                )
+                keepAliveManager.activate()
             case .active:
                 cronScheduler?.resume()
-                keepAliveManager.deactivate()
+                keepAliveManager.onReturnToForeground()
             default:
                 break
             }
@@ -127,6 +125,7 @@ struct iClawApp: App {
         scheduler.start()
         cronScheduler = scheduler
         bgTaskCoordinator.scheduler = scheduler
+        ChatViewModel.keepAliveManager = keepAliveManager
     }
 
     // MARK: - Deep Link Handling
