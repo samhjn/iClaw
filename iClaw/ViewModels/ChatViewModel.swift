@@ -18,6 +18,9 @@ final class ChatViewModel {
     var streamingContent: String = ""
     var streamingThinking: String = ""
     var pendingImages: [ImageAttachment] = []
+    var pendingVideos: [VideoAttachment] = []
+    /// Error message shown when a video fails validation (e.g. too large/long).
+    var videoValidationError: String?
     var errorMessage: String? {
         didSet {
             if let errorMessage {
@@ -116,6 +119,8 @@ final class ChatViewModel {
 
     /// Draft pending images — survives ViewModel recreation.
     private static var cachedPendingImages: [UUID: [ImageAttachment]] = [:]
+    /// Draft pending videos — survives ViewModel recreation.
+    private static var cachedPendingVideos: [UUID: [VideoAttachment]] = [:]
 
     /// Return cached pending images for a session (used by file browser to exclude draft files).
     static func cachedPendingImages(for sessionId: UUID) -> [ImageAttachment] {
@@ -128,6 +133,9 @@ final class ChatViewModel {
             return true
         }
         if let images = cachedPendingImages[sessionId], !images.isEmpty {
+            return true
+        }
+        if let videos = cachedPendingVideos[sessionId], !videos.isEmpty {
             return true
         }
         return false
@@ -187,6 +195,14 @@ final class ChatViewModel {
                   let images = try? JSONDecoder().decode([ImageAttachment].self, from: data), !images.isEmpty {
             self.pendingImages = images
             Self.cachedPendingImages[session.id] = images
+        }
+        // Restore draft videos.
+        if let cached = Self.cachedPendingVideos[session.id], !cached.isEmpty {
+            self.pendingVideos = cached
+        } else if let data = session.draftVideosData,
+                  let videos = try? JSONDecoder().decode([VideoAttachment].self, from: data), !videos.isEmpty {
+            self.pendingVideos = videos
+            Self.cachedPendingVideos[session.id] = videos
         }
         // Load messages synchronously during init so subsequent recovery
         // methods see the current message list immediately.
@@ -433,7 +449,7 @@ final class ChatViewModel {
 
     func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty || !pendingImages.isEmpty || !pendingVideos.isEmpty else { return }
         guard !isLoading, Self.activeGenerations[session.id] == nil else { return }
 
         checkActiveSessionLock()
@@ -461,6 +477,13 @@ final class ChatViewModel {
         Self.cachedPendingImages.removeValue(forKey: session.id)
         session.draftImagesData = nil
 
+        // Finalize pending video attachments (already file-backed from addVideo).
+        let finalVideos = pendingVideos.filter { !$0.isFileDeleted }
+        let videoData: Data? = finalVideos.isEmpty ? nil : try? JSONEncoder().encode(finalVideos)
+        pendingVideos = []
+        Self.cachedPendingVideos.removeValue(forKey: session.id)
+        session.draftVideosData = nil
+
         // Embed agentfile:// refs into message content so images are part of the
         // file/ref system and visible in the AI context via resolveAgentFileImages.
         var messageContent = text
@@ -472,7 +495,8 @@ final class ChatViewModel {
 
         let userMessage = Message(role: .user, content: messageContent)
         userMessage.imageAttachmentsData = imageData
-        if imageData != nil { userMessage.recalculateTokenEstimate() }
+        userMessage.videoAttachmentsData = videoData
+        if imageData != nil || videoData != nil { userMessage.recalculateTokenEstimate() }
         modelContext.insert(userMessage)
         session.messages.append(userMessage)
         session.updatedAt = Date()
@@ -587,9 +611,15 @@ final class ChatViewModel {
             if let primary = chain.first {
                 let effectiveModel = primary.modelName ?? primary.provider.modelName
                 let caps = primary.provider.capabilities(for: effectiveModel)
-                let strippedCount = Self.stripUnsupportedModalities(from: &contextMessages, capabilities: caps)
-                if strippedCount > 0 {
-                    modalityWarning = L10n.Chat.modalityStripped(strippedCount, effectiveModel)
+                let stripped = Self.stripUnsupportedModalities(from: &contextMessages, capabilities: caps)
+                if stripped.total > 0 {
+                    if stripped.videos > 0 && stripped.images == 0 {
+                        modalityWarning = "\(stripped.videos) video(s) removed — \(effectiveModel) does not support video input."
+                    } else if stripped.images > 0 && stripped.videos == 0 {
+                        modalityWarning = L10n.Chat.modalityStripped(stripped.images, effectiveModel)
+                    } else {
+                        modalityWarning = L10n.Chat.modalityStripped(stripped.total, effectiveModel)
+                    }
                 } else {
                     modalityWarning = nil
                 }
@@ -1272,6 +1302,78 @@ final class ChatViewModel {
         session.draftImagesData = pendingImages.isEmpty ? nil : try? JSONEncoder().encode(pendingImages)
     }
 
+    // MARK: - Video Management
+
+    /// True while a video is being preprocessed (transcoded/trimmed).
+    var isProcessingVideo: Bool = false
+
+    /// Add a video from a file URL. Copies the video to the agent's file folder and creates a VideoAttachment.
+    /// If the video exceeds size/duration limits, automatically preprocesses (transcodes/trims) it.
+    func addVideo(from url: URL) {
+        guard let agent = session.agent else { return }
+        let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
+        let ext = (url.pathExtension).lowercased()
+        guard VideoAttachment.supportedExtensions.contains(ext) || ext == "hevc" || ext == "3gp" else {
+            videoValidationError = "Unsupported video format: .\(ext)"
+            return
+        }
+
+        // Check if preprocessing is needed (check raw file first)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
+        let asset = AVURLAsset(url: url)
+        let duration = CMTimeGetSeconds(asset.duration)
+        let needsPreprocessing = fileSize > VideoAttachment.maxInlineFileSize || duration > VideoAttachment.maxDurationSeconds
+
+        if needsPreprocessing {
+            isProcessingVideo = true
+            videoValidationError = nil
+            Task {
+                do {
+                    let processedURL = try await VideoPreprocessor.preprocess(url: url)
+                    await MainActor.run {
+                        self.isProcessingVideo = false
+                        self.finalizeVideoAdd(from: processedURL, agentId: agentId)
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.isProcessingVideo = false
+                        self.videoValidationError = "Video preprocessing failed: \(error.localizedDescription)"
+                    }
+                }
+            }
+        } else {
+            finalizeVideoAdd(from: url, agentId: agentId)
+        }
+    }
+
+    private func finalizeVideoAdd(from url: URL, agentId: UUID) {
+        let filename = "video_\(UUID().uuidString).\(url.pathExtension.lowercased().isEmpty ? "mp4" : url.pathExtension.lowercased())"
+
+        guard let data = try? Data(contentsOf: url) else {
+            videoValidationError = "Failed to read video file."
+            return
+        }
+
+        guard let attachment = VideoAttachment.from(data: data, filename: filename, agentId: agentId) else {
+            videoValidationError = "Failed to process video."
+            return
+        }
+
+        videoValidationError = nil
+        pendingVideos.append(attachment)
+        persistDraftVideos()
+    }
+
+    func removeVideo(id: UUID) {
+        pendingVideos.removeAll { $0.id == id }
+        persistDraftVideos()
+    }
+
+    private func persistDraftVideos() {
+        Self.cachedPendingVideos[session.id] = pendingVideos
+        session.draftVideosData = pendingVideos.isEmpty ? nil : try? JSONEncoder().encode(pendingVideos)
+    }
+
     // MARK: - Think Tag Extraction
 
     /// Extracts `<think>...</think>` blocks from content, returning cleaned content and extracted thinking.
@@ -1380,20 +1482,27 @@ final class ChatViewModel {
 
     // MARK: - Modality Stripping
 
+    /// Result of modality stripping — counts by media type.
+    struct StrippedModalities {
+        var images: Int = 0
+        var videos: Int = 0
+        var total: Int { images + videos }
+    }
+
     /// Removes image and/or video content parts from context messages when the target model
     /// lacks vision or video support. Also strips `agentfile://` image refs from text content
-    /// (replacing with `[Image: description]`). Returns the number of media parts that were stripped.
+    /// (replacing with `[Image: description]`). Returns counts of stripped media by type.
     @discardableResult
     static func stripUnsupportedModalities(
         from messages: inout [LLMChatMessage],
         capabilities: ModelCapabilities
-    ) -> Int {
+    ) -> StrippedModalities {
         // If the model supports both vision and video, nothing to strip
         let needsImageStrip = !capabilities.supportsVision
         let needsVideoStrip = !capabilities.supportsVideoInput
-        guard needsImageStrip || needsVideoStrip else { return 0 }
+        guard needsImageStrip || needsVideoStrip else { return StrippedModalities() }
 
-        var strippedCount = 0
+        var stripped = StrippedModalities()
         var indicesToRemove: [Int] = []
         for i in messages.indices {
             var didModify = false
@@ -1419,7 +1528,8 @@ final class ChatViewModel {
             let videoCount = needsVideoStrip ? parts.filter({ if case .videoURL = $0 { return true }; return false }).count : 0
             let totalStripped = imageCount + videoCount
             guard totalStripped > 0 else { continue }
-            strippedCount += totalStripped
+            stripped.images += imageCount
+            stripped.videos += videoCount
 
             // Filter out unsupported parts, keeping the rest
             let filteredParts = parts.filter { part in
@@ -1450,7 +1560,7 @@ final class ChatViewModel {
         for i in indicesToRemove.reversed() {
             messages.remove(at: i)
         }
-        return strippedCount
+        return stripped
     }
 }
 

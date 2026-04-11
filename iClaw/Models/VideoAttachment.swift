@@ -16,9 +16,52 @@ struct VideoAttachment: Codable, Identifiable {
     /// (format: `agentfile://<agentId>/<filename>`).
     var fileReference: String?
 
+    // MARK: - Size & Duration Limits
+
+    /// Maximum file size for inline base64 API transmission (20 MB).
+    static let maxInlineFileSize: Int64 = 20 * 1024 * 1024
+
+    /// Maximum video duration for API submission (2 minutes).
+    static let maxDurationSeconds: TimeInterval = 120
+
+    /// Maximum resolution (longest edge) to send to API.
+    static let maxResolution: Int = 720
+
+    /// Validation result for video eligibility.
+    enum ValidationResult {
+        case valid
+        case tooLarge(fileSize: Int64, limit: Int64)
+        case tooLong(duration: TimeInterval, limit: TimeInterval)
+        case tooLargeAndLong(fileSize: Int64, sizeLimit: Int64, duration: TimeInterval, durationLimit: TimeInterval)
+    }
+
+    /// Check whether the video meets size and duration limits for inline API transmission.
+    var validationResult: ValidationResult {
+        let oversized = fileSize > Self.maxInlineFileSize
+        let overlong = duration > Self.maxDurationSeconds
+        if oversized && overlong {
+            return .tooLargeAndLong(
+                fileSize: fileSize, sizeLimit: Self.maxInlineFileSize,
+                duration: duration, durationLimit: Self.maxDurationSeconds
+            )
+        } else if oversized {
+            return .tooLarge(fileSize: fileSize, limit: Self.maxInlineFileSize)
+        } else if overlong {
+            return .tooLong(duration: duration, limit: Self.maxDurationSeconds)
+        }
+        return .valid
+    }
+
+    /// Whether this video exceeds inline transmission limits and requires preprocessing.
+    var needsPreprocessing: Bool {
+        if case .valid = validationResult { return false }
+        return true
+    }
+
     /// Base64 data URI of the full video (for API transmission).
-    /// Returns nil if the file is missing or too large.
+    /// Returns nil if the file is missing or exceeds the inline size limit.
     var base64DataURI: String? {
+        guard fileSize <= Self.maxInlineFileSize else { return nil }
         guard let data = resolvedVideoData else { return nil }
         return "data:\(mimeType);base64,\(data.base64EncodedString())"
     }

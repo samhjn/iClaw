@@ -180,7 +180,11 @@ final class Message {
 
         if let vidData = videoAttachmentsData,
            let videos = try? JSONDecoder().decode([VideoAttachment].self, from: vidData) {
-            total += videos.count * 1000
+            for vid in videos {
+                // Gemini charges ~258 tokens per second of video at 1 FPS sampling.
+                // Use this as a reasonable cross-provider estimate.
+                total += TokenEstimator.estimateVideoTokens(duration: vid.duration, width: vid.width, height: vid.height)
+            }
         }
 
         return total

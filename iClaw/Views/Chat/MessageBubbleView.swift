@@ -11,6 +11,7 @@ struct MessageBubbleView: View {
     private final class DecodedCache {
         var toolCalls: [LLMToolCall]??
         var imageAttachments: [ImageAttachment]?
+        var videoAttachments: [VideoAttachment]?
     }
 
     private var role: MessageRole {
@@ -71,6 +72,19 @@ struct MessageBubbleView: View {
             return images
         }()
         cache.imageAttachments = result
+        return result
+    }
+
+    private var videoAttachments: [VideoAttachment] {
+        if let cached = cache.videoAttachments { return cached }
+        let result: [VideoAttachment] = {
+            guard let data = message?.videoAttachmentsData,
+                  let decoded = try? JSONDecoder().decode([VideoAttachment].self, from: data) else {
+                return []
+            }
+            return decoded.filter { !$0.isFileDeleted }
+        }()
+        cache.videoAttachments = result
         return result
     }
 
@@ -181,6 +195,9 @@ struct MessageBubbleView: View {
                 if !imageAttachments.isEmpty {
                     MessageImageGrid(images: imageAttachments)
                 }
+                if !videoAttachments.isEmpty {
+                    MessageVideoGrid(videos: videoAttachments)
+                }
                 if !userDisplayContent.isEmpty {
                     Text(userDisplayContent)
                         .font(.body)
@@ -217,6 +234,9 @@ struct MessageBubbleView: View {
                 if !imageAttachments.isEmpty && !contentHasInlineImageRefs {
                     MessageImageGrid(images: imageAttachments)
                 }
+                if !videoAttachments.isEmpty {
+                    MessageVideoGrid(videos: videoAttachments)
+                }
             }
         }
     }
@@ -240,6 +260,9 @@ struct MessageBubbleView: View {
 
             if !imageAttachments.isEmpty && !contentHasInlineImageRefs {
                 MessageImageGrid(images: imageAttachments)
+            }
+            if !videoAttachments.isEmpty {
+                MessageVideoGrid(videos: videoAttachments)
             }
 
             if isVerbose {
@@ -313,6 +336,155 @@ private struct CachedImageCell: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: maxW, maxHeight: maxH)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+// MARK: - Video Grid
+
+private struct MessageVideoGrid: View {
+    let videos: [VideoAttachment]
+    @State private var playingVideoURL: URL?
+
+    var body: some View {
+        let columns = videos.count == 1
+            ? [GridItem(.flexible())]
+            : [GridItem(.flexible()), GridItem(.flexible())]
+
+        LazyVGrid(columns: columns, spacing: 4) {
+            ForEach(videos) { attachment in
+                VideoThumbnailCell(attachment: attachment) {
+                    if let ref = attachment.fileReference,
+                       let (agentId, filename) = AgentFileManager.parseFileReference(ref) {
+                        let url = AgentFileManager.shared.fileURL(agentId: agentId, name: filename)
+                        if FileManager.default.fileExists(atPath: url.path) {
+                            playingVideoURL = url
+                        }
+                    }
+                }
+            }
+        }
+        .fullScreenCover(item: Binding(
+            get: { playingVideoURL.map { IdentifiableURL(url: $0) } },
+            set: { playingVideoURL = $0?.url }
+        )) { item in
+            VideoPlayerSheet(url: item.url)
+        }
+    }
+}
+
+private struct IdentifiableURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
+private struct VideoThumbnailCell: View {
+    let attachment: VideoAttachment
+    let onTap: () -> Void
+
+    var body: some View {
+        if attachment.isFileDeleted {
+            ZStack {
+                if let thumb = attachment.thumbnailImage {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .blur(radius: 3)
+                } else {
+                    Color(.systemGray5)
+                }
+                Color.black.opacity(0.5)
+                VStack(spacing: 4) {
+                    Image(systemName: "trash.slash")
+                        .font(.title3)
+                    Text("Deleted")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.white)
+            }
+            .frame(maxWidth: 240, maxHeight: 160)
+            .frame(minHeight: 80)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            ZStack {
+                if let thumb = attachment.thumbnailImage {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: 240, maxHeight: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray5))
+                        .frame(maxWidth: 240, maxHeight: 160)
+                        .frame(minHeight: 80)
+                }
+
+                // Play button overlay
+                Circle()
+                    .fill(.black.opacity(0.5))
+                    .frame(width: 44, height: 44)
+                    .overlay {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.white)
+                            .offset(x: 2)
+                    }
+
+                // Duration badge
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Text(attachment.durationString)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(.black.opacity(0.6)))
+                            .padding(6)
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { onTap() }
+        }
+    }
+}
+
+// MARK: - Video Player Sheet
+
+import AVKit
+
+private struct VideoPlayerSheet: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let player {
+                    VideoPlayer(player: player)
+                } else {
+                    Color.black
+                }
+            }
+            .ignoresSafeArea()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .onAppear {
+            player = AVPlayer(url: url)
+            player?.play()
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
         }
     }
 }

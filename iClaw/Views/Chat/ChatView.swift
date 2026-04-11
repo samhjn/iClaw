@@ -509,7 +509,9 @@ private struct ChatContentView: View {
                 canRetry: vm.canRetry,
                 cancelFailureReason: vm.cancelFailureReason,
                 pendingImages: vm.pendingImages,
+                pendingVideos: vm.pendingVideos,
                 isImageDisabled: vm.isImageInputDisabled,
+                isVideoDisabled: vm.isImageInputDisabled,
                 onSend: {
                     forceScrollToBottom = true
                     vm.sendMessage()
@@ -519,7 +521,9 @@ private struct ChatContentView: View {
                 onRetry: { vm.retryGeneration() },
                 onDismissKeyboard: {},
                 onAddImage: { vm.addImage($0) },
-                onRemoveImage: { vm.removeImage(id: $0) }
+                onRemoveImage: { vm.removeImage(id: $0) },
+                onAddVideo: { vm.addVideo(from: $0) },
+                onRemoveVideo: { vm.removeVideo(id: $0) }
             )
         }
         .animation(.easeInOut(duration: 0.25), value: vm.canRetry)

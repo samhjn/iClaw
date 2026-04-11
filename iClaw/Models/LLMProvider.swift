@@ -183,7 +183,8 @@ struct ModelCapabilities: Codable, Equatable {
 
     /// Infer default capabilities from a model name.
     ///
-    /// Vision: GPT-4+, Claude 3.5+, Qwen-VL/Omni/3.5+, Gemini 2+
+    /// Vision: GPT-4+, Claude 3.5+, Qwen-VL/Omni/3.5+, Gemini 1.5+
+    /// Video: Gemini 1.5+, Qwen-VL/Omni, InternVL, Pixtral, LLaVA-Video
     /// Image generation (chatInline): gemini-*-image-* models
     /// Image generation (dedicatedAPI): dall-e-*, gpt-image-*, flux-*, sd3-*, sdxl-*
     static func inferred(from modelName: String) -> ModelCapabilities {
@@ -213,12 +214,23 @@ struct ModelCapabilities: Codable, Equatable {
 
         let videoCapable = inferVideoInput(base)
 
+        // Video capability implies vision capability
+        if videoCapable {
+            return ModelCapabilities(
+                supportsVision: true,
+                supportsToolUse: true,
+                imageGenerationMode: .none,
+                supportsVideoInput: true,
+                supportsReasoning: false
+            )
+        }
+
         if inferVision(base) {
             return ModelCapabilities(
                 supportsVision: true,
                 supportsToolUse: true,
                 imageGenerationMode: .none,
-                supportsVideoInput: videoCapable,
+                supportsVideoInput: false,
                 supportsReasoning: false
             )
         }
@@ -238,12 +250,12 @@ struct ModelCapabilities: Codable, Equatable {
     }
 
     /// Detect models that support video input.
-    /// Gemini 2+, Qwen-VL/Omni support video natively.
+    /// Gemini 1.5+, Qwen-VL/Omni, InternVL, Pixtral, LLaVA-Video support video natively.
     private static func inferVideoInput(_ name: String) -> Bool {
-        // Gemini 2+ supports video input
+        // Gemini 1.5+ supports video input
         if name.hasPrefix("gemini-") {
             let rest = name.dropFirst(7)
-            if let digit = rest.first, let num = digit.wholeNumberValue, num >= 2 {
+            if let version = parseLeadingVersion(String(rest)), version >= 1.5 {
                 return true
             }
         }
@@ -251,11 +263,24 @@ struct ModelCapabilities: Codable, Equatable {
         if name.contains("qwen") && (name.contains("-vl") || name.contains("-omni")) {
             return true
         }
+        // InternVL supports video
+        if name.contains("internvl") {
+            return true
+        }
+        // Pixtral (Mistral) supports video
+        if name.contains("pixtral") {
+            return true
+        }
+        // LLaVA-Video / LLaVA-Next-Video
+        if name.contains("llava") && name.contains("video") {
+            return true
+        }
         return false
     }
 
     // MARK: - Private inference helpers
 
+    /// Detect vision-only models (no video). Video models are handled separately by `inferVideoInput`.
     private static func inferVision(_ name: String) -> Bool {
         isGPTVisionCapable(name)
             || isClaudeVisionCapable(name)
@@ -313,12 +338,14 @@ struct ModelCapabilities: Codable, Equatable {
         return false
     }
 
-    /// Gemini 2 and above (non-image variants handled here)
+    /// Gemini 1.5 and above
     private static func isGeminiVisionCapable(_ name: String) -> Bool {
         guard name.hasPrefix("gemini-") else { return false }
         let rest = name.dropFirst(7)
-        guard let digit = rest.first, let num = digit.wholeNumberValue else { return false }
-        return num >= 2
+        if let version = parseLeadingVersion(String(rest)), version >= 1.5 {
+            return true
+        }
+        return false
     }
 
     private static func parseLeadingVersion(_ str: String) -> Double? {

@@ -11,7 +11,9 @@ struct InputBarView: View {
     var canRetry: Bool = false
     var cancelFailureReason: String?
     var pendingImages: [ImageAttachment] = []
+    var pendingVideos: [VideoAttachment] = []
     var isImageDisabled: Bool = false
+    var isVideoDisabled: Bool = false
     let onSend: () -> Void
     var onStop: (() -> Void)?
     var onStopCompression: (() -> Void)?
@@ -19,6 +21,8 @@ struct InputBarView: View {
     var onDismissKeyboard: (() -> Void)?
     var onAddImage: ((UIImage) -> Void)?
     var onRemoveImage: ((UUID) -> Void)?
+    var onAddVideo: ((URL) -> Void)?
+    var onRemoveVideo: ((UUID) -> Void)?
 
     @State private var isInputFocused = false
     @State private var showImageSourcePicker = false
@@ -26,11 +30,13 @@ struct InputBarView: View {
     @State private var showPhotoPicker = false
     @State private var showCamera = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showVideoPicker = false
+    @State private var showVideoCamera = false
 
     private var isBusy: Bool { isLoading || isCompressing }
 
     private var canSendMessage: Bool {
-        (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingImages.isEmpty) && !isBusy && !isBlocked
+        (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingImages.isEmpty || !pendingVideos.isEmpty) && !isBusy && !isBlocked
     }
 
     var body: some View {
@@ -53,6 +59,13 @@ struct InputBarView: View {
             if !pendingImages.isEmpty {
                 ImageAttachmentBar(images: pendingImages) { id in
                     onRemoveImage?(id)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            if !pendingVideos.isEmpty {
+                VideoAttachmentBar(videos: pendingVideos) { id in
+                    onRemoveVideo?(id)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -122,13 +135,24 @@ struct InputBarView: View {
         .animation(.easeInOut(duration: 0.2), value: isLoading)
         .animation(.easeInOut(duration: 0.2), value: cancelFailureReason != nil)
         .animation(.easeInOut(duration: 0.2), value: pendingImages.count)
+        .animation(.easeInOut(duration: 0.2), value: pendingVideos.count)
         .animation(.easeInOut(duration: 0.2), value: canRetry)
         .confirmationDialog(L10n.Chat.addImage, isPresented: $showImageSourcePicker) {
             Button(L10n.Chat.photoLibrary) {
                 showPhotoPicker = true
             }
+            if !isVideoDisabled {
+                Button("Video from Library") {
+                    showVideoPicker = true
+                }
+            }
             Button(L10n.Chat.camera) {
                 showCamera = true
+            }
+            if !isVideoDisabled {
+                Button("Record Video") {
+                    showVideoCamera = true
+                }
             }
             if UIPasteboard.general.hasImages {
                 Button(L10n.Chat.pasteFromClipboard) {
@@ -155,6 +179,18 @@ struct InputBarView: View {
         .fullScreenCover(isPresented: $showCamera) {
             CameraPickerView { image in
                 onAddImage?(image)
+            }
+            .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showVideoPicker) {
+            VideoPickerView { url in
+                onAddVideo?(url)
+            }
+            .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showVideoCamera) {
+            VideoCameraPickerView { url in
+                onAddVideo?(url)
             }
             .ignoresSafeArea()
         }
@@ -379,6 +415,110 @@ struct CameraPickerView: UIViewControllerRepresentable {
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage {
                 parent.onImagePicked(image)
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+}
+
+// MARK: - Video Picker (PHPicker for videos)
+
+import UniformTypeIdentifiers
+
+struct VideoPickerView: UIViewControllerRepresentable {
+    let onVideoPicked: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .videos
+        config.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let parent: VideoPickerView
+
+        init(_ parent: VideoPickerView) {
+            self.parent = parent
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            guard let result = results.first else {
+                parent.dismiss()
+                return
+            }
+            let movieType = UTType.movie
+            guard result.itemProvider.hasItemConformingToTypeIdentifier(movieType.identifier) else {
+                parent.dismiss()
+                return
+            }
+            result.itemProvider.loadFileRepresentation(forTypeIdentifier: movieType.identifier) { url, error in
+                if let url {
+                    // Copy to temp location since the provided URL is temporary
+                    let tempURL = FileManager.default.temporaryDirectory
+                        .appendingPathComponent(UUID().uuidString)
+                        .appendingPathExtension(url.pathExtension)
+                    try? FileManager.default.copyItem(at: url, to: tempURL)
+                    DispatchQueue.main.async {
+                        self.parent.onVideoPicked(tempURL)
+                        self.parent.dismiss()
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.parent.dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Video Camera Picker (record video via camera)
+
+struct VideoCameraPickerView: UIViewControllerRepresentable {
+    let onVideoRecorded: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.mediaTypes = ["public.movie"]
+        picker.cameraCaptureMode = .video
+        picker.videoMaximumDuration = VideoAttachment.maxDurationSeconds
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: VideoCameraPickerView
+
+        init(_ parent: VideoCameraPickerView) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let url = info[.mediaURL] as? URL {
+                parent.onVideoRecorded(url)
             }
             parent.dismiss()
         }
