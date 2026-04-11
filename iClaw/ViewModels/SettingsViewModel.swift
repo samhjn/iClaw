@@ -114,11 +114,9 @@ final class SettingsViewModel {
         defaultProviderId = providers.first(where: \.isDefault)?.id
             ?? providers.first?.id
 
-        // ── 2. Defer model context work ─────────────────────────────
-        DispatchQueue.main.async { [modelContext] in
-            modelContext.delete(provider)
-            try? modelContext.save()
-        }
+        // ── 2. Persist deletion ─────────────────────────────────────
+        modelContext.delete(provider)
+        try? modelContext.save()
     }
 
     func updateProvider(_ provider: LLMProvider) {
