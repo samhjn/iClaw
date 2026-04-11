@@ -63,10 +63,8 @@
 "chat.deleteAgentMessage" = "Agent \"%@\" and all its sessions, sub-agents, and data will be permanently deleted. This cannot be undone.";
 "chat.thinkingProcess" = "Thinking Process";
 "chat.addMedia" = "Add Media";
-"chat.photoLibrary" = "Photo Library";
-"chat.videoLibrary" = "Video Library";
+"chat.photosAndVideos" = "Photos & Videos";
 "chat.camera" = "Camera";
-"chat.recordVideo" = "Record Video";
 "chat.pasteFromClipboard" = "Paste from Clipboard";
 "chat.imagePlaceholder" = "[Image]";
 "chat.saveImageToPhotos" = "Save Image";

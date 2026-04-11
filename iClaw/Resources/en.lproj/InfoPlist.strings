@@ -1,7 +1,8 @@
 /* English — Info.plist permission descriptions */
 
 NSCalendarsFullAccessUsageDescription = "iClaw needs access to your calendars so the AI agent can create, read, and manage calendar events on your behalf.";
-NSCameraUsageDescription = "iClaw needs camera access to capture photos for use in conversations with the AI agent.";
+NSCameraUsageDescription = "iClaw needs camera access to capture photos and record videos for use in conversations with the AI agent.";
+NSMicrophoneUsageDescription = "iClaw needs microphone access to record audio when capturing videos for conversations with the AI agent.";
 NSContactsUsageDescription = "iClaw needs access to your contacts so the AI agent can look up contact information when you ask.";
 NSHealthShareUsageDescription = "iClaw needs read access to your Health data so the AI agent can analyze trends such as steps, sleep, heart rate, and body metrics.";
 NSHealthUpdateUsageDescription = "iClaw needs write access to your Health data so the AI agent can log entries such as calorie intake and body metrics.";

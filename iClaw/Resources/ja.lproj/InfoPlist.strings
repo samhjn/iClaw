@@ -1,7 +1,8 @@
 /* 日本語 — Info.plist 権限の説明 */
 
 NSCalendarsFullAccessUsageDescription = "iClaw は、AIエージェントがカレンダーイベントの作成・閲覧・管理を行うために、カレンダーへのアクセスを必要とします。";
-NSCameraUsageDescription = "iClaw は、AIエージェントとの会話で使用する写真を撮影するために、カメラへのアクセスを必要とします。";
+NSCameraUsageDescription = "iClaw は、AIエージェントとの会話で使用する写真の撮影やビデオの録画のために、カメラへのアクセスを必要とします。";
+NSMicrophoneUsageDescription = "iClaw は、ビデオ録画時に音声を収録するために、マイクへのアクセスを必要とします。";
 NSContactsUsageDescription = "iClaw は、AIエージェントが連絡先情報を検索するために、連絡先へのアクセスを必要とします。";
 NSHealthShareUsageDescription = "iClaw は、AIエージェントが歩数・睡眠・心拍数・身体指標などの傾向を分析するために、ヘルスデータの読み取りを必要とします。";
 NSHealthUpdateUsageDescription = "iClaw は、AIエージェントがカロリー摂取量や身体指標などを記録するために、ヘルスデータの書き込みを必要とします。";

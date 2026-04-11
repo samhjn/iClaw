@@ -46,7 +46,9 @@
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>iClaw needs access to your calendars so the AI agent can create, read, and manage calendar events on your behalf.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>iClaw needs camera access to capture photos for use in conversations with the AI agent.</string>
+	<string>iClaw needs camera access to capture photos and record videos for use in conversations with the AI agent.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>iClaw needs microphone access to record audio when capturing videos for conversations with the AI agent.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>iClaw needs access to your contacts so the AI agent can look up contact information when you ask.</string>
 	<key>NSHealthShareUsageDescription</key>

@@ -63,10 +63,8 @@
 "chat.deleteAgentMessage" = "智能体「%@」及其所有会话、子智能体和数据将被永久删除，此操作无法撤销。";
 "chat.thinkingProcess" = "思考过程";
 "chat.addMedia" = "添加媒体";
-"chat.photoLibrary" = "相册";
-"chat.videoLibrary" = "视频库";
-"chat.camera" = "拍照";
-"chat.recordVideo" = "录制视频";
+"chat.photosAndVideos" = "照片和视频";
+"chat.camera" = "拍摄";
 "chat.pasteFromClipboard" = "从剪贴板粘贴";
 "chat.imagePlaceholder" = "[图片]";
 "chat.saveImageToPhotos" = "保存图片";
