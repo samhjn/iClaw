@@ -64,6 +64,11 @@ final class BGTaskIdentifierTests: XCTestCase {
 
 final class BGTaskRegistrationLifecycleTests: XCTestCase {
 
+    override func tearDown() {
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
+        super.tearDown()
+    }
+
     func testRegisterCallsRegistrarExactlyOnce() {
         let mock = MockBGTaskRegistrar()
         let coordinator = CronBGTaskCoordinator(registrar: mock)
@@ -172,6 +177,7 @@ final class BGTaskSeparationTests: XCTestCase {
 
     override func tearDown() {
         container = nil
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
         super.tearDown()
     }
 
@@ -257,24 +263,34 @@ final class BGTaskSeparationTests: XCTestCase {
         scheduler.stop()
     }
 
-    /// Multiple coordinators with the same mock should each register independently.
-    /// This verifies that idempotency is per-coordinator, not global.
-    func testMultipleCoordinatorsRegisterIndependently() {
+    /// When multiple coordinators exist (e.g. SwiftUI recreates the App struct),
+    /// only the first should call through to the registrar. The process-wide
+    /// static guard prevents the duplicate registration that crashes BGTaskScheduler.
+    func testSecondCoordinatorSkipsRegistration() {
         let mock = MockBGTaskRegistrar()
         let coordinator1 = CronBGTaskCoordinator(registrar: mock)
         let coordinator2 = CronBGTaskCoordinator(registrar: mock)
 
-        coordinator1.registerCronTask()
-        coordinator2.registerCronTask()
+        let first = coordinator1.registerCronTask()
+        let second = coordinator2.registerCronTask()
 
-        XCTAssertEqual(mock.registerCallCount, 2,
-                       "Each coordinator instance manages its own registration state")
+        XCTAssertTrue(first)
+        XCTAssertFalse(second, "Second coordinator must not call registrar again")
+        XCTAssertEqual(mock.registerCallCount, 1,
+                       "Only one registration call should reach BGTaskScheduler")
+        XCTAssertTrue(coordinator2.isRegistered,
+                      "Second coordinator should still reflect registered state")
     }
 }
 
 // MARK: - Handler Safety Tests
 
 final class BGTaskHandlerSafetyTests: XCTestCase {
+
+    override func tearDown() {
+        CronBGTaskCoordinator.resetRegistrationStateForTesting()
+        super.tearDown()
+    }
 
     /// When the scheduler is nil (not yet created), the coordinator's handler
     /// should gracefully handle the BGTask without crashing.
