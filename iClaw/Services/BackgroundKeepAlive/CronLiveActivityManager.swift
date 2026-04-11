@@ -2,7 +2,7 @@ import ActivityKit
 import Foundation
 
 /// Manages a Live Activity that appears on the Dynamic Island / Lock Screen
-/// while cron jobs are running, giving the system a reason to keep the app
+/// while background tasks are running, giving the system a reason to keep the app
 /// active and providing the user with at-a-glance status.
 @MainActor
 final class CronLiveActivityManager {
@@ -10,20 +10,22 @@ final class CronLiveActivityManager {
     private var currentActivity: Activity<CronActivityAttributes>?
     private(set) var isActive = false
 
-    /// Starts (or updates) the Live Activity with the current job count.
-    func start(runningJobCount: Int = 1, statusText: String? = nil) {
+    /// Starts (or updates) the Live Activity with the current task info.
+    func start(activeAgentCount: Int = 1,
+               sessionName: String = "",
+               statusText: String? = nil) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("[CronLiveActivity] Live Activities are not enabled")
+            print("[LiveActivity] Live Activities are not enabled")
             return
         }
 
         let state = CronActivityAttributes.ContentState(
-            runningJobCount: runningJobCount,
-            statusText: statusText ?? NSLocalizedString("cronLiveActivity.running", comment: "")
+            activeAgentCount: activeAgentCount,
+            sessionName: sessionName,
+            statusText: statusText ?? L10n.LiveActivity.running
         )
 
         if let existing = currentActivity {
-            // Update existing activity
             Task {
                 await existing.update(
                     ActivityContent(state: state, staleDate: nil)
@@ -32,7 +34,6 @@ final class CronLiveActivityManager {
             return
         }
 
-        // Start a new activity
         let attributes = CronActivityAttributes()
         do {
             currentActivity = try Activity.request(
@@ -41,18 +42,25 @@ final class CronLiveActivityManager {
                 pushType: nil
             )
             isActive = true
-            print("[CronLiveActivity] Started activity")
+            print("[LiveActivity] Started activity")
         } catch {
-            print("[CronLiveActivity] Failed to start: \(error)")
+            print("[LiveActivity] Failed to start: \(error)")
         }
     }
 
-    /// Updates the running job count on an existing activity.
-    func update(runningJobCount: Int, statusText: String? = nil) {
+    /// Updates the Live Activity with current task state.
+    func update(activeAgentCount: Int,
+                sessionName: String = "",
+                statusText: String? = nil,
+                isCompleted: Bool = false,
+                isError: Bool = false) {
         guard let activity = currentActivity else { return }
         let state = CronActivityAttributes.ContentState(
-            runningJobCount: runningJobCount,
-            statusText: statusText ?? NSLocalizedString("cronLiveActivity.running", comment: "")
+            activeAgentCount: activeAgentCount,
+            sessionName: sessionName,
+            statusText: statusText ?? L10n.LiveActivity.running,
+            isCompleted: isCompleted,
+            isError: isError
         )
         Task {
             await activity.update(
@@ -61,12 +69,30 @@ final class CronLiveActivityManager {
         }
     }
 
-    /// Ends the Live Activity (e.g. when all jobs finish or the user disables the feature).
+    /// Shows completion status on the Live Activity without ending it.
+    func showCompletionStatus(sessionName: String, isError: Bool) {
+        guard let activity = currentActivity else { return }
+        let state = CronActivityAttributes.ContentState(
+            activeAgentCount: 0,
+            sessionName: sessionName,
+            statusText: isError ? L10n.LiveActivity.error : L10n.LiveActivity.done,
+            isCompleted: !isError,
+            isError: isError
+        )
+        Task {
+            await activity.update(
+                ActivityContent(state: state, staleDate: nil)
+            )
+        }
+    }
+
+    /// Ends the Live Activity (e.g. when all tasks finish or the user disables the feature).
     func stop() {
         guard let activity = currentActivity else { return }
         let finalState = CronActivityAttributes.ContentState(
-            runningJobCount: 0,
-            statusText: NSLocalizedString("cronLiveActivity.done", comment: "")
+            activeAgentCount: 0,
+            sessionName: "",
+            statusText: L10n.LiveActivity.done
         )
         Task {
             await activity.end(
@@ -76,6 +102,6 @@ final class CronLiveActivityManager {
         }
         currentActivity = nil
         isActive = false
-        print("[CronLiveActivity] Stopped activity")
+        print("[LiveActivity] Stopped activity")
     }
 }

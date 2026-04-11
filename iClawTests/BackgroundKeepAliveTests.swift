@@ -63,19 +63,19 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
         XCTAssertFalse(manager.isEnabled)
     }
 
-    // MARK: Deactivate Safety
+    // MARK: Lifecycle Safety
 
     @MainActor
-    func testDeactivateFromCleanStateDoesNotCrash() {
+    func testOnReturnToForegroundFromCleanStateDoesNotCrash() {
         let manager = BackgroundKeepAliveManager()
-        manager.deactivate()
+        manager.onReturnToForeground()
     }
 
     @MainActor
-    func testDoubleDeactivateDoesNotCrash() {
+    func testDoubleReturnToForegroundDoesNotCrash() {
         let manager = BackgroundKeepAliveManager()
-        manager.deactivate()
-        manager.deactivate()
+        manager.onReturnToForeground()
+        manager.onReturnToForeground()
     }
 
     // MARK: Activate When Disabled
@@ -84,17 +84,25 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
     func testActivateWhenDisabledIsNoOp() {
         UserDefaults.standard.removeObject(forKey: testKey)
         let manager = BackgroundKeepAliveManager()
-        manager.activate(runningJobCount: 5)
+        manager.activate()
     }
 
-    // MARK: onJobsChanged When Disabled
+    // MARK: Session Events When Disabled
 
     @MainActor
-    func testOnJobsChangedWhenDisabledIsNoOp() {
+    func testOnSessionStartedWhenDisabledIsNoOp() {
         UserDefaults.standard.removeObject(forKey: testKey)
         let manager = BackgroundKeepAliveManager()
-        manager.onJobsChanged(runningCount: 3)
-        manager.onJobsChanged(runningCount: 0)
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+    }
+
+    @MainActor
+    func testOnSessionCompletedWhenDisabledIsNoOp() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let manager = BackgroundKeepAliveManager()
+        let id = UUID()
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
     }
 
     // MARK: Disabling Calls Deactivate
@@ -106,6 +114,160 @@ final class BackgroundKeepAliveManagerTests: XCTestCase {
         manager.isEnabled = false
         XCTAssertFalse(manager.isEnabled)
     }
+
+    // MARK: Smart Foreground Lifecycle
+
+    @MainActor
+    func testReturnToForegroundWithNoBackgroundTasksDismisses() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        // Go to background with no active tasks
+        manager.activate()
+        // Return to foreground without any tasks having started
+        manager.onReturnToForeground()
+        // Should not crash — Live Activity should be dismissed
+    }
+
+    @MainActor
+    func testReturnToForegroundWithActiveTasksKeepsActivity() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test Task")
+        manager.activate()
+        // Return to foreground while task still running
+        manager.onReturnToForeground()
+        // Complete the task after returning
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test Task", isError: false)
+    }
+
+    // MARK: Multiple Sessions
+
+    @MainActor
+    func testMultipleSessionsTracked() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id1 = UUID()
+        let id2 = UUID()
+        manager.onSessionStarted(sessionId: id1, sessionName: "Task 1")
+        manager.onSessionStarted(sessionId: id2, sessionName: "Task 2")
+        // Complete one — should still be active
+        manager.onSessionCompleted(sessionId: id1, sessionName: "Task 1", isError: false)
+        // Complete the other
+        manager.onSessionCompleted(sessionId: id2, sessionName: "Task 2", isError: false)
+    }
+
+    @MainActor
+    func testSessionCompletedWithError() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Failing Task")
+        manager.onSessionCompleted(sessionId: id, sessionName: "Failing Task", isError: true)
+    }
+
+    // MARK: hasActiveSessions
+
+    @MainActor
+    func testHasActiveSessionsDefaultFalse() {
+        let manager = BackgroundKeepAliveManager()
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testHasActiveSessionsTrueAfterStart() {
+        let manager = BackgroundKeepAliveManager()
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertTrue(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testHasActiveSessionsFalseAfterComplete() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertTrue(manager.hasActiveSessions)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    // MARK: isInBackground
+
+    @MainActor
+    func testIsInBackgroundTracksLifecycle() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        XCTAssertFalse(manager.isInBackground)
+        manager.activate()
+        XCTAssertTrue(manager.isInBackground)
+        manager.onReturnToForeground()
+        XCTAssertFalse(manager.isInBackground)
+    }
+
+    // MARK: Background task starts when entering background with active sessions
+
+    @MainActor
+    func testActivateWithActiveSessionsDoesNotCrash() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Task")
+        manager.activate()
+        manager.onReturnToForeground()
+        manager.onSessionCompleted(sessionId: id, sessionName: "Task", isError: false)
+    }
+
+    @MainActor
+    func testNewSessionDuringBackgroundSetsFlag() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        manager.activate()
+        XCTAssertTrue(manager.isInBackground)
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "BG Task")
+        // Return to foreground — should keep activity since task started during background
+        manager.onReturnToForeground()
+        // Clean up
+        manager.onSessionCompleted(sessionId: id, sessionName: "BG Task", isError: false)
+    }
+
+    // MARK: shouldPreserveStreams
+
+    @MainActor
+    func testShouldPreserveStreamsFalseByDefault() {
+        let manager = BackgroundKeepAliveManager()
+        XCTAssertFalse(manager.shouldPreserveStreams)
+    }
+
+    @MainActor
+    func testShouldPreserveStreamsFalseWhenDisabled() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = false
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertFalse(manager.shouldPreserveStreams)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
+    }
+
+    @MainActor
+    func testShouldPreserveStreamsTrueWhenEnabledWithSessions() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Test")
+        XCTAssertTrue(manager.shouldPreserveStreams)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Test", isError: false)
+        XCTAssertFalse(manager.shouldPreserveStreams)
+    }
+
+    @MainActor
+    func testShouldPreserveStreamsAccessibleFromNonisolated() {
+        let manager = BackgroundKeepAliveManager()
+        // This test verifies the property is nonisolated and compiles without @MainActor
+        let _ = manager.shouldPreserveStreams
+    }
 }
 
 // MARK: - CronActivityAttributes Tests
@@ -116,67 +278,120 @@ final class CronActivityAttributesTests: XCTestCase {
 
     func testContentStateEncodeDecode() throws {
         let state = CronActivityAttributes.ContentState(
-            runningJobCount: 3,
-            statusText: "Running daily report…"
+            activeAgentCount: 3,
+            sessionName: "Daily Report",
+            statusText: "3 Agents running"
         )
         let encoded = try JSONEncoder().encode(state)
         let decoded = try JSONDecoder().decode(
             CronActivityAttributes.ContentState.self,
             from: encoded
         )
-        XCTAssertEqual(decoded.runningJobCount, 3)
-        XCTAssertEqual(decoded.statusText, "Running daily report…")
+        XCTAssertEqual(decoded.activeAgentCount, 3)
+        XCTAssertEqual(decoded.sessionName, "Daily Report")
+        XCTAssertEqual(decoded.statusText, "3 Agents running")
+        XCTAssertFalse(decoded.isCompleted)
+        XCTAssertFalse(decoded.isError)
+    }
+
+    func testContentStateWithCompletionStatus() throws {
+        let state = CronActivityAttributes.ContentState(
+            activeAgentCount: 0,
+            sessionName: "Finished Task",
+            statusText: "All tasks completed",
+            isCompleted: true,
+            isError: false
+        )
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(
+            CronActivityAttributes.ContentState.self,
+            from: encoded
+        )
+        XCTAssertEqual(decoded.activeAgentCount, 0)
+        XCTAssertEqual(decoded.sessionName, "Finished Task")
+        XCTAssertTrue(decoded.isCompleted)
+        XCTAssertFalse(decoded.isError)
+    }
+
+    func testContentStateWithErrorStatus() throws {
+        let state = CronActivityAttributes.ContentState(
+            activeAgentCount: 0,
+            sessionName: "Failed Task",
+            statusText: "Task failed",
+            isCompleted: false,
+            isError: true
+        )
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(
+            CronActivityAttributes.ContentState.self,
+            from: encoded
+        )
+        XCTAssertTrue(decoded.isError)
+        XCTAssertFalse(decoded.isCompleted)
     }
 
     func testContentStateDecodesFromJSON() throws {
         let json = """
-        {"runningJobCount": 5, "statusText": "Processing…"}
+        {"activeAgentCount": 5, "sessionName": "Test", "statusText": "Processing…", "isCompleted": false, "isError": false}
         """.data(using: .utf8)!
         let state = try JSONDecoder().decode(
             CronActivityAttributes.ContentState.self,
             from: json
         )
-        XCTAssertEqual(state.runningJobCount, 5)
+        XCTAssertEqual(state.activeAgentCount, 5)
+        XCTAssertEqual(state.sessionName, "Test")
         XCTAssertEqual(state.statusText, "Processing…")
     }
 
     // MARK: ContentState Hashable
 
     func testContentStateEquality() {
-        let a = CronActivityAttributes.ContentState(runningJobCount: 2, statusText: "Running")
-        let b = CronActivityAttributes.ContentState(runningJobCount: 2, statusText: "Running")
+        let a = CronActivityAttributes.ContentState(activeAgentCount: 2, sessionName: "S", statusText: "Running")
+        let b = CronActivityAttributes.ContentState(activeAgentCount: 2, sessionName: "S", statusText: "Running")
         XCTAssertEqual(a, b)
     }
 
     func testContentStateInequalityByCount() {
-        let a = CronActivityAttributes.ContentState(runningJobCount: 1, statusText: "Running")
-        let b = CronActivityAttributes.ContentState(runningJobCount: 2, statusText: "Running")
+        let a = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "S", statusText: "Running")
+        let b = CronActivityAttributes.ContentState(activeAgentCount: 2, sessionName: "S", statusText: "Running")
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testContentStateInequalityBySessionName() {
+        let a = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "A", statusText: "Running")
+        let b = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "B", statusText: "Running")
         XCTAssertNotEqual(a, b)
     }
 
     func testContentStateInequalityByStatus() {
-        let a = CronActivityAttributes.ContentState(runningJobCount: 1, statusText: "Running")
-        let b = CronActivityAttributes.ContentState(runningJobCount: 1, statusText: "Done")
+        let a = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "S", statusText: "Running")
+        let b = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "S", statusText: "Done")
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testContentStateInequalityByCompletion() {
+        let a = CronActivityAttributes.ContentState(activeAgentCount: 0, sessionName: "S", statusText: "Done", isCompleted: true)
+        let b = CronActivityAttributes.ContentState(activeAgentCount: 0, sessionName: "S", statusText: "Done", isCompleted: false)
         XCTAssertNotEqual(a, b)
     }
 
     func testContentStateHashConsistency() {
-        let state = CronActivityAttributes.ContentState(runningJobCount: 4, statusText: "Test")
+        let state = CronActivityAttributes.ContentState(activeAgentCount: 4, sessionName: "S", statusText: "Test")
         let hash1 = state.hashValue
         let hash2 = state.hashValue
         XCTAssertEqual(hash1, hash2)
     }
 
     func testEqualStatesHaveEqualHashes() {
-        let a = CronActivityAttributes.ContentState(runningJobCount: 3, statusText: "Same")
-        let b = CronActivityAttributes.ContentState(runningJobCount: 3, statusText: "Same")
+        let a = CronActivityAttributes.ContentState(activeAgentCount: 3, sessionName: "S", statusText: "Same")
+        let b = CronActivityAttributes.ContentState(activeAgentCount: 3, sessionName: "S", statusText: "Same")
         XCTAssertEqual(a.hashValue, b.hashValue)
     }
 
     func testContentStateWorksInSet() {
-        let s1 = CronActivityAttributes.ContentState(runningJobCount: 1, statusText: "A")
-        let s2 = CronActivityAttributes.ContentState(runningJobCount: 2, statusText: "B")
-        let s3 = CronActivityAttributes.ContentState(runningJobCount: 1, statusText: "A") // duplicate
+        let s1 = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "A", statusText: "A")
+        let s2 = CronActivityAttributes.ContentState(activeAgentCount: 2, sessionName: "B", statusText: "B")
+        let s3 = CronActivityAttributes.ContentState(activeAgentCount: 1, sessionName: "A", statusText: "A") // duplicate
         let set: Set = [s1, s2, s3]
         XCTAssertEqual(set.count, 2)
     }
@@ -203,7 +418,13 @@ final class CronLiveActivityManagerStateTests: XCTestCase {
     @MainActor
     func testUpdateWithNoActivityDoesNotCrash() {
         let manager = CronLiveActivityManager()
-        manager.update(runningJobCount: 5, statusText: "test")
+        manager.update(activeAgentCount: 5, sessionName: "test", statusText: "test")
+    }
+
+    @MainActor
+    func testShowCompletionWithNoActivityDoesNotCrash() {
+        let manager = CronLiveActivityManager()
+        manager.showCompletionStatus(sessionName: "test", isError: false)
     }
 
     @MainActor

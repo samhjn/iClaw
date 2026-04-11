@@ -286,9 +286,11 @@
 "settings.license" = "MIT 라이선스에 따라 공개";
 "settings.backgroundExecution" = "백그라운드 실행";
 "settings.backgroundKeepAlive" = "라이브 활동";
-"settings.backgroundKeepAliveFooter" = "cron 작업 실행 중 Dynamic Island에 라이브 활동을 고정하여 앱의 가시성을 유지합니다. 기본적으로 비활성화되어 있습니다.";
-"cronLiveActivity.running" = "cron 작업 실행 중…";
-"cronLiveActivity.done" = "모든 작업 완료";
+"settings.backgroundKeepAliveFooter" = "백그라운드 작업 실행 중 Dynamic Island에 라이브 활동을 고정하여 앱의 가시성을 유지합니다. 기본적으로 비활성화되어 있습니다.";
+"liveActivity.running" = "작업 실행 중…";
+"liveActivity.done" = "모든 작업 완료";
+"liveActivity.error" = "작업 실패";
+"liveActivity.agentsRunning" = "%d개의 Agent 실행 중";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "제공자 편집";

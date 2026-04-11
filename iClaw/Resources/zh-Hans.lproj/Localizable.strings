@@ -287,9 +287,11 @@
 "settings.license" = "基于 MIT 许可证开源";
 "settings.backgroundExecution" = "后台执行";
 "settings.backgroundKeepAlive" = "实时活动";
-"settings.backgroundKeepAliveFooter" = "定时任务运行时在灵动岛上固定一个实时活动，保持应用可见且方便返回。默认关闭。";
-"cronLiveActivity.running" = "定时任务运行中…";
-"cronLiveActivity.done" = "所有任务已完成";
+"settings.backgroundKeepAliveFooter" = "后台任务运行时在灵动岛上固定一个实时活动，保持应用可见且方便返回。默认关闭。";
+"liveActivity.running" = "任务运行中…";
+"liveActivity.done" = "所有任务已完成";
+"liveActivity.error" = "任务出错";
+"liveActivity.agentsRunning" = "%d个Agent运行中";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "编辑服务商";

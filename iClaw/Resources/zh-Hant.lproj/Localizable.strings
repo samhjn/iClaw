@@ -287,9 +287,11 @@
 "settings.license" = "基於 MIT 授權條款開源";
 "settings.backgroundExecution" = "背景執行";
 "settings.backgroundKeepAlive" = "即時動態";
-"settings.backgroundKeepAliveFooter" = "排程任務執行時在動態島上釘選即時動態，保持應用程式可見且方便返回。預設為關閉。";
-"cronLiveActivity.running" = "排程任務執行中…";
-"cronLiveActivity.done" = "所有任務已完成";
+"settings.backgroundKeepAliveFooter" = "後台任務執行時在動態島上釘選即時動態，保持應用程式可見且方便返回。預設為關閉。";
+"liveActivity.running" = "任務執行中…";
+"liveActivity.done" = "所有任務已完成";
+"liveActivity.error" = "任務出錯";
+"liveActivity.agentsRunning" = "%d個Agent執行中";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "編輯服務商";

@@ -286,9 +286,11 @@
 "settings.license" = "MIT ライセンスに基づき公開";
 "settings.backgroundExecution" = "バックグラウンド実行";
 "settings.backgroundKeepAlive" = "ライブアクティビティ";
-"settings.backgroundKeepAliveFooter" = "cronジョブの実行中にDynamic Islandにライブアクティビティを固定し、アプリの可視性を維持します。デフォルトでは無効です。";
-"cronLiveActivity.running" = "cronジョブ実行中…";
-"cronLiveActivity.done" = "すべてのジョブが完了";
+"settings.backgroundKeepAliveFooter" = "バックグラウンドタスクの実行中にDynamic Islandにライブアクティビティを固定し、アプリの可視性を維持します。デフォルトでは無効です。";
+"liveActivity.running" = "タスク実行中…";
+"liveActivity.done" = "すべてのタスクが完了";
+"liveActivity.error" = "タスクが失敗";
+"liveActivity.agentsRunning" = "%d個のAgentが実行中";
 
 // MARK: - LLM Provider
 "provider.editProvider" = "プロバイダーを編集";
