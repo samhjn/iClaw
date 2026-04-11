@@ -155,6 +155,39 @@ final class LLMService: @unchecked Sendable {
         }
     }
 
+    // MARK: - Video Content Adaptation
+
+    /// Adapts video content parts for the target provider/model before serialization.
+    /// - Gemini (supportsVideoInput): converts `.videoURL` to `.imageURL` (Gemini accepts video
+    ///   data URIs through the `image_url` content type in OpenAI-compatible mode).
+    /// - Models without video support: strips `.videoURL` parts as a safety net.
+    private func adaptVideoContentParts(in messages: [LLMChatMessage]) -> [LLMChatMessage] {
+        let caps = effectiveCapabilities
+        return messages.map { msg in
+            guard let parts = msg.contentParts, parts.contains(where: { if case .videoURL = $0 { return true }; return false }) else {
+                return msg
+            }
+            let adaptedParts: [ContentPart] = parts.compactMap { part in
+                guard case .videoURL(let url) = part else { return part }
+                if caps.supportsVideoInput {
+                    // Gemini-compatible: send video data URI via image_url content type
+                    return .imageURL(url: url, detail: nil)
+                } else {
+                    // Model doesn't support video: strip
+                    return nil
+                }
+            }
+            return LLMChatMessage(
+                role: msg.role,
+                content: msg.content,
+                contentParts: adaptedParts.isEmpty ? nil : adaptedParts,
+                toolCalls: msg.toolCalls,
+                toolCallId: msg.toolCallId,
+                name: msg.name
+            )
+        }
+    }
+
     // MARK: - OpenAI Implementation
 
     private func openAIChatCompletion(
@@ -162,11 +195,12 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?
     ) async throws -> LLMChatResponse {
         let caps = effectiveCapabilities
+        let adaptedMessages = adaptVideoContentParts(in: messages)
         let modalities: [String]? = caps.imageGenerationMode == .chatInline ? ["image", "text"] : nil
         let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
-            messages: messages,
+            messages: adaptedMessages,
             tools: tools?.isEmpty == true ? nil : tools,
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: false,
@@ -195,11 +229,12 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?
     ) async throws -> (stream: AsyncStream<StreamChunk>, cancel: @Sendable () -> Void) {
         let caps = effectiveCapabilities
+        let adaptedMessages = adaptVideoContentParts(in: messages)
         let modalities: [String]? = caps.imageGenerationMode == .chatInline ? ["image", "text"] : nil
         let thinkingLevel = effectiveThinkingLevel
         let request = LLMChatRequest(
             model: model,
-            messages: messages,
+            messages: adaptedMessages,
             tools: tools?.isEmpty == true ? nil : tools,
             toolChoice: (tools != nil && tools?.isEmpty == false) ? .auto : nil,
             stream: true,
@@ -489,8 +524,6 @@ final class LLMService: @unchecked Sendable {
         tools: [LLMToolDefinition]?,
         stream: Bool
     ) -> AnthropicRequest {
-        let caps = effectiveCapabilities
-
         var systemBlocks: [AnthropicSystemBlock] = []
         var anthropicMessages: [AnthropicMessage] = []
 
@@ -785,6 +818,8 @@ enum LLMError: LocalizedError {
     case invalidResponse
     case apiError(statusCode: Int, message: String)
     case decodingError(String)
+    case videoTooLarge(message: String)
+    case videoFormatUnsupported(message: String)
 
     var errorDescription: String? {
         switch self {
@@ -792,6 +827,22 @@ enum LLMError: LocalizedError {
         case .invalidResponse: return "Invalid response from server"
         case .apiError(let code, let msg): return "API Error (\(code)): \(msg)"
         case .decodingError(let msg): return "Decoding error: \(msg)"
+        case .videoTooLarge(let msg): return "Video too large: \(msg)"
+        case .videoFormatUnsupported(let msg): return "Unsupported video format: \(msg)"
+        }
+    }
+
+    /// Detect if an API error is video-related based on the error message.
+    var isVideoRelated: Bool {
+        switch self {
+        case .videoTooLarge, .videoFormatUnsupported:
+            return true
+        case .apiError(_, let msg):
+            let lower = msg.lowercased()
+            return lower.contains("video") || lower.contains("file size") || lower.contains("too large")
+                || lower.contains("payload") || lower.contains("media")
+        default:
+            return false
         }
     }
 }

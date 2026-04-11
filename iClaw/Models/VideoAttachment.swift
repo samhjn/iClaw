@@ -16,9 +16,52 @@ struct VideoAttachment: Codable, Identifiable {
     /// (format: `agentfile://<agentId>/<filename>`).
     var fileReference: String?
 
+    // MARK: - Size & Duration Limits
+
+    /// Maximum file size for inline base64 API transmission (20 MB).
+    static let maxInlineFileSize: Int64 = 20 * 1024 * 1024
+
+    /// Maximum video duration for API submission (2 minutes).
+    static let maxDurationSeconds: TimeInterval = 120
+
+    /// Maximum resolution (longest edge) to send to API.
+    static let maxResolution: Int = 720
+
+    /// Validation result for video eligibility.
+    enum ValidationResult {
+        case valid
+        case tooLarge(fileSize: Int64, limit: Int64)
+        case tooLong(duration: TimeInterval, limit: TimeInterval)
+        case tooLargeAndLong(fileSize: Int64, sizeLimit: Int64, duration: TimeInterval, durationLimit: TimeInterval)
+    }
+
+    /// Check whether the video meets size and duration limits for inline API transmission.
+    var validationResult: ValidationResult {
+        let oversized = fileSize > Self.maxInlineFileSize
+        let overlong = duration > Self.maxDurationSeconds
+        if oversized && overlong {
+            return .tooLargeAndLong(
+                fileSize: fileSize, sizeLimit: Self.maxInlineFileSize,
+                duration: duration, durationLimit: Self.maxDurationSeconds
+            )
+        } else if oversized {
+            return .tooLarge(fileSize: fileSize, limit: Self.maxInlineFileSize)
+        } else if overlong {
+            return .tooLong(duration: duration, limit: Self.maxDurationSeconds)
+        }
+        return .valid
+    }
+
+    /// Whether this video exceeds inline transmission limits and requires preprocessing.
+    var needsPreprocessing: Bool {
+        if case .valid = validationResult { return false }
+        return true
+    }
+
     /// Base64 data URI of the full video (for API transmission).
-    /// Returns nil if the file is missing or too large.
+    /// Returns nil if the file is missing or exceeds the inline size limit.
     var base64DataURI: String? {
+        guard fileSize <= Self.maxInlineFileSize else { return nil }
         guard let data = resolvedVideoData else { return nil }
         return "data:\(mimeType);base64,\(data.base64EncodedString())"
     }
@@ -58,20 +101,25 @@ struct VideoAttachment: Codable, Identifiable {
     // MARK: - Factory Methods
 
     /// Create from an agentfile:// reference by extracting metadata from the video on disk.
-    static func from(fileReference ref: String) -> VideoAttachment? {
+    static func from(fileReference ref: String) async -> VideoAttachment? {
         guard let (agentId, filename) = AgentFileManager.parseFileReference(ref) else { return nil }
         let url = AgentFileManager.shared.fileURL(agentId: agentId, name: filename)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
 
         let asset = AVURLAsset(url: url)
-        let duration = CMTimeGetSeconds(asset.duration)
+        guard let cmDuration = try? await asset.load(.duration) else { return nil }
+        let duration = CMTimeGetSeconds(cmDuration)
         guard duration.isFinite, duration > 0 else { return nil }
 
         var width = 0, height = 0
-        if let track = asset.tracks(withMediaType: .video).first {
-            let size = track.naturalSize.applying(track.preferredTransform)
-            width = Int(abs(size.width))
-            height = Int(abs(size.height))
+        if let tracks = try? await asset.loadTracks(withMediaType: .video),
+           let track = tracks.first {
+            if let naturalSize = try? await track.load(.naturalSize),
+               let transform = try? await track.load(.preferredTransform) {
+                let size = naturalSize.applying(transform)
+                width = Int(abs(size.width))
+                height = Int(abs(size.height))
+            }
         }
 
         let fileSize: Int64
@@ -82,7 +130,7 @@ struct VideoAttachment: Codable, Identifiable {
             fileSize = 0
         }
 
-        let thumbnail = generateThumbnail(from: url)
+        let thumbnail = await generateThumbnail(from: url)
         let ext = (filename as NSString).pathExtension.lowercased()
 
         return VideoAttachment(
@@ -98,7 +146,7 @@ struct VideoAttachment: Codable, Identifiable {
     }
 
     /// Create from raw video data, saving to the agent's file folder.
-    static func from(data: Data, filename: String, agentId: UUID) -> VideoAttachment? {
+    static func from(data: Data, filename: String, agentId: UUID) async -> VideoAttachment? {
         let ext = (filename as NSString).pathExtension.lowercased()
         guard supportedExtensions.contains(ext) else { return nil }
 
@@ -109,7 +157,7 @@ struct VideoAttachment: Codable, Identifiable {
         }
 
         let ref = AgentFileManager.makeFileReference(agentId: agentId, filename: filename)
-        return from(fileReference: ref)
+        return await from(fileReference: ref)
     }
 
     // MARK: - Supported Formats
@@ -120,13 +168,19 @@ struct VideoAttachment: Codable, Identifiable {
 
     // MARK: - Thumbnail
 
-    static func generateThumbnail(from url: URL, maxDimension: CGFloat = 128) -> Data {
+    static func generateThumbnail(from url: URL, maxDimension: CGFloat = 128) async -> Data {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: maxDimension, height: maxDimension)
 
-        let time = CMTime(seconds: min(1.0, CMTimeGetSeconds(asset.duration) / 2), preferredTimescale: 600)
+        let durationSeconds: Double
+        if let cmDuration = try? await asset.load(.duration) {
+            durationSeconds = CMTimeGetSeconds(cmDuration)
+        } else {
+            durationSeconds = 2.0
+        }
+        let time = CMTime(seconds: min(1.0, durationSeconds / 2), preferredTimescale: 600)
         guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else {
             return Data()
         }

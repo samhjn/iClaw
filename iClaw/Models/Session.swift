@@ -40,6 +40,9 @@ final class Session {
     /// Draft image attachments (JSON-encoded [ImageAttachment]) persisted across app quit / session exit.
     var draftImagesData: Data?
 
+    /// Draft video attachments (JSON-encoded [VideoAttachment]) persisted across app quit / session exit.
+    var draftVideosData: Data?
+
     /// Pipe-separated UUIDs of related sessions (computed once at session start, persisted for stable prompt).
     var relatedSessionIdsRaw: String?
 

@@ -234,7 +234,7 @@ final class AgentFileReferenceTests: XCTestCase {
         let noVision = ModelCapabilities(supportsVision: false)
         let stripped = ChatViewModel.stripUnsupportedModalities(from: &messages, capabilities: noVision)
 
-        XCTAssertEqual(stripped, 1)
+        XCTAssertEqual(stripped.total, 1)
         XCTAssertEqual(messages.count, 1)
         XCTAssertTrue(messages[0].content?.contains("[Image: my chart]") ?? false,
                       "agentfile:// refs should be replaced with [Image: alt]")
@@ -252,7 +252,7 @@ final class AgentFileReferenceTests: XCTestCase {
         let withVision = ModelCapabilities(supportsVision: true)
         let stripped = ChatViewModel.stripUnsupportedModalities(from: &messages, capabilities: withVision)
 
-        XCTAssertEqual(stripped, 0)
+        XCTAssertEqual(stripped.total, 0)
         XCTAssertTrue(messages[0].content?.contains("agentfile://") ?? false,
                       "agentfile:// refs should remain when vision is supported")
     }

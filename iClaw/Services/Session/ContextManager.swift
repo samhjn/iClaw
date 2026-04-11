@@ -478,6 +478,13 @@ enum TokenEstimator {
             }
         }
 
+        if let vidData = message.videoAttachmentsData,
+           let videos = try? JSONDecoder().decode([VideoAttachment].self, from: vidData) {
+            for vid in videos {
+                total += estimateVideoTokens(duration: vid.duration, width: vid.width, height: vid.height)
+            }
+        }
+
         return total
     }
 
@@ -502,6 +509,17 @@ enum TokenEstimator {
         let tilesX = max(1, (width + 511) / 512)
         let tilesY = max(1, (height + 511) / 512)
         return 85 + tilesX * tilesY * 170
+    }
+
+    /// Estimate token cost for a video based on duration and resolution.
+    ///
+    /// Gemini samples video at 1 FPS and charges ~258 tokens per frame.
+    /// This provides a reasonable cross-provider estimate.
+    static func estimateVideoTokens(duration: TimeInterval, width: Int, height: Int) -> Int {
+        guard duration > 0 else { return 258 }
+        let frameCount = max(1, Int(duration)) // ~1 FPS
+        let tokensPerFrame = 258 // Gemini's approximate per-frame cost
+        return frameCount * tokensPerFrame
     }
 
     private static func isCJK(_ v: UInt32) -> Bool {
