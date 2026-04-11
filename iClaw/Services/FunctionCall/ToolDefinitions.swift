@@ -496,7 +496,7 @@ enum ToolDefinitions {
         name: "browser_click",
         description: "Click an element on the current page by CSS selector. Triggers the element's click event.",
         properties: [
-            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the element to click (e.g. '#submit-btn', '.login-button', 'a[href=\"/login\"]')")
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector (e.g. '#submit-btn', '.login-button'). Use :contains(\"text\") to match elements by text content (e.g. 'button:contains(\"Submit\")').")
         ],
         required: ["selector"]
     )
@@ -505,7 +505,7 @@ enum ToolDefinitions {
         name: "browser_input",
         description: "Type text into an input field or textarea on the current page. Dispatches input and change events for React/Vue compatibility.",
         properties: [
-            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the input element"),
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the input element. Use :contains(\"text\") to match by text content."),
             "text": ToolDefinitionBuilder.stringParam("The text to type into the field"),
             "clear_first": ToolDefinitionBuilder.boolParam("Clear existing value before typing (default: true)")
         ],
@@ -516,7 +516,7 @@ enum ToolDefinitions {
         name: "browser_select",
         description: "Select an option in a <select> dropdown element.",
         properties: [
-            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the <select> element"),
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector of the <select> element. Use :contains(\"text\") to match by text content."),
             "value": ToolDefinitionBuilder.stringParam("The option value to select")
         ],
         required: ["selector", "value"]
@@ -526,7 +526,7 @@ enum ToolDefinitions {
         name: "browser_extract",
         description: "Extract text content or attribute values from elements matching a CSS selector. Returns up to 50 matches.",
         properties: [
-            "selector": ToolDefinitionBuilder.stringParam("CSS selector to match elements (e.g. 'h1', '.price', 'a.nav-link')"),
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector to match elements (e.g. 'h1', '.price', 'a.nav-link'). Use :contains(\"text\") to match by text content."),
             "attribute": ToolDefinitionBuilder.stringParam("Optional: extract a specific attribute (e.g. 'href', 'src') instead of text content")
         ],
         required: ["selector"]
@@ -536,7 +536,7 @@ enum ToolDefinitions {
         name: "browser_execute_js",
         description: "Execute arbitrary JavaScript code in the browser page context. Use for complex interactions not covered by other browser tools. Has full access to the page DOM and JavaScript APIs.",
         properties: [
-            "code": ToolDefinitionBuilder.stringParam("JavaScript code to execute in the page context. Return a value to see the result.")
+            "code": ToolDefinitionBuilder.stringParam("JavaScript code to execute in the page context. Use `return value` to return a result. Supports `await` for async operations.")
         ],
         required: ["code"]
     )
@@ -545,7 +545,7 @@ enum ToolDefinitions {
         name: "browser_wait",
         description: "Wait for an element matching a CSS selector to appear on the page. Polls every 300ms until the element is found or timeout is reached.",
         properties: [
-            "selector": ToolDefinitionBuilder.stringParam("CSS selector to wait for"),
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector to wait for. Use :contains(\"text\") to match by text content."),
             "timeout": ToolDefinitionBuilder.numberParam("Max wait time in seconds (1-30, default: 10)")
         ],
         required: ["selector"]

@@ -79,7 +79,7 @@ struct BrowserTools {
         guard let code = arguments["code"] as? String else {
             return "[Error] Missing required parameter: code"
         }
-        let result = await BrowserService.shared.executeJavaScript(code)
+        let result = await BrowserService.shared.executeUserJavaScript(code)
         await refreshLock()
         return formatResult(result)
     }
