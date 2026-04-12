@@ -1252,9 +1252,7 @@ final class ChatViewModel {
         guard session.isActive, generationTask == nil, monitoringTask == nil else { return }
         isLoading = true
 
-        if let pending = session.pendingStreamingContent, !pending.isEmpty {
-            streamingContent = pending
-        }
+        streamingContent = session.pendingStreamingContent ?? ""
 
         monitoringTask = Task { @MainActor [weak self] in
             defer {
@@ -1276,9 +1274,7 @@ final class ChatViewModel {
                 guard let self, !Task.isCancelled else { return }
                 self.loadMessages()
 
-                if let pending = self.session.pendingStreamingContent, !pending.isEmpty {
-                    self.streamingContent = pending
-                }
+                self.streamingContent = self.session.pendingStreamingContent ?? ""
 
                 if !self.session.isCompressingContext && self.isCompressing && self.compressionTask == nil {
                     self.isCompressing = false
