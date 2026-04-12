@@ -1759,4 +1759,113 @@ final class SessionStateRecoveryTests: XCTestCase {
             vm.onViewDisappear()
         }
     }
+
+    // MARK: - Monitoring clears streamingContent when pendingStreamingContent becomes nil
+
+    @MainActor
+    func testMonitoringClearsStreamingContentWhenPendingBecomesNil() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "ToolLoop")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.pendingStreamingContent = "First API reply..."
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+
+        // Monitoring picks up the pending content initially.
+        XCTAssertEqual(vm.streamingContent, "First API reply...",
+                       "ViewModel must recover pendingStreamingContent on init")
+
+        // Simulate the generation clearing pendingStreamingContent (e.g. stream
+        // ended and entered a tool-call cycle where no new content is produced).
+        session.pendingStreamingContent = nil
+
+        // Recreate the ViewModel as if SwiftUI rebuilt the view.
+        let vm2 = ChatViewModel(session: session, modelContext: context)
+
+        XCTAssertEqual(vm2.streamingContent, "",
+                       "streamingContent must be empty when pendingStreamingContent is nil")
+        XCTAssertTrue(vm2.isLoading,
+                      "isLoading must remain true while session is still active")
+    }
+
+    // MARK: - Monitoring does not show stale content from previous generation
+
+    @MainActor
+    func testMonitoringDoesNotShowStalePreviousContent() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Stale")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        // pendingStreamingContent is nil — the previous generation already
+        // finished and a new one just started but hasn't produced content yet.
+        session.pendingStreamingContent = nil
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+
+        XCTAssertEqual(vm.streamingContent, "",
+                       "streamingContent must be empty when no pending content exists")
+        XCTAssertTrue(vm.isLoading,
+                      "isLoading must be true for active session")
+    }
+
+    // MARK: - Monitoring transitions from content to empty correctly
+
+    @MainActor
+    func testMonitoringTransitionsFromContentToEmpty() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "Transition")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.pendingStreamingContent = "Hello from first call"
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        // First VM sees the pending content.
+        let vm1 = ChatViewModel(session: session, modelContext: context)
+        XCTAssertEqual(vm1.streamingContent, "Hello from first call")
+
+        // Generation moves to tool-call phase: content cleared.
+        session.pendingStreamingContent = nil
+        // Second API call produces new content.
+        session.pendingStreamingContent = "New response"
+
+        let vm2 = ChatViewModel(session: session, modelContext: context)
+        XCTAssertEqual(vm2.streamingContent, "New response",
+                       "streamingContent must reflect the latest pendingStreamingContent")
+    }
+
+    // MARK: - Empty string pendingStreamingContent treated as no content
+
+    @MainActor
+    func testEmptyStringPendingTreatedAsNoContent() {
+        let agent = Agent(name: "AgentA")
+        context.insert(agent)
+        let session = Session(title: "EmptyString")
+        context.insert(session)
+        session.agent = agent
+        session.isActive = true
+        session.pendingStreamingContent = ""
+        try! context.save()
+
+        ChatViewModel._simulateActiveGeneration(for: session.id)
+
+        let vm = ChatViewModel(session: session, modelContext: context)
+
+        XCTAssertEqual(vm.streamingContent, "",
+                       "Empty pendingStreamingContent must result in empty streamingContent")
+    }
 }
