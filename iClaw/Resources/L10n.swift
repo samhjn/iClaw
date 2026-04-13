@@ -14,6 +14,15 @@ enum L10n {
         String(format: NSLocalizedString(key, comment: ""), arguments: args)
     }
 
+    // MARK: - Migration
+
+    enum Migration {
+        static var alertTitle: String { tr("migration.alertTitle") }
+        static var alertMessage: String { tr("migration.alertMessage") }
+        static var resetAndRestart: String { tr("migration.resetAndRestart") }
+        static var exitApp: String { tr("migration.exitApp") }
+    }
+
     // MARK: - Launch Tasks
 
     enum Launch {

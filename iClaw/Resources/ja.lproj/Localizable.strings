@@ -1,5 +1,11 @@
 /* 日本語 */
 
+// MARK: - Migration
+"migration.alertTitle" = "データベースの更新に失敗";
+"migration.alertMessage" = "データベースを新しいバージョンに移行できません。データベースをリセットしてアプリを再起動できますが、すべてのデータ（セッション、エージェント、設定）が完全に失われます。変更せずにアプリを終了することもできます。";
+"migration.resetAndRestart" = "リセットして再起動";
+"migration.exitApp" = "アプリを終了";
+
 // MARK: - Launch Tasks
 "launch.cleaningUp" = "クリーンアップ中…";
 "launch.buildingIndex" = "検索インデックスを構築中…";
