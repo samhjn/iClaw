@@ -80,12 +80,12 @@ final class TextFilePreviewTests: XCTestCase {
     }
 
     func testIsTextPreviewableIsCaseInsensitive() {
-        let info = FileInfo(name: "README.MD", size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false)
+        let info = FileInfo(name: "README.MD", size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false, isVideo: false)
         XCTAssertTrue(info.isTextPreviewable, "Extension matching should be case-insensitive")
     }
 
     func testIsTextPreviewableNoExtension() {
-        let info = FileInfo(name: "Makefile", size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false)
+        let info = FileInfo(name: "Makefile", size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false, isVideo: false)
         // "Makefile" has no extension -> empty string, which is in textExtensions only if listed as "makefile"
         // The pathExtension of "Makefile" is "", so it should NOT be previewable
         XCTAssertFalse(info.isTextPreviewable, "Files without extension should not match")
