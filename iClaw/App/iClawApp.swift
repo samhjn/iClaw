@@ -7,8 +7,11 @@ struct iClawApp: App {
     let modelContainer: ModelContainer
     @State private var cronScheduler: CronScheduler?
     @State private var launchTaskManager: LaunchTaskManager
+    @State private var showMigrationResetAlert: Bool
     private let bgTaskCoordinator: CronBGTaskCoordinator
     private let keepAliveManager = BackgroundKeepAliveManager()
+    /// Store URL that needs to be deleted if the user confirms a migration reset.
+    private static var pendingStoreURL: URL?
 
     init() {
         Self.installExceptionHandler()
@@ -28,22 +31,18 @@ struct iClawApp: App {
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             modelContainer = try ModelContainer(for: schema, configurations: [config])
+            _showMigrationResetAlert = State(initialValue: false)
         } catch {
-            print("[iClawApp] ModelContainer migration failed: \(error). Deleting old store.")
-            let storeURL = config.url
-            let related = [
-                storeURL,
-                storeURL.appendingPathExtension("wal"),
-                storeURL.appendingPathExtension("shm"),
-            ]
-            for url in related {
-                try? FileManager.default.removeItem(at: url)
-            }
+            print("[iClawApp] ModelContainer migration failed: \(error). Awaiting user confirmation before reset.")
+            Self.pendingStoreURL = config.url
+            // Use in-memory fallback so the app can launch and show the alert.
+            let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             do {
-                modelContainer = try ModelContainer(for: schema, configurations: [config])
+                modelContainer = try ModelContainer(for: schema, configurations: [fallback])
             } catch {
-                fatalError("Failed to create ModelContainer after reset: \(error)")
+                fatalError("Failed to create in-memory ModelContainer: \(error)")
             }
+            _showMigrationResetAlert = State(initialValue: true)
         }
 
         _launchTaskManager = State(initialValue: LaunchTaskManager(container: modelContainer))
@@ -53,6 +52,21 @@ struct iClawApp: App {
         let coordinator = CronBGTaskCoordinator()
         coordinator.registerCronTask()
         bgTaskCoordinator = coordinator
+    }
+
+    /// Delete the on-disk store files and terminate so the next launch starts fresh.
+    private static func performStoreReset() {
+        guard let storeURL = pendingStoreURL else { return }
+        let related = [
+            storeURL,
+            storeURL.appendingPathExtension("wal"),
+            storeURL.appendingPathExtension("shm"),
+        ]
+        for url in related {
+            try? FileManager.default.removeItem(at: url)
+        }
+        print("[iClawApp] Store files deleted by user. Restarting.")
+        Darwin.exit(0)
     }
 
     private static func installExceptionHandler() {
@@ -101,6 +115,16 @@ struct iClawApp: App {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                     cronScheduler?.scheduleBackgroundTask()
+                }
+                .alert(L10n.Migration.alertTitle, isPresented: $showMigrationResetAlert) {
+                    Button(L10n.Migration.resetAndRestart, role: .destructive) {
+                        Self.performStoreReset()
+                    }
+                    Button(L10n.Migration.exitApp, role: .cancel) {
+                        Darwin.exit(0)
+                    }
+                } message: {
+                    Text(L10n.Migration.alertMessage)
                 }
         }
         .modelContainer(modelContainer)

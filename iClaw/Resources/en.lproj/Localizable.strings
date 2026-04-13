@@ -1,5 +1,11 @@
 /* English — Base language */
 
+// MARK: - Migration
+"migration.alertTitle" = "Database Update Failed";
+"migration.alertMessage" = "The database cannot be migrated to the new version. You can reset the database and restart the app, but all existing data (sessions, agents, settings) will be permanently lost. Alternatively, exit the app without changes.";
+"migration.resetAndRestart" = "Reset & Restart";
+"migration.exitApp" = "Exit App";
+
 // MARK: - Launch Tasks
 "launch.cleaningUp" = "Cleaning up…";
 "launch.buildingIndex" = "Building search index…";

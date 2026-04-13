@@ -1,5 +1,11 @@
 /* 한국어 */
 
+// MARK: - Migration
+"migration.alertTitle" = "데이터베이스 업데이트 실패";
+"migration.alertMessage" = "데이터베이스를 새 버전으로 마이그레이션할 수 없습니다. 데이터베이스를 초기화하고 앱을 재시작할 수 있지만, 모든 기존 데이터(세션, 에이전트, 설정)가 영구적으로 삭제됩니다. 변경 없이 앱을 종료할 수도 있습니다.";
+"migration.resetAndRestart" = "초기화 후 재시작";
+"migration.exitApp" = "앱 종료";
+
 // MARK: - Launch Tasks
 "launch.cleaningUp" = "정리 중…";
 "launch.buildingIndex" = "검색 인덱스 구축 중…";

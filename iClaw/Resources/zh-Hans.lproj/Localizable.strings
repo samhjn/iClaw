@@ -1,5 +1,11 @@
 /* 简体中文 */
 
+// MARK: - Migration
+"migration.alertTitle" = "数据库升级失败";
+"migration.alertMessage" = "数据库无法迁移到新版本。你可以重置数据库并重启应用，但所有现有数据（会话、智能体、设置）将永久丢失。也可以选择退出应用，不做任何更改。";
+"migration.resetAndRestart" = "重置并重启";
+"migration.exitApp" = "退出应用";
+
 // MARK: - Launch Tasks
 "launch.cleaningUp" = "正在清理…";
 "launch.buildingIndex" = "正在构建搜索索引…";
