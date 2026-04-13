@@ -532,6 +532,7 @@ private struct ChatContentView: View {
     }
 
     @ViewBuilder
+    @ViewBuilder
     private func silentLabel(for status: String) -> some View {
         if status == "tool:generate_video", let phase = ChatViewModel.videoProgress[vm.session.id] {
             videoProgressLabel(phase: phase)
