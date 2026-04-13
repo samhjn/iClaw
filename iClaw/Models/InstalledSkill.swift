@@ -7,8 +7,8 @@ final class InstalledSkill {
     var agent: Agent?
     var skill: Skill?
     var isEnabled: Bool
-    var priority: Int = 0
-    var configRaw: String = "{}"
+    var priority: Int
+    var configRaw: String
     var installedAt: Date
 
     var config: [String: String] {
