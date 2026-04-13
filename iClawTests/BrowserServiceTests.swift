@@ -163,6 +163,69 @@ final class BrowserJSEscapeTests: XCTestCase {
     }
 }
 
+// MARK: - Element ID & XPath Resolution
+
+@MainActor
+final class BrowserElementIdResolutionTests: XCTestCase {
+
+    func testResolveElementId() {
+        let service = BrowserService.shared
+        let result = service.resolveElementId("ab3k7")
+        XCTAssertEqual(result, "document.querySelector('[data-iclaw-id=' + 'ab3k7' + ']')")
+    }
+
+    func testResolveElementIdEscapesSpecialChars() {
+        let service = BrowserService.shared
+        let result = service.resolveElementId("a'b")
+        XCTAssertTrue(result.contains("a\\'b"))
+    }
+
+    func testResolveXPathSingle() {
+        let service = BrowserService.shared
+        let result = service.resolveXPath("//button[@class='submit']")
+        XCTAssertTrue(result.contains("document.evaluate"))
+        XCTAssertTrue(result.contains("FIRST_ORDERED_NODE_TYPE"))
+        XCTAssertTrue(result.contains("singleNodeValue"))
+    }
+
+    func testResolveXPathAll() {
+        let service = BrowserService.shared
+        let result = service.resolveXPath("//input", all: true)
+        XCTAssertTrue(result.contains("document.evaluate"))
+        XCTAssertTrue(result.contains("ORDERED_NODE_SNAPSHOT_TYPE"))
+        XCTAssertTrue(result.contains("snapshotLength"))
+    }
+
+    func testResolveTargetElementIdTakesPrecedence() {
+        let service = BrowserService.shared
+        let result = service.resolveTarget(elementId: "ab3k7", xpath: "//button", selector: "#btn")
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result!.contains("data-iclaw-id"))
+        XCTAssertFalse(result!.contains("document.evaluate"))
+        XCTAssertFalse(result!.contains("querySelector('#btn')"))
+    }
+
+    func testResolveTargetXPathOverSelector() {
+        let service = BrowserService.shared
+        let result = service.resolveTarget(elementId: nil, xpath: "//button", selector: "#btn")
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result!.contains("document.evaluate"))
+    }
+
+    func testResolveTargetFallsBackToSelector() {
+        let service = BrowserService.shared
+        let result = service.resolveTarget(elementId: nil, xpath: nil, selector: "#btn")
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result, "document.querySelector('#btn')")
+    }
+
+    func testResolveTargetReturnsNilWhenAllNil() {
+        let service = BrowserService.shared
+        let result = service.resolveTarget(elementId: nil, xpath: nil, selector: nil)
+        XCTAssertNil(result)
+    }
+}
+
 // MARK: - BrowserService Lock Mechanism
 
 @MainActor

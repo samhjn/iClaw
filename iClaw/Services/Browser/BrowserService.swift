@@ -247,11 +247,15 @@ final class BrowserService: NSObject {
 
     // MARK: - Element Interaction
 
-    func click(selector: String) async -> Result<String, BrowserError> {
+    func click(elementId: String? = nil, xpath: String? = nil, selector: String? = nil) async -> Result<String, BrowserError> {
+        guard let resolved = resolveTarget(elementId: elementId, xpath: xpath, selector: selector) else {
+            return .failure(.elementNotFound("No element_id, xpath, or selector provided"))
+        }
+        let desc = (elementId ?? xpath ?? selector ?? "").replacingOccurrences(of: "'", with: "\\'")
         let script = """
         (function() {
-            const el = \(resolveSelector(selector));
-            if (!el) return JSON.stringify({error: 'Element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
+            const el = \(resolved);
+            if (!el) return JSON.stringify({error: 'Element not found: \(desc)'});
             el.click();
             var r = JSON.stringify({ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 100)});
             if (document.activeElement) document.activeElement.blur();
@@ -263,12 +267,16 @@ final class BrowserService: NSObject {
         return parseJSResult(result, action: "click")
     }
 
-    func input(selector: String, text: String, clearFirst: Bool = true) async -> Result<String, BrowserError> {
+    func input(elementId: String? = nil, xpath: String? = nil, selector: String? = nil, text: String, clearFirst: Bool = true) async -> Result<String, BrowserError> {
+        guard let resolved = resolveTarget(elementId: elementId, xpath: xpath, selector: selector) else {
+            return .failure(.elementNotFound("No element_id, xpath, or selector provided"))
+        }
+        let desc = (elementId ?? xpath ?? selector ?? "").replacingOccurrences(of: "'", with: "\\'")
         let clearScript = clearFirst ? "el.value = '';" : ""
         let script = """
         (function() {
-            const el = \(resolveSelector(selector));
-            if (!el) return JSON.stringify({error: 'Element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
+            const el = \(resolved);
+            if (!el) return JSON.stringify({error: 'Element not found: \(desc)'});
             el.focus();
             \(clearScript)
             const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
@@ -289,11 +297,15 @@ final class BrowserService: NSObject {
         return parseJSResult(result, action: "input")
     }
 
-    func select(selector: String, value: String) async -> Result<String, BrowserError> {
+    func select(elementId: String? = nil, xpath: String? = nil, selector: String? = nil, value: String) async -> Result<String, BrowserError> {
+        guard let resolved = resolveTarget(elementId: elementId, xpath: xpath, selector: selector) else {
+            return .failure(.elementNotFound("No element_id, xpath, or selector provided"))
+        }
+        let desc = (elementId ?? xpath ?? selector ?? "").replacingOccurrences(of: "'", with: "\\'")
         let script = """
         (function() {
-            const el = \(resolveSelector(selector));
-            if (!el || el.tagName !== 'SELECT') return JSON.stringify({error: 'SELECT element not found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
+            const el = \(resolved);
+            if (!el || el.tagName !== 'SELECT') return JSON.stringify({error: 'SELECT element not found: \(desc)'});
             el.value = \(jsEscape(value));
             el.dispatchEvent(new Event('change', {bubbles: true}));
             el.blur();
@@ -305,7 +317,11 @@ final class BrowserService: NSObject {
         return parseJSResult(result, action: "select")
     }
 
-    func extract(selector: String, attribute: String? = nil) async -> Result<String, BrowserError> {
+    func extract(elementId: String? = nil, xpath: String? = nil, selector: String? = nil, attribute: String? = nil) async -> Result<String, BrowserError> {
+        guard let resolved = resolveTarget(elementId: elementId, xpath: xpath, selector: selector, all: true) else {
+            return .failure(.elementNotFound("No element_id, xpath, or selector provided"))
+        }
+        let desc = (elementId ?? xpath ?? selector ?? "").replacingOccurrences(of: "'", with: "\\'")
         let attrCode: String
         if let attribute = attribute {
             attrCode = "el.getAttribute(\(jsEscape(attribute))) || ''"
@@ -314,8 +330,8 @@ final class BrowserService: NSObject {
         }
         let script = """
         (function() {
-            const els = \(resolveSelector(selector, all: true));
-            if (els.length === 0) return JSON.stringify({error: 'No elements found: \(selector.replacingOccurrences(of: "'", with: "\\'"))'});
+            const els = \(resolved);
+            if (els.length === 0) return JSON.stringify({error: 'No elements found: \(desc)'});
             const results = [];
             els.forEach(function(el, i) {
                 if (i < 50) results.push(\(attrCode));
@@ -342,18 +358,22 @@ final class BrowserService: NSObject {
         }
     }
 
-    func waitForElement(selector: String, timeout: TimeInterval = 10) async -> Result<String, BrowserError> {
+    func waitForElement(elementId: String? = nil, xpath: String? = nil, selector: String? = nil, timeout: TimeInterval = 10) async -> Result<String, BrowserError> {
+        guard let resolved = resolveTarget(elementId: elementId, xpath: xpath, selector: selector) else {
+            return .failure(.elementNotFound("No element_id, xpath, or selector provided"))
+        }
+        let desc = elementId ?? xpath ?? selector ?? ""
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline, !Task.isCancelled {
-            let script = "(\(resolveSelector(selector))) !== null"
+            let script = "(\(resolved)) !== null"
             let result = await executeJavaScript(script)
             if case .success(let value) = result, value == "1" || value == "true" {
-                return .success("Element found: \(selector)")
+                return .success("Element found: \(desc)")
             }
             try? await Task.sleep(for: .milliseconds(300))
             if Task.isCancelled { break }
         }
-        return .failure(.waitTimeout(selector, timeout))
+        return .failure(.waitTimeout(desc, timeout))
     }
 
     func scroll(direction: String = "down", pixels: Int = 500) async -> Result<String, BrowserError> {
@@ -438,6 +458,34 @@ final class BrowserService: NSObject {
         return "'\(escaped)'"
     }
 
+    // MARK: - Element ID & XPath Resolution
+
+    /// Resolve element(s) by data-iclaw-id attribute.
+    func resolveElementId(_ elementId: String, all: Bool = false) -> String {
+        if all {
+            return "document.querySelectorAll('[data-iclaw-id=' + \(jsEscape(elementId)) + ']')"
+        } else {
+            return "document.querySelector('[data-iclaw-id=' + \(jsEscape(elementId)) + ']')"
+        }
+    }
+
+    /// Resolve element(s) by XPath expression.
+    func resolveXPath(_ xpath: String, all: Bool = false) -> String {
+        if all {
+            return "(function(){var r=[];var x=document.evaluate(\(jsEscape(xpath)),document,null,XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,null);for(var i=0;i<x.snapshotLength;i++)r.push(x.snapshotItem(i));return r})()"
+        } else {
+            return "(function(){var x=document.evaluate(\(jsEscape(xpath)),document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null);return x.singleNodeValue})()"
+        }
+    }
+
+    /// Unified resolution: element_id > xpath > selector. Returns nil if none provided.
+    func resolveTarget(elementId: String?, xpath: String?, selector: String?, all: Bool = false) -> String? {
+        if let eid = elementId { return resolveElementId(eid, all: all) }
+        if let xp = xpath { return resolveXPath(xp, all: all) }
+        if let sel = selector { return resolveSelector(sel, all: all) }
+        return nil
+    }
+
     private func parseJSResult(_ result: Result<String, BrowserError>, action: String) -> Result<String, BrowserError> {
         switch result {
         case .success(let json):
@@ -455,41 +503,81 @@ final class BrowserService: NSObject {
     }
 
     /// Extracts a simplified readable DOM: text, links, inputs, buttons, etc.
+    /// Interactive elements are tagged with 5-char random IDs (data-iclaw-id) for easy reference.
     private static let simplifiedDOMScript = """
     (function() {
+        var _ids = new Set();
+        var _chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+        function genId() {
+            var id;
+            do { id = ''; for (var i = 0; i < 5; i++) id += _chars[Math.floor(Math.random()*_chars.length)]; } while (_ids.has(id));
+            _ids.add(id);
+            return id;
+        }
+        function tagEl(node) {
+            var id = genId();
+            node.setAttribute('data-iclaw-id', id);
+            return id;
+        }
+        function isInteractive(node) {
+            var tag = (node.tagName || '').toLowerCase();
+            if (['a','button','input','textarea','select'].includes(tag)) return true;
+            var role = (node.getAttribute && node.getAttribute('role') || '').toLowerCase();
+            if (['button','link','checkbox','tab','menuitem','switch','option'].includes(role)) return true;
+            if (node.getAttribute && node.getAttribute('contenteditable') === 'true') return true;
+            return false;
+        }
+        document.querySelectorAll('[data-iclaw-id]').forEach(function(el) { el.removeAttribute('data-iclaw-id'); });
         function walk(node, depth) {
             if (depth > 15) return '';
-            const skip = new Set(['SCRIPT','STYLE','NOSCRIPT','SVG','PATH','META','LINK']);
+            var skip = new Set(['SCRIPT','STYLE','NOSCRIPT','SVG','PATH','META','LINK']);
             if (skip.has(node.tagName)) return '';
-            let out = '';
-            const tag = (node.tagName || '').toLowerCase();
+            var out = '';
+            var tag = (node.tagName || '').toLowerCase();
             if (tag === 'a') {
-                const href = node.getAttribute('href') || '';
-                const text = (node.innerText || '').trim().substring(0, 80);
-                if (text) out += '[link: ' + text + ' -> ' + href + '] ';
+                var id = tagEl(node);
+                var href = node.getAttribute('href') || '';
+                var text = (node.innerText || '').trim().substring(0, 80);
+                if (text) out += '[#' + id + ' link: ' + text + ' -> ' + href + '] ';
             } else if (tag === 'input') {
-                const t = node.type || 'text';
-                const n = node.name || node.id || '';
-                const v = node.value || '';
-                const p = node.placeholder || '';
-                out += '[input(' + t + ') name=' + n + ' value="' + v.substring(0,50) + '" placeholder="' + p.substring(0,50) + '"] ';
+                var id = tagEl(node);
+                var t = node.type || 'text';
+                var n = node.name || node.id || '';
+                if (t === 'checkbox' || t === 'radio') {
+                    var v = node.value || '';
+                    out += '[#' + id + ' input(' + t + ') name=' + n + ' value="' + v.substring(0,50) + '" checked=' + node.checked + '] ';
+                } else if (t === 'submit' || t === 'button') {
+                    out += '[#' + id + ' button: ' + (node.value || '').trim().substring(0,50) + '] ';
+                } else {
+                    var v = node.value || '';
+                    var p = node.placeholder || '';
+                    out += '[#' + id + ' input(' + t + ') name=' + n + ' value="' + v.substring(0,50) + '" placeholder="' + p.substring(0,50) + '"] ';
+                }
             } else if (tag === 'textarea') {
-                const n = node.name || node.id || '';
-                out += '[textarea name=' + n + ' value="' + (node.value || '').substring(0,100) + '"] ';
-            } else if (tag === 'button' || (tag === 'input' && (node.type === 'submit' || node.type === 'button'))) {
-                out += '[button: ' + (node.innerText || node.value || '').trim().substring(0,50) + '] ';
+                var id = tagEl(node);
+                var n = node.name || node.id || '';
+                out += '[#' + id + ' textarea name=' + n + ' value="' + (node.value || '').substring(0,100) + '"] ';
+            } else if (tag === 'button') {
+                var id = tagEl(node);
+                out += '[#' + id + ' button: ' + (node.innerText || node.value || '').trim().substring(0,50) + '] ';
             } else if (tag === 'select') {
-                const n = node.name || node.id || '';
-                const opts = Array.from(node.options).map(o => o.value + '=' + o.text).join(', ');
-                out += '[select name=' + n + ' options: ' + opts.substring(0,200) + '] ';
+                var id = tagEl(node);
+                var n = node.name || node.id || '';
+                var opts = Array.from(node.options).map(function(o) { return o.value + '=' + o.text; }).join(', ');
+                out += '[#' + id + ' select name=' + n + ' options: ' + opts.substring(0,200) + '] ';
             } else if (tag === 'img') {
                 out += '[img: ' + (node.alt || node.src || '').substring(0,80) + '] ';
             } else if (node.nodeType === 3) {
-                const t = node.textContent.trim();
+                var t = node.textContent.trim();
                 if (t.length > 0) out += t + ' ';
+            } else if (isInteractive(node)) {
+                var id = tagEl(node);
+                var role = (node.getAttribute('role') || '').toLowerCase();
+                var text = (node.innerText || '').trim().substring(0, 80);
+                out += '[#' + id + ' ' + tag + (role ? '(role=' + role + ')' : '') + ': ' + text + '] ';
             }
             if (node.childNodes) {
-                for (let c of node.childNodes) { out += walk(c, depth + 1); }
+                for (var c of node.childNodes) { out += walk(c, depth + 1); }
             }
             if (['P','DIV','LI','TR','H1','H2','H3','H4','H5','H6','BR','HR','SECTION','ARTICLE','HEADER','FOOTER','MAIN','NAV'].includes(node.tagName)) {
                 out += '\\n';

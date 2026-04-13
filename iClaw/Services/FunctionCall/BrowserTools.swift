@@ -28,48 +28,52 @@ struct BrowserTools {
 
     func click(arguments: [String: Any]) async -> String {
         if let err = await checkLock() { return err }
-        guard let selector = arguments["selector"] as? String else {
-            return "[Error] Missing required parameter: selector"
+        let (eid, xp, sel) = extractTarget(arguments)
+        guard eid != nil || xp != nil || sel != nil else {
+            return "[Error] Provide 'element_id', 'xpath', or 'selector'"
         }
-        let result = await BrowserService.shared.click(selector: selector)
+        let result = await BrowserService.shared.click(elementId: eid, xpath: xp, selector: sel)
         await refreshLock()
         return formatResult(result)
     }
 
     func input(arguments: [String: Any]) async -> String {
         if let err = await checkLock() { return err }
-        guard let selector = arguments["selector"] as? String else {
-            return "[Error] Missing required parameter: selector"
+        let (eid, xp, sel) = extractTarget(arguments)
+        guard eid != nil || xp != nil || sel != nil else {
+            return "[Error] Provide 'element_id', 'xpath', or 'selector'"
         }
         guard let text = arguments["text"] as? String else {
             return "[Error] Missing required parameter: text"
         }
         let clear = arguments["clear_first"] as? Bool ?? true
-        let result = await BrowserService.shared.input(selector: selector, text: text, clearFirst: clear)
+        let result = await BrowserService.shared.input(elementId: eid, xpath: xp, selector: sel, text: text, clearFirst: clear)
         await refreshLock()
         return formatResult(result)
     }
 
     func select(arguments: [String: Any]) async -> String {
         if let err = await checkLock() { return err }
-        guard let selector = arguments["selector"] as? String else {
-            return "[Error] Missing required parameter: selector"
+        let (eid, xp, sel) = extractTarget(arguments)
+        guard eid != nil || xp != nil || sel != nil else {
+            return "[Error] Provide 'element_id', 'xpath', or 'selector'"
         }
         guard let value = arguments["value"] as? String else {
             return "[Error] Missing required parameter: value"
         }
-        let result = await BrowserService.shared.select(selector: selector, value: value)
+        let result = await BrowserService.shared.select(elementId: eid, xpath: xp, selector: sel, value: value)
         await refreshLock()
         return formatResult(result)
     }
 
     func extract(arguments: [String: Any]) async -> String {
         if let err = await checkLock() { return err }
-        guard let selector = arguments["selector"] as? String else {
-            return "[Error] Missing required parameter: selector"
+        let (eid, xp, sel) = extractTarget(arguments)
+        guard eid != nil || xp != nil || sel != nil else {
+            return "[Error] Provide 'element_id', 'xpath', or 'selector'"
         }
         let attribute = arguments["attribute"] as? String
-        let result = await BrowserService.shared.extract(selector: selector, attribute: attribute)
+        let result = await BrowserService.shared.extract(elementId: eid, xpath: xp, selector: sel, attribute: attribute)
         await refreshLock()
         return formatResult(result)
     }
@@ -86,12 +90,13 @@ struct BrowserTools {
 
     func waitForElement(arguments: [String: Any]) async -> String {
         if let err = await checkLock() { return err }
-        guard let selector = arguments["selector"] as? String else {
-            return "[Error] Missing required parameter: selector"
+        let (eid, xp, sel) = extractTarget(arguments)
+        guard eid != nil || xp != nil || sel != nil else {
+            return "[Error] Provide 'element_id', 'xpath', or 'selector'"
         }
         let timeout = arguments["timeout"] as? Double ?? 10
         let clampedTimeout = min(max(timeout, 1), 30)
-        let result = await BrowserService.shared.waitForElement(selector: selector, timeout: clampedTimeout)
+        let result = await BrowserService.shared.waitForElement(elementId: eid, xpath: xp, selector: sel, timeout: clampedTimeout)
         await refreshLock()
         return formatResult(result)
     }
@@ -116,6 +121,13 @@ struct BrowserTools {
     }
 
     // MARK: - Private
+
+    private func extractTarget(_ arguments: [String: Any]) -> (String?, String?, String?) {
+        let elementId = arguments["element_id"] as? String
+        let xpath = arguments["xpath"] as? String
+        let selector = arguments["selector"] as? String
+        return (elementId, xpath, selector)
+    }
 
     private func handleAction(_ action: String) async -> String {
         switch action {

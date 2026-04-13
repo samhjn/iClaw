@@ -499,9 +499,9 @@ enum ToolDefinitions {
 
     static let browserGetPageInfoTool = ToolDefinitionBuilder.build(
         name: "browser_get_page_info",
-        description: "Get information about the current browser page: URL, title, and optionally a simplified readable representation of the page content (text, links, forms, buttons).",
+        description: "Get information about the current browser page: URL, title, and optionally a simplified readable representation of the page content. When include_content is true, interactive elements (buttons, inputs, links, selects, etc.) are tagged with 5-character IDs (e.g. [#ab3k7 button: Submit]) that can be used with element_id parameter in other browser tools.",
         properties: [
-            "include_content": ToolDefinitionBuilder.boolParam("Include page content (default: false). Set true to read page text, links, and form elements."),
+            "include_content": ToolDefinitionBuilder.boolParam("Include page content (default: false). Set true to read page text, links, and form elements with assigned element IDs."),
             "simplified": ToolDefinitionBuilder.boolParam("Use simplified DOM extraction (default: true). If false, returns raw HTML.")
         ],
         required: []
@@ -509,42 +509,50 @@ enum ToolDefinitions {
 
     static let browserClickTool = ToolDefinitionBuilder.build(
         name: "browser_click",
-        description: "Click an element on the current page by CSS selector. Triggers the element's click event.",
+        description: "Click an element on the current page. Identify the element by element_id (preferred, from browser_get_page_info), CSS selector, or XPath. Triggers the element's click event.",
         properties: [
-            "selector": ToolDefinitionBuilder.stringParam("CSS selector (e.g. '#submit-btn', '.login-button'). Use :contains(\"text\") to match elements by text content (e.g. 'button:contains(\"Submit\")').")
+            "element_id": ToolDefinitionBuilder.stringParam("5-character element ID from browser_get_page_info output (e.g. 'ab3k7'). Preferred."),
+            "selector": ToolDefinitionBuilder.stringParam("CSS selector (e.g. '#submit-btn', '.login-button'). Use :contains(\"text\") to match by text content."),
+            "xpath": ToolDefinitionBuilder.stringParam("XPath expression to locate the element (fallback for elements without an assigned ID)")
         ],
-        required: ["selector"]
+        required: []
     )
 
     static let browserInputTool = ToolDefinitionBuilder.build(
         name: "browser_input",
-        description: "Type text into an input field or textarea on the current page. Dispatches input and change events for React/Vue compatibility.",
+        description: "Type text into an input field or textarea on the current page. Identify the element by element_id (preferred, from browser_get_page_info), CSS selector, or XPath. Dispatches input and change events for React/Vue compatibility.",
         properties: [
+            "element_id": ToolDefinitionBuilder.stringParam("5-character element ID from browser_get_page_info output (e.g. 'ab3k7'). Preferred."),
             "selector": ToolDefinitionBuilder.stringParam("CSS selector of the input element. Use :contains(\"text\") to match by text content."),
+            "xpath": ToolDefinitionBuilder.stringParam("XPath expression to locate the element (fallback for elements without an assigned ID)"),
             "text": ToolDefinitionBuilder.stringParam("The text to type into the field"),
             "clear_first": ToolDefinitionBuilder.boolParam("Clear existing value before typing (default: true)")
         ],
-        required: ["selector", "text"]
+        required: ["text"]
     )
 
     static let browserSelectTool = ToolDefinitionBuilder.build(
         name: "browser_select",
-        description: "Select an option in a <select> dropdown element.",
+        description: "Select an option in a <select> dropdown element. Identify the element by element_id (preferred, from browser_get_page_info), CSS selector, or XPath.",
         properties: [
+            "element_id": ToolDefinitionBuilder.stringParam("5-character element ID from browser_get_page_info output (e.g. 'ab3k7'). Preferred."),
             "selector": ToolDefinitionBuilder.stringParam("CSS selector of the <select> element. Use :contains(\"text\") to match by text content."),
+            "xpath": ToolDefinitionBuilder.stringParam("XPath expression to locate the element (fallback for elements without an assigned ID)"),
             "value": ToolDefinitionBuilder.stringParam("The option value to select")
         ],
-        required: ["selector", "value"]
+        required: ["value"]
     )
 
     static let browserExtractTool = ToolDefinitionBuilder.build(
         name: "browser_extract",
-        description: "Extract text content or attribute values from elements matching a CSS selector. Returns up to 50 matches.",
+        description: "Extract text content or attribute values from elements. Identify elements by element_id (preferred, from browser_get_page_info), CSS selector, or XPath. Returns up to 50 matches.",
         properties: [
+            "element_id": ToolDefinitionBuilder.stringParam("5-character element ID from browser_get_page_info output (e.g. 'ab3k7'). Preferred."),
             "selector": ToolDefinitionBuilder.stringParam("CSS selector to match elements (e.g. 'h1', '.price', 'a.nav-link'). Use :contains(\"text\") to match by text content."),
+            "xpath": ToolDefinitionBuilder.stringParam("XPath expression to locate elements (fallback for elements without an assigned ID)"),
             "attribute": ToolDefinitionBuilder.stringParam("Optional: extract a specific attribute (e.g. 'href', 'src') instead of text content")
         ],
-        required: ["selector"]
+        required: []
     )
 
     static let browserExecuteJSTool = ToolDefinitionBuilder.build(
@@ -558,12 +566,14 @@ enum ToolDefinitions {
 
     static let browserWaitTool = ToolDefinitionBuilder.build(
         name: "browser_wait",
-        description: "Wait for an element matching a CSS selector to appear on the page. Polls every 300ms until the element is found or timeout is reached.",
+        description: "Wait for an element to appear on the page. Identify the element by element_id (preferred, from browser_get_page_info), CSS selector, or XPath. Polls every 300ms until found or timeout.",
         properties: [
+            "element_id": ToolDefinitionBuilder.stringParam("5-character element ID from browser_get_page_info output (e.g. 'ab3k7'). Preferred."),
             "selector": ToolDefinitionBuilder.stringParam("CSS selector to wait for. Use :contains(\"text\") to match by text content."),
+            "xpath": ToolDefinitionBuilder.stringParam("XPath expression to wait for (fallback for elements without an assigned ID)"),
             "timeout": ToolDefinitionBuilder.numberParam("Max wait time in seconds (1-30, default: 10)")
         ],
-        required: ["selector"]
+        required: []
     )
 
     static let browserScrollTool = ToolDefinitionBuilder.build(
