@@ -163,10 +163,13 @@ final class SkillService {
             predicate: #Predicate { $0.isBuiltIn == true }
         )
         let existing = (try? modelContext.fetch(descriptor)) ?? []
-        let existingNames = Set(existing.map { $0.name })
+        let existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
 
         for template in BuiltInSkills.all {
-            if !existingNames.contains(template.name) {
+            if let skill = existingByName[template.name] {
+                // Upgrade existing built-in skill if template has changed
+                upgradeBuiltInSkill(skill, from: template)
+            } else {
                 let skill = Skill(
                     name: template.name,
                     summary: template.summary,
@@ -182,6 +185,46 @@ final class SkillService {
             }
         }
         save()
+    }
+
+    /// Update an existing built-in skill to match the latest template.
+    /// Only updates fields that have changed to avoid unnecessary writes.
+    private func upgradeBuiltInSkill(_ skill: Skill, from template: BuiltInSkills.Template) {
+        var changed = false
+
+        if skill.content != template.content {
+            skill.content = template.content
+            changed = true
+        }
+        if skill.summary != template.summary {
+            skill.summary = template.summary
+            changed = true
+        }
+        if skill.tags != template.tags {
+            skill.tags = template.tags
+            changed = true
+        }
+        if skill.scripts != template.scripts {
+            skill.scripts = template.scripts
+            changed = true
+        }
+        if skill.customTools != template.customTools {
+            skill.customTools = template.customTools
+            changed = true
+        }
+        if skill.configSchema != template.configSchema {
+            skill.configSchema = template.configSchema
+            changed = true
+        }
+        // Backfill nameLowercase for skills created before this field existed
+        if skill.nameLowercase.isEmpty {
+            skill.nameLowercase = skill.name.lowercased()
+            changed = true
+        }
+
+        if changed {
+            skill.updatedAt = Date()
+        }
     }
 }
 
