@@ -34,74 +34,22 @@ struct SettingsView: View {
     }
 
     private func settingsList(_ vm: SettingsViewModel) -> some View {
-        List {
-            Section(L10n.Settings.llmProviders) {
-                ForEach(vm.providers, id: \.id) { provider in
-                    NavigationLink {
-                        LLMProviderEditView(viewModel: vm, existingProvider: provider)
-                    } label: {
-                        let row = vm.providerRowCache[provider.id]
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row?.name ?? "")
-                                    .font(.headline)
-                                HStack(spacing: 4) {
-                                    Text(row?.modelName ?? "")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    if let extra = row?.extraModelCount, extra > 0 {
-                                        Text("+\(extra)")
-                                            .font(.caption2)
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 5)
-                                            .padding(.vertical, 1)
-                                            .background(Capsule().fill(.blue.opacity(0.7)))
-                                    }
-                                }
-                                Text(row?.endpoint ?? "")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            Spacer()
-                            if vm.defaultProviderId == provider.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                            }
-                        }
-                    }
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            vm.confirmDeleteProvider(provider)
-                            showDeleteConfirmation = true
-                        } label: {
-                            Label(L10n.Common.delete, systemImage: "trash")
-                        }
-                        if vm.defaultProviderId != provider.id {
-                            Button {
-                                vm.setDefault(provider)
-                            } label: {
-                                Label(L10n.Common.defaultLabel, systemImage: "checkmark")
-                            }
-                            .tint(.green)
-                        }
-                    }
-                    .contextMenu {
-                        if vm.defaultProviderId != provider.id {
-                            Button {
-                                vm.setDefault(provider)
-                            } label: {
-                                Label(L10n.Common.defaultLabel, systemImage: "checkmark.circle")
-                            }
-                        }
-                        Button(role: .destructive) {
-                            vm.confirmDeleteProvider(provider)
-                            showDeleteConfirmation = true
-                        } label: {
-                            Label(L10n.Common.delete, systemImage: "trash")
-                        }
-                    }
-                }
+        let llmProviders = vm.providers.filter { (vm.providerRowCache[$0.id]?.providerType ?? .llm) == .llm }
+        let imageProviders = vm.providers.filter { (vm.providerRowCache[$0.id]?.providerType ?? .llm) == .imageOnly }
+        let videoProviders = vm.providers.filter { (vm.providerRowCache[$0.id]?.providerType ?? .llm) == .videoOnly }
 
+        return List {
+            providerSection(vm, providers: llmProviders, header: L10n.Settings.llmProviders, showDefault: true)
+
+            if !imageProviders.isEmpty {
+                providerSection(vm, providers: imageProviders, header: L10n.Settings.imageProviders, showDefault: false)
+            }
+
+            if !videoProviders.isEmpty {
+                providerSection(vm, providers: videoProviders, header: L10n.Settings.videoProviders, showDefault: false)
+            }
+
+            Section {
                 Button {
                     showAddProvider = true
                 } label: {
@@ -131,10 +79,6 @@ struct SettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
-        // Use a plain @State bool — NOT a custom Binding derived from
-        // @Observable state. Custom bindings trigger dispatchImmediately
-        // during alert dismissal, re-entering the render cycle and
-        // crashing the UICollectionView batch update.
         .alert(L10n.Settings.deleteProviderTitle, isPresented: $showDeleteConfirmation) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let provider = vm.providerToDelete {
@@ -154,6 +98,77 @@ struct SettingsView: View {
                 Text(L10n.Settings.deleteProviderAffectedMessage(
                     vm.affectedAgentNames.joined(separator: ", ")
                 ))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func providerSection(_ vm: SettingsViewModel, providers: [LLMProvider], header: String, showDefault: Bool) -> some View {
+        Section(header) {
+            ForEach(providers, id: \.id) { provider in
+                NavigationLink {
+                    LLMProviderEditView(viewModel: vm, existingProvider: provider)
+                } label: {
+                    let row = vm.providerRowCache[provider.id]
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(row?.name ?? "")
+                                .font(.headline)
+                            HStack(spacing: 4) {
+                                Text(row?.modelName ?? "")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                if let extra = row?.extraModelCount, extra > 0 {
+                                    Text("+\(extra)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(Capsule().fill(.blue.opacity(0.7)))
+                                }
+                            }
+                            Text(row?.endpoint ?? "")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        if showDefault && vm.defaultProviderId == provider.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                    }
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        vm.confirmDeleteProvider(provider)
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label(L10n.Common.delete, systemImage: "trash")
+                    }
+                    if showDefault && vm.defaultProviderId != provider.id {
+                        Button {
+                            vm.setDefault(provider)
+                        } label: {
+                            Label(L10n.Common.defaultLabel, systemImage: "checkmark")
+                        }
+                        .tint(.green)
+                    }
+                }
+                .contextMenu {
+                    if showDefault && vm.defaultProviderId != provider.id {
+                        Button {
+                            vm.setDefault(provider)
+                        } label: {
+                            Label(L10n.Common.defaultLabel, systemImage: "checkmark.circle")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        vm.confirmDeleteProvider(provider)
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label(L10n.Common.delete, systemImage: "trash")
+                    }
+                }
             }
         }
     }

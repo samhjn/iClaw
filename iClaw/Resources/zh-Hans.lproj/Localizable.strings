@@ -294,6 +294,8 @@
 // MARK: - Settings
 "settings.title" = "设置";
 "settings.llmProviders" = "LLM 服务商";
+"settings.imageProviders" = "图片生成";
+"settings.videoProviders" = "视频生成";
 "settings.addProvider" = "添加服务商";
 "settings.deleteProviderTitle" = "删除服务商";
 "settings.deleteProviderMessage" = "此服务商将被永久删除，此操作无法撤销。";
@@ -365,6 +367,7 @@
 "provider.parametersFooter" = "所有模型的默认值。可在上方「已启用模型」中为单个模型分别覆盖。";
 "provider.providerType" = "提供商类型";
 "provider.providerType.llm" = "LLM（对话）";
+"provider.providerType.image" = "图片生成";
 "provider.providerType.video" = "视频生成";
 "provider.providerTypeFooter" = "LLM 提供商处理对话补全。视频提供商专用于 Kling、Veo、DashScope 等视频生成 API。";
 "provider.apiStyle" = "API 风格";

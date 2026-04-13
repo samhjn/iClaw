@@ -90,19 +90,22 @@ enum ImageGenMode: String, Codable, CaseIterable {
     }
 }
 
-/// Provider type: LLM chat provider vs video-only / image-only provider.
+/// Provider type: distinguishes LLM chat, image generation, and video generation providers.
 ///
-/// Allows video-only APIs (Kling, Veo, DashScope) to be configured without
-/// requiring irrelevant LLM fields like apiStyle, maxTokens, or temperature.
+/// Non-LLM providers hide irrelevant fields (apiStyle, maxTokens, temperature)
+/// and show only relevant capability toggles in the edit UI.
 enum ProviderType: String, Codable, CaseIterable {
     /// Standard LLM chat/completion provider.
     case llm = "llm"
+    /// Image generation only (DALL-E, Flux, SD3, etc.).
+    case imageOnly = "image"
     /// Video generation only (Kling, Veo, DashScope, Sora, etc.).
     case videoOnly = "video"
 
     var displayName: String {
         switch self {
         case .llm: return L10n.Provider.providerTypeLLM
+        case .imageOnly: return L10n.Provider.providerTypeImage
         case .videoOnly: return L10n.Provider.providerTypeVideo
         }
     }
@@ -515,6 +518,12 @@ final class LLMProvider {
 
     /// Whether this provider is exclusively for video generation.
     var isVideoOnly: Bool { providerType == .videoOnly }
+
+    /// Whether this provider is exclusively for image generation.
+    var isImageOnly: Bool { providerType == .imageOnly }
+
+    /// Whether this provider is a media-only provider (not usable for chat).
+    var isMediaOnly: Bool { providerType != .llm }
 
     var enabledModels: [String] {
         get {

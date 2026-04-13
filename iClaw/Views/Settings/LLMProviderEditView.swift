@@ -217,29 +217,45 @@ struct LLMProviderEditView: View {
     }
 
     /// Inline model row with expandable capabilities toggles.
+    /// Toggles shown depend on provider type — media-only providers hide irrelevant LLM toggles.
     @ViewBuilder
     private func modelRow(_ model: String) -> some View {
         DisclosureGroup {
             let binding = capabilitiesBinding(for: model)
-            Toggle(L10n.Provider.supportsVision, isOn: binding.supportsVision)
-            Toggle(L10n.Provider.supportsVideoInput, isOn: binding.supportsVideoInput)
-            Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
-            Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
-                ForEach(ImageGenMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
+            switch providerType {
+            case .llm:
+                Toggle(L10n.Provider.supportsVision, isOn: binding.supportsVision)
+                Toggle(L10n.Provider.supportsVideoInput, isOn: binding.supportsVideoInput)
+                Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
+                Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
+                    ForEach(ImageGenMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
+                    ForEach(VideoGenMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
+                    ForEach(ThinkingLevel.allCases, id: \.self) { level in
+                        Text(level.displayName).tag(level)
+                    }
+                }
+                perModelParametersView(for: model)
+            case .imageOnly:
+                Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
+                    ForEach(ImageGenMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+            case .videoOnly:
+                Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
+                    ForEach(VideoGenMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
                 }
             }
-            Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
-                ForEach(VideoGenMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
-                }
-            }
-            Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
-                ForEach(ThinkingLevel.allCases, id: \.self) { level in
-                    Text(level.displayName).tag(level)
-                }
-            }
-            perModelParametersView(for: model)
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -252,10 +268,12 @@ struct LLMProviderEditView: View {
                     }
                     HStack(spacing: 4) {
                         let c = modelCapabilities[model] ?? .default
-                        if c.supportsVision { capBadge("eye", color: .green) }
-                        if c.supportsVideoInput { capBadge("video", color: .green) }
-                        if c.supportsToolUse { capBadge("wrench", color: .blue) }
-                        if c.thinkingLevel.isEnabled { thinkingLevelBadge(c.thinkingLevel) }
+                        if providerType == .llm {
+                            if c.supportsVision { capBadge("eye", color: .green) }
+                            if c.supportsVideoInput { capBadge("video", color: .green) }
+                            if c.supportsToolUse { capBadge("wrench", color: .blue) }
+                            if c.thinkingLevel.isEnabled { thinkingLevelBadge(c.thinkingLevel) }
+                        }
                         if c.imageGenerationMode == .chatInline { capBadge("paintbrush", color: .orange) }
                         if c.imageGenerationMode == .dedicatedAPI { capBadge("photo", color: .orange) }
                         if c.videoGenerationMode != .none { capBadge("film", color: .purple) }
@@ -545,10 +563,10 @@ struct LLMProviderEditView: View {
 
     private var presetsSection: some View {
         Section(L10n.Provider.presets) {
-            if providerType == .videoOnly {
-                videoPresetsContent
-            } else {
-                llmPresetsContent
+            switch providerType {
+            case .llm: llmPresetsContent
+            case .imageOnly: imagePresetsContent
+            case .videoOnly: videoPresetsContent
             }
         }
     }
@@ -618,6 +636,38 @@ struct LLMProviderEditView: View {
             modelName = "sora-2"
             enableVideoModel("sora-2", mode: .openAI)
         }
+    }
+
+    @ViewBuilder
+    private var imagePresetsContent: some View {
+        Button("OpenAI (DALL-E / GPT Image)") {
+            name = name.isEmpty ? "OpenAI Image" : name
+            endpoint = "https://api.openai.com/v1"
+            modelName = "gpt-image-1"
+            enableImageModel("gpt-image-1", mode: .dedicatedAPI)
+            enableImageModel("dall-e-3", mode: .dedicatedAPI)
+        }
+        Button("Flux") {
+            name = name.isEmpty ? "Flux" : name
+            endpoint = "https://api.us1.bfl.ai/v1"
+            modelName = "flux-pro-1.1"
+            enableImageModel("flux-pro-1.1", mode: .dedicatedAPI)
+        }
+        Button("Stable Diffusion") {
+            name = name.isEmpty ? "Stable Diffusion" : name
+            endpoint = "https://api.stability.ai/v1"
+            modelName = "sd3-medium"
+            enableImageModel("sd3-medium", mode: .dedicatedAPI)
+        }
+    }
+
+    /// Enable a model with image generation capability pre-configured.
+    private func enableImageModel(_ model: String, mode: ImageGenMode) {
+        enabledModels.insert(model)
+        var caps = modelCapabilities[model] ?? ModelCapabilities.inferred(from: model)
+        caps.imageGenerationMode = mode
+        caps.supportsToolUse = false
+        modelCapabilities[model] = caps
     }
 
     /// Enable a model with video generation capability pre-configured.

@@ -293,6 +293,8 @@
 // MARK: - Settings
 "settings.title" = "設定";
 "settings.llmProviders" = "LLM プロバイダー";
+"settings.imageProviders" = "画像生成";
+"settings.videoProviders" = "動画生成";
 "settings.addProvider" = "プロバイダーを追加";
 "settings.deleteProviderTitle" = "プロバイダーを削除";
 "settings.deleteProviderMessage" = "このプロバイダーは完全に削除されます。この操作は元に戻せません。";
@@ -364,6 +366,7 @@
 "provider.parametersFooter" = "全モデルのデフォルト値です。上の「有効なモデル」セクションでモデルごとに上書きできます。";
 "provider.providerType" = "プロバイダー種別";
 "provider.providerType.llm" = "LLM（チャット）";
+"provider.providerType.image" = "画像生成";
 "provider.providerType.video" = "動画生成";
 "provider.providerTypeFooter" = "LLMプロバイダーはチャット補完を処理します。動画プロバイダーはKling、Veo、DashScopeなどの動画生成APIに特化しています。";
 "provider.apiStyle" = "APIスタイル";

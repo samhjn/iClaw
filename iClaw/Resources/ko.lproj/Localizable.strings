@@ -293,6 +293,8 @@
 // MARK: - Settings
 "settings.title" = "설정";
 "settings.llmProviders" = "LLM 제공자";
+"settings.imageProviders" = "이미지 생성";
+"settings.videoProviders" = "동영상 생성";
 "settings.addProvider" = "제공자 추가";
 "settings.deleteProviderTitle" = "제공자 삭제";
 "settings.deleteProviderMessage" = "이 제공자가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
@@ -364,6 +366,7 @@
 "provider.parametersFooter" = "모든 모델의 기본값입니다. 위의 '활성화된 모델' 섹션에서 모델별로 재정의할 수 있습니다.";
 "provider.providerType" = "제공자 유형";
 "provider.providerType.llm" = "LLM (채팅)";
+"provider.providerType.image" = "이미지 생성";
 "provider.providerType.video" = "동영상 생성";
 "provider.providerTypeFooter" = "LLM 제공자는 채팅 완성을 처리합니다. 동영상 제공자는 Kling, Veo, DashScope 등 동영상 생성 API 전용입니다.";
 "provider.apiStyle" = "API 스타일";
