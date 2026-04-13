@@ -58,7 +58,7 @@ final class TextFilePreviewTests: XCTestCase {
     func testIsTextPreviewableForTextFiles() {
         let textFiles = ["notes.txt", "README.md", "config.json", "script.py", "main.swift", "app.js", "style.css"]
         for name in textFiles {
-            let info = FileInfo(name: name, size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false)
+            let info = FileInfo(name: name, size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false, isVideo: false)
             XCTAssertTrue(info.isTextPreviewable, "'\(name)' should be text-previewable")
         }
     }
@@ -66,7 +66,7 @@ final class TextFilePreviewTests: XCTestCase {
     func testIsTextPreviewableForImageFiles() {
         let imageFiles = ["photo.jpg", "icon.png", "anim.gif"]
         for name in imageFiles {
-            let info = FileInfo(name: name, size: 100, createdAt: Date(), modifiedAt: Date(), isImage: true)
+            let info = FileInfo(name: name, size: 100, createdAt: Date(), modifiedAt: Date(), isImage: true, isVideo: false)
             XCTAssertFalse(info.isTextPreviewable, "'\(name)' should not be text-previewable")
         }
     }
@@ -74,7 +74,7 @@ final class TextFilePreviewTests: XCTestCase {
     func testIsTextPreviewableForBinaryFiles() {
         let binaryFiles = ["doc.pdf", "archive.zip", "video.mp4"]
         for name in binaryFiles {
-            let info = FileInfo(name: name, size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false)
+            let info = FileInfo(name: name, size: 100, createdAt: Date(), modifiedAt: Date(), isImage: false, isVideo: false)
             XCTAssertFalse(info.isTextPreviewable, "'\(name)' should not be text-previewable")
         }
     }
@@ -230,7 +230,7 @@ final class TextFilePreviewTests: XCTestCase {
 
         for file in files {
             let info = FileInfo(name: file.name, size: 0, createdAt: Date(), modifiedAt: Date(),
-                                isImage: file.isImg)
+                                isImage: file.isImg, isVideo: false)
             XCTAssertEqual(info.isImage, file.isImg, "isImage mismatch for \(file.name)")
             XCTAssertEqual(info.isTextPreviewable, file.isTxt, "isTextPreviewable mismatch for \(file.name)")
 
