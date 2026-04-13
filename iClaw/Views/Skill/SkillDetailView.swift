@@ -112,7 +112,7 @@ struct SkillDetailView: View {
     private var scriptsSection: some View {
         if !skill.scripts.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Label("Scripts (\(skill.scripts.count))", systemImage: "terminal")
+                Label(L10n.Skills.scriptsCount(skill.scripts.count), systemImage: "terminal")
                     .font(.headline)
 
                 ForEach(skill.scripts, id: \.name) { script in
@@ -149,7 +149,7 @@ struct SkillDetailView: View {
     private var toolsSection: some View {
         if !skill.customTools.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Label("Custom Tools (\(skill.customTools.count))", systemImage: "wrench.and.screwdriver")
+                Label(L10n.Skills.customToolsCount(skill.customTools.count), systemImage: "wrench.and.screwdriver")
                     .font(.headline)
 
                 ForEach(skill.customTools, id: \.name) { tool in
@@ -162,7 +162,7 @@ struct SkillDetailView: View {
 
                         if !tool.parameters.isEmpty {
                             HStack(spacing: 4) {
-                                Text("Parameters:")
+                                Text("\(L10n.Skills.parameters):")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                 ForEach(tool.parameters, id: \.name) { param in
@@ -342,12 +342,12 @@ struct SkillEditView: View {
                         newScriptCode = ""
                         showAddScript = true
                     } label: {
-                        Label("Add Script", systemImage: "plus")
+                        Label(L10n.Skills.addScript, systemImage: "plus")
                     }
                 } header: {
-                    Label("Scripts", systemImage: "terminal")
+                    Label(L10n.Skills.scripts, systemImage: "terminal")
                 } footer: {
-                    Text("JavaScript snippets registered as code snippets when the skill is installed.")
+                    Text(L10n.Skills.scriptsFooter)
                 }
 
                 // Custom Tools section
@@ -379,12 +379,12 @@ struct SkillEditView: View {
                         newToolParams = []
                         showAddTool = true
                     } label: {
-                        Label("Add Tool", systemImage: "plus")
+                        Label(L10n.Skills.addTool, systemImage: "plus")
                     }
                 } header: {
-                    Label("Custom Tools", systemImage: "wrench.and.screwdriver")
+                    Label(L10n.Skills.customTools, systemImage: "wrench.and.screwdriver")
                 } footer: {
-                    Text("Custom tools become callable functions for the agent, backed by JavaScript.")
+                    Text(L10n.Skills.customToolsFooter)
                 }
             }
             .navigationTitle(isEditing ? L10n.Skills.editSkill : L10n.Skills.newSkill)
@@ -425,18 +425,18 @@ struct SkillEditView: View {
     private var addScriptSheet: some View {
         NavigationStack {
             Form {
-                Section("Info") {
-                    TextField("Script name", text: $newScriptName)
+                Section(L10n.Skills.info) {
+                    TextField(L10n.Skills.scriptName, text: $newScriptName)
                         .autocapitalization(.none)
-                    TextField("Description (optional)", text: $newScriptDesc)
+                    TextField(L10n.Skills.descriptionOptional, text: $newScriptDesc)
                 }
-                Section("JavaScript Code") {
+                Section(L10n.Skills.jsCode) {
                     TextEditor(text: $newScriptCode)
                         .frame(minHeight: 200)
                         .font(.system(.body, design: .monospaced))
                 }
             }
-            .navigationTitle("Add Script")
+            .navigationTitle(L10n.Skills.addScript)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -463,10 +463,10 @@ struct SkillEditView: View {
     private var addToolSheet: some View {
         NavigationStack {
             Form {
-                Section("Tool Info") {
-                    TextField("Tool name", text: $newToolName)
+                Section(L10n.Skills.toolInfo) {
+                    TextField(L10n.Skills.toolName, text: $newToolName)
                         .autocapitalization(.none)
-                    TextField("Description", text: $newToolDesc)
+                    TextField(L10n.Skills.description, text: $newToolDesc)
                 }
                 Section {
                     ForEach(Array(newToolParams.enumerated()), id: \.offset) { index, _ in
@@ -497,22 +497,22 @@ struct SkillEditView: View {
                     Button {
                         newToolParams.append(SkillToolParam(name: "", description: ""))
                     } label: {
-                        Label("Add Parameter", systemImage: "plus")
+                        Label(L10n.Skills.addParameter, systemImage: "plus")
                     }
                 } header: {
-                    Text("Parameters")
+                    Text(L10n.Skills.parameters)
                 }
                 Section {
                     TextEditor(text: $newToolCode)
                         .frame(minHeight: 200)
                         .font(.system(.body, design: .monospaced))
                 } header: {
-                    Text("JavaScript Implementation")
+                    Text(L10n.Skills.jsImplementation)
                 } footer: {
-                    Text("Access parameters via `args.paramName`. Installation config is available via `args.config`.")
+                    Text(L10n.Skills.jsImplementationFooter)
                 }
             }
-            .navigationTitle("Add Tool")
+            .navigationTitle(L10n.Skills.addTool)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

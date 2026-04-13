@@ -403,6 +403,27 @@
 "skills.uninstall" = "解除安裝";
 "skills.skillLibrary" = "技能庫";
 "skills.activeInstalled" = "%d 個啟用 / %d 個已安裝";
+"skills.scriptsCount" = "腳本 (%d)";
+"skills.customToolsCount" = "自訂工具 (%d)";
+"skills.parameters" = "參數";
+"skills.addScript" = "新增腳本";
+"skills.addTool" = "新增工具";
+"skills.addParameter" = "新增參數";
+"skills.scripts" = "腳本";
+"skills.customTools" = "自訂工具";
+"skills.scriptsFooter" = "安裝技能時，JavaScript 腳本會自動註冊為程式碼片段。";
+"skills.customToolsFooter" = "自訂工具會成為智慧體可呼叫的函式，由 JavaScript 驅動。";
+"skills.scriptName" = "腳本名稱";
+"skills.descriptionOptional" = "描述（選填）";
+"skills.jsCode" = "JavaScript 程式碼";
+"skills.toolName" = "工具名稱";
+"skills.toolInfo" = "工具資訊";
+"skills.description" = "描述";
+"skills.jsImplementation" = "JavaScript 實作";
+"skills.jsImplementationFooter" = "透過 `args.參數名` 存取參數。安裝設定可透過 `args.config` 取得。";
+"skills.configure" = "設定";
+"skills.skillConfiguration" = "技能設定";
+"skills.required" = "必填";
 
 // MARK: - Cron Description
 "cron.invalidExpression" = "無效的 Cron 表達式";

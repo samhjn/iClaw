@@ -403,6 +403,27 @@
 "skills.uninstall" = "Uninstall";
 "skills.skillLibrary" = "Skill Library";
 "skills.activeInstalled" = "%d active / %d installed";
+"skills.scriptsCount" = "Scripts (%d)";
+"skills.customToolsCount" = "Custom Tools (%d)";
+"skills.parameters" = "Parameters";
+"skills.addScript" = "Add Script";
+"skills.addTool" = "Add Tool";
+"skills.addParameter" = "Add Parameter";
+"skills.scripts" = "Scripts";
+"skills.customTools" = "Custom Tools";
+"skills.scriptsFooter" = "JavaScript snippets registered as code snippets when the skill is installed.";
+"skills.customToolsFooter" = "Custom tools become callable functions for the agent, backed by JavaScript.";
+"skills.scriptName" = "Script name";
+"skills.descriptionOptional" = "Description (optional)";
+"skills.jsCode" = "JavaScript Code";
+"skills.toolName" = "Tool name";
+"skills.toolInfo" = "Tool Info";
+"skills.description" = "Description";
+"skills.jsImplementation" = "JavaScript Implementation";
+"skills.jsImplementationFooter" = "Access parameters via `args.paramName`. Installation config is available via `args.config`.";
+"skills.configure" = "Configure";
+"skills.skillConfiguration" = "Skill Configuration";
+"skills.required" = "Required";
 
 // MARK: - Cron Description
 "cron.invalidExpression" = "Invalid cron expression";
