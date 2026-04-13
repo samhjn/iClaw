@@ -37,9 +37,9 @@ struct AgentModelConfigView: View {
         }
     }
 
-    /// Provider+model combos excluding video-only providers (for LLM pickers).
+    /// Provider+model combos excluding media-only providers (for LLM pickers).
     private var llmProviderModels: [ProviderModel] {
-        allProviderModels.filter { $0.provider.providerType != .videoOnly }
+        allProviderModels.filter { !$0.provider.isMediaOnly }
     }
 
     private var hasWhitelist: Bool { !agent.allowedModelIds.isEmpty }

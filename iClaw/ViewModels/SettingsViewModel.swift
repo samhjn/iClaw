@@ -9,6 +9,7 @@ struct ProviderRowData {
     let modelName: String
     let extraModelCount: Int
     let endpoint: String
+    let providerType: ProviderType
 }
 
 @Observable
@@ -49,7 +50,8 @@ final class SettingsViewModel {
                 name: p.name,
                 modelName: p.modelName,
                 extraModelCount: p.enabledModels.count - 1,
-                endpoint: p.endpoint
+                endpoint: p.endpoint,
+                providerType: p.providerType
             )
         }
         providerRowCache = cache

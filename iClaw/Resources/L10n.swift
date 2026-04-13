@@ -415,6 +415,8 @@ enum L10n {
     enum Settings {
         static var title: String { tr("settings.title") }
         static var llmProviders: String { tr("settings.llmProviders") }
+        static var imageProviders: String { tr("settings.imageProviders") }
+        static var videoProviders: String { tr("settings.videoProviders") }
         static var addProvider: String { tr("settings.addProvider") }
         static var deleteProviderTitle: String { tr("settings.deleteProviderTitle") }
         static var deleteProviderMessage: String { tr("settings.deleteProviderMessage") }
@@ -485,6 +487,7 @@ enum L10n {
         static var parametersFooter: String { tr("provider.parametersFooter") }
         static var providerType: String { tr("provider.providerType") }
         static var providerTypeLLM: String { tr("provider.providerType.llm") }
+        static var providerTypeImage: String { tr("provider.providerType.image") }
         static var providerTypeVideo: String { tr("provider.providerType.video") }
         static var providerTypeFooter: String { tr("provider.providerTypeFooter") }
         static var apiStyle: String { tr("provider.apiStyle") }

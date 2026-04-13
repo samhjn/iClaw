@@ -63,12 +63,14 @@ final class AgentFileManager {
                 return nil
             }
             let name = url.lastPathComponent
+            let ext = url.pathExtension.lowercased()
             return FileInfo(
                 name: name,
                 size: Int64(attrs.fileSize ?? 0),
                 createdAt: attrs.creationDate ?? Date(),
                 modifiedAt: attrs.contentModificationDate ?? Date(),
-                isImage: Self.imageExtensions.contains(url.pathExtension.lowercased())
+                isImage: Self.imageExtensions.contains(ext),
+                isVideo: Self.videoExtensions.contains(ext)
             )
         }.sorted { $0.modifiedAt > $1.modifiedAt }
     }
@@ -120,12 +122,14 @@ final class AgentFileManager {
         let url = agentDirectory(for: agentId).appendingPathComponent(name)
         guard let attrs = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey]),
               fm.fileExists(atPath: url.path) else { return nil }
+        let ext = url.pathExtension.lowercased()
         return FileInfo(
             name: name,
             size: Int64(attrs.fileSize ?? 0),
             createdAt: attrs.creationDate ?? Date(),
             modifiedAt: attrs.contentModificationDate ?? Date(),
-            isImage: Self.imageExtensions.contains(url.pathExtension.lowercased())
+            isImage: Self.imageExtensions.contains(ext),
+            isVideo: Self.videoExtensions.contains(ext)
         )
     }
 
@@ -220,6 +224,10 @@ final class AgentFileManager {
         "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "tif", "svg"
     ]
 
+    static let videoExtensions: Set<String> = [
+        "mp4", "mov", "m4v", "webm", "avi", "mkv"
+    ]
+
     private static func extensionForMime(_ mime: String) -> String {
         switch mime.lowercased() {
         case "image/png": return "png"
@@ -242,6 +250,7 @@ struct FileInfo: Identifiable {
     let createdAt: Date
     let modifiedAt: Date
     let isImage: Bool
+    let isVideo: Bool
 
     var id: String { name }
 

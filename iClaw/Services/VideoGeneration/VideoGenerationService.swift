@@ -626,7 +626,7 @@ final class VideoGenerationService: @unchecked Sendable {
            !(200...299).contains(httpResponse.statusCode) {
             let errorBody = String(data: submitData, encoding: .utf8) ?? "Unknown error"
             let error = VideoGenerationError.apiError(statusCode: httpResponse.statusCode, message: errorBody)
-            onProgress?(.failed(error.localizedDescription ?? errorBody))
+            onProgress?(.failed(errorBody))
             throw error
         }
 
