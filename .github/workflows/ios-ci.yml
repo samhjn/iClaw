@@ -11,6 +11,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SwiftData Migration Safety Check
+        run: bash scripts/lint_swiftdata_migration.sh origin/${{ github.base_ref || 'develop' }}..HEAD
+
+      - name: CollectionView Crash Risk Check
+        run: bash scripts/lint_collectionview_risks.sh
+
   test:
     name: Build & Test
     runs-on: macos-latest

@@ -344,7 +344,7 @@ private struct CachedImageCell: View {
 
 private struct MessageVideoGrid: View {
     let videos: [VideoAttachment]
-    @State private var playingVideoURL: URL?
+    @State private var playingVideo: IdentifiableURL?
 
     var body: some View {
         let columns = videos.count == 1
@@ -358,16 +358,13 @@ private struct MessageVideoGrid: View {
                        let (agentId, filename) = AgentFileManager.parseFileReference(ref) {
                         let url = AgentFileManager.shared.fileURL(agentId: agentId, name: filename)
                         if FileManager.default.fileExists(atPath: url.path) {
-                            playingVideoURL = url
+                            playingVideo = IdentifiableURL(url: url)
                         }
                     }
                 }
             }
         }
-        .fullScreenCover(item: Binding(
-            get: { playingVideoURL.map { IdentifiableURL(url: $0) } },
-            set: { playingVideoURL = $0?.url }
-        )) { item in
+        .fullScreenCover(item: $playingVideo) { item in
             VideoPlayerSheet(url: item.url)
         }
     }
