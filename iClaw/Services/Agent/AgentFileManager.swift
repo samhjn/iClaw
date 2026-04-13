@@ -146,6 +146,19 @@ final class AgentFileManager {
         }
     }
 
+    /// Save video data to the agent's file directory and return the `agentfile://` reference.
+    func saveVideo(_ videoData: Data, extension ext: String = "mp4", agentId: UUID) -> String? {
+        let name = "vid_\(UUID().uuidString.prefix(8)).\(ext)"
+        do {
+            try writeFile(agentId: agentId, name: name, data: videoData)
+            os_log(.info, log: fileLog, "Saved video %{public}@ for agent %{public}@", name, agentId.uuidString)
+            return Self.makeFileReference(agentId: agentId, filename: name)
+        } catch {
+            os_log(.error, log: fileLog, "Failed to save video: %{public}@", error.localizedDescription)
+            return nil
+        }
+    }
+
     /// Load image data from a `agentfile://` reference.
     func loadImageData(from fileReference: String) -> Data? {
         guard let (agentId, filename) = Self.parseFileReference(fileReference) else { return nil }

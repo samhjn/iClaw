@@ -210,6 +210,11 @@ struct LLMProviderEditView: View {
                     Text(mode.displayName).tag(mode)
                 }
             }
+            Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
+                ForEach(VideoGenMode.allCases, id: \.self) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
             Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
                 ForEach(ThinkingLevel.allCases, id: \.self) { level in
                     Text(level.displayName).tag(level)
@@ -234,6 +239,7 @@ struct LLMProviderEditView: View {
                         if c.thinkingLevel.isEnabled { thinkingLevelBadge(c.thinkingLevel) }
                         if c.imageGenerationMode == .chatInline { capBadge("paintbrush", color: .orange) }
                         if c.imageGenerationMode == .dedicatedAPI { capBadge("photo", color: .orange) }
+                        if c.videoGenerationMode != .none { capBadge("film", color: .purple) }
                     }
                 }
                 Spacer()
@@ -311,6 +317,14 @@ struct LLMProviderEditView: View {
                 set: { newVal in
                     var caps = modelCapabilities[model] ?? .default
                     caps.imageGenerationMode = newVal
+                    modelCapabilities[model] = caps
+                }
+            ),
+            videoGenerationMode: Binding(
+                get: { (modelCapabilities[model] ?? .default).videoGenerationMode },
+                set: { newVal in
+                    var caps = modelCapabilities[model] ?? .default
+                    caps.videoGenerationMode = newVal
                     modelCapabilities[model] = caps
                 }
             )
@@ -656,4 +670,5 @@ private struct CapabilitiesBindings {
     let supportsVideoInput: Binding<Bool>
     let supportsToolUse: Binding<Bool>
     let imageGenerationMode: Binding<ImageGenMode>
+    let videoGenerationMode: Binding<VideoGenMode>
 }

@@ -64,6 +64,9 @@ enum ToolDefinitions {
             // Image Generation
             generateImageTool,
 
+            // Video Generation
+            generateVideoTool,
+
             // Apple Ecosystem — Calendar
             calendarListCalendarsTool,
             calendarCreateEventTool,
@@ -1051,6 +1054,20 @@ enum ToolDefinitions {
             "size": ToolDefinitionBuilder.stringParam("Image size. Common values: 1024x1024, 1792x1024, 1024x1792. Optional, defaults to model default."),
             "quality": ToolDefinitionBuilder.enumParam("Image quality level. Optional.", values: ["standard", "hd"]),
             "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1.")
+        ],
+        required: ["prompt"]
+    )
+
+    // MARK: - Video Generation
+
+    static let generateVideoTool = ToolDefinitionBuilder.build(
+        name: "generate_video",
+        description: "Generate a video using AI video generation models. Use this when the user asks you to create or generate a video. Video generation typically takes 1-5 minutes. Returns the generated video as an attachment in the conversation.",
+        properties: [
+            "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the video to generate. Be specific about the scene, action, camera movement, style, and mood."),
+            "duration": ToolDefinitionBuilder.stringParam("Desired video duration. Common values: '5s', '10s'. Optional, defaults to model default."),
+            "aspect_ratio": ToolDefinitionBuilder.stringParam("Aspect ratio. Common values: '16:9', '9:16', '1:1'. Optional, defaults to model default."),
+            "image_url": ToolDefinitionBuilder.stringParam("Optional URL or agentfile:// reference of an image to use as the first frame (image-to-video). Only supported by some models.")
         ],
         required: ["prompt"]
     )

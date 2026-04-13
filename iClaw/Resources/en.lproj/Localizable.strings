@@ -187,6 +187,10 @@
 "modelConfig.imageProviderNone" = "Disabled";
 "modelConfig.imageGenerationHeader" = "Image Generation";
 "modelConfig.imageProviderFooter" = "Select a model for the generate_image tool. Only models with image generation capability are shown. When configured, the agent can generate images via tool calling.";
+"modelConfig.videoProvider" = "Video Generation Model";
+"modelConfig.videoProviderNone" = "Disabled";
+"modelConfig.videoGenerationHeader" = "Video Generation";
+"modelConfig.videoProviderFooter" = "Select a model for the generate_video tool. Only models with video generation capability are shown. Video generation typically takes 1-5 minutes per clip.";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "Cron Jobs";
@@ -327,9 +331,16 @@
 "provider.supportsToolUseFooter" = "Disable if this model does not support function calling / tool use (some OpenRouter models)";
 "provider.supportsImageGeneration" = "Image Generation";
 "provider.supportsImageGenerationFooter" = "Enable for models that can generate images (e.g. Gemini 2.5 Flash Image / Nano Banana). Sends modalities parameter to the API.";
+"provider.supportsVideoGeneration" = "Video Generation";
 "provider.imageGenMode.none" = "None";
 "provider.imageGenMode.chatInline" = "Chat Inline";
 "provider.imageGenMode.dedicatedAPI" = "Dedicated API";
+"provider.videoGenMode.none" = "None";
+"provider.videoGenMode.auto" = "Auto Detect";
+"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.googleVeo" = "Google Veo";
+"provider.videoGenMode.dashScope" = "DashScope (Tongyi Wan)";
+"provider.videoGenMode.kling" = "Kling";
 "provider.supportsReasoning" = "Supports Reasoning";
 "provider.supportsReasoningFooter" = "Enable for models with extended thinking / reasoning (e.g. Claude with extended thinking, DeepSeek R1, o1/o3). Thinking output will be captured and displayed.";
 "provider.thinkingLevel" = "Thinking Level";
@@ -526,6 +537,7 @@
 "toolPermissions.model" = "Model";
 "toolPermissions.files" = "Files";
 "toolPermissions.imageGeneration" = "Image Generation";
+"toolPermissions.videoGeneration" = "Video Generation";
 "toolPermissions.appleSection" = "Apple Ecosystem";
 "toolPermissions.agentSection" = "Agent Capabilities";
 "agentDetail.toolPermissions" = "Tool Permissions";

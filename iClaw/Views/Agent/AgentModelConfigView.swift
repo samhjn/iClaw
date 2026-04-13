@@ -57,6 +57,7 @@ struct AgentModelConfigView: View {
             fallbackSection
             subAgentSection
             imageGenerationSection
+            videoGenerationSection
             modelWhitelistSection
             compressionSection
             resolutionPreviewSection
@@ -375,6 +376,68 @@ struct AgentModelConfigView: View {
                             agent.imageModelNameOverride = nil
                         } else {
                             agent.imageModelNameOverride = modelName
+                        }
+                    }
+                }
+                agent.updatedAt = Date()
+                try? modelContext.save()
+            }
+        )
+    }
+
+    // MARK: - Video Generation
+
+    @ViewBuilder
+    private var videoGenerationSection: some View {
+        Section {
+            Picker(L10n.ModelConfig.videoProvider, selection: videoProviderBinding) {
+                Text(L10n.ModelConfig.videoProviderNone).tag("" as String)
+                ForEach(videoCapableProviderModels) { pm in
+                    Text(pm.displayName).tag(pm.id)
+                }
+            }
+        } header: {
+            Text(L10n.ModelConfig.videoGenerationHeader)
+        } footer: {
+            Text(L10n.ModelConfig.videoProviderFooter)
+        }
+    }
+
+    /// Provider+model combos that have video generation capabilities.
+    private var videoCapableProviderModels: [ProviderModel] {
+        allProviderModels.filter { pm in
+            let caps = pm.provider.capabilities(for: pm.modelName)
+            return caps.videoGenerationMode != .none
+        }
+    }
+
+    private var videoProviderBinding: Binding<String> {
+        Binding(
+            get: {
+                guard let pid = agent.videoProviderId else { return "" }
+                let override = agent.videoModelNameOverride
+                if let override {
+                    return "\(pid.uuidString):\(override)"
+                }
+                if let provider = allProviders.first(where: { $0.id == pid }) {
+                    return "\(pid.uuidString):\(provider.modelName)"
+                }
+                return ""
+            },
+            set: { newValue in
+                if newValue.isEmpty {
+                    agent.videoProviderId = nil
+                    agent.videoModelNameOverride = nil
+                } else {
+                    let parts = newValue.split(separator: ":", maxSplits: 1)
+                    if parts.count == 2, let uid = UUID(uuidString: String(parts[0])) {
+                        let modelName = String(parts[1])
+                        agent.videoProviderId = uid
+                        if let provider = allProviders.first(where: { $0.id == uid }),
+                           modelName == provider.modelName {
+                            agent.videoModelNameOverride = nil
+                        } else {
+                            agent.videoModelNameOverride = modelName
                         }
                     }
                 }

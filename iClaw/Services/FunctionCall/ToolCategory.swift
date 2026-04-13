@@ -61,6 +61,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     case model
     case files
     case imageGeneration
+    case videoGeneration
 
     var id: String { rawValue }
 
@@ -88,6 +89,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .model:         return L10n.ToolPermissions.model
         case .files:         return L10n.ToolPermissions.files
         case .imageGeneration: return L10n.ToolPermissions.imageGeneration
+        case .videoGeneration: return L10n.ToolPermissions.videoGeneration
         }
     }
 
@@ -111,6 +113,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .model:         return "cpu"
         case .files:         return "folder"
         case .imageGeneration: return "paintbrush.pointed"
+        case .videoGeneration: return "film"
         }
     }
 
@@ -157,6 +160,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .files:
             return ["file_list", "file_read", "file_info", "attach_media"]
         case .imageGeneration:
+            return []
+        case .videoGeneration:
             return []
         }
     }
@@ -208,6 +213,8 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             return ["file_write", "file_delete"]
         case .imageGeneration:
             return ["generate_image"]
+        case .videoGeneration:
+            return ["generate_video"]
         }
     }
 
@@ -239,7 +246,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             ]
         case .files:
             return ["files.list", "files.read", "files.info"]
-        case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration:
+        case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration, .videoGeneration:
             return []
         }
     }
@@ -263,7 +270,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
             ]
         case .files:
             return ["files.write", "files.delete"]
-        case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration:
+        case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration, .videoGeneration:
             return []
         }
     }
@@ -278,7 +285,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     ]
 
     static let agentCategories: [ToolCategory] = [
-        .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .files, .imageGeneration,
+        .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .files, .imageGeneration, .videoGeneration,
     ]
 
     /// Every function-call tool name across all categories.

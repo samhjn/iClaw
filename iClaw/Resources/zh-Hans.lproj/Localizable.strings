@@ -187,6 +187,10 @@
 "modelConfig.imageProviderNone" = "未启用";
 "modelConfig.imageGenerationHeader" = "图片生成";
 "modelConfig.imageProviderFooter" = "选择 generate_image 工具使用的模型。仅显示具有图片生成能力的模型。配置后，智能体可通过工具调用生成图片。";
+"modelConfig.videoProvider" = "视频生成模型";
+"modelConfig.videoProviderNone" = "未启用";
+"modelConfig.videoGenerationHeader" = "视频生成";
+"modelConfig.videoProviderFooter" = "选择 generate_video 工具使用的模型。仅显示具有视频生成能力的模型。视频生成通常需要 1-5 分钟。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定时任务";
@@ -327,9 +331,16 @@
 "provider.supportsToolUseFooter" = "如果此模型不支持函数调用/工具使用请关闭（部分 OpenRouter 模型）";
 "provider.supportsImageGeneration" = "图片生成";
 "provider.supportsImageGenerationFooter" = "为能生成图片的模型启用（如 Gemini 2.5 Flash Image / Nano Banana），将向 API 发送 modalities 参数";
+"provider.supportsVideoGeneration" = "视频生成";
 "provider.imageGenMode.none" = "不支持";
 "provider.imageGenMode.chatInline" = "对话内联";
 "provider.imageGenMode.dedicatedAPI" = "独立 API";
+"provider.videoGenMode.none" = "不支持";
+"provider.videoGenMode.auto" = "自动检测";
+"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.googleVeo" = "Google Veo";
+"provider.videoGenMode.dashScope" = "DashScope (通义万相)";
+"provider.videoGenMode.kling" = "可灵";
 "provider.supportsReasoning" = "支持推理";
 "provider.supportsReasoningFooter" = "为支持扩展思考/推理的模型启用（如 Claude 扩展思考、DeepSeek R1、o1/o3）。思考过程将被捕获并显示。";
 "provider.thinkingLevel" = "思考等级";
@@ -526,6 +537,7 @@
 "toolPermissions.model" = "模型";
 "toolPermissions.files" = "文件";
 "toolPermissions.imageGeneration" = "图片生成";
+"toolPermissions.videoGeneration" = "视频生成";
 "toolPermissions.appleSection" = "Apple 生态";
 "toolPermissions.agentSection" = "智能体能力";
 "agentDetail.toolPermissions" = "功能权限";

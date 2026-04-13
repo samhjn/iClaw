@@ -219,6 +219,7 @@ enum L10n {
         static var model: String { tr("toolPermissions.model") }
         static var files: String { tr("toolPermissions.files") }
         static var imageGeneration: String { tr("toolPermissions.imageGeneration") }
+        static var videoGeneration: String { tr("toolPermissions.videoGeneration") }
         static var appleSection: String { tr("toolPermissions.appleSection") }
         static var agentSection: String { tr("toolPermissions.agentSection") }
     }
@@ -291,6 +292,10 @@ enum L10n {
         static var imageProviderNone: String { tr("modelConfig.imageProviderNone") }
         static var imageGenerationHeader: String { tr("modelConfig.imageGenerationHeader") }
         static var imageProviderFooter: String { tr("modelConfig.imageProviderFooter") }
+        static var videoProvider: String { tr("modelConfig.videoProvider") }
+        static var videoProviderNone: String { tr("modelConfig.videoProviderNone") }
+        static var videoGenerationHeader: String { tr("modelConfig.videoGenerationHeader") }
+        static var videoProviderFooter: String { tr("modelConfig.videoProviderFooter") }
     }
 
     // MARK: - Cron Jobs
@@ -451,6 +456,7 @@ enum L10n {
         static var supportsToolUseFooter: String { tr("provider.supportsToolUseFooter") }
         static var supportsImageGeneration: String { tr("provider.supportsImageGeneration") }
         static var supportsImageGenerationFooter: String { tr("provider.supportsImageGenerationFooter") }
+        static var supportsVideoGeneration: String { tr("provider.supportsVideoGeneration") }
         static var supportsReasoning: String { tr("provider.supportsReasoning") }
         static var supportsReasoningFooter: String { tr("provider.supportsReasoningFooter") }
         static var thinkingLevel: String { tr("provider.thinkingLevel") }
@@ -466,6 +472,12 @@ enum L10n {
         static var imageGenModeNone: String { tr("provider.imageGenMode.none") }
         static var imageGenModeChatInline: String { tr("provider.imageGenMode.chatInline") }
         static var imageGenModeDedicatedAPI: String { tr("provider.imageGenMode.dedicatedAPI") }
+        static var videoGenModeNone: String { tr("provider.videoGenMode.none") }
+        static var videoGenModeAuto: String { tr("provider.videoGenMode.auto") }
+        static var videoGenModeOpenAI: String { tr("provider.videoGenMode.openAI") }
+        static var videoGenModeGoogleVeo: String { tr("provider.videoGenMode.googleVeo") }
+        static var videoGenModeDashScope: String { tr("provider.videoGenMode.dashScope") }
+        static var videoGenModeKling: String { tr("provider.videoGenMode.kling") }
     }
 
     // MARK: - Skills
