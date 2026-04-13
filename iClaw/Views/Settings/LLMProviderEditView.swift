@@ -647,6 +647,24 @@ struct LLMProviderEditView: View {
             enableImageModel("gpt-image-1", mode: .dedicatedAPI)
             enableImageModel("dall-e-3", mode: .dedicatedAPI)
         }
+        Button("Google Gemini (Imagen)") {
+            name = name.isEmpty ? "Google Imagen" : name
+            endpoint = "https://generativelanguage.googleapis.com/v1beta"
+            modelName = "gemini-2.0-flash-preview-image-generation"
+            enableImageModel("gemini-2.0-flash-preview-image-generation", mode: .chatInline)
+        }
+        Button("ByteDance (Seedance)") {
+            name = name.isEmpty ? "Seedance" : name
+            endpoint = "https://api.seedance.cn/v1"
+            modelName = "seedance-3.0"
+            enableImageModel("seedance-3.0", mode: .dedicatedAPI)
+        }
+        Button("DashScope (Tongyi Wan)") {
+            name = name.isEmpty ? "DashScope Image" : name
+            endpoint = "https://dashscope.aliyuncs.com/api/v1"
+            modelName = "wan-x2.1"
+            enableImageModel("wan-x2.1", mode: .dedicatedAPI)
+        }
         Button("Flux") {
             name = name.isEmpty ? "Flux" : name
             endpoint = "https://api.us1.bfl.ai/v1"
