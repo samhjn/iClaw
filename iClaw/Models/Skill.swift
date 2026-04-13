@@ -73,7 +73,7 @@ struct SkillConfigField: Codable, Hashable {
 final class Skill {
     var id: UUID
     var name: String
-    var nameLowercase: String
+    var nameLowercase: String = ""
     var summary: String
     var content: String
     var tagsRaw: String
@@ -86,9 +86,9 @@ final class Skill {
     var updatedAt: Date
 
     // Executable skill data (JSON-encoded)
-    var scriptsRaw: String
-    var toolsRaw: String
-    var configSchemaRaw: String
+    var scriptsRaw: String = "[]"
+    var toolsRaw: String = "[]"
+    var configSchemaRaw: String = "[]"
 
     var tags: [String] {
         get { tagsRaw.isEmpty ? [] : tagsRaw.components(separatedBy: ",") }
