@@ -502,10 +502,12 @@ struct SkillEditView: View {
                 } header: {
                     Text("Parameters")
                 }
-                Section("JavaScript Implementation") {
+                Section {
                     TextEditor(text: $newToolCode)
                         .frame(minHeight: 200)
                         .font(.system(.body, design: .monospaced))
+                } header: {
+                    Text("JavaScript Implementation")
                 } footer: {
                     Text("Access parameters via `args.paramName`. Installation config is available via `args.config`.")
                 }
