@@ -1,5 +1,7 @@
 import SwiftUI
 import UIKit
+import AVFoundation
+import AVKit
 import UniformTypeIdentifiers
 
 struct AgentFileBrowserView: View {
@@ -178,12 +180,20 @@ struct AgentFileBrowserView: View {
 private struct FileRowView: View {
     let file: FileInfo
     let agentId: UUID
+    @State private var showVideoPlayer = false
+    @State private var videoThumbnail: UIImage?
+
+    private var fileURL: URL {
+        AgentFileManager.shared.fileURL(agentId: agentId, name: file.name)
+    }
 
     var body: some View {
         Button {
             if file.isImage, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
                let img = UIImage(data: data) {
                 ImagePreviewCoordinator.shared.show(img)
+            } else if file.isVideo {
+                showVideoPlayer = true
             } else if file.isTextPreviewable, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
                       let text = String(data: data, encoding: .utf8) {
                 TextFilePreviewCoordinator.shared.show(content: text, filename: file.name)
@@ -211,6 +221,12 @@ private struct FileRowView: View {
             }
         }
         .buttonStyle(.plain)
+        .fullScreenCover(isPresented: $showVideoPlayer) {
+            VideoFilePlayerView(url: fileURL)
+        }
+        .task(id: file.name) {
+            if file.isVideo { videoThumbnail = await generateThumbnail() }
+        }
     }
 
     @ViewBuilder
@@ -220,6 +236,21 @@ private struct FileRowView: View {
             Image(uiImage: img)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
+        } else if file.isVideo {
+            ZStack {
+                if let thumb = videoThumbnail {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(.systemGray5))
+                }
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+            }
         } else {
             ZStack {
                 RoundedRectangle(cornerRadius: 6)
@@ -239,7 +270,55 @@ private struct FileRowView: View {
         case "pdf": return "doc.richtext"
         case "zip", "gz", "tar", "rar": return "archivebox"
         case "js", "py", "swift", "html", "css": return "chevron.left.forwardslash.chevron.right"
+        case "mp4", "mov", "m4v", "webm", "avi", "mkv": return "film"
         default: return "doc"
+        }
+    }
+
+    private func generateThumbnail() async -> UIImage? {
+        let asset = AVURLAsset(url: fileURL)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 80, height: 80)
+        let time = CMTimeMakeWithSeconds(0.5, preferredTimescale: 600)
+        guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { return nil }
+        return UIImage(cgImage: cgImage)
+    }
+}
+
+// MARK: - Video File Player
+
+private struct VideoFilePlayerView: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let player {
+                    VideoPlayer(player: player)
+                } else {
+                    Color.black
+                }
+            }
+            .ignoresSafeArea()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L10n.Common.done) { dismiss() }
+                        .foregroundStyle(.white)
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+        .onAppear {
+            player = AVPlayer(url: url)
+            player?.play()
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
         }
     }
 }
