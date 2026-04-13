@@ -122,6 +122,13 @@ enum L10n {
         static func displayModeScope(_ agentName: String) -> String { tr("chat.displayModeScope", agentName) }
         static var doubleTapToExpand: String { tr("chat.doubleTapToExpand") }
         static var cellDetail: String { tr("chat.cellDetail") }
+        // Video generation progress
+        static var videoSubmitting: String { tr("chat.videoSubmitting") }
+        static var videoSubmitted: String { tr("chat.videoSubmitted") }
+        static func videoGenerating(_ seconds: Int) -> String { tr("chat.videoGenerating", seconds) }
+        static var videoDownloading: String { tr("chat.videoDownloading") }
+        static var videoCompleted: String { tr("chat.videoCompleted") }
+        static func videoFailed(_ reason: String) -> String { tr("chat.videoFailed", reason) }
     }
 
     // MARK: - Agents
@@ -296,6 +303,8 @@ enum L10n {
         static var videoProviderNone: String { tr("modelConfig.videoProviderNone") }
         static var videoGenerationHeader: String { tr("modelConfig.videoGenerationHeader") }
         static var videoProviderFooter: String { tr("modelConfig.videoProviderFooter") }
+        static var i2vProvider: String { tr("modelConfig.i2vProvider") }
+        static var i2vSameAsT2V: String { tr("modelConfig.i2vSameAsT2V") }
     }
 
     // MARK: - Cron Jobs
@@ -465,6 +474,10 @@ enum L10n {
         static func temperature(_ value: Double) -> String { tr("provider.temperature", value) }
         static var perModelTemperature: String { tr("provider.perModelTemperature") }
         static var parametersFooter: String { tr("provider.parametersFooter") }
+        static var providerType: String { tr("provider.providerType") }
+        static var providerTypeLLM: String { tr("provider.providerType.llm") }
+        static var providerTypeVideo: String { tr("provider.providerType.video") }
+        static var providerTypeFooter: String { tr("provider.providerTypeFooter") }
         static var apiStyle: String { tr("provider.apiStyle") }
         static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
         static var modelCapabilities: String { tr("provider.modelCapabilities") }
@@ -663,6 +676,8 @@ enum L10n {
         static var healthWriteWorkout: String { tr("toolCard.healthWriteWorkout") }
         static var searchSessions: String { tr("toolCard.searchSessions") }
         static var recallSession: String { tr("toolCard.recallSession") }
+        static var generateImage: String { tr("toolCard.generateImage") }
+        static var generateVideo: String { tr("toolCard.generateVideo") }
     }
 
     // MARK: - Tool Result

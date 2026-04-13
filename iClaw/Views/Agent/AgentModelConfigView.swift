@@ -37,6 +37,11 @@ struct AgentModelConfigView: View {
         }
     }
 
+    /// Provider+model combos excluding video-only providers (for LLM pickers).
+    private var llmProviderModels: [ProviderModel] {
+        allProviderModels.filter { $0.provider.providerType != .videoOnly }
+    }
+
     private var hasWhitelist: Bool { !agent.allowedModelIds.isEmpty }
     private var whitelistSet: Set<String> { Set(agent.allowedModelIds) }
 
@@ -79,7 +84,7 @@ struct AgentModelConfigView: View {
         Section {
             Picker(L10n.ModelConfig.primaryModel, selection: primaryBinding) {
                 Text(L10n.ModelConfig.globalDefault).tag("" as String)
-                ForEach(allProviderModels) { pm in
+                ForEach(llmProviderModels) { pm in
                     Text(pm.displayName).tag(pm.id)
                 }
             }
@@ -234,7 +239,7 @@ struct AgentModelConfigView: View {
     private var availableFallbackModels: [ProviderModel] {
         let existingIds = Set(buildFallbackChain().map(\.id))
         let primaryId = primaryBinding.wrappedValue
-        return allProviderModels.filter { pm in
+        return llmProviderModels.filter { pm in
             pm.id != primaryId && !existingIds.contains(pm.id)
         }
     }
@@ -269,7 +274,7 @@ struct AgentModelConfigView: View {
         Section {
             Picker(L10n.ModelConfig.subAgentModel, selection: subAgentBinding) {
                 Text(L10n.ModelConfig.inheritFromPrimary).tag("" as String)
-                ForEach(allProviderModels) { pm in
+                ForEach(llmProviderModels) { pm in
                     Text(pm.displayName).tag(pm.id)
                 }
             }
@@ -396,6 +401,14 @@ struct AgentModelConfigView: View {
                     Text(pm.displayName).tag(pm.id)
                 }
             }
+            if agent.videoProviderId != nil {
+                Picker(L10n.ModelConfig.i2vProvider, selection: i2vProviderBinding) {
+                    Text(L10n.ModelConfig.i2vSameAsT2V).tag("" as String)
+                    ForEach(videoCapableProviderModels) { pm in
+                        Text(pm.displayName).tag(pm.id)
+                    }
+                }
+            }
         } header: {
             Text(L10n.ModelConfig.videoGenerationHeader)
         } footer: {
@@ -428,6 +441,9 @@ struct AgentModelConfigView: View {
                 if newValue.isEmpty {
                     agent.videoProviderId = nil
                     agent.videoModelNameOverride = nil
+                    // Clear I2V when T2V is disabled
+                    agent.i2vProviderId = nil
+                    agent.i2vModelNameOverride = nil
                 } else {
                     let parts = newValue.split(separator: ":", maxSplits: 1)
                     if parts.count == 2, let uid = UUID(uuidString: String(parts[0])) {
@@ -438,6 +454,42 @@ struct AgentModelConfigView: View {
                             agent.videoModelNameOverride = nil
                         } else {
                             agent.videoModelNameOverride = modelName
+                        }
+                    }
+                }
+                agent.updatedAt = Date()
+                try? modelContext.save()
+            }
+        )
+    }
+
+    private var i2vProviderBinding: Binding<String> {
+        Binding(
+            get: {
+                guard let pid = agent.i2vProviderId else { return "" }
+                let override = agent.i2vModelNameOverride
+                if let override {
+                    return "\(pid.uuidString):\(override)"
+                }
+                if let provider = allProviders.first(where: { $0.id == pid }) {
+                    return "\(pid.uuidString):\(provider.modelName)"
+                }
+                return ""
+            },
+            set: { newValue in
+                if newValue.isEmpty {
+                    agent.i2vProviderId = nil
+                    agent.i2vModelNameOverride = nil
+                } else {
+                    let parts = newValue.split(separator: ":", maxSplits: 1)
+                    if parts.count == 2, let uid = UUID(uuidString: String(parts[0])) {
+                        let modelName = String(parts[1])
+                        agent.i2vProviderId = uid
+                        if let provider = allProviders.first(where: { $0.id == uid }),
+                           modelName == provider.modelName {
+                            agent.i2vModelNameOverride = nil
+                        } else {
+                            agent.i2vModelNameOverride = modelName
                         }
                     }
                 }
@@ -511,7 +563,7 @@ struct AgentModelConfigView: View {
 
             Menu {
                 let existingIds = Set(currentWhitelist)
-                let available = allProviderModels.filter { !existingIds.contains($0.id) }
+                let available = llmProviderModels.filter { !existingIds.contains($0.id) }
                 ForEach(available) { pm in
                     Button(pm.displayName) {
                         addToWhitelist(pm)

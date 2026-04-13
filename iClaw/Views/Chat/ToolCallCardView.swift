@@ -631,6 +631,10 @@ struct ToolMeta {
             return ToolMeta(displayName: L10n.ToolCard.healthWriteHeartRate, icon: "heart.fill", color: .red)
         case "health_write_workout":
             return ToolMeta(displayName: L10n.ToolCard.healthWriteWorkout, icon: "figure.run.circle", color: .red)
+        case "generate_image":
+            return ToolMeta(displayName: L10n.ToolCard.generateImage, icon: "photo.artframe", color: .orange)
+        case "generate_video":
+            return ToolMeta(displayName: L10n.ToolCard.generateVideo, icon: "film", color: .purple)
         // Session RAG
         case "search_sessions":
             return ToolMeta(displayName: L10n.ToolCard.searchSessions, icon: "text.magnifyingglass", color: .purple)

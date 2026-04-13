@@ -90,6 +90,24 @@ enum ImageGenMode: String, Codable, CaseIterable {
     }
 }
 
+/// Provider type: LLM chat provider vs video-only / image-only provider.
+///
+/// Allows video-only APIs (Kling, Veo, DashScope) to be configured without
+/// requiring irrelevant LLM fields like apiStyle, maxTokens, or temperature.
+enum ProviderType: String, Codable, CaseIterable {
+    /// Standard LLM chat/completion provider.
+    case llm = "llm"
+    /// Video generation only (Kling, Veo, DashScope, Sora, etc.).
+    case videoOnly = "video"
+
+    var displayName: String {
+        switch self {
+        case .llm: return L10n.Provider.providerTypeLLM
+        case .videoOnly: return L10n.Provider.providerTypeVideo
+        }
+    }
+}
+
 /// Video generation API adaptation mode for a model.
 ///
 /// All video generation APIs are asynchronous (submit → poll → download).
@@ -477,6 +495,9 @@ final class LLMProvider {
     /// API communication style: "openai" or "anthropic".
     var apiStyleRaw: String = "openai"
 
+    /// Provider type: "llm" (default) or "video" (video-only).
+    var providerTypeRaw: String = "llm"
+
     /// Per-model capabilities, stored as JSON: {"model-name": {...}}
     var modelCapabilitiesJSON: String?
 
@@ -486,6 +507,14 @@ final class LLMProvider {
         get { APIStyle(rawValue: apiStyleRaw) ?? .openAI }
         set { apiStyleRaw = newValue.rawValue }
     }
+
+    var providerType: ProviderType {
+        get { ProviderType(rawValue: providerTypeRaw) ?? .llm }
+        set { providerTypeRaw = newValue.rawValue }
+    }
+
+    /// Whether this provider is exclusively for video generation.
+    var isVideoOnly: Bool { providerType == .videoOnly }
 
     var enabledModels: [String] {
         get {
@@ -586,6 +615,7 @@ final class LLMProvider {
         self.cachedModelListDate = nil
         self.supportsVision = false
         self.apiStyleRaw = "openai"
+        self.providerTypeRaw = "llm"
         self.modelCapabilitiesJSON = nil
     }
 }

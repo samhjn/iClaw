@@ -44,6 +44,10 @@ final class Agent {
     var videoProviderIdRaw: String?
     /// Model name override for the video generation provider
     var videoModelNameOverride: String?
+    /// UUID of the provider used for image-to-video generation (nil = use same as videoProviderId)
+    var i2vProviderIdRaw: String?
+    /// Model name override for the image-to-video provider
+    var i2vModelNameOverride: String?
 
     /// SubAgent lifecycle: "temp" = auto-destroy after task, "persistent" = long-lived, nil = main agent
     var subAgentType: String? = nil
@@ -119,6 +123,11 @@ final class Agent {
     var videoProviderId: UUID? {
         get { videoProviderIdRaw.flatMap { UUID(uuidString: $0) } }
         set { videoProviderIdRaw = newValue?.uuidString }
+    }
+
+    var i2vProviderId: UUID? {
+        get { i2vProviderIdRaw.flatMap { UUID(uuidString: $0) } }
+        set { i2vProviderIdRaw = newValue?.uuidString }
     }
 
     /// Parsed model whitelist as `["providerId:modelName", ...]`. Empty = allow all.

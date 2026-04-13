@@ -14,21 +14,22 @@ final class ModelRouter {
     // MARK: - Provider resolution
 
     /// Returns the ordered list of providers for an agent: primary first, then fallbacks.
+    /// Video-only providers are excluded since they cannot handle chat completions.
     func resolveProviderChain(for agent: Agent) -> [LLMProvider] {
         var chain: [LLMProvider] = []
 
-        if let primaryId = agent.primaryProviderId, let p = fetchProvider(id: primaryId) {
+        if let primaryId = agent.primaryProviderId, let p = fetchProvider(id: primaryId), !p.isVideoOnly {
             chain.append(p)
         }
 
         for fbId in agent.fallbackProviderIds {
-            if let p = fetchProvider(id: fbId), !chain.contains(where: { $0.id == p.id }) {
+            if let p = fetchProvider(id: fbId), !p.isVideoOnly, !chain.contains(where: { $0.id == p.id }) {
                 chain.append(p)
             }
         }
 
         if chain.isEmpty {
-            if let global = fetchGlobalDefault() {
+            if let global = fetchGlobalDefault(), !global.isVideoOnly {
                 chain.append(global)
             }
         }

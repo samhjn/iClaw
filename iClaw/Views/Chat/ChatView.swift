@@ -532,8 +532,11 @@ private struct ChatContentView: View {
     }
 
     @ViewBuilder
+    @ViewBuilder
     private func silentLabel(for status: String) -> some View {
-        if status.hasPrefix("tool:") {
+        if status == "tool:generate_video", let phase = ChatViewModel.videoProgress[vm.session.id] {
+            videoProgressLabel(phase: phase)
+        } else if status.hasPrefix("tool:") {
             let name = String(status.dropFirst(5))
             let meta = ToolMeta.resolve(name)
             HStack(spacing: 6) {
@@ -560,6 +563,44 @@ private struct ChatContentView: View {
             Text(L10n.Chat.thinking)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func videoProgressLabel(phase: VideoGenerationPhase) -> some View {
+        let meta = ToolMeta.resolve("generate_video")
+        HStack(spacing: 6) {
+            Image(systemName: meta.icon)
+                .font(.caption)
+                .foregroundStyle(meta.color)
+            switch phase {
+            case .submitting:
+                Text(L10n.Chat.videoSubmitting)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            case .submitted:
+                Text(L10n.Chat.videoSubmitted)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            case .polling(_, let elapsed):
+                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                    Text(L10n.Chat.videoGenerating(Int(elapsed)))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            case .downloading:
+                Text(L10n.Chat.videoDownloading)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            case .completed:
+                Text(L10n.Chat.videoCompleted)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            case .failed(let reason):
+                Text(L10n.Chat.videoFailed(reason))
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+            }
         }
     }
 }

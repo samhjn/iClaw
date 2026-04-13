@@ -67,6 +67,8 @@ final class ChatViewModel {
     private static var silentRounds: [UUID: Int] = [:]
     /// Last tool that was executed, shown alongside thinking status so brief tool calls aren't missed.
     private static var silentLastTools: [UUID: String] = [:]
+    /// Video generation progress — keyed by session ID, updated by the progress callback.
+    static var videoProgress: [UUID: VideoGenerationPhase] = [:]
 
     var silentStatus: String {
         get { Self.silentStatuses[session.id] ?? "" }
@@ -579,6 +581,7 @@ final class ChatViewModel {
                 Self.silentStatuses.removeValue(forKey: session.id)
                 Self.silentRounds.removeValue(forKey: session.id)
                 Self.silentLastTools.removeValue(forKey: session.id)
+                Self.videoProgress.removeValue(forKey: session.id)
                 session.isActive = false
                 session.pendingStreamingContent = nil
                 generationTask = nil
@@ -817,6 +820,14 @@ final class ChatViewModel {
         agent: Agent
     ) async {
         let fnRouter = FunctionCallRouter(agent: agent, modelContext: modelContext, sessionId: session.id)
+
+        // Wire video generation progress callback for real-time UI updates
+        let sessionId = session.id
+        fnRouter.videoProgressCallback = { @Sendable phase in
+            Task { @MainActor in
+                ChatViewModel.videoProgress[sessionId] = phase
+            }
+        }
 
         if Task.isCancelled || cancelled {
             let cancelMsg = Message(

@@ -417,41 +417,107 @@ final class FunctionCallRouter {
 
     // MARK: - Video Generation
 
+    /// Video generation progress callback, set by ChatViewModel for UI updates.
+    var videoProgressCallback: (@Sendable (VideoGenerationPhase) -> Void)?
+
     private func generateVideo(arguments: [String: Any]) async throws -> ToolCallResult {
         guard let prompt = arguments["prompt"] as? String, !prompt.isEmpty else {
             return ToolCallResult("[Error] Missing required parameter: prompt")
         }
 
-        guard let videoProviderId = agent.videoProviderId else {
+        let duration = arguments["duration"] as? String
+        let aspectRatio = arguments["aspect_ratio"] as? String
+        let imageURL = arguments["image_url"] as? String
+        let isI2V = imageURL != nil && !imageURL!.isEmpty
+
+        // Resolve provider: use separate I2V provider if configured, else fall back to T2V provider
+        let resolvedProviderId: UUID?
+        let resolvedModelOverride: String?
+        if isI2V, let i2vId = agent.i2vProviderId {
+            resolvedProviderId = i2vId
+            resolvedModelOverride = agent.i2vModelNameOverride
+        } else {
+            resolvedProviderId = agent.videoProviderId
+            resolvedModelOverride = agent.videoModelNameOverride
+        }
+
+        guard let providerId = resolvedProviderId else {
             return ToolCallResult("[Error] No video generation provider configured for this agent. Please configure one in Agent Settings → Model → Video Generation.")
         }
 
         let router = ModelRouter(modelContext: modelContext)
-        guard let provider = router.providerById(videoProviderId) else {
+        guard let provider = router.providerById(providerId) else {
             return ToolCallResult("[Error] Video generation provider not found. It may have been deleted.")
         }
 
-        let modelOverride = agent.videoModelNameOverride
-        let effectiveModel = modelOverride ?? provider.modelName
-
-        let duration = arguments["duration"] as? String
-        let aspectRatio = arguments["aspect_ratio"] as? String
-        let imageURL = arguments["image_url"] as? String
+        let effectiveModel = resolvedModelOverride ?? provider.modelName
+        let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
 
         let service = VideoGenerationService(provider: provider, modelName: effectiveModel)
-        let video = try await service.generate(
-            prompt: prompt,
-            duration: duration,
-            aspectRatio: aspectRatio,
-            imageURL: imageURL,
-            agentId: AgentFileManager.shared.resolveAgentId(for: agent)
+
+        // Pre-resolve video provider for background continuation (avoid capturing @Model in @Sendable)
+        let caps = provider.capabilities(for: effectiveModel)
+        let resolvedVideoProvider = VideoGenProvider.resolve(
+            mode: caps.videoGenerationMode,
+            endpoint: provider.endpoint,
+            modelName: effectiveModel
         )
+        let providerEndpoint = provider.endpoint
+        let providerApiKey = provider.apiKey
 
-        let durationStr = String(format: "%.1fs", video.duration)
-        let sizeStr = ByteCountFormatter.string(fromByteCount: video.fileSize, countStyle: .file)
-        let resultText = "Generated video successfully (\(durationStr), \(sizeStr))."
+        // Track the submit result so we can continue polling in the background if cancelled.
+        let capturedSubmitResult = MutableBox<VideoGenerationService.SubmitResult?>(nil)
+        let progressCallback = videoProgressCallback
+        let wrappedProgress: @Sendable (VideoGenerationPhase) -> Void = { phase in
+            progressCallback?(phase)
+            if case .submitted(let taskId) = phase {
+                capturedSubmitResult.value = VideoGenerationService.SubmitResult(
+                    taskId: taskId,
+                    videoProvider: resolvedVideoProvider,
+                    endpoint: providerEndpoint,
+                    apiKey: providerApiKey,
+                    agentId: agentId
+                )
+            }
+        }
 
-        return ToolCallResult(resultText, videoAttachments: [video])
+        // Try the full generate flow with progress reporting.
+        // On cancellation after submit, continue polling in the background.
+        do {
+            let video = try await service.generate(
+                prompt: prompt,
+                duration: duration,
+                aspectRatio: aspectRatio,
+                imageURL: imageURL,
+                agentId: agentId,
+                onProgress: wrappedProgress
+            )
+
+            let durationStr = String(format: "%.1fs", video.duration)
+            let sizeStr = ByteCountFormatter.string(fromByteCount: video.fileSize, countStyle: .file)
+            let resultText = "Generated video successfully (\(durationStr), \(sizeStr))."
+
+            return ToolCallResult(resultText, videoAttachments: [video])
+        } catch is CancellationError {
+            // If we have a taskId from the submit phase, continue polling in background
+            if let submitResult = capturedSubmitResult.value {
+                Task.detached { [service] in
+                    _ = try? await service.pollUntilComplete(
+                        taskId: submitResult.taskId,
+                        videoProvider: submitResult.videoProvider,
+                        agentId: submitResult.agentId
+                    )
+                    // Video saved to agent files by downloadAndStore
+                }
+            }
+            throw CancellationError()
+        }
+    }
+
+    /// Thread-safe mutable box for capturing values from @Sendable closures.
+    private final class MutableBox<T>: @unchecked Sendable {
+        var value: T
+        init(_ value: T) { self.value = value }
     }
 
     // MARK: - Private

@@ -86,6 +86,12 @@
 "chat.displayModeScope" = "%@의 모든 세션에 적용";
 "chat.doubleTapToExpand" = "셀을 두 번 탭하여 전체 내용 보기";
 "chat.cellDetail" = "셀 상세";
+"chat.videoSubmitting" = "제출 중...";
+"chat.videoSubmitted" = "작업 제출됨";
+"chat.videoGenerating" = "동영상 생성 중 (%d초)";
+"chat.videoDownloading" = "동영상 다운로드 중...";
+"chat.videoCompleted" = "동영상 완료";
+"chat.videoFailed" = "실패: %@";
 
 // MARK: - Agents
 "agents.title" = "에이전트";
@@ -190,6 +196,8 @@
 "modelConfig.videoProviderNone" = "비활성화";
 "modelConfig.videoGenerationHeader" = "동영상 생성";
 "modelConfig.videoProviderFooter" = "generate_video 도구에 사용할 모델을 선택합니다. 동영상 생성 기능이 있는 모델만 표시됩니다. 동영상 생성은 보통 1~5분이 소요됩니다.";
+"modelConfig.i2vProvider" = "이미지→동영상 모델";
+"modelConfig.i2vSameAsT2V" = "텍스트→동영상과 동일";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "예약 작업";
@@ -348,6 +356,10 @@
 "provider.temperature" = "온도: %.2f";
 "provider.perModelTemperature" = "온도 재정의";
 "provider.parametersFooter" = "모든 모델의 기본값입니다. 위의 '활성화된 모델' 섹션에서 모델별로 재정의할 수 있습니다.";
+"provider.providerType" = "제공자 유형";
+"provider.providerType.llm" = "LLM (채팅)";
+"provider.providerType.video" = "동영상 생성";
+"provider.providerTypeFooter" = "LLM 제공자는 채팅 완성을 처리합니다. 동영상 제공자는 Kling, Veo, DashScope 등 동영상 생성 API 전용입니다.";
 "provider.apiStyle" = "API 스타일";
 "provider.apiStyleFooter" = "OpenAI: OpenAI 호환 chat/completions 엔드포인트. Anthropic: 네이티브 Anthropic Messages API, 확장 사고 지원.";
 "provider.modelCapabilities" = "모델 기능";
@@ -518,6 +530,8 @@
 "toolCard.healthWriteWorkout" = "운동 기록";
 "toolCard.searchSessions" = "세션 검색";
 "toolCard.recallSession" = "세션 회상";
+"toolCard.generateImage" = "이미지 생성";
+"toolCard.generateVideo" = "동영상 생성";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "표준 출력";

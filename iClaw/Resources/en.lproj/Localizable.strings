@@ -86,6 +86,12 @@
 "chat.displayModeScope" = "Applies to all sessions of %@";
 "chat.doubleTapToExpand" = "Double tap cell to expand";
 "chat.cellDetail" = "Cell Detail";
+"chat.videoSubmitting" = "Submitting...";
+"chat.videoSubmitted" = "Task submitted";
+"chat.videoGenerating" = "Generating video (%ds)";
+"chat.videoDownloading" = "Downloading video...";
+"chat.videoCompleted" = "Video complete";
+"chat.videoFailed" = "Failed: %@";
 
 // MARK: - Agents
 "agents.title" = "Agents";
@@ -191,6 +197,8 @@
 "modelConfig.videoProviderNone" = "Disabled";
 "modelConfig.videoGenerationHeader" = "Video Generation";
 "modelConfig.videoProviderFooter" = "Select a model for the generate_video tool. Only models with video generation capability are shown. Video generation typically takes 1-5 minutes per clip.";
+"modelConfig.i2vProvider" = "Image-to-Video Model";
+"modelConfig.i2vSameAsT2V" = "Same as Text-to-Video";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "Cron Jobs";
@@ -349,6 +357,10 @@
 "provider.temperature" = "Temperature: %.2f";
 "provider.perModelTemperature" = "Override Temperature";
 "provider.parametersFooter" = "Default values for all models. Individual models can override these in the Enabled Models section above.";
+"provider.providerType" = "Provider Type";
+"provider.providerType.llm" = "LLM (Chat)";
+"provider.providerType.video" = "Video Generation";
+"provider.providerTypeFooter" = "LLM providers handle chat completions. Video providers are dedicated to video generation APIs like Kling, Veo, or DashScope.";
 "provider.apiStyle" = "API Style";
 "provider.apiStyleFooter" = "OpenAI: OpenAI-compatible chat/completions endpoint. Anthropic: Native Anthropic Messages API with extended thinking support.";
 "provider.modelCapabilities" = "Model Capabilities";
@@ -519,6 +531,8 @@
 "toolCard.healthWriteWorkout" = "Write Workout";
 "toolCard.searchSessions" = "Search Sessions";
 "toolCard.recallSession" = "Recall Session";
+"toolCard.generateImage" = "Generate Image";
+"toolCard.generateVideo" = "Generate Video";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "stdout";
