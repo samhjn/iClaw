@@ -14,6 +14,7 @@ struct LLMProviderEditView: View {
     @State private var thinkingBudget: Int = 10000
     @State private var temperature: Double = 0.7
     @State private var apiStyle: APIStyle = .openAI
+    @State private var providerType: ProviderType = .llm
 
     // Per-model capabilities
     @State private var modelCapabilities: [String: ModelCapabilities] = [:]
@@ -36,13 +37,18 @@ struct LLMProviderEditView: View {
     var body: some View {
         NavigationStack {
             Form {
+                providerTypeSection
                 providerSection
-                apiStyleSection
+                if providerType == .llm {
+                    apiStyleSection
+                }
                 authSection
                 defaultModelSection
                 enabledModelsSection
-                remoteModelsSection
-                parametersSection
+                if providerType == .llm {
+                    remoteModelsSection
+                    parametersSection
+                }
                 presetsSection
             }
             .navigationTitle(isEditing ? L10n.Provider.editProvider : L10n.Provider.addProvider)
@@ -82,6 +88,7 @@ struct LLMProviderEditView: View {
                 thinkingBudget = p.thinkingBudget
                 temperature = p.temperature
                 apiStyle = APIStyle(rawValue: p.apiStyleRaw) ?? .openAI
+                providerType = ProviderType(rawValue: p.providerTypeRaw) ?? .llm
                 enabledModels = Set(p.enabledModels)
                 fetchedModels = p.cachedModelList
 
@@ -108,6 +115,18 @@ struct LLMProviderEditView: View {
     }
 
     // MARK: - Sections
+
+    private var providerTypeSection: some View {
+        Section {
+            Picker(L10n.Provider.providerType, selection: $providerType) {
+                ForEach(ProviderType.allCases, id: \.self) { type in
+                    Text(type.displayName).tag(type)
+                }
+            }
+        } footer: {
+            Text(L10n.Provider.providerTypeFooter)
+        }
+    }
 
     private var providerSection: some View {
         Section(L10n.Provider.provider) {
@@ -526,41 +545,88 @@ struct LLMProviderEditView: View {
 
     private var presetsSection: some View {
         Section(L10n.Provider.presets) {
-            Button("OpenAI") {
-                endpoint = "https://api.openai.com/v1"
-                modelName = "gpt-5.4"
-                apiStyle = .openAI
-                enableModel("gpt-5.4")
-            }
-            Button("Anthropic") {
-                endpoint = "https://api.anthropic.com/v1"
-                modelName = "claude-sonnet-4-6"
-                apiStyle = .anthropic
-                enableModel("claude-sonnet-4-6")
-                modelCapabilities["claude-sonnet-4-6"]?.thinkingLevel = .medium
-                modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
-            }
-            Button("DeepSeek") {
-                endpoint = "https://api.deepseek.com/v1"
-                modelName = "deepseek-chat"
-                apiStyle = .openAI
-                enableModel("deepseek-chat")
-            }
-            Button("OpenRouter") {
-                endpoint = "https://openrouter.ai/api/v1"
-                modelName = "anthropic/claude-sonnet-4.6"
-                apiStyle = .openAI
-                enableModel("anthropic/claude-sonnet-4.6")
-                enableModel("openai/gpt-5.4")
-            }
-            Button("Local (Ollama)") {
-                endpoint = "http://localhost:11434/v1"
-                modelName = "llama3"
-                apiKey = "ollama"
-                apiStyle = .openAI
-                enableModel("llama3")
+            if providerType == .videoOnly {
+                videoPresetsContent
+            } else {
+                llmPresetsContent
             }
         }
+    }
+
+    @ViewBuilder
+    private var llmPresetsContent: some View {
+        Button("OpenAI") {
+            endpoint = "https://api.openai.com/v1"
+            modelName = "gpt-5.4"
+            apiStyle = .openAI
+            enableModel("gpt-5.4")
+        }
+        Button("Anthropic") {
+            endpoint = "https://api.anthropic.com/v1"
+            modelName = "claude-sonnet-4-6"
+            apiStyle = .anthropic
+            enableModel("claude-sonnet-4-6")
+            modelCapabilities["claude-sonnet-4-6"]?.thinkingLevel = .medium
+            modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
+        }
+        Button("DeepSeek") {
+            endpoint = "https://api.deepseek.com/v1"
+            modelName = "deepseek-chat"
+            apiStyle = .openAI
+            enableModel("deepseek-chat")
+        }
+        Button("OpenRouter") {
+            endpoint = "https://openrouter.ai/api/v1"
+            modelName = "anthropic/claude-sonnet-4.6"
+            apiStyle = .openAI
+            enableModel("anthropic/claude-sonnet-4.6")
+            enableModel("openai/gpt-5.4")
+        }
+        Button("Local (Ollama)") {
+            endpoint = "http://localhost:11434/v1"
+            modelName = "llama3"
+            apiKey = "ollama"
+            apiStyle = .openAI
+            enableModel("llama3")
+        }
+    }
+
+    @ViewBuilder
+    private var videoPresetsContent: some View {
+        Button("Kling") {
+            name = name.isEmpty ? "Kling" : name
+            endpoint = "https://api.klingai.com"
+            modelName = "kling-v2"
+            enableVideoModel("kling-v2", mode: .kling)
+        }
+        Button("DashScope (Tongyi Wan)") {
+            name = name.isEmpty ? "DashScope" : name
+            endpoint = "https://dashscope.aliyuncs.com/api/v1"
+            modelName = "wan2.6-t2v"
+            enableVideoModel("wan2.6-t2v", mode: .dashScope)
+            enableVideoModel("wan2.6-i2v", mode: .dashScope)
+        }
+        Button("Google Veo") {
+            name = name.isEmpty ? "Google Veo" : name
+            endpoint = "https://generativelanguage.googleapis.com/v1beta"
+            modelName = "veo-3"
+            enableVideoModel("veo-3", mode: .googleVeo)
+        }
+        Button("OpenAI Sora") {
+            name = name.isEmpty ? "OpenAI Sora" : name
+            endpoint = "https://api.openai.com/v1"
+            modelName = "sora-2"
+            enableVideoModel("sora-2", mode: .openAI)
+        }
+    }
+
+    /// Enable a model with video generation capability pre-configured.
+    private func enableVideoModel(_ model: String, mode: VideoGenMode) {
+        enabledModels.insert(model)
+        var caps = modelCapabilities[model] ?? ModelCapabilities.inferred(from: model)
+        caps.videoGenerationMode = mode
+        caps.supportsToolUse = false
+        modelCapabilities[model] = caps
     }
 
     // MARK: - Actions
@@ -597,6 +663,7 @@ struct LLMProviderEditView: View {
             p.temperature = temperature
             // Write raw stored properties directly (not through computed setters)
             p.apiStyleRaw = apiStyle.rawValue
+            p.providerTypeRaw = providerType.rawValue
             p.modelCapabilitiesJSON = capsJSON
             p.enabledModels = Array(enabledModels)
             p.cachedModelList = fetchedModels
@@ -620,6 +687,7 @@ struct LLMProviderEditView: View {
             // Write raw stored properties directly
             provider.thinkingBudget = thinkingBudget
             provider.apiStyleRaw = apiStyle.rawValue
+            provider.providerTypeRaw = providerType.rawValue
             provider.modelCapabilitiesJSON = capsJSON
 
             provider.supportsVision = defaultCaps.supportsVision

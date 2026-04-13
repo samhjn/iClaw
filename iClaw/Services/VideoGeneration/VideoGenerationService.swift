@@ -38,16 +38,28 @@ enum VideoGenerationError: LocalizedError {
 
 // MARK: - Poll Status
 
-enum PollStatus {
+enum PollStatus: Sendable {
     case pending(detail: String?)
     case processing(progress: String?)
     case completed(videoURL: String)
     case failed(reason: String)
 }
 
+// MARK: - Video Generation Phase (progress reporting)
+
+/// Describes the current phase of a video generation request, used for UI progress reporting.
+enum VideoGenerationPhase: Sendable {
+    case submitting
+    case submitted(taskId: String)
+    case polling(status: PollStatus, elapsed: TimeInterval)
+    case downloading
+    case completed
+    case failed(String)
+}
+
 // MARK: - VideoGenProvider (closure-driven multi-provider adapter)
 
-struct VideoGenProvider {
+struct VideoGenProvider: @unchecked Sendable {
     /// Build the URLRequest for submitting a video generation task.
     let buildSubmitRequest: (
         _ endpoint: String, _ apiKey: String, _ model: String,
@@ -56,7 +68,9 @@ struct VideoGenProvider {
     ) throws -> URLRequest
 
     /// Parse the task ID / operation name from the submit response.
-    let parseTaskId: (_ responseData: Data) throws -> String
+    /// `imageData` indicates whether this was an I2V request (non-nil) or T2V (nil),
+    /// allowing providers that use separate endpoints (e.g. Kling) to encode the mode.
+    let parseTaskId: (_ responseData: Data, _ imageData: Data?) throws -> String
 
     /// Build the URLRequest for polling task status.
     let buildPollRequest: (
@@ -146,7 +160,7 @@ extension VideoGenProvider {
                 request.httpBody = try JSONSerialization.data(withJSONObject: body)
                 return request
             },
-            parseTaskId: { data in
+            parseTaskId: { data, _ in
                 guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let taskId = json["id"] as? String else {
                     throw VideoGenerationError.noTaskIdReturned
@@ -250,7 +264,7 @@ extension VideoGenProvider {
                 request.httpBody = try JSONSerialization.data(withJSONObject: body)
                 return request
             },
-            parseTaskId: { data in
+            parseTaskId: { data, _ in
                 guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let name = json["name"] as? String else {
                     throw VideoGenerationError.noTaskIdReturned
@@ -378,7 +392,7 @@ extension VideoGenProvider {
                 request.httpBody = try JSONSerialization.data(withJSONObject: body)
                 return request
             },
-            parseTaskId: { data in
+            parseTaskId: { data, _ in
                 guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let output = json["output"] as? [String: Any],
                       let taskId = output["task_id"] as? String else {
@@ -438,7 +452,8 @@ extension VideoGenProvider {
         VideoGenProvider(
             buildSubmitRequest: { endpoint, apiKey, model, prompt, duration, aspectRatio, imageData in
                 let baseURL = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
-                let urlStr = "\(baseURL)/v1/videos/text2video"
+                let path = imageData != nil ? "image2video" : "text2video"
+                let urlStr = "\(baseURL)/v1/videos/\(path)"
                 guard let url = URL(string: urlStr) else {
                     throw VideoGenerationError.invalidURL(urlStr)
                 }
@@ -462,21 +477,40 @@ extension VideoGenProvider {
                 request.httpBody = try JSONSerialization.data(withJSONObject: body)
                 return request
             },
-            parseTaskId: { data in
+            parseTaskId: { data, imageData in
                 guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                     throw VideoGenerationError.noTaskIdReturned
                 }
                 // Try common Kling response paths
+                let rawId: String
                 if let dataObj = json["data"] as? [String: Any], let taskId = dataObj["task_id"] as? String {
-                    return taskId
+                    rawId = taskId
+                } else if let taskId = json["task_id"] as? String {
+                    rawId = taskId
+                } else if let taskId = json["id"] as? String {
+                    rawId = taskId
+                } else {
+                    throw VideoGenerationError.noTaskIdReturned
                 }
-                if let taskId = json["task_id"] as? String { return taskId }
-                if let taskId = json["id"] as? String { return taskId }
-                throw VideoGenerationError.noTaskIdReturned
+                // Encode T2V/I2V mode so buildPollRequest can reconstruct the correct URL path.
+                let prefix = imageData != nil ? "i2v" : "t2v"
+                return "\(prefix):\(rawId)"
             },
             buildPollRequest: { endpoint, apiKey, taskId in
                 let baseURL = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
-                let urlStr = "\(baseURL)/v1/videos/text2video/\(taskId)"
+                // Parse mode prefix from encoded taskId
+                let (mode, actualId): (String, String)
+                if taskId.hasPrefix("i2v:") {
+                    mode = "image2video"
+                    actualId = String(taskId.dropFirst(4))
+                } else if taskId.hasPrefix("t2v:") {
+                    mode = "text2video"
+                    actualId = String(taskId.dropFirst(4))
+                } else {
+                    mode = "text2video"
+                    actualId = taskId
+                }
+                let urlStr = "\(baseURL)/v1/videos/\(mode)/\(actualId)"
                 guard let url = URL(string: urlStr) else {
                     throw VideoGenerationError.invalidURL(urlStr)
                 }
@@ -542,6 +576,15 @@ final class VideoGenerationService: @unchecked Sendable {
         self.modelName = modelName ?? provider.modelName
     }
 
+    /// Result of submitting a video generation request, used for background continuation.
+    struct SubmitResult: Sendable {
+        let taskId: String
+        let videoProvider: VideoGenProvider
+        let endpoint: String
+        let apiKey: String
+        let agentId: UUID
+    }
+
     /// Generate a video and return it as a VideoAttachment.
     ///
     /// This method handles the full async lifecycle:
@@ -549,13 +592,16 @@ final class VideoGenerationService: @unchecked Sendable {
     /// 2. Poll for completion (with cancellation support)
     /// 3. Download the resulting video
     /// 4. Store it locally and create a VideoAttachment
+    ///
+    /// - Parameter onProgress: Optional callback invoked at each phase transition for UI updates.
     func generate(
         prompt: String,
         duration: String? = nil,
         aspectRatio: String? = nil,
         imageURL: String? = nil,
         agentId: UUID,
-        pollingConfig: VideoPollingConfig = VideoPollingConfig()
+        pollingConfig: VideoPollingConfig = VideoPollingConfig(),
+        onProgress: (@Sendable (VideoGenerationPhase) -> Void)? = nil
     ) async throws -> VideoAttachment {
         let caps = provider.capabilities(for: modelName)
         let videoProvider = VideoGenProvider.resolve(
@@ -568,6 +614,57 @@ final class VideoGenerationService: @unchecked Sendable {
         let imageData: Data? = try await resolveImageData(from: imageURL, agentId: agentId)
 
         // 1. Submit the generation request
+        onProgress?(.submitting)
+        let submitRequest = try videoProvider.buildSubmitRequest(
+            provider.endpoint, provider.apiKey, modelName,
+            prompt, duration, aspectRatio, imageData
+        )
+
+        let (submitData, submitResponse) = try await URLSession.shared.data(for: submitRequest)
+
+        if let httpResponse = submitResponse as? HTTPURLResponse,
+           !(200...299).contains(httpResponse.statusCode) {
+            let errorBody = String(data: submitData, encoding: .utf8) ?? "Unknown error"
+            let error = VideoGenerationError.apiError(statusCode: httpResponse.statusCode, message: errorBody)
+            onProgress?(.failed(error.localizedDescription ?? errorBody))
+            throw error
+        }
+
+        // 2. Parse the task ID
+        let taskId = try videoProvider.parseTaskId(submitData, imageData)
+        onProgress?(.submitted(taskId: taskId))
+
+        // 3. Poll for completion
+        let result = try await pollUntilComplete(
+            taskId: taskId,
+            videoProvider: videoProvider,
+            agentId: agentId,
+            pollingConfig: pollingConfig,
+            onProgress: onProgress
+        )
+
+        onProgress?(.completed)
+        return result
+    }
+
+    /// Submit a video generation request and return the context needed for polling.
+    /// Used by `FunctionCallRouter` for background continuation on cancellation.
+    func submit(
+        prompt: String,
+        duration: String? = nil,
+        aspectRatio: String? = nil,
+        imageURL: String? = nil,
+        agentId: UUID
+    ) async throws -> SubmitResult {
+        let caps = provider.capabilities(for: modelName)
+        let videoProvider = VideoGenProvider.resolve(
+            mode: caps.videoGenerationMode,
+            endpoint: provider.endpoint,
+            modelName: modelName
+        )
+
+        let imageData: Data? = try await resolveImageData(from: imageURL, agentId: agentId)
+
         let submitRequest = try videoProvider.buildSubmitRequest(
             provider.endpoint, provider.apiKey, modelName,
             prompt, duration, aspectRatio, imageData
@@ -581,10 +678,28 @@ final class VideoGenerationService: @unchecked Sendable {
             throw VideoGenerationError.apiError(statusCode: httpResponse.statusCode, message: errorBody)
         }
 
-        // 2. Parse the task ID
-        let taskId = try videoProvider.parseTaskId(submitData)
+        let taskId = try videoProvider.parseTaskId(submitData, imageData)
 
-        // 3. Poll for completion
+        return SubmitResult(
+            taskId: taskId,
+            videoProvider: videoProvider,
+            endpoint: provider.endpoint,
+            apiKey: provider.apiKey,
+            agentId: agentId
+        )
+    }
+
+    /// Poll for video completion and download the result.
+    /// Can be used independently for background continuation after cancellation.
+    func pollUntilComplete(
+        taskId: String,
+        videoProvider: VideoGenProvider,
+        agentId: UUID,
+        pollingConfig: VideoPollingConfig = VideoPollingConfig(),
+        onProgress: (@Sendable (VideoGenerationPhase) -> Void)? = nil
+    ) async throws -> VideoAttachment {
+        let startTime = Date()
+
         try await Task.sleep(for: .seconds(pollingConfig.initialDelay))
 
         let deadline = Date().addingTimeInterval(pollingConfig.maxPollDuration)
@@ -597,9 +712,12 @@ final class VideoGenerationService: @unchecked Sendable {
             let (pollData, _) = try await URLSession.shared.data(for: pollRequest)
             let status = try videoProvider.parsePollResponse(pollData)
 
+            let elapsed = Date().timeIntervalSince(startTime)
+            onProgress?(.polling(status: status, elapsed: elapsed))
+
             switch status {
             case .completed(let videoURL):
-                // 4. Download and store
+                onProgress?(.downloading)
                 return try await downloadAndStore(
                     videoURL: videoURL,
                     apiKey: provider.apiKey,
@@ -607,12 +725,14 @@ final class VideoGenerationService: @unchecked Sendable {
                     agentId: agentId
                 )
             case .failed(let reason):
+                onProgress?(.failed(reason))
                 throw VideoGenerationError.generationFailed(reason)
             case .pending, .processing:
                 try await Task.sleep(for: .seconds(pollingConfig.pollInterval))
             }
         }
 
+        onProgress?(.failed("Timed out"))
         throw VideoGenerationError.timeout
     }
 

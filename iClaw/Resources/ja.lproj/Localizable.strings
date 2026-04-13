@@ -86,6 +86,12 @@
 "chat.displayModeScope" = "%@ の全セッションに適用";
 "chat.doubleTapToExpand" = "セルをダブルタップで全文表示";
 "chat.cellDetail" = "セル詳細";
+"chat.videoSubmitting" = "送信中...";
+"chat.videoSubmitted" = "タスク送信済み";
+"chat.videoGenerating" = "動画生成中 (%d秒)";
+"chat.videoDownloading" = "動画ダウンロード中...";
+"chat.videoCompleted" = "動画完了";
+"chat.videoFailed" = "失敗：%@";
 
 // MARK: - Agents
 "agents.title" = "エージェント";
@@ -190,6 +196,8 @@
 "modelConfig.videoProviderNone" = "無効";
 "modelConfig.videoGenerationHeader" = "動画生成";
 "modelConfig.videoProviderFooter" = "generate_video ツールで使用するモデルを選択します。動画生成に対応したモデルのみ表示されます。動画生成には通常1〜5分かかります。";
+"modelConfig.i2vProvider" = "画像→動画モデル";
+"modelConfig.i2vSameAsT2V" = "テキスト→動画と同じ";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定期タスク";
@@ -348,6 +356,10 @@
 "provider.temperature" = "温度：%.2f";
 "provider.perModelTemperature" = "温度を上書き";
 "provider.parametersFooter" = "全モデルのデフォルト値です。上の「有効なモデル」セクションでモデルごとに上書きできます。";
+"provider.providerType" = "プロバイダー種別";
+"provider.providerType.llm" = "LLM（チャット）";
+"provider.providerType.video" = "動画生成";
+"provider.providerTypeFooter" = "LLMプロバイダーはチャット補完を処理します。動画プロバイダーはKling、Veo、DashScopeなどの動画生成APIに特化しています。";
 "provider.apiStyle" = "APIスタイル";
 "provider.apiStyleFooter" = "OpenAI：OpenAI互換のchat/completionsエンドポイント。Anthropic：ネイティブAnthropic Messages API、拡張思考対応。";
 "provider.modelCapabilities" = "モデル機能";
@@ -518,6 +530,8 @@
 "toolCard.healthWriteWorkout" = "ワークアウト記録";
 "toolCard.searchSessions" = "セッション検索";
 "toolCard.recallSession" = "セッション想起";
+"toolCard.generateImage" = "画像生成";
+"toolCard.generateVideo" = "動画生成";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "標準出力";

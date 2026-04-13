@@ -86,6 +86,12 @@
 "chat.displayModeScope" = "应用于 %@ 的所有会话";
 "chat.doubleTapToExpand" = "双击单元格查看完整内容";
 "chat.cellDetail" = "单元格详情";
+"chat.videoSubmitting" = "提交中...";
+"chat.videoSubmitted" = "任务已提交";
+"chat.videoGenerating" = "生成视频中 (%d秒)";
+"chat.videoDownloading" = "下载视频中...";
+"chat.videoCompleted" = "视频完成";
+"chat.videoFailed" = "失败：%@";
 
 // MARK: - Agents
 "agents.title" = "智能体";
@@ -191,6 +197,8 @@
 "modelConfig.videoProviderNone" = "未启用";
 "modelConfig.videoGenerationHeader" = "视频生成";
 "modelConfig.videoProviderFooter" = "选择 generate_video 工具使用的模型。仅显示具有视频生成能力的模型。视频生成通常需要 1-5 分钟。";
+"modelConfig.i2vProvider" = "图生视频模型";
+"modelConfig.i2vSameAsT2V" = "与文生视频相同";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定时任务";
@@ -349,6 +357,10 @@
 "provider.temperature" = "温度：%.2f";
 "provider.perModelTemperature" = "覆盖温度";
 "provider.parametersFooter" = "所有模型的默认值。可在上方「已启用模型」中为单个模型分别覆盖。";
+"provider.providerType" = "提供商类型";
+"provider.providerType.llm" = "LLM（对话）";
+"provider.providerType.video" = "视频生成";
+"provider.providerTypeFooter" = "LLM 提供商处理对话补全。视频提供商专用于 Kling、Veo、DashScope 等视频生成 API。";
 "provider.apiStyle" = "API 风格";
 "provider.apiStyleFooter" = "OpenAI：兼容 OpenAI 的 chat/completions 接口。Anthropic：原生 Anthropic Messages API，支持扩展思考。";
 "provider.modelCapabilities" = "模型能力";
@@ -519,6 +531,8 @@
 "toolCard.healthWriteWorkout" = "写入运动";
 "toolCard.searchSessions" = "搜索会话";
 "toolCard.recallSession" = "回忆会话";
+"toolCard.generateImage" = "生成图片";
+"toolCard.generateVideo" = "生成视频";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "标准输出";
