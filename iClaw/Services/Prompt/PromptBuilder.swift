@@ -341,13 +341,40 @@ final class PromptBuilder {
 
         for installation in activeSkills {
             guard let skill = installation.skill else { continue }
-            parts.append("""
+            var skillSection = """
             ### Skill: \(skill.name)
             \(skill.content)
-            """)
+            """
+
+            // List available scripts
+            if !skill.scripts.isEmpty {
+                skillSection += "\n\n**Available scripts** (use `run_snippet` to execute):"
+                for script in skill.scripts {
+                    let desc = script.description ?? script.name
+                    skillSection += "\n- `skill:\(skill.name):\(script.name)` — \(desc)"
+                }
+            }
+
+            // List custom tools
+            if !skill.customTools.isEmpty {
+                skillSection += "\n\n**Custom tools** provided by this skill:"
+                for tool in skill.customTools {
+                    let toolName = Self.skillToolName(skillName: skill.name, toolName: tool.name)
+                    let params = tool.parameters.map { "\($0.name): \($0.type)" }.joined(separator: ", ")
+                    skillSection += "\n- `\(toolName)(\(params))` — \(tool.description)"
+                }
+            }
+
+            parts.append(skillSection)
         }
 
         return parts.joined(separator: "\n\n")
+    }
+
+    /// Generate the canonical tool name for a skill custom tool.
+    static func skillToolName(skillName: String, toolName: String) -> String {
+        let sanitized = skillName.lowercased().replacingOccurrences(of: " ", with: "_")
+        return "skill_\(sanitized)_\(toolName)"
     }
 
     private func buildRelatedSessionsSection(_ sessions: [(id: UUID, title: String, updatedAt: Date)]) -> String {
