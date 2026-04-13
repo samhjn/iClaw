@@ -5,6 +5,8 @@ struct AgentSkillsView: View {
     let agent: Agent
     @Environment(\.modelContext) private var modelContext
     @State private var showLibraryPicker = false
+    @State private var showConfigEditor = false
+    @State private var editingInstallation: InstalledSkill?
 
     var body: some View {
         List {
@@ -23,7 +25,7 @@ struct AgentSkillsView: View {
                         if let skill = installation.skill {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
+                                    HStack(spacing: 4) {
                                         Text(skill.name)
                                             .font(.headline)
                                         if skill.isBuiltIn {
@@ -33,6 +35,16 @@ struct AgentSkillsView: View {
                                                 .padding(.vertical, 1)
                                                 .background(Capsule().fill(.blue.opacity(0.15)))
                                                 .foregroundStyle(.blue)
+                                        }
+                                        if !skill.scripts.isEmpty {
+                                            Image(systemName: "terminal")
+                                                .font(.caption2)
+                                                .foregroundStyle(.orange)
+                                        }
+                                        if !skill.customTools.isEmpty {
+                                            Image(systemName: "wrench.and.screwdriver")
+                                                .font(.caption2)
+                                                .foregroundStyle(.purple)
                                         }
                                     }
                                     Text(skill.summary)
@@ -58,6 +70,14 @@ struct AgentSkillsView: View {
                                 }
                             }
                             .contextMenu {
+                                if !skill.configSchema.isEmpty {
+                                    Button {
+                                        editingInstallation = installation
+                                        showConfigEditor = true
+                                    } label: {
+                                        Label("Configure", systemImage: "gear")
+                                    }
+                                }
                                 Button(role: .destructive) {
                                     let service = SkillService(modelContext: modelContext)
                                     _ = service.uninstallSkill(skill, from: agent)
@@ -82,6 +102,11 @@ struct AgentSkillsView: View {
         }
         .sheet(isPresented: $showLibraryPicker) {
             SkillPickerSheet(agent: agent)
+        }
+        .sheet(isPresented: $showConfigEditor) {
+            if let installation = editingInstallation, let skill = installation.skill {
+                SkillConfigEditorSheet(installation: installation, schema: skill.configSchema)
+            }
         }
     }
 
@@ -162,5 +187,66 @@ struct SkillPickerSheet: View {
         let service = SkillService(modelContext: modelContext)
         service.ensureBuiltInSkills()
         allSkills = service.fetchAllSkills()
+    }
+}
+
+// MARK: - Skill Config Editor
+
+struct SkillConfigEditorSheet: View {
+    @Bindable var installation: InstalledSkill
+    let schema: [SkillConfigField]
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var values: [String: String] = [:]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                ForEach(schema, id: \.key) { field in
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(field.label)
+                                .font(.subheadline)
+                            if field.required {
+                                Text("Required")
+                                    .font(.caption2)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        Spacer()
+                        TextField(field.defaultValue ?? "", text: Binding(
+                            get: { values[field.key] ?? "" },
+                            set: { values[field.key] = $0 }
+                        ))
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 200)
+                    }
+                }
+            }
+            .navigationTitle("Skill Configuration")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.Common.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.Common.save) {
+                        installation.config = values
+                        try? modelContext.save()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                // Load existing config values, falling back to schema defaults
+                var loaded = installation.config
+                for field in schema {
+                    if loaded[field.key] == nil, let defaultVal = field.defaultValue {
+                        loaded[field.key] = defaultVal
+                    }
+                }
+                values = loaded
+            }
+        }
     }
 }

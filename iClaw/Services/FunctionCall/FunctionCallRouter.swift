@@ -348,8 +348,44 @@ final class FunctionCallRouter {
             return try await runAsync { await AppleHealthTools().writeWorkout(arguments: arguments) }
 
         default:
+            // Dispatch skill custom tools (prefixed with "skill_")
+            if name.hasPrefix("skill_") {
+                return try await executeSkillTool(name: name, arguments: arguments)
+            }
             return ToolCallResult("[Error] Unknown tool: \(name)")
         }
+    }
+
+    // MARK: - Skill Custom Tool Execution
+
+    /// Execute a custom tool defined by an active skill.
+    /// Finds the matching SkillToolDefinition and runs its JS implementation
+    /// via the code execution sandbox, passing tool arguments and installation config.
+    private func executeSkillTool(name: String, arguments: [String: Any]) async throws -> ToolCallResult {
+        for installation in agent.activeSkills {
+            guard let skill = installation.skill else { continue }
+            let prefix = PromptBuilder.skillToolName(skillName: skill.name, toolName: "")
+            guard name.hasPrefix(prefix) else { continue }
+
+            let funcName = String(name.dropFirst(prefix.count))
+            guard let toolDef = skill.customTools.first(where: { $0.name == funcName }) else { continue }
+
+            // Merge tool arguments with installation config
+            var jsArgs: [String: Any] = arguments
+            if !installation.config.isEmpty {
+                jsArgs["config"] = installation.config
+            }
+
+            let codeTools = CodeExecutionTools(agent: agent, modelContext: modelContext)
+            let execArgs: [String: Any] = [
+                "code": toolDef.implementation,
+                "mode": "script",
+                "args": jsArgs
+            ]
+            let result = try await codeTools.executeJavaScript(arguments: execArgs)
+            return ToolCallResult(result)
+        }
+        return ToolCallResult("[Error] Skill tool '\(name)' not found or skill is not active")
     }
 
     // MARK: - Cancellation Helpers

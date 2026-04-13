@@ -18,6 +18,14 @@ struct SkillDetailView: View {
                 metadataSection
                 Divider()
                 contentSection
+                if !skill.scripts.isEmpty {
+                    Divider()
+                    scriptsSection
+                }
+                if !skill.customTools.isEmpty {
+                    Divider()
+                    toolsSection
+                }
             }
             .padding()
         }
@@ -97,6 +105,86 @@ struct SkillDetailView: View {
             Text(skill.content)
                 .font(.body)
                 .textSelection(.enabled)
+        }
+    }
+
+    @ViewBuilder
+    private var scriptsSection: some View {
+        if !skill.scripts.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Scripts (\(skill.scripts.count))", systemImage: "terminal")
+                    .font(.headline)
+
+                ForEach(skill.scripts, id: \.name) { script in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(script.name)
+                                .font(.subheadline.bold())
+                            Spacer()
+                            Text(script.language)
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.blue.opacity(0.15)))
+                        }
+                        if let desc = script.description {
+                            Text(desc)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(script.code)
+                            .font(.system(.caption, design: .monospaced))
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color(.systemGray6)))
+                            .textSelection(.enabled)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var toolsSection: some View {
+        if !skill.customTools.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Custom Tools (\(skill.customTools.count))", systemImage: "wrench.and.screwdriver")
+                    .font(.headline)
+
+                ForEach(skill.customTools, id: \.name) { tool in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(tool.name)
+                            .font(.subheadline.bold())
+                        Text(tool.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if !tool.parameters.isEmpty {
+                            HStack(spacing: 4) {
+                                Text("Parameters:")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                ForEach(tool.parameters, id: \.name) { param in
+                                    Text("\(param.name):\(param.type)")
+                                        .font(.system(.caption2, design: .monospaced))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(Capsule().fill(Color.orange.opacity(0.15)))
+                                }
+                            }
+                        }
+
+                        Text(tool.implementation)
+                            .font(.system(.caption, design: .monospaced))
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color(.systemGray6)))
+                            .textSelection(.enabled)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
         }
     }
 }
@@ -181,6 +269,21 @@ struct SkillEditView: View {
     @State private var summary = ""
     @State private var content = ""
     @State private var tagsText = ""
+    @State private var scripts: [SkillScript] = []
+    @State private var customTools: [SkillToolDefinition] = []
+
+    // Editing state for new script
+    @State private var showAddScript = false
+    @State private var newScriptName = ""
+    @State private var newScriptDesc = ""
+    @State private var newScriptCode = ""
+
+    // Editing state for new tool
+    @State private var showAddTool = false
+    @State private var newToolName = ""
+    @State private var newToolDesc = ""
+    @State private var newToolCode = ""
+    @State private var newToolParams: [SkillToolParam] = []
 
     init(existingSkill: Skill? = nil, onSave: (() -> Void)? = nil) {
         self.existingSkill = existingSkill
@@ -201,12 +304,87 @@ struct SkillEditView: View {
 
                 Section {
                     TextEditor(text: $content)
-                        .frame(minHeight: 250)
+                        .frame(minHeight: 200)
                         .font(.system(.body, design: .monospaced))
                 } header: {
                     Text(L10n.Skills.contentMarkdown)
                 } footer: {
                     Text(L10n.Skills.contentFooter)
+                }
+
+                // Scripts section
+                Section {
+                    ForEach(Array(scripts.enumerated()), id: \.element.name) { index, script in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(script.name).font(.subheadline.bold())
+                                Spacer()
+                                Button(role: .destructive) {
+                                    scripts.remove(at: index)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .font(.caption)
+                                }
+                            }
+                            if let desc = script.description, !desc.isEmpty {
+                                Text(desc).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Text(script.code)
+                                .font(.system(.caption2, design: .monospaced))
+                                .lineLimit(3)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Button {
+                        newScriptName = ""
+                        newScriptDesc = ""
+                        newScriptCode = ""
+                        showAddScript = true
+                    } label: {
+                        Label("Add Script", systemImage: "plus")
+                    }
+                } header: {
+                    Label("Scripts", systemImage: "terminal")
+                } footer: {
+                    Text("JavaScript snippets registered as code snippets when the skill is installed.")
+                }
+
+                // Custom Tools section
+                Section {
+                    ForEach(Array(customTools.enumerated()), id: \.element.name) { index, tool in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(tool.name).font(.subheadline.bold())
+                                Spacer()
+                                Button(role: .destructive) {
+                                    customTools.remove(at: index)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .font(.caption)
+                                }
+                            }
+                            Text(tool.description).font(.caption).foregroundStyle(.secondary)
+                            if !tool.parameters.isEmpty {
+                                Text("Params: \(tool.parameters.map { $0.name }.joined(separator: ", "))")
+                                    .font(.caption2).foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+
+                    Button {
+                        newToolName = ""
+                        newToolDesc = ""
+                        newToolCode = ""
+                        newToolParams = []
+                        showAddTool = true
+                    } label: {
+                        Label("Add Tool", systemImage: "plus")
+                    }
+                } header: {
+                    Label("Custom Tools", systemImage: "wrench.and.screwdriver")
+                } footer: {
+                    Text("Custom tools become callable functions for the agent, backed by JavaScript.")
                 }
             }
             .navigationTitle(isEditing ? L10n.Skills.editSkill : L10n.Skills.newSkill)
@@ -229,10 +407,134 @@ struct SkillEditView: View {
                     summary = s.summary
                     content = s.content
                     tagsText = s.tags.joined(separator: ", ")
+                    scripts = s.scripts
+                    customTools = s.customTools
+                }
+            }
+            .sheet(isPresented: $showAddScript) {
+                addScriptSheet
+            }
+            .sheet(isPresented: $showAddTool) {
+                addToolSheet
+            }
+        }
+    }
+
+    // MARK: - Add Script Sheet
+
+    private var addScriptSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Info") {
+                    TextField("Script name", text: $newScriptName)
+                        .autocapitalization(.none)
+                    TextField("Description (optional)", text: $newScriptDesc)
+                }
+                Section("JavaScript Code") {
+                    TextEditor(text: $newScriptCode)
+                        .frame(minHeight: 200)
+                        .font(.system(.body, design: .monospaced))
+                }
+            }
+            .navigationTitle("Add Script")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.Common.cancel) { showAddScript = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let script = SkillScript(
+                            name: newScriptName,
+                            code: newScriptCode,
+                            description: newScriptDesc.isEmpty ? nil : newScriptDesc
+                        )
+                        scripts.append(script)
+                        showAddScript = false
+                    }
+                    .disabled(newScriptName.isEmpty || newScriptCode.isEmpty)
                 }
             }
         }
     }
+
+    // MARK: - Add Tool Sheet
+
+    private var addToolSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Tool Info") {
+                    TextField("Tool name", text: $newToolName)
+                        .autocapitalization(.none)
+                    TextField("Description", text: $newToolDesc)
+                }
+                Section {
+                    ForEach(Array(newToolParams.enumerated()), id: \.offset) { index, _ in
+                        HStack {
+                            TextField("Name", text: Binding(
+                                get: { newToolParams[index].name },
+                                set: { newToolParams[index] = SkillToolParam(name: $0, type: newToolParams[index].type, description: newToolParams[index].description, required: newToolParams[index].required) }
+                            ))
+                            .autocapitalization(.none)
+                            .frame(maxWidth: 100)
+                            Picker("", selection: Binding(
+                                get: { newToolParams[index].type },
+                                set: { newToolParams[index] = SkillToolParam(name: newToolParams[index].name, type: $0, description: newToolParams[index].description, required: newToolParams[index].required) }
+                            )) {
+                                Text("string").tag("string")
+                                Text("number").tag("number")
+                                Text("boolean").tag("boolean")
+                            }
+                            .labelsHidden()
+                            .frame(maxWidth: 90)
+                            Button(role: .destructive) {
+                                newToolParams.remove(at: index)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                            }
+                        }
+                    }
+                    Button {
+                        newToolParams.append(SkillToolParam(name: "", description: ""))
+                    } label: {
+                        Label("Add Parameter", systemImage: "plus")
+                    }
+                } header: {
+                    Text("Parameters")
+                }
+                Section("JavaScript Implementation") {
+                    TextEditor(text: $newToolCode)
+                        .frame(minHeight: 200)
+                        .font(.system(.body, design: .monospaced))
+                } footer: {
+                    Text("Access parameters via `args.paramName`. Installation config is available via `args.config`.")
+                }
+            }
+            .navigationTitle("Add Tool")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.Common.cancel) { showAddTool = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let validParams = newToolParams.filter { !$0.name.isEmpty }
+                        let tool = SkillToolDefinition(
+                            name: newToolName,
+                            description: newToolDesc,
+                            parameters: validParams,
+                            implementation: newToolCode
+                        )
+                        customTools.append(tool)
+                        showAddTool = false
+                    }
+                    .disabled(newToolName.isEmpty || newToolCode.isEmpty)
+                }
+            }
+        }
+    }
+
+    // MARK: - Save
 
     private func save() {
         let tags = tagsText.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
@@ -240,9 +542,15 @@ struct SkillEditView: View {
         if let s = existingSkill {
             let service = SkillService(modelContext: modelContext)
             service.updateSkill(s, name: name, summary: summary, content: content, tags: tags)
+            s.scripts = scripts
+            s.customTools = customTools
+            try? modelContext.save()
         } else {
             let service = SkillService(modelContext: modelContext)
-            _ = service.createSkill(name: name, summary: summary, content: content, tags: tags)
+            _ = service.createSkill(
+                name: name, summary: summary, content: content, tags: tags,
+                scripts: scripts, customTools: customTools
+            )
         }
         onSave?()
     }

@@ -2,12 +2,22 @@ import Foundation
 
 enum ToolDefinitions {
 
-    /// Returns tools filtered by the agent's Apple tool permission settings.
-    /// Tools are filtered per category read/write permissions.
+    /// Returns tools filtered by the agent's Apple tool permission settings,
+    /// plus any custom tools defined by the agent's active skills.
     static func tools(for agent: Agent) -> [LLMToolDefinition] {
-        allTools.filter { tool in
+        var tools = allTools.filter { tool in
             agent.isToolAllowed(tool.function.name)
         }
+
+        // Append custom tools from active skills
+        for installation in agent.activeSkills {
+            guard let skill = installation.skill else { continue }
+            for customTool in skill.customTools {
+                tools.append(customTool.toLLMToolDefinition(skillName: skill.name))
+            }
+        }
+
+        return tools
     }
 
     static var allTools: [LLMToolDefinition] {
@@ -324,12 +334,14 @@ enum ToolDefinitions {
 
     static let createSkillTool = ToolDefinitionBuilder.build(
         name: "create_skill",
-        description: "Create a new reusable skill in the skill library. A skill is a markdown document that provides specialized instructions, knowledge, or methodology. Once created, it can be installed on any agent.",
+        description: "Create a new reusable skill in the skill library. A skill can include: markdown instructions (injected into system prompt), JavaScript scripts (registered as code snippets), and custom tools (callable functions backed by JS). Once created, it can be installed on any agent.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("A unique name for the skill"),
             "summary": ToolDefinitionBuilder.stringParam("A brief one-line description of what the skill does"),
             "content": ToolDefinitionBuilder.stringParam("The full markdown content with instructions, methodology, or knowledge"),
-            "tags": ToolDefinitionBuilder.stringParam("Comma-separated tags for categorization (e.g. 'coding,review,quality')")
+            "tags": ToolDefinitionBuilder.stringParam("Comma-separated tags for categorization (e.g. 'coding,review,quality')"),
+            "scripts": ToolDefinitionBuilder.stringParam("JSON array of scripts: [{\"name\": \"...\", \"code\": \"...\", \"description\": \"...\"}]. Each script is registered as a code snippet when the skill is installed."),
+            "tools": ToolDefinitionBuilder.stringParam("JSON array of custom tools: [{\"name\": \"...\", \"description\": \"...\", \"parameters\": [{\"name\": \"...\", \"type\": \"string\", \"description\": \"...\", \"required\": true}], \"implementation\": \"...(JS code)...\"}]. Each tool becomes a callable function for the agent.")
         ],
         required: ["name", "content"]
     )

@@ -8,6 +8,14 @@ final class SkillService {
         self.modelContext = modelContext
     }
 
+    private func save() {
+        do {
+            try modelContext.save()
+        } catch {
+            print("[SkillService] Save failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - CRUD
 
     func createSkill(
@@ -15,46 +23,59 @@ final class SkillService {
         summary: String,
         content: String,
         tags: [String] = [],
-        author: String = "user"
+        author: String = "user",
+        scripts: [SkillScript] = [],
+        customTools: [SkillToolDefinition] = [],
+        configSchema: [SkillConfigField] = []
     ) -> Skill {
         let skill = Skill(
             name: name,
             summary: summary,
             content: content,
             tags: tags,
-            author: author
+            author: author,
+            scripts: scripts,
+            customTools: customTools,
+            configSchema: configSchema
         )
         modelContext.insert(skill)
-        try? modelContext.save()
+        save()
         return skill
     }
 
     func updateSkill(_ skill: Skill, name: String? = nil, summary: String? = nil, content: String? = nil, tags: [String]? = nil) {
-        if let name { skill.name = name }
+        if let name {
+            skill.name = name
+            skill.nameLowercase = name.lowercased()
+        }
         if let summary { skill.summary = summary }
         if let content { skill.content = content }
         if let tags { skill.tags = tags }
         skill.updatedAt = Date()
-        try? modelContext.save()
+        save()
     }
 
     func deleteSkill(_ skill: Skill) {
         guard !skill.isBuiltIn else { return }
         modelContext.delete(skill)
-        try? modelContext.save()
+        save()
     }
 
     func fetchSkill(id: UUID) -> Skill? {
-        let descriptor = FetchDescriptor<Skill>(
+        var descriptor = FetchDescriptor<Skill>(
             predicate: #Predicate { $0.id == id }
         )
+        descriptor.fetchLimit = 1
         return try? modelContext.fetch(descriptor).first
     }
 
     func fetchSkill(name: String) -> Skill? {
-        let descriptor = FetchDescriptor<Skill>()
-        let all = (try? modelContext.fetch(descriptor)) ?? []
-        return all.first { $0.name.lowercased() == name.lowercased() }
+        let lowered = name.lowercased()
+        var descriptor = FetchDescriptor<Skill>(
+            predicate: #Predicate { $0.nameLowercase == lowered }
+        )
+        descriptor.fetchLimit = 1
+        return try? modelContext.fetch(descriptor).first
     }
 
     func fetchAllSkills() -> [Skill] {
@@ -65,14 +86,16 @@ final class SkillService {
     }
 
     func searchSkills(query: String) -> [Skill] {
-        let all = fetchAllSkills()
-        if query.isEmpty { return all }
-        let q = query.lowercased()
-        return all.filter {
-            $0.name.lowercased().contains(q) ||
-            $0.summary.lowercased().contains(q) ||
-            $0.tags.contains(where: { $0.lowercased().contains(q) })
-        }
+        guard !query.isEmpty else { return fetchAllSkills() }
+        let descriptor = FetchDescriptor<Skill>(
+            predicate: #Predicate {
+                $0.name.localizedStandardContains(query) ||
+                $0.summary.localizedStandardContains(query) ||
+                $0.tagsRaw.localizedStandardContains(query)
+            },
+            sortBy: [SortDescriptor(\.name)]
+        )
+        return (try? modelContext.fetch(descriptor)) ?? []
     }
 
     // MARK: - Installation
@@ -85,8 +108,19 @@ final class SkillService {
         modelContext.insert(installation)
         agent.installedSkills.append(installation)
         installation.skill = skill
+
+        // Register skill scripts as CodeSnippets on the agent
+        for script in skill.scripts {
+            let snippetName = "skill:\(skill.name):\(script.name)"
+            if !agent.codeSnippets.contains(where: { $0.name == snippetName }) {
+                let snippet = CodeSnippet(name: snippetName, language: script.language, code: script.code)
+                modelContext.insert(snippet)
+                agent.codeSnippets.append(snippet)
+            }
+        }
+
         agent.updatedAt = Date()
-        try? modelContext.save()
+        save()
         return installation
     }
 
@@ -95,15 +129,23 @@ final class SkillService {
             return false
         }
         modelContext.delete(installation)
+
+        // Clean up skill-registered CodeSnippets
+        let prefix = "skill:\(skill.name):"
+        let toRemove = agent.codeSnippets.filter { $0.name.hasPrefix(prefix) }
+        for snippet in toRemove {
+            modelContext.delete(snippet)
+        }
+
         agent.updatedAt = Date()
-        try? modelContext.save()
+        save()
         return true
     }
 
     func toggleSkill(_ installation: InstalledSkill) {
         installation.isEnabled.toggle()
         installation.agent?.updatedAt = Date()
-        try? modelContext.save()
+        save()
     }
 
     func isInstalled(_ skill: Skill, on agent: Agent) -> Bool {
@@ -117,7 +159,10 @@ final class SkillService {
     // MARK: - Built-in Skills
 
     func ensureBuiltInSkills() {
-        let existing = fetchAllSkills().filter { $0.isBuiltIn }
+        let descriptor = FetchDescriptor<Skill>(
+            predicate: #Predicate { $0.isBuiltIn == true }
+        )
+        let existing = (try? modelContext.fetch(descriptor)) ?? []
         let existingNames = Set(existing.map { $0.name })
 
         for template in BuiltInSkills.all {
@@ -128,12 +173,15 @@ final class SkillService {
                     content: template.content,
                     tags: template.tags,
                     author: "system",
-                    isBuiltIn: true
+                    isBuiltIn: true,
+                    scripts: template.scripts,
+                    customTools: template.customTools,
+                    configSchema: template.configSchema
                 )
                 modelContext.insert(skill)
             }
         }
-        try? modelContext.save()
+        save()
     }
 }
 
@@ -145,6 +193,9 @@ enum BuiltInSkills {
         let summary: String
         let content: String
         let tags: [String]
+        var scripts: [SkillScript] = []
+        var customTools: [SkillToolDefinition] = []
+        var configSchema: [SkillConfigField] = []
     }
 
     static let all: [Template] = [
@@ -158,7 +209,7 @@ enum BuiltInSkills {
 
             ## Process
             1. **Decompose** the question into sub-questions
-            2. **Search** for information using available tools (JavaScript for web scraping, etc.)
+            2. **Search** for information using available tools — use the custom tools provided by this skill
             3. **Evaluate** source credibility and recency
             4. **Synthesize** findings into a coherent analysis
             5. **Cite** sources and note confidence levels
@@ -174,8 +225,73 @@ enum BuiltInSkills {
             - Note when information might be outdated
             - Distinguish between facts and opinions
             - Save key findings to MEMORY.md for future reference
+            - Use `fetch_and_extract` to gather content from URLs
+            - Use the `extract_links` script to find follow-up sources
             """,
-            tags: ["research", "analysis", "methodology"]
+            tags: ["research", "analysis", "methodology"],
+            scripts: [
+                SkillScript(
+                    name: "extract_links",
+                    language: "javascript",
+                    code: """
+                    const html = args.html || '';
+                    const matches = [...html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([^<]*)<\\/a>/gi)];
+                    const links = matches
+                        .map(m => ({ url: m[1], text: m[2].trim() }))
+                        .filter(l => l.url.startsWith('http'));
+                    console.log(JSON.stringify(links.slice(0, 30), null, 2));
+                    """,
+                    description: "Extract links from HTML content for further research"
+                ),
+                SkillScript(
+                    name: "summarize_text",
+                    language: "javascript",
+                    code: """
+                    const text = args.text || '';
+                    const maxLen = args.max_length || 2000;
+                    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+                    const summary = sentences.slice(0, Math.min(sentences.length, 20)).join('. ') + '.';
+                    console.log(summary.substring(0, maxLen));
+                    """,
+                    description: "Extract key sentences from long text"
+                )
+            ],
+            customTools: [
+                SkillToolDefinition(
+                    name: "fetch_and_extract",
+                    description: "Fetch a URL and extract readable text content, stripping HTML tags",
+                    parameters: [
+                        SkillToolParam(name: "url", type: "string", description: "The URL to fetch content from"),
+                        SkillToolParam(name: "max_length", type: "number", description: "Maximum characters to return", required: false)
+                    ],
+                    implementation: """
+                    const url = args.url;
+                    const maxLen = args.max_length || 3000;
+                    try {
+                        const resp = fetch(url);
+                        if (!resp.ok) {
+                            console.log(`[Error] HTTP ${resp.status}: ${resp.statusText}`);
+                        } else {
+                            const html = resp.text;
+                            // Strip HTML tags and normalize whitespace
+                            const text = html
+                                .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')
+                                .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')
+                                .replace(/<[^>]+>/g, ' ')
+                                .replace(/&nbsp;/g, ' ')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/\\s+/g, ' ')
+                                .trim();
+                            console.log(text.substring(0, maxLen));
+                        }
+                    } catch (e) {
+                        console.log(`[Error] Failed to fetch: ${e.message}`);
+                    }
+                    """
+                )
+            ]
         ),
         Template(
             name: "Code Review",

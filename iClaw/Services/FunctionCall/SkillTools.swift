@@ -4,7 +4,13 @@ import SwiftData
 struct SkillTools {
     let agent: Agent
     let modelContext: ModelContext
-    private var service: SkillService { SkillService(modelContext: modelContext) }
+    private let service: SkillService
+
+    init(agent: Agent, modelContext: ModelContext) {
+        self.agent = agent
+        self.modelContext = modelContext
+        self.service = SkillService(modelContext: modelContext)
+    }
 
     func createSkill(arguments: [String: Any]) -> String {
         guard let name = arguments["name"] as? String else {
@@ -17,6 +23,18 @@ struct SkillTools {
         let tagsStr = arguments["tags"] as? String ?? ""
         let tags = tagsStr.isEmpty ? [] : tagsStr.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
 
+        // Parse optional scripts JSON
+        var scripts: [SkillScript] = []
+        if let scriptsJson = arguments["scripts"] as? String, let data = scriptsJson.data(using: .utf8) {
+            scripts = (try? JSONDecoder().decode([SkillScript].self, from: data)) ?? []
+        }
+
+        // Parse optional tools JSON
+        var customTools: [SkillToolDefinition] = []
+        if let toolsJson = arguments["tools"] as? String, let data = toolsJson.data(using: .utf8) {
+            customTools = (try? JSONDecoder().decode([SkillToolDefinition].self, from: data)) ?? []
+        }
+
         if service.fetchSkill(name: name) != nil {
             return "[Error] A skill named '\(name)' already exists. Use a different name or update the existing skill."
         }
@@ -26,18 +44,26 @@ struct SkillTools {
             summary: summary,
             content: content,
             tags: tags,
-            author: agent.name
+            author: agent.name,
+            scripts: scripts,
+            customTools: customTools
         )
 
-        return """
+        var result = """
         Skill created successfully.
         - Name: \(skill.name)
         - ID: \(skill.id.uuidString)
         - Tags: \(skill.tags.isEmpty ? "(none)" : skill.tags.joined(separator: ", "))
         - Content: \(skill.content.count) characters
-
-        Use `install_skill` to install this skill on an agent.
         """
+        if !scripts.isEmpty {
+            result += "\n- Scripts: \(scripts.count) (\(scripts.map { $0.name }.joined(separator: ", ")))"
+        }
+        if !customTools.isEmpty {
+            result += "\n- Custom Tools: \(customTools.count) (\(customTools.map { $0.name }.joined(separator: ", ")))"
+        }
+        result += "\n\nUse `install_skill` to install this skill on an agent."
+        return result
     }
 
     func deleteSkill(arguments: [String: Any]) -> String {
@@ -64,7 +90,15 @@ struct SkillTools {
         }
 
         if let _ = service.installSkill(skill, on: agent) {
-            return "Skill '\(skill.name)' installed on agent '\(agent.name)'. It will now be included in your system prompt."
+            var msg = "Skill '\(skill.name)' installed on agent '\(agent.name)'. It will now be included in your system prompt."
+            if !skill.scripts.isEmpty {
+                msg += "\n- \(skill.scripts.count) script(s) registered as code snippets (use `run_snippet` to execute)"
+            }
+            if !skill.customTools.isEmpty {
+                let toolNames = skill.customTools.map { PromptBuilder.skillToolName(skillName: skill.name, toolName: $0.name) }
+                msg += "\n- \(skill.customTools.count) custom tool(s) now available: \(toolNames.joined(separator: ", "))"
+            }
+            return msg
         } else {
             return "Skill '\(skill.name)' is already installed on this agent."
         }
@@ -111,7 +145,7 @@ struct SkillTools {
             return "[Error] Skill not found"
         }
 
-        return """
+        var result = """
         # \(skill.name)
         **Summary**: \(skill.summary)
         **Tags**: \(skill.tags.joined(separator: ", "))
@@ -122,6 +156,24 @@ struct SkillTools {
 
         \(skill.content)
         """
+
+        if !skill.scripts.isEmpty {
+            result += "\n\n---\n\n**Scripts (\(skill.scripts.count)):**"
+            for script in skill.scripts {
+                let desc = script.description ?? script.name
+                result += "\n- `\(script.name)` [\(script.language)] — \(desc)"
+            }
+        }
+
+        if !skill.customTools.isEmpty {
+            result += "\n\n**Custom Tools (\(skill.customTools.count)):**"
+            for tool in skill.customTools {
+                let params = tool.parameters.map { "\($0.name):\($0.type)" }.joined(separator: ", ")
+                result += "\n- `\(tool.name)(\(params))` — \(tool.description)"
+            }
+        }
+
+        return result
     }
 
     // MARK: - Helpers
