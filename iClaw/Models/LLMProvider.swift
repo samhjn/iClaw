@@ -90,6 +90,37 @@ enum ImageGenMode: String, Codable, CaseIterable {
     }
 }
 
+/// Video generation API adaptation mode for a model.
+///
+/// All video generation APIs are asynchronous (submit → poll → download).
+/// This enum specifies which API protocol/format to use, allowing users to
+/// manually override auto-detection when using proxies or relay services.
+enum VideoGenMode: String, Codable, CaseIterable {
+    /// Model does not support video generation.
+    case none
+    /// Auto-detect from endpoint hostname and model name.
+    case auto
+    /// OpenAI-compatible REST pattern (Sora, Runway, Luma AI, etc.).
+    case openAI
+    /// Google Gemini API `predictLongRunning` pattern (Veo 2/3/3.1).
+    case googleVeo
+    /// Alibaba Cloud DashScope pattern (Tongyi Wan series).
+    case dashScope
+    /// Kuaishou Kling API pattern.
+    case kling
+
+    var displayName: String {
+        switch self {
+        case .none: return L10n.Provider.videoGenModeNone
+        case .auto: return L10n.Provider.videoGenModeAuto
+        case .openAI: return L10n.Provider.videoGenModeOpenAI
+        case .googleVeo: return L10n.Provider.videoGenModeGoogleVeo
+        case .dashScope: return L10n.Provider.videoGenModeDashScope
+        case .kling: return L10n.Provider.videoGenModeKling
+        }
+    }
+}
+
 /// Per-model capability flags and parameter overrides.
 struct ModelCapabilities: Codable, Equatable {
     var supportsVision: Bool = false
@@ -97,6 +128,8 @@ struct ModelCapabilities: Codable, Equatable {
     var imageGenerationMode: ImageGenMode = .none
     /// Whether this model supports video input (e.g. Gemini 2+, Qwen-VL).
     var supportsVideoInput: Bool = false
+    /// Video generation API mode. `.none` = not supported, `.auto` = detect from endpoint/model.
+    var videoGenerationMode: VideoGenMode = .none
     /// Legacy flag kept for backward compatibility with existing persisted data.
     /// New code should use `thinkingLevel` instead.
     var supportsReasoning: Bool = false
@@ -113,10 +146,14 @@ struct ModelCapabilities: Codable, Equatable {
         set { imageGenerationMode = newValue ? .chatInline : .none }
     }
 
+    /// Whether this model supports video generation.
+    var supportsVideoGeneration: Bool { videoGenerationMode != .none }
+
     static let `default` = ModelCapabilities()
 
     enum CodingKeys: String, CodingKey {
         case supportsVision, supportsToolUse, imageGenerationMode, supportsVideoInput
+        case videoGenerationMode
         case supportsReasoning, thinkingLevel
         case maxTokens, temperature
         case _legacyImageGen = "supportsImageGeneration"
@@ -124,12 +161,14 @@ struct ModelCapabilities: Codable, Equatable {
 
     init(supportsVision: Bool = false, supportsToolUse: Bool = true,
          imageGenerationMode: ImageGenMode = .none, supportsVideoInput: Bool = false,
+         videoGenerationMode: VideoGenMode = .none,
          supportsReasoning: Bool = false, thinkingLevel: ThinkingLevel = .off,
          maxTokens: Int? = nil, temperature: Double? = nil) {
         self.supportsVision = supportsVision
         self.supportsToolUse = supportsToolUse
         self.imageGenerationMode = imageGenerationMode
         self.supportsVideoInput = supportsVideoInput
+        self.videoGenerationMode = videoGenerationMode
         self.supportsReasoning = supportsReasoning
         self.thinkingLevel = thinkingLevel
         self.maxTokens = maxTokens
@@ -150,6 +189,7 @@ struct ModelCapabilities: Codable, Equatable {
         supportsVision = try c.decodeIfPresent(Bool.self, forKey: .supportsVision) ?? false
         supportsToolUse = try c.decodeIfPresent(Bool.self, forKey: .supportsToolUse) ?? true
         supportsVideoInput = try c.decodeIfPresent(Bool.self, forKey: .supportsVideoInput) ?? false
+        videoGenerationMode = try c.decodeIfPresent(VideoGenMode.self, forKey: .videoGenerationMode) ?? .none
         supportsReasoning = try c.decodeIfPresent(Bool.self, forKey: .supportsReasoning) ?? false
         // ImageGenMode: try new enum first, fall back to legacy bool
         if let mode = try? c.decodeIfPresent(ImageGenMode.self, forKey: .imageGenerationMode) {
@@ -175,6 +215,7 @@ struct ModelCapabilities: Codable, Equatable {
         try container.encode(supportsToolUse, forKey: .supportsToolUse)
         try container.encode(imageGenerationMode, forKey: .imageGenerationMode)
         try container.encode(supportsVideoInput, forKey: .supportsVideoInput)
+        try container.encode(videoGenerationMode, forKey: .videoGenerationMode)
         try container.encode(supportsReasoning, forKey: .supportsReasoning)
         try container.encode(thinkingLevel, forKey: .thinkingLevel)
         try container.encodeIfPresent(maxTokens, forKey: .maxTokens)
@@ -212,6 +253,16 @@ struct ModelCapabilities: Codable, Equatable {
             )
         }
 
+        // Dedicated video generation models
+        if inferVideoGeneration(base) {
+            return ModelCapabilities(
+                supportsVision: false,
+                supportsToolUse: false,
+                videoGenerationMode: .auto,
+                supportsReasoning: false
+            )
+        }
+
         let videoCapable = inferVideoInput(base)
 
         // Video capability implies vision capability
@@ -236,6 +287,35 @@ struct ModelCapabilities: Codable, Equatable {
         }
 
         return .default
+    }
+
+    /// Detect dedicated video generation models.
+    ///
+    /// Sora: sora-*
+    /// Veo: veo-*
+    /// Wan (Tongyi): wan*-t2v*, wan*-i2v*, wan*-r2v*, wan*-kf2v*, wan*-s2v*, wan*-vace*
+    /// Runway: runway-*, gen-3*, gen-4*
+    /// Luma: luma-*, dream-machine*
+    /// Kling: kling-*
+    /// MiniMax/Hailuo: minimax-video*, hailuo*
+    private static func inferVideoGeneration(_ name: String) -> Bool {
+        // OpenAI Sora
+        if name.hasPrefix("sora") { return true }
+        // Google Veo
+        if name.hasPrefix("veo-") || name.hasPrefix("veo_") { return true }
+        // Alibaba Wan series (wan2.6-t2v, wan2.7-t2v-turbo, wan2.6-i2v-flash, etc.)
+        if name.hasPrefix("wan") && (name.contains("-t2v") || name.contains("-i2v")
+            || name.contains("-r2v") || name.contains("-kf2v")
+            || name.contains("-s2v") || name.contains("-vace")) { return true }
+        // Runway
+        if name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4") { return true }
+        // Luma AI
+        if name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-") { return true }
+        // Kling
+        if name.hasPrefix("kling") { return true }
+        // MiniMax / Hailuo
+        if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return true }
+        return false
     }
 
     /// Detect models that use the dedicated /images/generations API.

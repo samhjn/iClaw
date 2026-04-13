@@ -222,6 +222,12 @@ final class FunctionCallRouter {
             try Task.checkCancellation()
             return result
 
+        // --- Video Generation ---
+        case "generate_video":
+            let result = try await generateVideo(arguments: arguments)
+            try Task.checkCancellation()
+            return result
+
         // --- Browser ---
         case "browser_navigate":
             return try await runAsync { await self.browserTools.navigate(arguments: arguments) }
@@ -407,6 +413,45 @@ final class FunctionCallRouter {
         }
 
         return ToolCallResult(resultText, imageAttachments: images)
+    }
+
+    // MARK: - Video Generation
+
+    private func generateVideo(arguments: [String: Any]) async throws -> ToolCallResult {
+        guard let prompt = arguments["prompt"] as? String, !prompt.isEmpty else {
+            return ToolCallResult("[Error] Missing required parameter: prompt")
+        }
+
+        guard let videoProviderId = agent.videoProviderId else {
+            return ToolCallResult("[Error] No video generation provider configured for this agent. Please configure one in Agent Settings → Model → Video Generation.")
+        }
+
+        let router = ModelRouter(modelContext: modelContext)
+        guard let provider = router.providerById(videoProviderId) else {
+            return ToolCallResult("[Error] Video generation provider not found. It may have been deleted.")
+        }
+
+        let modelOverride = agent.videoModelNameOverride
+        let effectiveModel = modelOverride ?? provider.modelName
+
+        let duration = arguments["duration"] as? String
+        let aspectRatio = arguments["aspect_ratio"] as? String
+        let imageURL = arguments["image_url"] as? String
+
+        let service = VideoGenerationService(provider: provider, modelName: effectiveModel)
+        let video = try await service.generate(
+            prompt: prompt,
+            duration: duration,
+            aspectRatio: aspectRatio,
+            imageURL: imageURL,
+            agentId: AgentFileManager.shared.resolveAgentId(for: agent)
+        )
+
+        let durationStr = String(format: "%.1fs", video.duration)
+        let sizeStr = ByteCountFormatter.string(fromByteCount: video.fileSize, countStyle: .file)
+        let resultText = "Generated video successfully (\(durationStr), \(sizeStr))."
+
+        return ToolCallResult(resultText, videoAttachments: [video])
     }
 
     // MARK: - Private

@@ -186,6 +186,10 @@
 "modelConfig.imageProviderNone" = "비활성화";
 "modelConfig.imageGenerationHeader" = "이미지 생성";
 "modelConfig.imageProviderFooter" = "generate_image 도구에서 사용할 모델을 선택하세요. 이미지 생성 기능이 있는 모델만 표시됩니다. 설정하면 에이전트가 도구 호출을 통해 이미지를 생성할 수 있습니다.";
+"modelConfig.videoProvider" = "동영상 생성 모델";
+"modelConfig.videoProviderNone" = "비활성화";
+"modelConfig.videoGenerationHeader" = "동영상 생성";
+"modelConfig.videoProviderFooter" = "generate_video 도구에 사용할 모델을 선택합니다. 동영상 생성 기능이 있는 모델만 표시됩니다. 동영상 생성은 보통 1~5분이 소요됩니다.";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "예약 작업";
@@ -326,9 +330,16 @@
 "provider.supportsToolUseFooter" = "이 모델이 함수 호출/도구 사용을 지원하지 않는 경우 비활성화하세요 (일부 OpenRouter 모델)";
 "provider.supportsImageGeneration" = "이미지 생성";
 "provider.supportsImageGenerationFooter" = "이미지를 생성할 수 있는 모델에 활성화하세요 (예: Gemini 2.5 Flash Image / Nano Banana). API에 modalities 매개변수를 전송합니다.";
+"provider.supportsVideoGeneration" = "동영상 생성";
 "provider.imageGenMode.none" = "없음";
 "provider.imageGenMode.chatInline" = "채팅 인라인";
 "provider.imageGenMode.dedicatedAPI" = "전용 API";
+"provider.videoGenMode.none" = "없음";
+"provider.videoGenMode.auto" = "자동 감지";
+"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.googleVeo" = "Google Veo";
+"provider.videoGenMode.dashScope" = "DashScope (통의완상)";
+"provider.videoGenMode.kling" = "Kling";
 "provider.supportsReasoning" = "추론 지원";
 "provider.supportsReasoningFooter" = "확장 사고/추론을 지원하는 모델에 활성화하세요 (예: Claude 확장 사고, DeepSeek R1, o1/o3). 사고 과정이 캡처되어 표시됩니다.";
 "provider.thinkingLevel" = "사고 레벨";
@@ -525,6 +536,7 @@
 "toolPermissions.model" = "모델";
 "toolPermissions.files" = "파일";
 "toolPermissions.imageGeneration" = "이미지 생성";
+"toolPermissions.videoGeneration" = "동영상 생성";
 "toolPermissions.appleSection" = "Apple 생태계";
 "toolPermissions.agentSection" = "에이전트 기능";
 "agentDetail.toolPermissions" = "도구 권한";

@@ -186,6 +186,10 @@
 "modelConfig.imageProviderNone" = "無効";
 "modelConfig.imageGenerationHeader" = "画像生成";
 "modelConfig.imageProviderFooter" = "generate_imageツールで使用するモデルを選択します。画像生成機能を持つモデルのみ表示されます。設定すると、エージェントはツール呼び出しで画像を生成できます。";
+"modelConfig.videoProvider" = "動画生成モデル";
+"modelConfig.videoProviderNone" = "無効";
+"modelConfig.videoGenerationHeader" = "動画生成";
+"modelConfig.videoProviderFooter" = "generate_video ツールで使用するモデルを選択します。動画生成に対応したモデルのみ表示されます。動画生成には通常1〜5分かかります。";
 
 // MARK: - Cron Jobs
 "cronJobs.title" = "定期タスク";
@@ -326,9 +330,16 @@
 "provider.supportsToolUseFooter" = "このモデルが関数呼び出し/ツール使用に対応していない場合は無効にしてください（一部の OpenRouter モデル）";
 "provider.supportsImageGeneration" = "画像生成";
 "provider.supportsImageGenerationFooter" = "画像を生成できるモデルで有効にしてください（例：Gemini 2.5 Flash Image / Nano Banana）。APIにmodalitiesパラメータを送信します。";
+"provider.supportsVideoGeneration" = "動画生成";
 "provider.imageGenMode.none" = "なし";
 "provider.imageGenMode.chatInline" = "チャットインライン";
 "provider.imageGenMode.dedicatedAPI" = "専用API";
+"provider.videoGenMode.none" = "なし";
+"provider.videoGenMode.auto" = "自動検出";
+"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.googleVeo" = "Google Veo";
+"provider.videoGenMode.dashScope" = "DashScope (通義万象)";
+"provider.videoGenMode.kling" = "Kling";
 "provider.supportsReasoning" = "推論対応";
 "provider.supportsReasoningFooter" = "拡張思考/推論に対応するモデルで有効にしてください（例：Claude拡張思考、DeepSeek R1、o1/o3）。思考過程がキャプチャされ表示されます。";
 "provider.thinkingLevel" = "思考レベル";
@@ -525,6 +536,7 @@
 "toolPermissions.model" = "モデル";
 "toolPermissions.files" = "ファイル";
 "toolPermissions.imageGeneration" = "画像生成";
+"toolPermissions.videoGeneration" = "動画生成";
 "toolPermissions.appleSection" = "Apple エコシステム";
 "toolPermissions.agentSection" = "エージェント機能";
 "agentDetail.toolPermissions" = "ツール権限";
