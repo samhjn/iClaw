@@ -75,7 +75,7 @@ struct AgentSkillsView: View {
                                         editingInstallation = installation
                                         showConfigEditor = true
                                     } label: {
-                                        Label("Configure", systemImage: "gear")
+                                        Label(L10n.Skills.configure, systemImage: "gear")
                                     }
                                 }
                                 Button(role: .destructive) {
@@ -208,7 +208,7 @@ struct SkillConfigEditorSheet: View {
                             Text(field.label)
                                 .font(.subheadline)
                             if field.required {
-                                Text("Required")
+                                Text(L10n.Skills.required)
                                     .font(.caption2)
                                     .foregroundStyle(.red)
                             }
@@ -223,7 +223,7 @@ struct SkillConfigEditorSheet: View {
                     }
                 }
             }
-            .navigationTitle("Skill Configuration")
+            .navigationTitle(L10n.Skills.skillConfiguration)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

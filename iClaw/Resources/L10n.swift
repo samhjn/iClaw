@@ -48,6 +48,7 @@ enum L10n {
         static var delete: String { tr("common.delete") }
         static var create: String { tr("common.create") }
         static var edit: String { tr("common.edit") }
+        static var add: String { tr("common.add") }
         static var done: String { tr("common.done") }
         static var copy: String { tr("common.copy") }
         static var copied: String { tr("common.copied") }
@@ -59,7 +60,6 @@ enum L10n {
         static var preview: String { tr("common.preview") }
         static var empty: String { tr("common.empty") }
         static var refresh: String { tr("common.refresh") }
-        static var add: String { tr("common.add") }
         static var name: String { tr("common.name") }
         static var unknown: String { tr("common.unknown") }
     }
@@ -537,6 +537,28 @@ enum L10n {
         static func activeInstalled(active: Int, installed: Int) -> String {
             tr("skills.activeInstalled", active, installed)
         }
+        // Scripts & Tools
+        static func scriptsCount(_ count: Int) -> String { tr("skills.scriptsCount", count) }
+        static func customToolsCount(_ count: Int) -> String { tr("skills.customToolsCount", count) }
+        static var parameters: String { tr("skills.parameters") }
+        static var addScript: String { tr("skills.addScript") }
+        static var addTool: String { tr("skills.addTool") }
+        static var addParameter: String { tr("skills.addParameter") }
+        static var scripts: String { tr("skills.scripts") }
+        static var customTools: String { tr("skills.customTools") }
+        static var scriptsFooter: String { tr("skills.scriptsFooter") }
+        static var customToolsFooter: String { tr("skills.customToolsFooter") }
+        static var scriptName: String { tr("skills.scriptName") }
+        static var descriptionOptional: String { tr("skills.descriptionOptional") }
+        static var jsCode: String { tr("skills.jsCode") }
+        static var toolName: String { tr("skills.toolName") }
+        static var toolInfo: String { tr("skills.toolInfo") }
+        static var description: String { tr("skills.description") }
+        static var jsImplementation: String { tr("skills.jsImplementation") }
+        static var jsImplementationFooter: String { tr("skills.jsImplementationFooter") }
+        static var configure: String { tr("skills.configure") }
+        static var skillConfiguration: String { tr("skills.skillConfiguration") }
+        static var required: String { tr("skills.required") }
     }
 
     // MARK: - Cron Parser

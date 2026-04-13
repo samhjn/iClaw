@@ -402,6 +402,27 @@
 "skills.uninstall" = "アンインストール";
 "skills.skillLibrary" = "スキルライブラリ";
 "skills.activeInstalled" = "%d 個アクティブ / %d 個インストール済み";
+"skills.scriptsCount" = "スクリプト (%d)";
+"skills.customToolsCount" = "カスタムツール (%d)";
+"skills.parameters" = "パラメータ";
+"skills.addScript" = "スクリプトを追加";
+"skills.addTool" = "ツールを追加";
+"skills.addParameter" = "パラメータを追加";
+"skills.scripts" = "スクリプト";
+"skills.customTools" = "カスタムツール";
+"skills.scriptsFooter" = "スキルのインストール時にJavaScriptスクリプトがコードスニペットとして自動登録されます。";
+"skills.customToolsFooter" = "カスタムツールはJavaScriptで実装されたエージェント用の呼び出し可能な関数になります。";
+"skills.scriptName" = "スクリプト名";
+"skills.descriptionOptional" = "説明（任意）";
+"skills.jsCode" = "JavaScriptコード";
+"skills.toolName" = "ツール名";
+"skills.toolInfo" = "ツール情報";
+"skills.description" = "説明";
+"skills.jsImplementation" = "JavaScript実装";
+"skills.jsImplementationFooter" = "`args.パラメータ名`でパラメータにアクセスできます。インストール設定は`args.config`で利用可能です。";
+"skills.configure" = "設定";
+"skills.skillConfiguration" = "スキル設定";
+"skills.required" = "必須";
 
 // MARK: - Cron Description
 "cron.invalidExpression" = "無効なCron式";
