@@ -60,7 +60,6 @@ enum L10n {
         static var preview: String { tr("common.preview") }
         static var empty: String { tr("common.empty") }
         static var refresh: String { tr("common.refresh") }
-        static var add: String { tr("common.add") }
         static var name: String { tr("common.name") }
         static var unknown: String { tr("common.unknown") }
     }
