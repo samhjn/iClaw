@@ -648,11 +648,11 @@ struct LLMProviderEditView: View {
             modelName = "gemini-2.0-flash-preview-image-generation"
             enableImageModel("gemini-2.0-flash-preview-image-generation", mode: .chatInline)
         }
-        Button("ByteDance (Seedance)") {
-            name = name.isEmpty ? "Seedance" : name
-            endpoint = "https://api.seedance.cn/v1"
-            modelName = "seedream-4.5"
-            enableImageModel("seedream-4.5", mode: .dedicatedAPI)
+        Button("ByteDance (Seedream)") {
+            name = name.isEmpty ? "Seedream" : name
+            endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+            modelName = "doubao-seedream-4.5"
+            enableImageModel("doubao-seedream-4.5", mode: .dedicatedAPI)
         }
         Button("DashScope (Tongyi Wan)") {
             name = name.isEmpty ? "DashScope Image" : name
