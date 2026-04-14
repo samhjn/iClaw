@@ -368,8 +368,8 @@
 "provider.parametersFooter" = "所有模型的預設值。可在上方「已啟用模型」中為單一模型分別覆蓋。";
 "provider.providerType" = "提供商類型";
 "provider.providerType.llm" = "LLM（對話）";
-"provider.providerType.image" = "圖片生成";
-"provider.providerType.video" = "影片生成";
+"provider.providerType.image" = "圖片生成 (實驗性)";
+"provider.providerType.video" = "影片生成 (實驗性)";
 "provider.providerTypeFooter" = "LLM 提供商處理對話補全。影片提供商專用於 Kling、Veo、DashScope 等影片生成 API。";
 "provider.apiStyle" = "API 風格";
 "provider.apiStyleFooter" = "OpenAI：相容 OpenAI 的 chat/completions 介面。Anthropic：原生 Anthropic Messages API，支援擴展思考。";

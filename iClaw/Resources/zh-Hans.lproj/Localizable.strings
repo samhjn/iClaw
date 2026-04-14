@@ -368,8 +368,8 @@
 "provider.parametersFooter" = "所有模型的默认值。可在上方「已启用模型」中为单个模型分别覆盖。";
 "provider.providerType" = "提供商类型";
 "provider.providerType.llm" = "LLM（对话）";
-"provider.providerType.image" = "图片生成";
-"provider.providerType.video" = "视频生成";
+"provider.providerType.image" = "图片生成 (实验性)";
+"provider.providerType.video" = "视频生成 (实验性)";
 "provider.providerTypeFooter" = "LLM 提供商处理对话补全。视频提供商专用于 Kling、Veo、DashScope 等视频生成 API。";
 "provider.apiStyle" = "API 风格";
 "provider.apiStyleFooter" = "OpenAI：兼容 OpenAI 的 chat/completions 接口。Anthropic：原生 Anthropic Messages API，支持扩展思考。";

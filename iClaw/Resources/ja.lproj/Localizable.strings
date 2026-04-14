@@ -367,8 +367,8 @@
 "provider.parametersFooter" = "全モデルのデフォルト値です。上の「有効なモデル」セクションでモデルごとに上書きできます。";
 "provider.providerType" = "プロバイダー種別";
 "provider.providerType.llm" = "LLM（チャット）";
-"provider.providerType.image" = "画像生成";
-"provider.providerType.video" = "動画生成";
+"provider.providerType.image" = "画像生成 (実験的)";
+"provider.providerType.video" = "動画生成 (実験的)";
 "provider.providerTypeFooter" = "LLMプロバイダーはチャット補完を処理します。動画プロバイダーはKling、Veo、DashScopeなどの動画生成APIに特化しています。";
 "provider.apiStyle" = "APIスタイル";
 "provider.apiStyleFooter" = "OpenAI：OpenAI互換のchat/completionsエンドポイント。Anthropic：ネイティブAnthropic Messages API、拡張思考対応。";
