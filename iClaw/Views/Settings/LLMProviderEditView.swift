@@ -631,6 +631,12 @@ struct LLMProviderEditView: View {
             modelName = "sora-2"
             enableVideoModel("sora-2", mode: .openAI)
         }
+        Button("ByteDance (Seedance)") {
+            name = name.isEmpty ? "Seedance" : name
+            endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+            modelName = "doubao-seedance-2-0"
+            enableVideoModel("doubao-seedance-2-0", mode: .seedance)
+        }
     }
 
     @ViewBuilder

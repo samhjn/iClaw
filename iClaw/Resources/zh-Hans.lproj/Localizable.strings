@@ -357,6 +357,7 @@
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (通义万相)";
 "provider.videoGenMode.kling" = "可灵";
+"provider.videoGenMode.seedance" = "Seedance (字节跳动)";
 "provider.supportsReasoning" = "支持推理";
 "provider.supportsReasoningFooter" = "为支持扩展思考/推理的模型启用（如 Claude 扩展思考、DeepSeek R1、o1/o3）。思考过程将被捕获并显示。";
 "provider.thinkingLevel" = "思考等级";
