@@ -250,26 +250,44 @@ enum BuiltInSkills {
 
             When asked to research a topic, follow this methodology:
 
+            ## Research Tools (in order of preference)
+
+            1. **Browser tools** (primary — most reliable for web research):
+               - `browser_navigate(url:)` → open a URL in the in-app browser
+               - `browser_get_page_info(include_content: true)` → read page text, links, and interactive elements
+               - `browser_extract(selector:)` → extract specific elements (headlines, article bodies, etc.)
+               - **Search strategy**: navigate to `https://www.google.com/search?q=YOUR+QUERY` to find sources, then visit promising results
+            2. **`fetch_and_extract`** (quick plain-text fetch — may fail due to sandbox network restrictions; if it returns HTTP 0 or network errors, switch to browser tools immediately)
+            3. **Post-processing scripts** (use `run_snippet` to execute):
+               - `extract_links` — parse HTML to extract follow-up URLs for deeper investigation
+               - `summarize_text` — condense long text into key points ranked by importance
+
             ## Process
-            1. **Decompose** the question into sub-questions
-            2. **Search** for information using available tools — use the custom tools provided by this skill
-            3. **Evaluate** source credibility and recency
-            4. **Synthesize** findings into a coherent analysis
-            5. **Cite** sources and note confidence levels
+            1. **Decompose** the question into 2–5 focused sub-questions
+            2. **Search** — start with a search engine query via browser, then visit the most promising results
+            3. **Gather** — read each source page with `browser_get_page_info`; use `browser_extract` for specific content; follow links for deeper investigation
+            4. **Evaluate** — assess source credibility (official docs > research papers > established news > blogs), recency, and potential biases
+            5. **Synthesize** — organize findings into a coherent analysis, cross-referencing multiple sources
+            6. **Cite** — reference every key claim to its source URL with a confidence level (High / Medium / Low)
+
+            ## Iterative Deepening
+            - After the first pass, identify gaps or conflicting information
+            - Search for additional sources to fill gaps or resolve conflicts
+            - Stop when key claims have 2–3 corroborating sources, or when additional sources add no new information
 
             ## Output Format
-            - Start with an executive summary
-            - Present findings organized by sub-topic
-            - Flag uncertainties and conflicting information
-            - End with actionable conclusions
+            - **Executive Summary** — 2–3 sentence overview of key findings
+            - **Findings** — organized by sub-topic, each with inline source citations
+            - **Source Table** — list of sources used with credibility rating (High / Medium / Low)
+            - **Uncertainties** — flag conflicting information and knowledge gaps
+            - **Conclusions** — actionable takeaways
 
             ## Guidelines
-            - Prefer primary sources over secondary
-            - Note when information might be outdated
-            - Distinguish between facts and opinions
+            - Prefer primary sources (official docs, research papers, raw data) over secondary (news articles, blog posts)
+            - Note when information might be outdated — check publication dates
+            - Distinguish clearly between established facts, expert opinions, and speculation
+            - When a tool fails, switch to an alternative immediately — do not retry the same failing tool
             - Save key findings to MEMORY.md for future reference
-            - Use `fetch_and_extract` to gather content from URLs
-            - Use the `extract_links` script to find follow-up sources
             """,
             tags: ["research", "analysis", "methodology"],
             scripts: [
@@ -278,13 +296,14 @@ enum BuiltInSkills {
                     language: "javascript",
                     code: """
                     const html = args.html || '';
-                    const matches = [...html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([^<]*)<\\/a>/gi)];
+                    const matches = [...html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\\/a>/gi)];
                     const links = matches
                         .map(m => ({ url: m[1], text: m[2].trim() }))
-                        .filter(l => l.url.startsWith('http'));
-                    console.log(JSON.stringify(links.slice(0, 30), null, 2));
+                        .filter(l => l.url.startsWith('http') && l.text.length > 0);
+                    const unique = links.filter((l, i, arr) => arr.findIndex(x => x.url === l.url) === i);
+                    console.log(JSON.stringify(unique.slice(0, 30), null, 2));
                     """,
-                    description: "Extract links from HTML content for further research"
+                    description: "Extract links from HTML content (supports both single and double quoted href attributes)"
                 ),
                 SkillScript(
                     name: "summarize_text",
@@ -292,45 +311,62 @@ enum BuiltInSkills {
                     code: """
                     const text = args.text || '';
                     const maxLen = args.max_length || 2000;
-                    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
-                    const summary = sentences.slice(0, Math.min(sentences.length, 20)).join('. ') + '.';
-                    console.log(summary.substring(0, maxLen));
+                    const sentences = text.split(/(?<=[.!?])\\s+/).filter(s => s.trim().length > 20);
+                    if (sentences.length === 0) { console.log(text.substring(0, maxLen)); }
+                    else {
+                        const scored = sentences.map((s, i) => ({
+                            text: s.trim(),
+                            score: (1 / (i + 1)) + Math.min(s.length / 200, 1)
+                        }));
+                        scored.sort((a, b) => b.score - a.score);
+                        const top = scored.slice(0, 15);
+                        top.sort((a, b) => {
+                            const ai = sentences.findIndex(x => x.includes(a.text));
+                            const bi = sentences.findIndex(x => x.includes(b.text));
+                            return ai - bi;
+                        });
+                        console.log(top.map(s => s.text).join(' ').substring(0, maxLen));
+                    }
                     """,
-                    description: "Extract key sentences from long text"
+                    description: "Extract key sentences from long text, ranked by position and length importance"
                 )
             ],
             customTools: [
                 SkillToolDefinition(
                     name: "fetch_and_extract",
-                    description: "Fetch a URL and extract readable text content, stripping HTML tags",
+                    description: "Fetch a URL and extract readable text content. May fail due to sandbox CORS restrictions — use browser_navigate + browser_get_page_info as a reliable alternative.",
                     parameters: [
                         SkillToolParam(name: "url", type: "string", description: "The URL to fetch content from"),
-                        SkillToolParam(name: "max_length", type: "number", description: "Maximum characters to return", required: false)
+                        SkillToolParam(name: "max_length", type: "number", description: "Maximum characters to return (default: 5000)", required: false)
                     ],
                     implementation: """
                     const url = args.url;
-                    const maxLen = args.max_length || 3000;
+                    const maxLen = args.max_length || 5000;
                     try {
                         const resp = fetch(url);
                         if (!resp.ok) {
-                            console.log(`[Error] HTTP ${resp.status}: ${resp.statusText}`);
+                            console.log(`[Error] HTTP ${resp.status}: ${resp.statusText}. Tip: use browser_navigate("${url}") + browser_get_page_info(include_content: true) instead.`);
                         } else {
                             const html = resp.text;
-                            // Strip HTML tags and normalize whitespace
                             const text = html
                                 .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')
                                 .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')
+                                .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, '')
+                                .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, '')
+                                .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, '')
                                 .replace(/<[^>]+>/g, ' ')
                                 .replace(/&nbsp;/g, ' ')
                                 .replace(/&amp;/g, '&')
                                 .replace(/&lt;/g, '<')
                                 .replace(/&gt;/g, '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#39;/g, "'")
                                 .replace(/\\s+/g, ' ')
                                 .trim();
                             console.log(text.substring(0, maxLen));
                         }
                     } catch (e) {
-                        console.log(`[Error] Failed to fetch: ${e.message}`);
+                        console.log(`[Error] Failed to fetch: ${e.message}. Tip: use browser_navigate("${url}") + browser_get_page_info(include_content: true) instead.`);
                     }
                     """
                 )

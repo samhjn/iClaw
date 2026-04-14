@@ -162,4 +162,20 @@ final class CodeExecutorTests: XCTestCase {
         XCTAssertTrue(script.contains("__appendOut"))
         XCTAssertTrue(script.contains("__appendErr"))
     }
+
+    // MARK: - Fetch Proxy Integration
+
+    func testRuntimeScriptFetchRoutesViaProxy() {
+        let script = JavaScriptExecutor.runtimeScript
+        XCTAssertTrue(script.contains("/fetch?url="),
+                       "fetch polyfill should route through same-origin proxy path")
+        XCTAssertTrue(script.contains("encodeURIComponent"),
+                       "fetch polyfill should percent-encode the target URL")
+    }
+
+    func testRuntimeScriptFetchIsSynchronous() {
+        let script = JavaScriptExecutor.runtimeScript
+        XCTAssertTrue(script.contains("proxyUrl, false"),
+                       "fetch XHR must use async=false for synchronous operation")
+    }
 }
