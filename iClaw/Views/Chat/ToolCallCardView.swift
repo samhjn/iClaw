@@ -366,24 +366,24 @@ struct ToolResultCardView: View {
                     .textSelection(.enabled)
             }
 
-            if let repr = parts.repr, !repr.isEmpty {
+            if let repl = parts.repl, !repl.isEmpty {
                 Divider().padding(.horizontal, 10)
                 HStack(spacing: 4) {
                     Text("→")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.blue)
-                    Text(repr)
+                    Text(repl)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.blue)
                         .textSelection(.enabled)
                     Spacer()
-                    copyButton(repr)
+                    copyButton(repl)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
             }
 
-            if parts.stdout == nil && parts.stderr == nil && parts.repr == nil {
+            if parts.stdout == nil && parts.stderr == nil && parts.repl == nil {
                 Text(content)
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.primary)
@@ -405,10 +405,10 @@ struct ToolResultCardView: View {
         .buttonStyle(.plain)
     }
 
-    private func parseCodeOutput(_ output: String) -> (stdout: String?, stderr: String?, repr: String?) {
+    private func parseCodeOutput(_ output: String) -> (stdout: String?, stderr: String?, repl: String?) {
         var stdout: String?
         var stderr: String?
-        var repr: String?
+        var repl: String?
         var currentSection: [String] = []
 
         let lines = output.components(separatedBy: "\n")
@@ -425,8 +425,8 @@ struct ToolResultCardView: View {
             } else if mode == "stderr" && !line.hasPrefix("[stderr]") {
                 stderr = currentSection.joined(separator: "\n")
                 currentSection = []
-                mode = "repr"
-                repr = line
+                mode = "repl"
+                repl = line
             } else {
                 currentSection.append(line)
             }
@@ -444,11 +444,11 @@ struct ToolResultCardView: View {
             case "stderr":
                 stderr = currentSection.joined(separator: "\n")
             default:
-                repr = currentSection.joined(separator: "\n")
+                repl = currentSection.joined(separator: "\n")
             }
         }
 
-        return (stdout, stderr, repr)
+        return (stdout, stderr, repl)
     }
 }
 

@@ -137,7 +137,7 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertNotNil(props["code"])
         XCTAssertNotNil(props["mode"])
         XCTAssertNotNil(props["timeout"])
-        XCTAssertEqual(props["mode"]?.enumValues, ["repr", "script"])
+        XCTAssertEqual(props["mode"]?.enumValues, ["repl", "script"])
         XCTAssertEqual(tool.function.parameters.required, ["code"])
     }
 

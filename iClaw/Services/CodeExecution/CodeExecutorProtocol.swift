@@ -1,22 +1,22 @@
 import Foundation
 
 enum ExecutionMode: String, Sendable {
-    case repr
+    case repl
     case script
 }
 
 struct ExecutionResult: Sendable {
     let stdout: String
     let stderr: String
-    let repr: String?
+    let repl: String?
     let exitCode: Int
 
-    static func success(stdout: String = "", stderr: String = "", repr: String? = nil) -> ExecutionResult {
-        ExecutionResult(stdout: stdout, stderr: stderr, repr: repr, exitCode: 0)
+    static func success(stdout: String = "", stderr: String = "", repl: String? = nil) -> ExecutionResult {
+        ExecutionResult(stdout: stdout, stderr: stderr, repl: repl, exitCode: 0)
     }
 
     static func failure(stderr: String, exitCode: Int = 1) -> ExecutionResult {
-        ExecutionResult(stdout: "", stderr: stderr, repr: nil, exitCode: exitCode)
+        ExecutionResult(stdout: "", stderr: stderr, repl: nil, exitCode: exitCode)
     }
 }
 

@@ -161,10 +161,10 @@ enum ToolDefinitions {
 
     static let executeJavaScriptTool = ToolDefinitionBuilder.build(
         name: "execute_javascript",
-        description: "Execute JavaScript code in a WKWebView sandbox. In 'repr' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). File system: `fs.list()`, `fs.read(name)`, `fs.write(name, content)`, `fs.delete(name)`, `fs.info(name)` — persistent agent file storage. Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — all return Promises, use `await` in script mode (e.g. `let events = await apple.calendar.searchEvents({})`). Parameter passing: use 'args' to inject a key-value object accessible as `args` in JS (e.g. `args.name`, `args.items`). Default timeout 60s (max 300s).",
+        description: "Execute JavaScript code in a WKWebView sandbox. In 'repl' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). File system: `fs.list()`, `fs.read(name)`, `fs.write(name, content)`, `fs.delete(name)`, `fs.info(name)` — persistent agent file storage. Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — all return Promises, use `await` in script mode (e.g. `let events = await apple.calendar.searchEvents({})`). Parameter passing: use 'args' to inject a key-value object accessible as `args` in JS (e.g. `args.name`, `args.items`). Default timeout 60s (max 300s).",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The JavaScript code to execute"),
-            "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repr", "script"]),
+            "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repl", "script"]),
             "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60)"),
             "args": ToolDefinitionBuilder.objectParam("Key-value arguments injected as the `args` object in JavaScript scope (e.g. {\"name\": \"Alice\", \"count\": 3} → accessible as args.name, args.count)")
         ],
@@ -203,7 +203,7 @@ enum ToolDefinitions {
         description: "Execute a saved code snippet by name. Loads the snippet and runs it directly in the appropriate runtime (currently JavaScript only). Supports optional argument overrides for mode and timeout. Use 'args' to pass parameters — they become the `args` object in JavaScript (e.g. a snippet using `args.url` can be called with {\"args\": {\"url\": \"https://example.com\"}}).",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("The name of the saved code snippet to execute"),
-            "mode": ToolDefinitionBuilder.enumParam("Execution mode override", values: ["repr", "script"]),
+            "mode": ToolDefinitionBuilder.enumParam("Execution mode override", values: ["repl", "script"]),
             "timeout": ToolDefinitionBuilder.numberParam("Execution timeout in seconds (1-300, default: 60)"),
             "args": ToolDefinitionBuilder.objectParam("Key-value arguments passed to the snippet as the `args` object in JavaScript scope")
         ],
