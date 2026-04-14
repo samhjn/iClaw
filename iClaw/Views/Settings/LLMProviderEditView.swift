@@ -232,11 +232,6 @@ struct LLMProviderEditView: View {
                         Text(mode.displayName).tag(mode)
                     }
                 }
-                Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
-                    ForEach(VideoGenMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
                 Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
                     ForEach(ThinkingLevel.allCases, id: \.self) { level in
                         Text(level.displayName).tag(level)
@@ -656,8 +651,8 @@ struct LLMProviderEditView: View {
         Button("ByteDance (Seedance)") {
             name = name.isEmpty ? "Seedance" : name
             endpoint = "https://api.seedance.cn/v1"
-            modelName = "seedance-3.0"
-            enableImageModel("seedance-3.0", mode: .dedicatedAPI)
+            modelName = "seedance-4.5"
+            enableImageModel("seedance-4.5", mode: .dedicatedAPI)
         }
         Button("DashScope (Tongyi Wan)") {
             name = name.isEmpty ? "DashScope Image" : name
