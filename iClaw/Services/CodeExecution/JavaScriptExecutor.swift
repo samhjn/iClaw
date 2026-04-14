@@ -181,15 +181,20 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     function clearTimeout(id) {}
     function clearInterval(id) {}
 
-    // --- Network: synchronous fetch via XMLHttpRequest ---
+    // --- Network: synchronous fetch via same-origin proxy ---
+    // XHR goes to iclaw-js://sandbox/fetch?url=<encoded> (same origin as page),
+    // where JSFetchSchemeHandler proxies the request through URLSession (no CORS).
     function fetch(url, options) {
         options = options || {};
         var method = (options.method || 'GET').toUpperCase();
         var body = options.body || null;
         var headers = options.headers || {};
 
+        var targetUrl = typeof url === 'string' ? url : url.toString();
+        var proxyUrl = '/fetch?url=' + encodeURIComponent(targetUrl);
+
         var xhr = new XMLHttpRequest();
-        xhr.open(method, typeof url === 'string' ? url : url.toString(), false);
+        xhr.open(method, proxyUrl, false);
         for (var key in headers) {
             if (headers.hasOwnProperty(key)) xhr.setRequestHeader(key, headers[key]);
         }

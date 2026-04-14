@@ -22,6 +22,10 @@ final class WKWebViewJSRuntime: NSObject {
 
     private var pendingContinuations: [String: CheckedContinuation<[String: Any], Error>] = [:]
 
+    /// Scheme handler that proxies JS `fetch()` requests via URLSession,
+    /// bypassing WKWebView's CORS restrictions on synchronous XHR.
+    private let fetchSchemeHandler = JSFetchSchemeHandler()
+
     private static let blankHTML = """
     <!DOCTYPE html>
     <html><head><meta charset="utf-8"></head><body></body></html>
@@ -37,12 +41,13 @@ final class WKWebViewJSRuntime: NSObject {
     private func buildWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
+        config.setURLSchemeHandler(fetchSchemeHandler, forURLScheme: JSFetchSchemeHandler.scheme)
         AppleEcosystemBridge.shared.install(on: config)
         webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
         webView.navigationDelegate = self
         isPageLoaded = false
         isCrashed = false
-        webView.loadHTMLString(Self.blankHTML, baseURL: URL(string: "https://localhost"))
+        webView.loadHTMLString(Self.blankHTML, baseURL: JSFetchSchemeHandler.sandboxBaseURL)
     }
 
     /// Tear down the old web view and create a fresh one.
@@ -125,7 +130,7 @@ final class WKWebViewJSRuntime: NSObject {
 
     private func reloadPage() {
         isPageLoaded = false
-        webView.loadHTMLString(Self.blankHTML, baseURL: URL(string: "https://localhost"))
+        webView.loadHTMLString(Self.blankHTML, baseURL: JSFetchSchemeHandler.sandboxBaseURL)
     }
 
     private func classify(_ error: Error) -> Error {
