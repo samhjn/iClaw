@@ -1,5 +1,22 @@
 import Foundation
 
+// MARK: - Message Role
+
+/// Strongly-typed message role, replacing raw string usage.
+/// Encodes/decodes as the raw string for wire compatibility.
+enum MessageRole: String, Codable, Equatable, Hashable {
+    case system
+    case user
+    case assistant
+    case tool
+
+    /// Allow constructing from arbitrary strings for forward compatibility
+    /// (e.g., unknown roles from newer API versions).
+    init(rawString: String) {
+        self = MessageRole(rawValue: rawString) ?? .user
+    }
+}
+
 // MARK: - Multimodal content parts
 
 enum ContentPart: Codable {
