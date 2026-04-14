@@ -440,6 +440,77 @@ final class LLMProviderTests: XCTestCase {
         }
     }
 
+    func testInferredCapabilities_DedicatedVideoGenModels() {
+        let videoModels: [(String, String)] = [
+            ("sora-2", "Sora"),
+            ("veo-3", "Veo"),
+            ("veo_2", "Veo underscore"),
+            ("wan2.6-t2v", "Wan T2V"),
+            ("wan2.7-i2v-flash", "Wan I2V"),
+            ("wan2.6-vace", "Wan VACE"),
+            ("runway-gen4", "Runway"),
+            ("gen-3-alpha", "Gen-3"),
+            ("gen-4-turbo", "Gen-4"),
+            ("luma-photon", "Luma"),
+            ("dream-machine-v1", "Dream Machine"),
+            ("kling-v2", "Kling"),
+            ("minimax-video-01", "MiniMax Video"),
+            ("hailuo-01", "Hailuo"),
+            ("doubao-seedance-2-0", "Seedance 2.0"),
+            ("doubao-seedance-1-5-pro-251215", "Seedance 1.5 pro"),
+            ("doubao-seedance-1-0-lite-t2v", "Seedance 1.0 lite t2v"),
+        ]
+        for (model, label) in videoModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertTrue(caps.supportsVideoGeneration,
+                          "\(label) (\(model)): expected videoGen=true")
+            XCTAssertEqual(caps.videoGenerationMode, .auto,
+                           "\(label) (\(model)): expected videoGenMode=.auto")
+            XCTAssertFalse(caps.supportsToolUse,
+                           "\(label) (\(model)): video-only models should NOT support tool use")
+        }
+    }
+
+    func testInferredCapabilities_DedicatedImageGenModels() {
+        let imageModels: [(String, String)] = [
+            ("dall-e-3", "DALL-E 3"),
+            ("gpt-image-1", "GPT Image"),
+            ("flux-pro-1.1", "Flux"),
+            ("sd3-medium", "SD3"),
+            ("sdxl-turbo", "SDXL"),
+            ("stable-diffusion-xl", "Stable Diffusion"),
+        ]
+        for (model, label) in imageModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertEqual(caps.imageGenerationMode, .dedicatedAPI,
+                           "\(label) (\(model)): expected imageGenMode=.dedicatedAPI")
+            XCTAssertFalse(caps.supportsToolUse,
+                           "\(label) (\(model)): image-only models should NOT support tool use")
+            XCTAssertFalse(caps.supportsVideoGeneration,
+                           "\(label) (\(model)): should not infer video generation")
+        }
+    }
+
+    func testInferredCapabilities_VideoInputModels() {
+        let videoInputModels = [
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "qwen2.5-vl-72b",
+            "qwen-omni-turbo",
+            "internvl-chat-v2",
+            "pixtral-12b",
+        ]
+        for model in videoInputModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertTrue(caps.supportsVideoInput,
+                          "\(model): expected supportsVideoInput=true")
+            XCTAssertTrue(caps.supportsVision,
+                          "\(model): video input models should also support vision")
+            XCTAssertFalse(caps.supportsVideoGeneration,
+                           "\(model): video INPUT models should not infer video GENERATION")
+        }
+    }
+
     func testInferredCapabilities_DoesNotOverrideExisting() {
         let custom = ModelCapabilities(
             supportsVision: false,
@@ -450,6 +521,98 @@ final class LLMProviderTests: XCTestCase {
         let inferred = ModelCapabilities.inferred(from: "gpt-5.4")
         XCTAssertNotEqual(inferred, custom,
                           "Inferred and custom should differ — caller decides which to use")
+    }
+
+    // MARK: - VideoGenMode
+
+    func testVideoGenModeCodableRoundTrip() throws {
+        for mode in VideoGenMode.allCases {
+            let data = try JSONEncoder().encode(mode)
+            let decoded = try JSONDecoder().decode(VideoGenMode.self, from: data)
+            XCTAssertEqual(decoded, mode,
+                           "VideoGenMode.\(mode.rawValue) should survive encode/decode")
+        }
+    }
+
+    func testVideoGenModeSeedanceRawValue() {
+        XCTAssertEqual(VideoGenMode.seedance.rawValue, "seedance")
+    }
+
+    func testVideoGenModeAllCasesIncludesSeedance() {
+        XCTAssertTrue(VideoGenMode.allCases.contains(.seedance))
+    }
+
+    // MARK: - ModelCapabilities with VideoGenerationMode
+
+    func testCapabilitiesVideoGenModeCodableRoundTrip() throws {
+        let caps = ModelCapabilities(
+            supportsVision: false,
+            supportsToolUse: false,
+            videoGenerationMode: .seedance
+        )
+        let data = try JSONEncoder().encode(caps)
+        let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: data)
+        XCTAssertEqual(decoded.videoGenerationMode, .seedance)
+        XCTAssertTrue(decoded.supportsVideoGeneration)
+        XCTAssertEqual(decoded, caps)
+    }
+
+    func testCapabilitiesVideoGenNoneMeansNoSupport() {
+        let caps = ModelCapabilities(videoGenerationMode: .none)
+        XCTAssertFalse(caps.supportsVideoGeneration)
+    }
+
+    func testCapabilitiesVideoGenAutoMeansSupported() {
+        let caps = ModelCapabilities(videoGenerationMode: .auto)
+        XCTAssertTrue(caps.supportsVideoGeneration)
+    }
+
+    func testCapabilitiesLegacyJSONWithoutVideoGenMode() throws {
+        let json = """
+        {"supportsVision":true,"supportsToolUse":true,"supportsImageGeneration":false,"supportsReasoning":false}
+        """
+        let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: json.data(using: .utf8)!)
+        XCTAssertEqual(decoded.videoGenerationMode, .none,
+                       "Legacy data without videoGenerationMode should default to .none")
+        XCTAssertFalse(decoded.supportsVideoGeneration)
+    }
+
+    // MARK: - ProviderType
+
+    func testProviderTypeCodableRoundTrip() throws {
+        for type in ProviderType.allCases {
+            let data = try JSONEncoder().encode(type)
+            let decoded = try JSONDecoder().decode(ProviderType.self, from: data)
+            XCTAssertEqual(decoded, type,
+                           "ProviderType.\(type.rawValue) should survive encode/decode")
+        }
+    }
+
+    @MainActor
+    func testProviderTypeDefaultIsLLM() {
+        let provider = LLMProvider(name: "Test")
+        XCTAssertEqual(provider.providerType, .llm)
+        XCTAssertFalse(provider.isVideoOnly)
+        XCTAssertFalse(provider.isImageOnly)
+        XCTAssertFalse(provider.isMediaOnly)
+    }
+
+    @MainActor
+    func testProviderTypeVideoOnly() {
+        let provider = LLMProvider(name: "Test")
+        provider.providerType = .videoOnly
+        XCTAssertTrue(provider.isVideoOnly)
+        XCTAssertFalse(provider.isImageOnly)
+        XCTAssertTrue(provider.isMediaOnly)
+    }
+
+    @MainActor
+    func testProviderTypeImageOnly() {
+        let provider = LLMProvider(name: "Test")
+        provider.providerType = .imageOnly
+        XCTAssertFalse(provider.isVideoOnly)
+        XCTAssertTrue(provider.isImageOnly)
+        XCTAssertTrue(provider.isMediaOnly)
     }
 
     // MARK: - Enabled Models
