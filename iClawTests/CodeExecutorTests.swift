@@ -6,12 +6,12 @@ final class CodeExecutorTests: XCTestCase {
     // MARK: - ExecutionMode
 
     func testExecutionModeRawValues() {
-        XCTAssertEqual(ExecutionMode.repr.rawValue, "repr")
+        XCTAssertEqual(ExecutionMode.repl.rawValue, "repl")
         XCTAssertEqual(ExecutionMode.script.rawValue, "script")
     }
 
     func testExecutionModeFromRawValue() {
-        XCTAssertEqual(ExecutionMode(rawValue: "repr"), .repr)
+        XCTAssertEqual(ExecutionMode(rawValue: "repl"), .repl)
         XCTAssertEqual(ExecutionMode(rawValue: "script"), .script)
         XCTAssertNil(ExecutionMode(rawValue: "invalid"))
     }
@@ -19,10 +19,10 @@ final class CodeExecutorTests: XCTestCase {
     // MARK: - ExecutionResult
 
     func testExecutionResultSuccess() {
-        let result = ExecutionResult.success(stdout: "Hello\n", stderr: "", repr: nil)
+        let result = ExecutionResult.success(stdout: "Hello\n", stderr: "", repl: nil)
         XCTAssertEqual(result.stdout, "Hello\n")
         XCTAssertTrue(result.stderr.isEmpty)
-        XCTAssertNil(result.repr)
+        XCTAssertNil(result.repl)
         XCTAssertEqual(result.exitCode, 0)
     }
 
@@ -30,13 +30,13 @@ final class CodeExecutorTests: XCTestCase {
         let result = ExecutionResult.success()
         XCTAssertTrue(result.stdout.isEmpty)
         XCTAssertTrue(result.stderr.isEmpty)
-        XCTAssertNil(result.repr)
+        XCTAssertNil(result.repl)
         XCTAssertEqual(result.exitCode, 0)
     }
 
-    func testExecutionResultSuccessWithRepr() {
-        let result = ExecutionResult.success(stdout: "", repr: "42")
-        XCTAssertEqual(result.repr, "42")
+    func testExecutionResultSuccessWithRepl() {
+        let result = ExecutionResult.success(stdout: "", repl: "42")
+        XCTAssertEqual(result.repl, "42")
         XCTAssertEqual(result.exitCode, 0)
     }
 
@@ -44,7 +44,7 @@ final class CodeExecutorTests: XCTestCase {
         let result = ExecutionResult.failure(stderr: "SyntaxError: Unexpected token")
         XCTAssertTrue(result.stdout.isEmpty)
         XCTAssertEqual(result.stderr, "SyntaxError: Unexpected token")
-        XCTAssertNil(result.repr)
+        XCTAssertNil(result.repl)
         XCTAssertEqual(result.exitCode, 1)
     }
 

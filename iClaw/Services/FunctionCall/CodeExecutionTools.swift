@@ -11,7 +11,7 @@ struct CodeExecutionTools {
         }
 
         let modeStr = arguments["mode"] as? String ?? "script"
-        let mode: ExecutionMode = modeStr == "repr" ? .repr : .script
+        let mode: ExecutionMode = modeStr == "repl" ? .repl : .script
         let timeout = resolveJSTimeout(arguments: arguments)
         let userArgs = arguments["args"] as? [String: Any] ?? [:]
 
@@ -50,9 +50,9 @@ struct CodeExecutionTools {
                 if !output.isEmpty { output += "\n" }
                 output += "[stderr] \(result.stderr)"
             }
-            if let repr = result.repr {
+            if let repl = result.repl {
                 if !output.isEmpty { output += "\n" }
-                output += repr
+                output += repl
             }
             return output.isEmpty ? "(No output)" : output
         } catch is CancellationError {

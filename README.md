@@ -75,7 +75,7 @@ iClaw is inspired by [OpenClaw](https://github.com/openclaw/openclaw) — the op
 
 ### ⚡ On-Device Code Execution
 - **JavaScript interpreter** — executed in a WKWebView sandbox with automatic crash recovery
-- Two execution modes: `repr` (expression evaluation) and `script` (full scripts)
+- Two execution modes: `repl` (expression evaluation) and `script` (full scripts)
 - Save and reuse code snippets — build your mobile code library
 
 ### 💬 Smart Session Management

@@ -320,7 +320,7 @@ final class MultipleToolCallResponseTests: XCTestCase {
                                 "type": "function",
                                 "function": {
                                     "name": "execute_javascript",
-                                    "arguments": "{\\"code\\": \\"1+1\\", \\"mode\\": \\"repr\\"}"
+                                    "arguments": "{\\"code\\": \\"1+1\\", \\"mode\\": \\"repl\\"}"
                                 }
                             }
                         ]
@@ -866,7 +866,7 @@ final class AnthropicToolFormatTests: XCTestCase {
                     "type": "tool_use",
                     "id": "toolu_abc",
                     "name": "execute_javascript",
-                    "input": {"code": "Math.PI", "mode": "repr"}
+                    "input": {"code": "Math.PI", "mode": "repl"}
                 }
             ],
             "model": "claude-3-5-sonnet",

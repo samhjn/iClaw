@@ -256,7 +256,7 @@ final class PromptBuilder {
         var section = """
         ### Code Execution
         - `execute_javascript`: Execute JavaScript in a sandboxed WKWebView runtime with two modes:
-          - `repr` mode: Evaluate an expression and return its JSON-serialized result
+          - `repl` mode: Evaluate an expression and return its JSON-serialized result
           - `script` mode: Run a script and capture console output
           - Full ES6+ syntax: arrow functions, destructuring, template literals, classes, Promises, Map/Set, Symbol, generators, spread/rest, for...of, and more
           - Built-in: `JSON`, `Math`, `Date`, `RegExp`, `Map`, `Set`, `Array` methods, `String` methods — all native JavaScript APIs

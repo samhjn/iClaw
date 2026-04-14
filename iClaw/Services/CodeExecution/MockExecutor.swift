@@ -8,37 +8,37 @@ final class MockExecutor: CodeExecutor, @unchecked Sendable {
         try await Task.sleep(for: .milliseconds(300))
 
         switch mode {
-        case .repr:
-            return simulateRepr(code: code)
+        case .repl:
+            return simulateRepl(code: code)
         case .script:
             return simulateScript(code: code)
         }
     }
 
-    private func simulateRepr(code: String) -> ExecutionResult {
+    private func simulateRepl(code: String) -> ExecutionResult {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let number = evaluateSimpleMath(trimmed) {
-            return .success(repr: String(number))
+            return .success(repl: String(number))
         }
 
         if trimmed.hasPrefix("\"") || trimmed.hasPrefix("'") {
-            return .success(repr: trimmed)
+            return .success(repl: trimmed)
         }
 
         if trimmed.hasPrefix("[") || trimmed.hasPrefix("{") || trimmed.hasPrefix("(") {
-            return .success(repr: trimmed)
+            return .success(repl: trimmed)
         }
 
         if trimmed.hasPrefix("len(") {
-            return .success(repr: "3")
+            return .success(repl: "3")
         }
 
         if trimmed.hasPrefix("type(") {
-            return .success(repr: "<class 'str'>")
+            return .success(repl: "<class 'str'>")
         }
 
-        return .success(repr: "[mock] repr of: \(trimmed.prefix(50))")
+        return .success(repl: "[mock] repl of: \(trimmed.prefix(50))")
     }
 
     private func simulateScript(code: String) -> ExecutionResult {

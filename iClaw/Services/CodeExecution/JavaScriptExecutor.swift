@@ -75,9 +75,9 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
         }
 
         switch mode {
-        case .repr:
-            let repr = dict["result"] as? String
-            return .success(stdout: stdout, stderr: stderr, repr: repr)
+        case .repl:
+            let repl = dict["result"] as? String
+            return .success(stdout: stdout, stderr: stderr, repl: repl)
         case .script:
             return .success(stdout: stdout, stderr: stderr)
         }
@@ -93,12 +93,12 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
     ) -> String {
         let userCode: String
         switch mode {
-        case .repr:
+        case .repl:
             userCode = """
             var __val = eval(\(escapeForJS(code)));
             if (__val && typeof __val.then === 'function') __val = await __val;
-            var __repr = __formatJSValue(__val);
-            return {stdout: __stdout, stderr: __stderr, result: __repr, error: null};
+            var __repl = __formatJSValue(__val);
+            return {stdout: __stdout, stderr: __stderr, result: __repl, error: null};
             """
         case .script:
             userCode = """
@@ -209,7 +209,7 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
         };
     }
 
-    // --- Format JS value for repr ---
+    // --- Format JS value for repl ---
     function __formatJSValue(v) {
         if (v === undefined) return 'undefined';
         if (v === null) return 'null';
