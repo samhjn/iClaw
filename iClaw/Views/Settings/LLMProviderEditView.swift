@@ -651,8 +651,8 @@ struct LLMProviderEditView: View {
         Button("ByteDance (Seedance)") {
             name = name.isEmpty ? "Seedance" : name
             endpoint = "https://api.seedance.cn/v1"
-            modelName = "seedance-4.5"
-            enableImageModel("seedance-4.5", mode: .dedicatedAPI)
+            modelName = "seedream-4.5"
+            enableImageModel("seedream-4.5", mode: .dedicatedAPI)
         }
         Button("DashScope (Tongyi Wan)") {
             name = name.isEmpty ? "DashScope Image" : name
