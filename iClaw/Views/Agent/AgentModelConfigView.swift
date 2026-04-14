@@ -42,6 +42,40 @@ struct AgentModelConfigView: View {
         allProviderModels.filter { !$0.provider.isMediaOnly }
     }
 
+    /// Group ProviderModels by provider for sectioned picker display.
+    private func groupedByProvider(_ models: [ProviderModel]) -> [(provider: LLMProvider, models: [ProviderModel])] {
+        var seen = Set<UUID>()
+        var groups: [(provider: LLMProvider, models: [ProviderModel])] = []
+        for pm in models {
+            if !seen.contains(pm.provider.id) {
+                seen.insert(pm.provider.id)
+                let providerModels = models.filter { $0.provider.id == pm.provider.id }
+                groups.append((provider: pm.provider, models: providerModels))
+            }
+        }
+        return groups
+    }
+
+    /// Builds grouped picker options with provider sections.
+    @ViewBuilder
+    private func groupedPickerOptions(_ models: [ProviderModel]) -> some View {
+        let groups = groupedByProvider(models)
+        if groups.count <= 1 {
+            // Single provider: no need for sections
+            ForEach(models) { pm in
+                Text(pm.modelName).tag(pm.id)
+            }
+        } else {
+            ForEach(groups, id: \.provider.id) { group in
+                Section(group.provider.name) {
+                    ForEach(group.models) { pm in
+                        Text(pm.modelName).tag(pm.id)
+                    }
+                }
+            }
+        }
+    }
+
     private var hasWhitelist: Bool { !agent.allowedModelIds.isEmpty }
     private var whitelistSet: Set<String> { Set(agent.allowedModelIds) }
 
@@ -84,9 +118,7 @@ struct AgentModelConfigView: View {
         Section {
             Picker(L10n.ModelConfig.primaryModel, selection: primaryBinding) {
                 Text(L10n.ModelConfig.globalDefault).tag("" as String)
-                ForEach(llmProviderModels) { pm in
-                    Text(pm.displayName).tag(pm.id)
-                }
+                groupedPickerOptions(llmProviderModels)
             }
             if isPrimaryBlockedByWhitelist {
                 whitelistWarningRow(
@@ -210,9 +242,18 @@ struct AgentModelConfigView: View {
             }
 
             Menu {
-                ForEach(availableFallbackModels) { pm in
-                    Button(pm.displayName) {
-                        addFallback(pm)
+                let groups = groupedByProvider(availableFallbackModels)
+                if groups.count <= 1 {
+                    ForEach(availableFallbackModels) { pm in
+                        Button(pm.modelName) { addFallback(pm) }
+                    }
+                } else {
+                    ForEach(groups, id: \.provider.id) { group in
+                        Section(group.provider.name) {
+                            ForEach(group.models) { pm in
+                                Button(pm.modelName) { addFallback(pm) }
+                            }
+                        }
                     }
                 }
             } label: {
@@ -274,9 +315,7 @@ struct AgentModelConfigView: View {
         Section {
             Picker(L10n.ModelConfig.subAgentModel, selection: subAgentBinding) {
                 Text(L10n.ModelConfig.inheritFromPrimary).tag("" as String)
-                ForEach(llmProviderModels) { pm in
-                    Text(pm.displayName).tag(pm.id)
-                }
+                groupedPickerOptions(llmProviderModels)
             }
             if isSubAgentBlockedByWhitelist {
                 whitelistWarningRow(
@@ -335,9 +374,7 @@ struct AgentModelConfigView: View {
         Section {
             Picker(L10n.ModelConfig.imageProvider, selection: imageProviderBinding) {
                 Text(L10n.ModelConfig.imageProviderNone).tag("" as String)
-                ForEach(imageCapableProviderModels) { pm in
-                    Text(pm.displayName).tag(pm.id)
-                }
+                groupedPickerOptions(imageCapableProviderModels)
             }
         } header: {
             Text(L10n.ModelConfig.imageGenerationHeader)
@@ -397,16 +434,13 @@ struct AgentModelConfigView: View {
         Section {
             Picker(L10n.ModelConfig.videoProvider, selection: videoProviderBinding) {
                 Text(L10n.ModelConfig.videoProviderNone).tag("" as String)
-                ForEach(videoCapableProviderModels) { pm in
-                    Text(pm.displayName).tag(pm.id)
+                groupedPickerOptions(videoCapableProviderModels)
                 }
             }
             if agent.videoProviderId != nil {
                 Picker(L10n.ModelConfig.i2vProvider, selection: i2vProviderBinding) {
                     Text(L10n.ModelConfig.i2vSameAsT2V).tag("" as String)
-                    ForEach(videoCapableProviderModels) { pm in
-                        Text(pm.displayName).tag(pm.id)
-                    }
+                    groupedPickerOptions(videoCapableProviderModels)
                 }
             }
         } header: {
@@ -564,9 +598,18 @@ struct AgentModelConfigView: View {
             Menu {
                 let existingIds = Set(currentWhitelist)
                 let available = llmProviderModels.filter { !existingIds.contains($0.id) }
-                ForEach(available) { pm in
-                    Button(pm.displayName) {
-                        addToWhitelist(pm)
+                let groups = groupedByProvider(available)
+                if groups.count <= 1 {
+                    ForEach(available) { pm in
+                        Button(pm.modelName) { addToWhitelist(pm) }
+                    }
+                } else {
+                    ForEach(groups, id: \.provider.id) { group in
+                        Section(group.provider.name) {
+                            ForEach(group.models) { pm in
+                                Button(pm.modelName) { addToWhitelist(pm) }
+                            }
+                        }
                     }
                 }
             } label: {

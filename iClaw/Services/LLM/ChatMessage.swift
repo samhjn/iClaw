@@ -1,22 +1,5 @@
 import Foundation
 
-// MARK: - Message Role
-
-/// Strongly-typed message role, replacing raw string usage.
-/// Encodes/decodes as the raw string for wire compatibility.
-enum MessageRole: String, Codable, Equatable, Hashable {
-    case system
-    case user
-    case assistant
-    case tool
-
-    /// Allow constructing from arbitrary strings for forward compatibility
-    /// (e.g., unknown roles from newer API versions).
-    init(rawString: String) {
-        self = MessageRole(rawValue: rawString) ?? .user
-    }
-}
-
 // MARK: - Multimodal content parts
 
 enum ContentPart: Codable {
@@ -117,7 +100,7 @@ struct LLMChatMessage: Codable {
             role = roleEnum
         } else {
             let roleStr = try container.decode(String.self, forKey: .role)
-            role = MessageRole(rawString: roleStr)
+            role = MessageRole(rawValue: roleStr) ?? .user
         }
         toolCalls = try container.decodeIfPresent([LLMToolCall].self, forKey: .toolCalls)
         toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
