@@ -435,7 +435,6 @@ struct AgentModelConfigView: View {
             Picker(L10n.ModelConfig.videoProvider, selection: videoProviderBinding) {
                 Text(L10n.ModelConfig.videoProviderNone).tag("" as String)
                 groupedPickerOptions(videoCapableProviderModels)
-                }
             }
             if agent.videoProviderId != nil {
                 Picker(L10n.ModelConfig.i2vProvider, selection: i2vProviderBinding) {
