@@ -103,6 +103,8 @@ struct VideoGenProvider: @unchecked Sendable {
             return dashScopeProvider()
         case .kling:
             return klingProvider()
+        case .seedance:
+            return seedanceProvider()
         case .auto:
             return autoDetect(endpoint: endpoint, modelName: modelName)
         }
@@ -125,6 +127,10 @@ struct VideoGenProvider: @unchecked Sendable {
         // Kling
         if host.contains("klingai.com") || model.hasPrefix("kling") {
             return klingProvider()
+        }
+        // ByteDance Seedance (Volcengine Ark)
+        if host.contains("volces.com") || model.hasPrefix("doubao-seedance") {
+            return seedanceProvider()
         }
         // Default: OpenAI-compatible (Sora, Runway, Luma, etc.)
         return openAIProvider()
@@ -543,6 +549,99 @@ extension VideoGenProvider {
                     return .failed(reason: reason)
                 }
                 return .processing(progress: nil)
+            },
+            buildDownloadRequest: { videoURL, _ in
+                guard let url = URL(string: videoURL) else {
+                    throw VideoGenerationError.downloadFailed(videoURL)
+                }
+                return URLRequest(url: url)
+            }
+        )
+    }
+}
+
+// MARK: - Seedance Provider (ByteDance Volcengine Ark)
+
+extension VideoGenProvider {
+    static func seedanceProvider() -> VideoGenProvider {
+        VideoGenProvider(
+            buildSubmitRequest: { endpoint, apiKey, model, prompt, duration, aspectRatio, imageData in
+                let baseURL = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
+                let urlStr = "\(baseURL)/contents/generations/tasks"
+                guard let url = URL(string: urlStr) else {
+                    throw VideoGenerationError.invalidURL(urlStr)
+                }
+
+                var content: [[String: Any]] = []
+                content.append(["type": "text", "text": prompt])
+                if let imageData {
+                    content.append([
+                        "type": "image_url",
+                        "image_url": ["url": "data:image/png;base64,\(imageData.base64EncodedString())"]
+                    ])
+                }
+
+                var body: [String: Any] = [
+                    "model": model,
+                    "content": content
+                ]
+                if let duration, let durationInt = Int(duration) {
+                    body["duration"] = durationInt
+                }
+                if let aspectRatio {
+                    body["ratio"] = aspectRatio
+                }
+
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+                if !apiKey.isEmpty {
+                    request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                }
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+                return request
+            },
+            parseTaskId: { data, _ in
+                guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let taskId = json["id"] as? String else {
+                    throw VideoGenerationError.noTaskIdReturned
+                }
+                return taskId
+            },
+            buildPollRequest: { endpoint, apiKey, taskId in
+                let baseURL = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
+                let urlStr = "\(baseURL)/contents/generations/tasks/\(taskId)"
+                guard let url = URL(string: urlStr) else {
+                    throw VideoGenerationError.invalidURL(urlStr)
+                }
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                if !apiKey.isEmpty {
+                    request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                }
+                return request
+            },
+            parsePollResponse: { data in
+                guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    throw VideoGenerationError.generationFailed("Invalid poll response")
+                }
+                let status = (json["status"] as? String)?.lowercased() ?? ""
+                if status == "succeeded" {
+                    if let content = json["content"] as? [String: Any],
+                       let url = content["video_url"] as? String {
+                        return .completed(videoURL: url)
+                    }
+                    throw VideoGenerationError.generationFailed("Completed but no video URL found in response")
+                }
+                if status == "failed" || status == "expired" || status == "cancelled" {
+                    let reason = (json["error"] as? [String: Any])?["message"] as? String ?? status
+                    return .failed(reason: reason)
+                }
+                if status == "running" {
+                    return .processing(progress: nil)
+                }
+                // queued or other
+                return .pending(detail: status.isEmpty ? nil : status)
             },
             buildDownloadRequest: { videoURL, _ in
                 guard let url = URL(string: videoURL) else {

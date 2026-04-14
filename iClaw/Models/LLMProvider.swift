@@ -129,6 +129,8 @@ enum VideoGenMode: String, Codable, CaseIterable {
     case dashScope
     /// Kuaishou Kling API pattern.
     case kling
+    /// ByteDance Volcengine Ark pattern (Seedance).
+    case seedance
 
     var displayName: String {
         switch self {
@@ -138,6 +140,7 @@ enum VideoGenMode: String, Codable, CaseIterable {
         case .googleVeo: return L10n.Provider.videoGenModeGoogleVeo
         case .dashScope: return L10n.Provider.videoGenModeDashScope
         case .kling: return L10n.Provider.videoGenModeKling
+        case .seedance: return L10n.Provider.videoGenModeSeedance
         }
     }
 }
@@ -319,6 +322,7 @@ struct ModelCapabilities: Codable, Equatable {
     /// Luma: luma-*, dream-machine*
     /// Kling: kling-*
     /// MiniMax/Hailuo: minimax-video*, hailuo*
+    /// Seedance (ByteDance): doubao-seedance-*
     private static func inferVideoGeneration(_ name: String) -> Bool {
         // OpenAI Sora
         if name.hasPrefix("sora") { return true }
@@ -336,6 +340,8 @@ struct ModelCapabilities: Codable, Equatable {
         if name.hasPrefix("kling") { return true }
         // MiniMax / Hailuo
         if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return true }
+        // ByteDance Seedance
+        if name.hasPrefix("doubao-seedance") { return true }
         return false
     }
 

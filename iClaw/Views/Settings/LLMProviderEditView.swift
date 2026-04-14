@@ -232,11 +232,6 @@ struct LLMProviderEditView: View {
                         Text(mode.displayName).tag(mode)
                     }
                 }
-                Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
-                    ForEach(VideoGenMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
                 Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
                     ForEach(ThinkingLevel.allCases, id: \.self) { level in
                         Text(level.displayName).tag(level)
@@ -636,6 +631,12 @@ struct LLMProviderEditView: View {
             modelName = "sora-2"
             enableVideoModel("sora-2", mode: .openAI)
         }
+        Button("ByteDance (Seedance)") {
+            name = name.isEmpty ? "Seedance" : name
+            endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+            modelName = "doubao-seedance-2-0"
+            enableVideoModel("doubao-seedance-2-0", mode: .seedance)
+        }
     }
 
     @ViewBuilder
@@ -653,11 +654,11 @@ struct LLMProviderEditView: View {
             modelName = "gemini-2.0-flash-preview-image-generation"
             enableImageModel("gemini-2.0-flash-preview-image-generation", mode: .chatInline)
         }
-        Button("ByteDance (Seedance)") {
-            name = name.isEmpty ? "Seedance" : name
-            endpoint = "https://api.seedance.cn/v1"
-            modelName = "seedance-3.0"
-            enableImageModel("seedance-3.0", mode: .dedicatedAPI)
+        Button("ByteDance (Seedream)") {
+            name = name.isEmpty ? "Seedream" : name
+            endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+            modelName = "doubao-seedream-4.5"
+            enableImageModel("doubao-seedream-4.5", mode: .dedicatedAPI)
         }
         Button("DashScope (Tongyi Wan)") {
             name = name.isEmpty ? "DashScope Image" : name

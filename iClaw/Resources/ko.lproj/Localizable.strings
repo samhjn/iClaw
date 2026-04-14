@@ -356,6 +356,7 @@
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (통의완상)";
 "provider.videoGenMode.kling" = "Kling";
+"provider.videoGenMode.seedance" = "Seedance (ByteDance)";
 "provider.supportsReasoning" = "추론 지원";
 "provider.supportsReasoningFooter" = "확장 사고/추론을 지원하는 모델에 활성화하세요 (예: Claude 확장 사고, DeepSeek R1, o1/o3). 사고 과정이 캡처되어 표시됩니다.";
 "provider.thinkingLevel" = "사고 레벨";
@@ -366,8 +367,8 @@
 "provider.parametersFooter" = "모든 모델의 기본값입니다. 위의 '활성화된 모델' 섹션에서 모델별로 재정의할 수 있습니다.";
 "provider.providerType" = "제공자 유형";
 "provider.providerType.llm" = "LLM (채팅)";
-"provider.providerType.image" = "이미지 생성";
-"provider.providerType.video" = "동영상 생성";
+"provider.providerType.image" = "이미지 생성 (실험적)";
+"provider.providerType.video" = "동영상 생성 (실험적)";
 "provider.providerTypeFooter" = "LLM 제공자는 채팅 완성을 처리합니다. 동영상 제공자는 Kling, Veo, DashScope 등 동영상 생성 API 전용입니다.";
 "provider.apiStyle" = "API 스타일";
 "provider.apiStyleFooter" = "OpenAI: OpenAI 호환 chat/completions 엔드포인트. Anthropic: 네이티브 Anthropic Messages API, 확장 사고 지원.";

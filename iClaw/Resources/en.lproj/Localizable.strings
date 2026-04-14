@@ -357,6 +357,7 @@
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (Tongyi Wan)";
 "provider.videoGenMode.kling" = "Kling";
+"provider.videoGenMode.seedance" = "Seedance (ByteDance)";
 "provider.supportsReasoning" = "Supports Reasoning";
 "provider.supportsReasoningFooter" = "Enable for models with extended thinking / reasoning (e.g. Claude with extended thinking, DeepSeek R1, o1/o3). Thinking output will be captured and displayed.";
 "provider.thinkingLevel" = "Thinking Level";
@@ -367,8 +368,8 @@
 "provider.parametersFooter" = "Default values for all models. Individual models can override these in the Enabled Models section above.";
 "provider.providerType" = "Provider Type";
 "provider.providerType.llm" = "LLM (Chat)";
-"provider.providerType.image" = "Image Generation";
-"provider.providerType.video" = "Video Generation";
+"provider.providerType.image" = "Image Generation (Experimental)";
+"provider.providerType.video" = "Video Generation (Experimental)";
 "provider.providerTypeFooter" = "LLM providers handle chat completions. Video providers are dedicated to video generation APIs like Kling, Veo, or DashScope.";
 "provider.apiStyle" = "API Style";
 "provider.apiStyleFooter" = "OpenAI: OpenAI-compatible chat/completions endpoint. Anthropic: Native Anthropic Messages API with extended thinking support.";

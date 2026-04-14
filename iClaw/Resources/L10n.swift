@@ -503,6 +503,7 @@ enum L10n {
         static var videoGenModeGoogleVeo: String { tr("provider.videoGenMode.googleVeo") }
         static var videoGenModeDashScope: String { tr("provider.videoGenMode.dashScope") }
         static var videoGenModeKling: String { tr("provider.videoGenMode.kling") }
+        static var videoGenModeSeedance: String { tr("provider.videoGenMode.seedance") }
     }
 
     // MARK: - Skills

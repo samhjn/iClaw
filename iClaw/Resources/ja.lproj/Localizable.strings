@@ -356,6 +356,7 @@
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (通義万象)";
 "provider.videoGenMode.kling" = "Kling";
+"provider.videoGenMode.seedance" = "Seedance (ByteDance)";
 "provider.supportsReasoning" = "推論対応";
 "provider.supportsReasoningFooter" = "拡張思考/推論に対応するモデルで有効にしてください（例：Claude拡張思考、DeepSeek R1、o1/o3）。思考過程がキャプチャされ表示されます。";
 "provider.thinkingLevel" = "思考レベル";
@@ -366,8 +367,8 @@
 "provider.parametersFooter" = "全モデルのデフォルト値です。上の「有効なモデル」セクションでモデルごとに上書きできます。";
 "provider.providerType" = "プロバイダー種別";
 "provider.providerType.llm" = "LLM（チャット）";
-"provider.providerType.image" = "画像生成";
-"provider.providerType.video" = "動画生成";
+"provider.providerType.image" = "画像生成 (実験的)";
+"provider.providerType.video" = "動画生成 (実験的)";
 "provider.providerTypeFooter" = "LLMプロバイダーはチャット補完を処理します。動画プロバイダーはKling、Veo、DashScopeなどの動画生成APIに特化しています。";
 "provider.apiStyle" = "APIスタイル";
 "provider.apiStyleFooter" = "OpenAI：OpenAI互換のchat/completionsエンドポイント。Anthropic：ネイティブAnthropic Messages API、拡張思考対応。";
