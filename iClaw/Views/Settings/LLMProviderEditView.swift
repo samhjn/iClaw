@@ -11,7 +11,6 @@ struct LLMProviderEditView: View {
     @State private var apiKey: String = ""
     @State private var modelName: String = "gpt-5.4"
     @State private var maxTokens: Int = 4096
-    @State private var thinkingBudget: Int = 10000
     @State private var temperature: Double = 0.7
     @State private var apiStyle: APIStyle = .openAI
     @State private var providerType: ProviderType = .llm
@@ -85,7 +84,6 @@ struct LLMProviderEditView: View {
                 apiKey = p.apiKey
                 modelName = p.modelName
                 maxTokens = p.maxTokens
-                thinkingBudget = p.thinkingBudget
                 temperature = p.temperature
                 apiStyle = APIStyle(rawValue: p.apiStyleRaw) ?? .openAI
                 providerType = ProviderType(rawValue: p.providerTypeRaw) ?? .llm
@@ -99,14 +97,9 @@ struct LLMProviderEditView: View {
                     modelCapabilities = dict
                 }
 
-                // Migrate legacy provider-level flags for existing models without capabilities
+                // Auto-infer capabilities for models without explicit entries
                 for model in p.enabledModels where modelCapabilities[model] == nil {
-                    modelCapabilities[model] = ModelCapabilities(
-                        supportsVision: p.supportsVision,
-                        supportsToolUse: p.supportsToolUse,
-                        supportsImageGeneration: p.supportsImageGeneration,
-                        supportsReasoning: false
-                    )
+                    modelCapabilities[model] = ModelCapabilities.inferred(from: model)
                 }
             } else {
                 enableModel(modelName)
@@ -728,7 +721,6 @@ struct LLMProviderEditView: View {
             p.apiKey = apiKey
             p.modelName = modelName
             p.maxTokens = maxTokens
-            p.thinkingBudget = thinkingBudget
             p.temperature = temperature
             // Write raw stored properties directly (not through computed setters)
             p.apiStyleRaw = apiStyle.rawValue
@@ -736,11 +728,6 @@ struct LLMProviderEditView: View {
             p.modelCapabilitiesJSON = capsJSON
             p.enabledModels = Array(enabledModels)
             p.cachedModelList = fetchedModels
-
-            // Sync legacy flags from default model for backward compatibility
-            p.supportsVision = defaultCaps.supportsVision
-            p.supportsToolUse = defaultCaps.supportsToolUse
-            p.supportsImageGeneration = defaultCaps.supportsImageGeneration
 
             viewModel.updateProvider(p)
         } else {
@@ -754,14 +741,9 @@ struct LLMProviderEditView: View {
                 temperature: temperature
             )
             // Write raw stored properties directly
-            provider.thinkingBudget = thinkingBudget
             provider.apiStyleRaw = apiStyle.rawValue
             provider.providerTypeRaw = providerType.rawValue
             provider.modelCapabilitiesJSON = capsJSON
-
-            provider.supportsVision = defaultCaps.supportsVision
-            provider.supportsToolUse = defaultCaps.supportsToolUse
-            provider.supportsImageGeneration = defaultCaps.supportsImageGeneration
 
             provider.enabledModels = Array(enabledModels)
             provider.cachedModelList = fetchedModels

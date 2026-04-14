@@ -278,11 +278,11 @@ struct ModelCapabilities: Codable, Equatable {
         }
 
         // Dedicated video generation models
-        if inferVideoGeneration(base) {
+        if let videoMode = inferVideoGenerationMode(base) {
             return ModelCapabilities(
                 supportsVision: false,
                 supportsToolUse: false,
-                videoGenerationMode: .auto,
+                videoGenerationMode: videoMode,
                 supportsReasoning: false
             )
         }
@@ -313,36 +313,30 @@ struct ModelCapabilities: Codable, Equatable {
         return .default
     }
 
-    /// Detect dedicated video generation models.
+    /// Detect dedicated video generation models and return the specific VideoGenMode.
     ///
-    /// Sora: sora-*
-    /// Veo: veo-*
-    /// Wan (Tongyi): wan*-t2v*, wan*-i2v*, wan*-r2v*, wan*-kf2v*, wan*-s2v*, wan*-vace*
-    /// Runway: runway-*, gen-3*, gen-4*
-    /// Luma: luma-*, dream-machine*
-    /// Kling: kling-*
-    /// MiniMax/Hailuo: minimax-video*, hailuo*
-    /// Seedance (ByteDance): doubao-seedance-*
-    private static func inferVideoGeneration(_ name: String) -> Bool {
+    /// Returns a specific mode instead of `.auto` to avoid redundant re-detection
+    /// in `VideoGenProvider.autoDetect`. Returns `nil` if not a video gen model.
+    private static func inferVideoGenerationMode(_ name: String) -> VideoGenMode? {
         // OpenAI Sora
-        if name.hasPrefix("sora") { return true }
+        if name.hasPrefix("sora") { return .openAI }
         // Google Veo
-        if name.hasPrefix("veo-") || name.hasPrefix("veo_") { return true }
+        if name.hasPrefix("veo-") || name.hasPrefix("veo_") { return .googleVeo }
         // Alibaba Wan series (wan2.6-t2v, wan2.7-t2v-turbo, wan2.6-i2v-flash, etc.)
         if name.hasPrefix("wan") && (name.contains("-t2v") || name.contains("-i2v")
             || name.contains("-r2v") || name.contains("-kf2v")
-            || name.contains("-s2v") || name.contains("-vace")) { return true }
+            || name.contains("-s2v") || name.contains("-vace")) { return .dashScope }
         // Runway
-        if name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4") { return true }
+        if name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4") { return .openAI }
         // Luma AI
-        if name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-") { return true }
+        if name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-") { return .openAI }
         // Kling
-        if name.hasPrefix("kling") { return true }
+        if name.hasPrefix("kling") { return .kling }
         // MiniMax / Hailuo
-        if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return true }
+        if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return .openAI }
         // ByteDance Seedance
-        if name.hasPrefix("doubao-seedance") { return true }
-        return false
+        if name.hasPrefix("doubao-seedance") { return .seedance }
+        return nil
     }
 
     /// Detect models that use the dedicated /images/generations API.
@@ -481,7 +475,6 @@ final class LLMProvider {
     var modelName: String
     var isDefault: Bool
     var maxTokens: Int
-    var thinkingBudget: Int = 10000
     var temperature: Double
     var createdAt: Date
 
@@ -556,53 +549,66 @@ final class LLMProvider {
         }
     }
 
+    // MARK: - Capabilities Cache
+
+    /// Transient cache for decoded capabilities. Not persisted by SwiftData.
+    @Transient private var _capabilitiesCache: [String: ModelCapabilities]?
+    @Transient private var _capabilitiesCacheKey: String?
+
+    /// Decode and cache the capabilities dictionary, invalidating on JSON change.
+    private func decodedCapabilities() -> [String: ModelCapabilities] {
+        if let cache = _capabilitiesCache, _capabilitiesCacheKey == modelCapabilitiesJSON {
+            return cache
+        }
+        guard let json = modelCapabilitiesJSON,
+              let data = json.data(using: .utf8),
+              let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data)
+        else {
+            _capabilitiesCache = [:]
+            _capabilitiesCacheKey = modelCapabilitiesJSON
+            return [:]
+        }
+        _capabilitiesCache = dict
+        _capabilitiesCacheKey = modelCapabilitiesJSON
+        return dict
+    }
+
+    /// Invalidate the transient cache (called after writes).
+    private func invalidateCapabilitiesCache() {
+        _capabilitiesCache = nil
+        _capabilitiesCacheKey = nil
+    }
+
     /// Per-model capabilities dictionary.
     var allModelCapabilities: [String: ModelCapabilities] {
-        get {
-            guard let json = modelCapabilitiesJSON,
-                  let data = json.data(using: .utf8),
-                  let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data)
-            else { return [:] }
-            return dict
-        }
+        get { decodedCapabilities() }
         set {
             guard let data = try? JSONEncoder().encode(newValue),
                   let json = String(data: data, encoding: .utf8)
-            else { modelCapabilitiesJSON = nil; return }
+            else { modelCapabilitiesJSON = nil; invalidateCapabilitiesCache(); return }
             modelCapabilitiesJSON = json
+            invalidateCapabilitiesCache()
         }
     }
 
-    /// Get capabilities for a specific model, with provider-level fallback.
-    /// Reads directly from the raw JSON to avoid computed property issues with SwiftData.
+    /// Get capabilities for a specific model.
+    /// Falls back to `ModelCapabilities.inferred(from:)` when no per-model entry exists.
     func capabilities(for model: String) -> ModelCapabilities {
-        if let json = modelCapabilitiesJSON,
-           let data = json.data(using: .utf8),
-           let dict = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data),
-           let caps = dict[model] {
+        if let caps = decodedCapabilities()[model] {
             return caps
         }
-        return ModelCapabilities(
-            supportsVision: supportsVision,
-            supportsToolUse: supportsToolUse,
-            imageGenerationMode: supportsImageGeneration ? .chatInline : .none,
-            supportsReasoning: false
-        )
+        // Infer from model name instead of using legacy provider-level bools
+        return ModelCapabilities.inferred(from: model)
     }
 
     /// Set capabilities for a specific model.
-    /// Writes directly to the raw JSON property for reliable SwiftData persistence.
     func setCapabilities(_ caps: ModelCapabilities, for model: String) {
-        var dict: [String: ModelCapabilities] = [:]
-        if let json = modelCapabilitiesJSON,
-           let data = json.data(using: .utf8),
-           let existing = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data) {
-            dict = existing
-        }
+        var dict = decodedCapabilities()
         dict[model] = caps
         if let data = try? JSONEncoder().encode(dict),
            let json = String(data: data, encoding: .utf8) {
             modelCapabilitiesJSON = json
+            invalidateCapabilitiesCache()
         }
     }
 
@@ -622,7 +628,6 @@ final class LLMProvider {
         self.modelName = modelName
         self.isDefault = isDefault
         self.maxTokens = maxTokens
-        self.thinkingBudget = 10000
         self.temperature = temperature
         self.createdAt = Date()
         self.enabledModelsRaw = nil
