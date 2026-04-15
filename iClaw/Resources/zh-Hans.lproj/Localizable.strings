@@ -353,7 +353,12 @@
 "provider.imageGenMode.dedicatedAPI" = "独立 API";
 "provider.videoGenMode.none" = "不支持";
 "provider.videoGenMode.auto" = "自动检测";
-"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.restPolling" = "REST 轮询 (Sora, Runway, Luma)";
+"provider.apiStyle.openAI" = "Bearer Token (OpenAI 兼容)";
+"provider.apiStyle.anthropic" = "API Key 头 (Anthropic)";
+"provider.testConnection" = "测试连接";
+"provider.testConnectionSuccess" = "%lld 个模型";
+"provider.testConnectionOK" = "OK";
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (通义万相)";
 "provider.videoGenMode.kling" = "可灵";

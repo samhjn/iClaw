@@ -352,7 +352,12 @@
 "provider.imageGenMode.dedicatedAPI" = "専用API";
 "provider.videoGenMode.none" = "なし";
 "provider.videoGenMode.auto" = "自動検出";
-"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.restPolling" = "REST ポーリング (Sora, Runway, Luma)";
+"provider.apiStyle.openAI" = "Bearer Token (OpenAI互換)";
+"provider.apiStyle.anthropic" = "APIキーヘッダー (Anthropic)";
+"provider.testConnection" = "接続テスト";
+"provider.testConnectionSuccess" = "%lldモデル";
+"provider.testConnectionOK" = "OK";
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (通義万象)";
 "provider.videoGenMode.kling" = "Kling";

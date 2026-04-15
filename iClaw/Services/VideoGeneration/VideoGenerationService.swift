@@ -94,9 +94,9 @@ struct VideoGenProvider: @unchecked Sendable {
         switch mode {
         case .none:
             // Should not reach here; caller should check before calling.
-            return openAIProvider()
-        case .openAI:
-            return openAIProvider()
+            return restPollingProvider()
+        case .restPolling:
+            return restPollingProvider()
         case .googleVeo:
             return googleVeoProvider()
         case .dashScope:
@@ -132,15 +132,15 @@ struct VideoGenProvider: @unchecked Sendable {
         if host.contains("volces.com") || model.hasPrefix("doubao-seedance") {
             return seedanceProvider()
         }
-        // Default: OpenAI-compatible (Sora, Runway, Luma, etc.)
-        return openAIProvider()
+        // Default: generic REST submit/poll pattern (Sora, Runway, Luma, etc.)
+        return restPollingProvider()
     }
 }
 
-// MARK: - OpenAI-Compatible Provider (Sora, Runway, Luma)
+// MARK: - REST Polling Provider (Sora, Runway, Luma)
 
 extension VideoGenProvider {
-    static func openAIProvider() -> VideoGenProvider {
+    static func restPollingProvider() -> VideoGenProvider {
         VideoGenProvider(
             buildSubmitRequest: { endpoint, apiKey, model, prompt, duration, aspectRatio, imageData in
                 let baseURL = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint

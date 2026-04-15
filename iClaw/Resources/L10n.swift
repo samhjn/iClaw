@@ -492,6 +492,11 @@ enum L10n {
         static var providerTypeFooter: String { tr("provider.providerTypeFooter") }
         static var apiStyle: String { tr("provider.apiStyle") }
         static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
+        static var apiStyleOpenAI: String { tr("provider.apiStyle.openAI") }
+        static var apiStyleAnthropic: String { tr("provider.apiStyle.anthropic") }
+        static var testConnection: String { tr("provider.testConnection") }
+        static func testConnectionSuccess(_ count: Int) -> String { tr("provider.testConnectionSuccess", count) }
+        static var testConnectionOK: String { tr("provider.testConnectionOK") }
         static var modelCapabilities: String { tr("provider.modelCapabilities") }
         static var presets: String { tr("provider.presets") }
         static var imageGenModeNone: String { tr("provider.imageGenMode.none") }
@@ -499,7 +504,7 @@ enum L10n {
         static var imageGenModeDedicatedAPI: String { tr("provider.imageGenMode.dedicatedAPI") }
         static var videoGenModeNone: String { tr("provider.videoGenMode.none") }
         static var videoGenModeAuto: String { tr("provider.videoGenMode.auto") }
-        static var videoGenModeOpenAI: String { tr("provider.videoGenMode.openAI") }
+        static var videoGenModeRestPolling: String { tr("provider.videoGenMode.restPolling") }
         static var videoGenModeGoogleVeo: String { tr("provider.videoGenMode.googleVeo") }
         static var videoGenModeDashScope: String { tr("provider.videoGenMode.dashScope") }
         static var videoGenModeKling: String { tr("provider.videoGenMode.kling") }

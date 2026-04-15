@@ -353,7 +353,12 @@
 "provider.imageGenMode.dedicatedAPI" = "Dedicated API";
 "provider.videoGenMode.none" = "None";
 "provider.videoGenMode.auto" = "Auto Detect";
-"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.restPolling" = "REST Polling (Sora, Runway, Luma)";
+"provider.apiStyle.openAI" = "Bearer Token (OpenAI-compatible)";
+"provider.apiStyle.anthropic" = "API Key Header (Anthropic)";
+"provider.testConnection" = "Test Connection";
+"provider.testConnectionSuccess" = "%lld models";
+"provider.testConnectionOK" = "OK";
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (Tongyi Wan)";
 "provider.videoGenMode.kling" = "Kling";
@@ -372,7 +377,7 @@
 "provider.providerType.video" = "Video Generation (Experimental)";
 "provider.providerTypeFooter" = "LLM providers handle chat completions. Video providers are dedicated to video generation APIs like Kling, Veo, or DashScope.";
 "provider.apiStyle" = "API Style";
-"provider.apiStyleFooter" = "OpenAI: OpenAI-compatible chat/completions endpoint. Anthropic: Native Anthropic Messages API with extended thinking support.";
+"provider.apiStyleFooter" = "Controls authentication and wire protocol. Bearer Token is compatible with most providers. API Key Header is for Anthropic's native API.";
 "provider.modelCapabilities" = "Model Capabilities";
 "provider.presets" = "Presets";
 

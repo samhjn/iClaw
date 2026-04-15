@@ -353,7 +353,12 @@
 "provider.imageGenMode.dedicatedAPI" = "獨立 API";
 "provider.videoGenMode.none" = "不支援";
 "provider.videoGenMode.auto" = "自動偵測";
-"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.restPolling" = "REST 輪詢 (Sora, Runway, Luma)";
+"provider.apiStyle.openAI" = "Bearer Token (OpenAI 相容)";
+"provider.apiStyle.anthropic" = "API Key 標頭 (Anthropic)";
+"provider.testConnection" = "測試連線";
+"provider.testConnectionSuccess" = "%lld 個模型";
+"provider.testConnectionOK" = "OK";
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (通義萬相)";
 "provider.videoGenMode.kling" = "可靈";
