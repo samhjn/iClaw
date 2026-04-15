@@ -148,6 +148,20 @@ struct LLMProviderEditView: View {
         }
     }
 
+    /// Valid ImageGenMode options based on current apiStyle and providerType.
+    /// - DashScope apiStyle: only `.dashScope`
+    /// - Image-only providers: exclude `.none` (they must generate images)
+    /// - LLM providers: all modes
+    private var relevantImageGenModes: [ImageGenMode] {
+        if apiStyle == .dashScope {
+            return [.dashScope]
+        }
+        if providerType == .imageOnly {
+            return ImageGenMode.allCases.filter { $0 != .none && $0 != .dashScope }
+        }
+        return ImageGenMode.allCases.filter { $0 != .dashScope }
+    }
+
     private var apiStyleSection: some View {
         Section {
             Picker(L10n.Provider.apiStyle, selection: $apiStyle) {
@@ -313,7 +327,7 @@ struct LLMProviderEditView: View {
                 Toggle(L10n.Provider.supportsVideoInput, isOn: binding.supportsVideoInput)
                 Toggle(L10n.Provider.supportsToolUse, isOn: binding.supportsToolUse)
                 Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
-                    ForEach(ImageGenMode.allCases, id: \.self) { mode in
+                    ForEach(relevantImageGenModes, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
                 }
@@ -325,7 +339,7 @@ struct LLMProviderEditView: View {
                 perModelParametersView(for: model)
             case .imageOnly:
                 Picker(L10n.Provider.supportsImageGeneration, selection: binding.imageGenerationMode) {
-                    ForEach(ImageGenMode.allCases, id: \.self) { mode in
+                    ForEach(relevantImageGenModes, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
                 }
@@ -352,6 +366,7 @@ struct LLMProviderEditView: View {
                         }
                         if c.imageGenerationMode == .chatInline { capBadge("paintbrush", color: .orange) }
                         if c.imageGenerationMode == .dedicatedAPI { capBadge("photo", color: .orange) }
+                        if c.imageGenerationMode == .dashScope { capBadge("photo", color: .orange) }
                         if c.supportsVideoGeneration { capBadge("film", color: .purple) }
                     }
                 }
@@ -779,8 +794,10 @@ struct LLMProviderEditView: View {
         presetChip("DashScope") {
             name = name.isEmpty ? "DashScope Image" : name
             endpoint = "https://dashscope.aliyuncs.com/api/v1"
-            modelName = "wan-x2.1"
-            enableImageModel("wan-x2.1", mode: .dedicatedAPI)
+            apiStyle = .dashScope
+            modelName = "wan2.7-image-pro"
+            enableImageModel("wan2.7-image-pro", mode: .dashScope)
+            enableImageModel("wan2.7-image", mode: .dashScope)
         }
         presetChip("Flux") {
             name = name.isEmpty ? "Flux" : name
