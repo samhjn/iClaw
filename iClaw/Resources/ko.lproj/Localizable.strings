@@ -376,6 +376,10 @@
 "provider.apiStyle" = "API 프로토콜";
 "provider.apiStyle.openAI" = "OpenAI 호환";
 "provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyle.googleVeo" = "Google Veo";
+"provider.apiStyle.dashScope" = "DashScope (통의완상)";
+"provider.apiStyle.kling" = "Kling";
+"provider.apiStyle.seedance" = "Seedance (ByteDance)";
 "provider.apiStyleFooter" = "요청에 사용할 API 프로토콜을 지정합니다. OpenAI 호환은 대부분의 제공업체(OpenAI, DeepSeek, OpenRouter, Ollama 등)에서 사용됩니다. Anthropic은 Anthropic 네이티브 Messages API입니다.";
 "provider.modelCapabilities" = "모델 기능";
 "provider.presets" = "프리셋";

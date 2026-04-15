@@ -376,6 +376,10 @@
 "provider.apiStyle" = "APIプロトコル";
 "provider.apiStyle.openAI" = "OpenAI互換";
 "provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyle.googleVeo" = "Google Veo";
+"provider.apiStyle.dashScope" = "DashScope (通義万相)";
+"provider.apiStyle.kling" = "Kling";
+"provider.apiStyle.seedance" = "Seedance (ByteDance)";
 "provider.apiStyleFooter" = "リクエストに使用するAPIプロトコルを指定します。OpenAI互換は多くのプロバイダー（OpenAI、DeepSeek、OpenRouter、Ollamaなど）で使用されます。AnthropicはAnthropic独自のMessages APIです。";
 "provider.modelCapabilities" = "モデル機能";
 "provider.presets" = "プリセット";

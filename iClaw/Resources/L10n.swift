@@ -494,6 +494,10 @@ enum L10n {
         static var apiStyleFooter: String { tr("provider.apiStyleFooter") }
         static var apiStyleOpenAI: String { tr("provider.apiStyle.openAI") }
         static var apiStyleAnthropic: String { tr("provider.apiStyle.anthropic") }
+        static var apiStyleGoogleVeo: String { tr("provider.apiStyle.googleVeo") }
+        static var apiStyleDashScope: String { tr("provider.apiStyle.dashScope") }
+        static var apiStyleKling: String { tr("provider.apiStyle.kling") }
+        static var apiStyleSeedance: String { tr("provider.apiStyle.seedance") }
         static var testConnection: String { tr("provider.testConnection") }
         static func testConnectionSuccess(_ count: Int) -> String { tr("provider.testConnectionSuccess", count) }
         static var testConnectionOK: String { tr("provider.testConnectionOK") }
@@ -502,13 +506,6 @@ enum L10n {
         static var imageGenModeNone: String { tr("provider.imageGenMode.none") }
         static var imageGenModeChatInline: String { tr("provider.imageGenMode.chatInline") }
         static var imageGenModeDedicatedAPI: String { tr("provider.imageGenMode.dedicatedAPI") }
-        static var videoGenModeNone: String { tr("provider.videoGenMode.none") }
-        static var videoGenModeAuto: String { tr("provider.videoGenMode.auto") }
-        static var videoGenModeRestPolling: String { tr("provider.videoGenMode.restPolling") }
-        static var videoGenModeGoogleVeo: String { tr("provider.videoGenMode.googleVeo") }
-        static var videoGenModeDashScope: String { tr("provider.videoGenMode.dashScope") }
-        static var videoGenModeKling: String { tr("provider.videoGenMode.kling") }
-        static var videoGenModeSeedance: String { tr("provider.videoGenMode.seedance") }
     }
 
     // MARK: - Skills

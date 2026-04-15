@@ -492,12 +492,7 @@ final class FunctionCallRouter {
         let service = VideoGenerationService(provider: provider, modelName: effectiveModel)
 
         // Pre-resolve video provider for background continuation (avoid capturing @Model in @Sendable)
-        let caps = provider.capabilities(for: effectiveModel)
-        let resolvedVideoProvider = VideoGenProvider.resolve(
-            mode: caps.videoGenerationMode,
-            endpoint: provider.endpoint,
-            modelName: effectiveModel
-        )
+        let resolvedVideoProvider = VideoGenProvider.resolve(apiStyle: provider.apiStyle)
         let providerEndpoint = provider.endpoint
         let providerApiKey = provider.apiKey
 

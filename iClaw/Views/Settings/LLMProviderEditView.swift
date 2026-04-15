@@ -139,10 +139,19 @@ struct LLMProviderEditView: View {
         }
     }
 
+    /// API style cases filtered by current provider type.
+    private var relevantAPIStyles: [APIStyle] {
+        switch providerType {
+        case .llm: return APIStyle.llmCases
+        case .imageOnly: return APIStyle.imageCases
+        case .videoOnly: return APIStyle.videoCases
+        }
+    }
+
     private var apiStyleSection: some View {
         Section {
             Picker(L10n.Provider.apiStyle, selection: $apiStyle) {
-                ForEach(APIStyle.allCases, id: \.self) { style in
+                ForEach(relevantAPIStyles, id: \.self) { style in
                     Text(style.displayName).tag(style)
                 }
             }
@@ -321,11 +330,7 @@ struct LLMProviderEditView: View {
                     }
                 }
             case .videoOnly:
-                Picker(L10n.Provider.supportsVideoGeneration, selection: binding.videoGenerationMode) {
-                    ForEach(VideoGenMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
+                Toggle(L10n.Provider.supportsVideoGeneration, isOn: binding.supportsVideoGeneration)
             }
         } label: {
             HStack {
@@ -347,7 +352,7 @@ struct LLMProviderEditView: View {
                         }
                         if c.imageGenerationMode == .chatInline { capBadge("paintbrush", color: .orange) }
                         if c.imageGenerationMode == .dedicatedAPI { capBadge("photo", color: .orange) }
-                        if c.videoGenerationMode != .none { capBadge("film", color: .purple) }
+                        if c.supportsVideoGeneration { capBadge("film", color: .purple) }
                     }
                 }
                 Spacer()
@@ -428,11 +433,11 @@ struct LLMProviderEditView: View {
                     modelCapabilities[model] = caps
                 }
             ),
-            videoGenerationMode: Binding(
-                get: { (modelCapabilities[model] ?? .default).videoGenerationMode },
+            supportsVideoGeneration: Binding(
+                get: { (modelCapabilities[model] ?? .default).supportsVideoGeneration },
                 set: { newVal in
                     var caps = modelCapabilities[model] ?? .default
-                    caps.videoGenerationMode = newVal
+                    caps.supportsVideoGeneration = newVal
                     modelCapabilities[model] = caps
                 }
             )
@@ -715,33 +720,38 @@ struct LLMProviderEditView: View {
         presetChip("Kling") {
             name = name.isEmpty ? "Kling" : name
             endpoint = "https://api.klingai.com"
+            apiStyle = .kling
             modelName = "kling-v2"
-            enableVideoModel("kling-v2", mode: .kling)
+            enableVideoModel("kling-v2")
         }
         presetChip("DashScope") {
             name = name.isEmpty ? "DashScope" : name
             endpoint = "https://dashscope.aliyuncs.com/api/v1"
+            apiStyle = .dashScope
             modelName = "wan2.6-t2v"
-            enableVideoModel("wan2.6-t2v", mode: .dashScope)
-            enableVideoModel("wan2.6-i2v", mode: .dashScope)
+            enableVideoModel("wan2.6-t2v")
+            enableVideoModel("wan2.6-i2v")
         }
         presetChip("Google Veo") {
             name = name.isEmpty ? "Google Veo" : name
             endpoint = "https://generativelanguage.googleapis.com/v1beta"
+            apiStyle = .googleVeo
             modelName = "veo-3"
-            enableVideoModel("veo-3", mode: .googleVeo)
+            enableVideoModel("veo-3")
         }
         presetChip("Sora") {
             name = name.isEmpty ? "OpenAI Sora" : name
             endpoint = "https://api.openai.com/v1"
+            apiStyle = .openAI
             modelName = "sora-2"
-            enableVideoModel("sora-2", mode: .restPolling)
+            enableVideoModel("sora-2")
         }
         presetChip("Seedance") {
             name = name.isEmpty ? "Seedance" : name
             endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+            apiStyle = .seedance
             modelName = "doubao-seedance-2-0"
-            enableVideoModel("doubao-seedance-2-0", mode: .seedance)
+            enableVideoModel("doubao-seedance-2-0")
         }
     }
 
@@ -796,10 +806,10 @@ struct LLMProviderEditView: View {
     }
 
     /// Enable a model with video generation capability pre-configured.
-    private func enableVideoModel(_ model: String, mode: VideoGenMode) {
+    private func enableVideoModel(_ model: String) {
         enabledModels.insert(model)
         var caps = modelCapabilities[model] ?? ModelCapabilities.inferred(from: model)
-        caps.videoGenerationMode = mode
+        caps.supportsVideoGeneration = true
         caps.supportsToolUse = false
         modelCapabilities[model] = caps
     }
@@ -900,5 +910,5 @@ private struct CapabilitiesBindings {
     let supportsVideoInput: Binding<Bool>
     let supportsToolUse: Binding<Bool>
     let imageGenerationMode: Binding<ImageGenMode>
-    let videoGenerationMode: Binding<VideoGenMode>
+    let supportsVideoGeneration: Binding<Bool>
 }
