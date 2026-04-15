@@ -351,6 +351,7 @@
 "provider.imageGenMode.none" = "None";
 "provider.imageGenMode.chatInline" = "Chat Inline";
 "provider.imageGenMode.dedicatedAPI" = "Dedicated API";
+"provider.imageGenMode.dashScope" = "DashScope";
 "provider.videoGenMode.none" = "None";
 "provider.videoGenMode.auto" = "Auto Detect";
 "provider.videoGenMode.restPolling" = "REST Polling (Sora, Runway, Luma)";

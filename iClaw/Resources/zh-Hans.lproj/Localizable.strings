@@ -351,6 +351,7 @@
 "provider.imageGenMode.none" = "不支持";
 "provider.imageGenMode.chatInline" = "对话内联";
 "provider.imageGenMode.dedicatedAPI" = "独立 API";
+"provider.imageGenMode.dashScope" = "DashScope";
 "provider.videoGenMode.none" = "不支持";
 "provider.videoGenMode.auto" = "自动检测";
 "provider.videoGenMode.restPolling" = "REST 轮询 (Sora, Runway, Luma)";

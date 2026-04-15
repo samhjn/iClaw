@@ -506,6 +506,7 @@ enum L10n {
         static var imageGenModeNone: String { tr("provider.imageGenMode.none") }
         static var imageGenModeChatInline: String { tr("provider.imageGenMode.chatInline") }
         static var imageGenModeDedicatedAPI: String { tr("provider.imageGenMode.dedicatedAPI") }
+        static var imageGenModeDashScope: String { tr("provider.imageGenMode.dashScope") }
     }
 
     // MARK: - Skills

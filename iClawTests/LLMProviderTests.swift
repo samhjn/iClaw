@@ -495,6 +495,22 @@ final class LLMProviderTests: XCTestCase {
         }
     }
 
+    func testInferredCapabilities_DashScopeImageGenModels() {
+        let imageModels: [(String, String)] = [
+            ("wan2.7-image-pro", "Wan 2.7 Image Pro"),
+            ("wan2.7-image", "Wan 2.7 Image"),
+        ]
+        for (model, label) in imageModels {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertEqual(caps.imageGenerationMode, .dashScope,
+                           "\(label) (\(model)): expected imageGenMode=.dashScope")
+            XCTAssertFalse(caps.supportsToolUse,
+                           "\(label) (\(model)): image-only models should NOT support tool use")
+            XCTAssertFalse(caps.supportsVideoGeneration,
+                           "\(label) (\(model)): should not infer video generation")
+        }
+    }
+
     func testInferredCapabilities_VideoInputModels() {
         let videoInputModels = [
             "gemini-2.0-flash",

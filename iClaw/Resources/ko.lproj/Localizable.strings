@@ -350,6 +350,7 @@
 "provider.imageGenMode.none" = "없음";
 "provider.imageGenMode.chatInline" = "채팅 인라인";
 "provider.imageGenMode.dedicatedAPI" = "전용 API";
+"provider.imageGenMode.dashScope" = "DashScope";
 "provider.videoGenMode.none" = "없음";
 "provider.videoGenMode.auto" = "자동 감지";
 "provider.videoGenMode.restPolling" = "REST 폴링 (Sora, Runway, Luma)";
