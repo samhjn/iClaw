@@ -528,16 +528,17 @@ final class ModelToolsTests: XCTestCase {
 
     @MainActor
     func testListModelsEmptyCategories() {
+        // Create only an LLM provider so image/video categories are empty
+        _ = makeLLMProvider(name: "OnlyLLM")
         let agent = makeAgent()
         let tools = ModelTools(agent: agent, modelContext: context)
         let result = tools.listModels(arguments: [:])
 
-        // All categories should show "(none)" when empty
-        let sections = result.components(separatedBy: "## ").filter { !$0.isEmpty }
-        for section in sections {
-            XCTAssertTrue(section.contains("(none)") || section.contains("###"),
-                         "Empty section should show (none): \(section)")
-        }
+        // Image and Video sections should show "(none)"
+        XCTAssertTrue(result.contains("## Image Generation Models\n(none)"),
+                      "Empty image section should show (none)")
+        XCTAssertTrue(result.contains("## Video Generation Models\n(none)"),
+                      "Empty video section should show (none)")
     }
 
     @MainActor
