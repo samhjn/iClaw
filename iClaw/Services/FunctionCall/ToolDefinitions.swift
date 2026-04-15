@@ -1075,7 +1075,9 @@ enum ToolDefinitions {
             "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the image to generate. Be specific about style, composition, colors, and subject matter."),
             "size": ToolDefinitionBuilder.stringParam("Image size. Common values: 1024x1024, 1792x1024, 1024x1792. Optional, defaults to model default."),
             "quality": ToolDefinitionBuilder.enumParam("Image quality level. Optional.", values: ["standard", "hd"]),
-            "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1.")
+            "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1."),
+            "provider_id": ToolDefinitionBuilder.stringParam("Optional: UUID of a specific provider to use for this request, overriding the agent's default image provider. Use list_models to see available providers."),
+            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name to use for this request, overriding the default. Must be used together with provider_id.")
         ],
         required: ["prompt"]
     )
@@ -1089,7 +1091,9 @@ enum ToolDefinitions {
             "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the video to generate. Be specific about the scene, action, camera movement, style, and mood."),
             "duration": ToolDefinitionBuilder.stringParam("Desired video duration. Common values: '5s', '10s'. Optional, defaults to model default."),
             "aspect_ratio": ToolDefinitionBuilder.stringParam("Aspect ratio. Common values: '16:9', '9:16', '1:1'. Optional, defaults to model default."),
-            "image_url": ToolDefinitionBuilder.stringParam("Optional URL or agentfile:// reference of an image to use as the first frame (image-to-video). Only supported by some models.")
+            "image_url": ToolDefinitionBuilder.stringParam("Optional URL or agentfile:// reference of an image to use as the first frame (image-to-video). Only supported by some models."),
+            "provider_id": ToolDefinitionBuilder.stringParam("Optional: UUID of a specific provider to use for this request, overriding the agent's default video provider. Use list_models to see available providers."),
+            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name to use for this request, overriding the default. Must be used together with provider_id.")
         ],
         required: ["prompt"]
     )
