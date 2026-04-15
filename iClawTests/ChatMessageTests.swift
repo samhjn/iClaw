@@ -7,7 +7,7 @@ final class ChatMessageTests: XCTestCase {
 
     func testSystemMessage() {
         let msg = LLMChatMessage.system("You are a helpful assistant.")
-        XCTAssertEqual(msg.role, "system")
+        XCTAssertEqual(msg.role, .system)
         XCTAssertEqual(msg.content, "You are a helpful assistant.")
         XCTAssertNil(msg.toolCalls)
         XCTAssertNil(msg.toolCallId)
@@ -15,13 +15,13 @@ final class ChatMessageTests: XCTestCase {
 
     func testUserMessage() {
         let msg = LLMChatMessage.user("Hello!")
-        XCTAssertEqual(msg.role, "user")
+        XCTAssertEqual(msg.role, .user)
         XCTAssertEqual(msg.content, "Hello!")
     }
 
     func testAssistantMessage() {
         let msg = LLMChatMessage.assistant("Hi there!")
-        XCTAssertEqual(msg.role, "assistant")
+        XCTAssertEqual(msg.role, .assistant)
         XCTAssertEqual(msg.content, "Hi there!")
         XCTAssertNil(msg.toolCalls)
     }
@@ -29,7 +29,7 @@ final class ChatMessageTests: XCTestCase {
     func testAssistantMessageWithToolCalls() {
         let toolCall = LLMToolCall(id: "call_1", name: "browser_navigate", arguments: "{\"url\":\"https://example.com\"}")
         let msg = LLMChatMessage.assistant(nil, toolCalls: [toolCall])
-        XCTAssertEqual(msg.role, "assistant")
+        XCTAssertEqual(msg.role, .assistant)
         XCTAssertNil(msg.content)
         XCTAssertEqual(msg.toolCalls?.count, 1)
         XCTAssertEqual(msg.toolCalls?.first?.function.name, "browser_navigate")
@@ -37,7 +37,7 @@ final class ChatMessageTests: XCTestCase {
 
     func testToolMessage() {
         let msg = LLMChatMessage.tool(content: "Success", toolCallId: "call_1", name: "browser_navigate")
-        XCTAssertEqual(msg.role, "tool")
+        XCTAssertEqual(msg.role, .tool)
         XCTAssertEqual(msg.content, "Success")
         XCTAssertEqual(msg.toolCallId, "call_1")
         XCTAssertEqual(msg.name, "browser_navigate")
@@ -68,7 +68,7 @@ final class ChatMessageTests: XCTestCase {
         let original = LLMChatMessage.assistant("Let me read that.", toolCalls: [toolCall])
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(LLMChatMessage.self, from: data)
-        XCTAssertEqual(decoded.role, "assistant")
+        XCTAssertEqual(decoded.role, .assistant)
         XCTAssertEqual(decoded.content, "Let me read that.")
         XCTAssertEqual(decoded.toolCalls?.count, 1)
         XCTAssertEqual(decoded.toolCalls?.first?.id, "call_abc")

@@ -57,7 +57,7 @@ enum ContentPart: Codable {
 // MARK: - OpenAI-compatible request/response types
 
 struct LLMChatMessage: Codable {
-    let role: String
+    let role: MessageRole
     var content: String?
     var contentParts: [ContentPart]?
     var toolCalls: [LLMToolCall]?
@@ -76,7 +76,7 @@ struct LLMChatMessage: Codable {
 
         if let parts = contentParts, !parts.isEmpty {
             try container.encode(parts, forKey: .content)
-        } else if role == "assistant" && toolCalls != nil {
+        } else if role == .assistant && toolCalls != nil {
             try container.encode(content, forKey: .content)
         } else if let content = content {
             try container.encode(content, forKey: .content)
@@ -95,7 +95,13 @@ struct LLMChatMessage: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        role = try container.decode(String.self, forKey: .role)
+        // Decode role: try enum first, fall back to raw string for forward compat
+        if let roleEnum = try? container.decode(MessageRole.self, forKey: .role) {
+            role = roleEnum
+        } else {
+            let roleStr = try container.decode(String.self, forKey: .role)
+            role = MessageRole(rawValue: roleStr) ?? .user
+        }
         toolCalls = try container.decodeIfPresent([LLMToolCall].self, forKey: .toolCalls)
         toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
         name = try container.decodeIfPresent(String.self, forKey: .name)
@@ -132,7 +138,7 @@ struct LLMChatMessage: Codable {
         content = contentStr
     }
 
-    init(role: String, content: String? = nil, contentParts: [ContentPart]? = nil,
+    init(role: MessageRole, content: String? = nil, contentParts: [ContentPart]? = nil,
          toolCalls: [LLMToolCall]? = nil, toolCallId: String? = nil, name: String? = nil) {
         self.role = role
         self.content = content
@@ -143,11 +149,11 @@ struct LLMChatMessage: Codable {
     }
 
     static func system(_ content: String) -> LLMChatMessage {
-        LLMChatMessage(role: "system", content: content)
+        LLMChatMessage(role: .system, content: content)
     }
 
     static func user(_ content: String) -> LLMChatMessage {
-        LLMChatMessage(role: "user", content: content)
+        LLMChatMessage(role: .user, content: content)
     }
 
     static func userWithImages(_ text: String, images: [ImageAttachment]) -> LLMChatMessage {
@@ -155,7 +161,7 @@ struct LLMChatMessage: Codable {
         for img in images {
             parts.append(.imageURL(url: img.base64DataURI, detail: "auto"))
         }
-        return LLMChatMessage(role: "user", content: text, contentParts: parts)
+        return LLMChatMessage(role: .user, content: text, contentParts: parts)
     }
 
     /// Create a user message with mixed media (images + videos).
@@ -169,15 +175,15 @@ struct LLMChatMessage: Codable {
                 parts.append(.videoURL(url: dataURI))
             }
         }
-        return LLMChatMessage(role: "user", content: text, contentParts: parts)
+        return LLMChatMessage(role: .user, content: text, contentParts: parts)
     }
 
     static func assistant(_ content: String?, toolCalls: [LLMToolCall]? = nil) -> LLMChatMessage {
-        LLMChatMessage(role: "assistant", content: content, toolCalls: toolCalls)
+        LLMChatMessage(role: .assistant, content: content, toolCalls: toolCalls)
     }
 
     static func tool(content: String, toolCallId: String, name: String? = nil) -> LLMChatMessage {
-        LLMChatMessage(role: "tool", content: content, toolCallId: toolCallId, name: name)
+        LLMChatMessage(role: .tool, content: content, toolCallId: toolCallId, name: name)
     }
 
 }

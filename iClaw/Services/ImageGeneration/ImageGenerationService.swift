@@ -108,30 +108,25 @@ final class ImageGenerationService: @unchecked Sendable {
             responseFormat: "b64_json"
         )
 
-        let endpoint = buildEndpoint("/images/generations")
-        guard let url = URL(string: endpoint) else {
-            throw ImageGenerationError.invalidURL(endpoint)
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue("iClaw/1.0 (https://iclaw.shadow.mov)", forHTTPHeaderField: "User-Agent")
-        if !provider.apiKey.isEmpty {
-            request.addValue("Bearer \(provider.apiKey)", forHTTPHeaderField: "Authorization")
-        }
-
         let encoder = JSONEncoder()
-        request.httpBody = try encoder.encode(body)
+        let bodyData = try encoder.encode(body)
+        let request = try APIRequestBuilder.jsonPOST(
+            base: provider.endpoint,
+            path: "/images/generations",
+            apiKey: provider.apiKey,
+            style: provider.apiStyle,
+            body: bodyData
+        )
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ImageGenerationError.apiError(statusCode: 0, message: "Invalid response")
-        }
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw ImageGenerationError.apiError(statusCode: httpResponse.statusCode, message: errorBody)
+        do {
+            try APIRequestBuilder.validate(data: data, response: response)
+        } catch let error as APIRequestError {
+            throw ImageGenerationError.apiError(
+                statusCode: error.statusCode ?? 0,
+                message: error.messageBody ?? "Unknown error"
+            )
         }
 
         let decoded = try JSONDecoder().decode(ImageGenerationResponse.self, from: data)
@@ -230,14 +225,6 @@ final class ImageGenerationService: @unchecked Sendable {
     }
 
     // MARK: - Helpers
-
-    private func buildEndpoint(_ path: String) -> String {
-        let base = provider.endpoint
-        if base.hasSuffix("/") {
-            return base + path.dropFirst() // remove leading /
-        }
-        return base + path
-    }
 
     private func createAttachment(from imageData: Data, mimeType: String, agentId: UUID) -> ImageAttachment? {
         guard let image = UIImage(data: imageData) else { return nil }

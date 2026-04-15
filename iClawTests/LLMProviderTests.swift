@@ -34,7 +34,6 @@ final class LLMProviderTests: XCTestCase {
         XCTAssertEqual(provider.modelName, "gpt-5.4")
         XCTAssertFalse(provider.isDefault)
         XCTAssertEqual(provider.maxTokens, 4096)
-        XCTAssertEqual(provider.thinkingBudget, 10000)
         XCTAssertEqual(provider.temperature, 0.7)
         XCTAssertEqual(provider.apiStyle, .openAI)
         XCTAssertTrue(provider.apiKey.isEmpty)
@@ -104,15 +103,18 @@ final class LLMProviderTests: XCTestCase {
     }
 
     @MainActor
-    func testCapabilitiesFallbackToProviderLevel() {
+    func testCapabilitiesFallbackToInferred() {
         let provider = LLMProvider(name: "Test")
-        provider.supportsVision = true
-        provider.supportsToolUse = true
 
+        // Unknown model with no per-model entry falls back to inferred defaults
         let caps = provider.capabilities(for: "some-model")
-        XCTAssertTrue(caps.supportsVision)
-        XCTAssertTrue(caps.supportsToolUse)
+        XCTAssertFalse(caps.supportsVision, "Unknown model should not infer vision")
+        XCTAssertTrue(caps.supportsToolUse, "Default should support tool use")
         XCTAssertFalse(caps.supportsImageGeneration)
+
+        // Known model name should get inferred capabilities
+        let gptCaps = provider.capabilities(for: "gpt-4o")
+        XCTAssertTrue(gptCaps.supportsVision, "GPT-4o should infer vision")
     }
 
     @MainActor
@@ -441,31 +443,32 @@ final class LLMProviderTests: XCTestCase {
     }
 
     func testInferredCapabilities_DedicatedVideoGenModels() {
-        let videoModels: [(String, String)] = [
-            ("sora-2", "Sora"),
-            ("veo-3", "Veo"),
-            ("veo_2", "Veo underscore"),
-            ("wan2.6-t2v", "Wan T2V"),
-            ("wan2.7-i2v-flash", "Wan I2V"),
-            ("wan2.6-vace", "Wan VACE"),
-            ("runway-gen4", "Runway"),
-            ("gen-3-alpha", "Gen-3"),
-            ("gen-4-turbo", "Gen-4"),
-            ("luma-photon", "Luma"),
-            ("dream-machine-v1", "Dream Machine"),
-            ("kling-v2", "Kling"),
-            ("minimax-video-01", "MiniMax Video"),
-            ("hailuo-01", "Hailuo"),
-            ("doubao-seedance-2-0", "Seedance 2.0"),
-            ("doubao-seedance-1-5-pro-251215", "Seedance 1.5 pro"),
-            ("doubao-seedance-1-0-lite-t2v", "Seedance 1.0 lite t2v"),
+        // Each model should infer a specific VideoGenMode (not .auto)
+        let videoModels: [(String, String, VideoGenMode)] = [
+            ("sora-2", "Sora", .openAI),
+            ("veo-3", "Veo", .googleVeo),
+            ("veo_2", "Veo underscore", .googleVeo),
+            ("wan2.6-t2v", "Wan T2V", .dashScope),
+            ("wan2.7-i2v-flash", "Wan I2V", .dashScope),
+            ("wan2.6-vace", "Wan VACE", .dashScope),
+            ("runway-gen4", "Runway", .openAI),
+            ("gen-3-alpha", "Gen-3", .openAI),
+            ("gen-4-turbo", "Gen-4", .openAI),
+            ("luma-photon", "Luma", .openAI),
+            ("dream-machine-v1", "Dream Machine", .openAI),
+            ("kling-v2", "Kling", .kling),
+            ("minimax-video-01", "MiniMax Video", .openAI),
+            ("hailuo-01", "Hailuo", .openAI),
+            ("doubao-seedance-2-0", "Seedance 2.0", .seedance),
+            ("doubao-seedance-1-5-pro-251215", "Seedance 1.5 pro", .seedance),
+            ("doubao-seedance-1-0-lite-t2v", "Seedance 1.0 lite t2v", .seedance),
         ]
-        for (model, label) in videoModels {
+        for (model, label, expectedMode) in videoModels {
             let caps = ModelCapabilities.inferred(from: model)
             XCTAssertTrue(caps.supportsVideoGeneration,
                           "\(label) (\(model)): expected videoGen=true")
-            XCTAssertEqual(caps.videoGenerationMode, .auto,
-                           "\(label) (\(model)): expected videoGenMode=.auto")
+            XCTAssertEqual(caps.videoGenerationMode, expectedMode,
+                           "\(label) (\(model)): expected videoGenMode=.\(expectedMode)")
             XCTAssertFalse(caps.supportsToolUse,
                            "\(label) (\(model)): video-only models should NOT support tool use")
         }
@@ -664,35 +667,6 @@ final class LLMProviderTests: XCTestCase {
         provider.cachedModelList = []
         XCTAssertTrue(provider.cachedModelList.isEmpty)
         XCTAssertNil(provider.cachedModelListRaw)
-    }
-
-    // MARK: - Thinking Budget
-
-    @MainActor
-    func testThinkingBudgetDefault() {
-        let provider = LLMProvider(name: "Test")
-        XCTAssertEqual(provider.thinkingBudget, 10000)
-    }
-
-    @MainActor
-    func testThinkingBudgetCustomValue() {
-        let provider = LLMProvider(name: "Test")
-        provider.thinkingBudget = 25000
-        XCTAssertEqual(provider.thinkingBudget, 25000)
-    }
-
-    @MainActor
-    func testThinkingBudgetPersistence() throws {
-        let provider = LLMProvider(name: "Budget Test")
-        provider.thinkingBudget = 50000
-        context.insert(provider)
-        try context.save()
-
-        let fetchDescriptor = FetchDescriptor<LLMProvider>(
-            predicate: #Predicate { $0.name == "Budget Test" }
-        )
-        let fetched = try context.fetch(fetchDescriptor)
-        XCTAssertEqual(fetched.first?.thinkingBudget, 50000)
     }
 
     // MARK: - SwiftData Persistence

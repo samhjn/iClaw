@@ -11,7 +11,6 @@ struct LLMProviderEditView: View {
     @State private var apiKey: String = ""
     @State private var modelName: String = "gpt-5.4"
     @State private var maxTokens: Int = 4096
-    @State private var thinkingBudget: Int = 10000
     @State private var temperature: Double = 0.7
     @State private var apiStyle: APIStyle = .openAI
     @State private var providerType: ProviderType = .llm
@@ -27,6 +26,15 @@ struct LLMProviderEditView: View {
     @State private var showAddModel = false
     @State private var newModelName: String = ""
 
+    // Connection test state
+    @State private var isTestingConnection = false
+    @State private var connectionTestResult: ConnectionTestResult?
+
+    enum ConnectionTestResult {
+        case success(modelCount: Int)
+        case failure(String)
+    }
+
     private var isEditing: Bool { existingProvider != nil }
 
     /// Only show enabled models in pickers.
@@ -38,18 +46,17 @@ struct LLMProviderEditView: View {
         NavigationStack {
             Form {
                 providerTypeSection
+                presetsSection
                 providerSection
-                if providerType == .llm {
-                    apiStyleSection
-                }
+                apiStyleSection
                 authSection
+                connectionTestSection
                 defaultModelSection
                 enabledModelsSection
                 if providerType == .llm {
                     remoteModelsSection
                     parametersSection
                 }
-                presetsSection
             }
             .navigationTitle(isEditing ? L10n.Provider.editProvider : L10n.Provider.addProvider)
             .navigationBarTitleDisplayMode(.inline)
@@ -85,7 +92,6 @@ struct LLMProviderEditView: View {
                 apiKey = p.apiKey
                 modelName = p.modelName
                 maxTokens = p.maxTokens
-                thinkingBudget = p.thinkingBudget
                 temperature = p.temperature
                 apiStyle = APIStyle(rawValue: p.apiStyleRaw) ?? .openAI
                 providerType = ProviderType(rawValue: p.providerTypeRaw) ?? .llm
@@ -99,14 +105,9 @@ struct LLMProviderEditView: View {
                     modelCapabilities = dict
                 }
 
-                // Migrate legacy provider-level flags for existing models without capabilities
+                // Auto-infer capabilities for models without explicit entries
                 for model in p.enabledModels where modelCapabilities[model] == nil {
-                    modelCapabilities[model] = ModelCapabilities(
-                        supportsVision: p.supportsVision,
-                        supportsToolUse: p.supportsToolUse,
-                        supportsImageGeneration: p.supportsImageGeneration,
-                        supportsReasoning: false
-                    )
+                    modelCapabilities[model] = ModelCapabilities.inferred(from: model)
                 }
             } else {
                 enableModel(modelName)
@@ -156,6 +157,81 @@ struct LLMProviderEditView: View {
         Section(L10n.Provider.authentication) {
             SecureField(L10n.Provider.apiKey, text: $apiKey)
                 .autocapitalization(.none)
+        }
+    }
+
+    private var connectionTestSection: some View {
+        Section {
+            HStack {
+                Button {
+                    testConnection()
+                } label: {
+                    HStack(spacing: 6) {
+                        if isTestingConnection {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "bolt.horizontal")
+                        }
+                        Text("Test Connection")
+                    }
+                }
+                .disabled(endpoint.isEmpty || isTestingConnection)
+
+                Spacer()
+
+                if let result = connectionTestResult {
+                    switch result {
+                    case .success(let count):
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text(count > 0 ? "\(count) models" : "OK")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    case .failure(let msg):
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(msg)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func testConnection() {
+        isTestingConnection = true
+        connectionTestResult = nil
+
+        Task {
+            do {
+                let models = try await LLMService.fetchModels(
+                    endpoint: endpoint,
+                    apiKey: apiKey,
+                    apiStyle: apiStyle
+                )
+                await MainActor.run {
+                    connectionTestResult = .success(modelCount: models.count)
+                    isTestingConnection = false
+                }
+            } catch {
+                await MainActor.run {
+                    let msg = if let apiErr = error as? LLMError,
+                                 case .apiError(let code, _) = apiErr {
+                        "HTTP \(code)"
+                    } else {
+                        error.localizedDescription
+                    }
+                    connectionTestResult = .failure(String(msg.prefix(40)))
+                    isTestingConnection = false
+                }
+            }
         }
     }
 
@@ -557,24 +633,51 @@ struct LLMProviderEditView: View {
     }
 
     private var presetsSection: some View {
-        Section(L10n.Provider.presets) {
-            switch providerType {
-            case .llm: llmPresetsContent
-            case .imageOnly: imagePresetsContent
-            case .videoOnly: videoPresetsContent
+        Section {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    switch providerType {
+                    case .llm: llmPresetChips
+                    case .imageOnly: imagePresetChips
+                    case .videoOnly: videoPresetChips
+                    }
+                }
+                .padding(.vertical, 4)
             }
+        } header: {
+            Text(L10n.Provider.presets)
         }
     }
 
+    private func presetChip(_ label: String, icon: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11))
+                }
+                Text(label)
+                    .font(.subheadline.weight(.medium))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(.blue.opacity(0.1), in: Capsule())
+            .foregroundStyle(.blue)
+        }
+        .buttonStyle(.plain)
+    }
+
     @ViewBuilder
-    private var llmPresetsContent: some View {
-        Button("OpenAI") {
+    private var llmPresetChips: some View {
+        presetChip("OpenAI") {
+            name = name.isEmpty ? "OpenAI" : name
             endpoint = "https://api.openai.com/v1"
             modelName = "gpt-5.4"
             apiStyle = .openAI
             enableModel("gpt-5.4")
         }
-        Button("Anthropic") {
+        presetChip("Anthropic") {
+            name = name.isEmpty ? "Anthropic" : name
             endpoint = "https://api.anthropic.com/v1"
             modelName = "claude-sonnet-4-6"
             apiStyle = .anthropic
@@ -582,20 +685,23 @@ struct LLMProviderEditView: View {
             modelCapabilities["claude-sonnet-4-6"]?.thinkingLevel = .medium
             modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
         }
-        Button("DeepSeek") {
+        presetChip("DeepSeek") {
+            name = name.isEmpty ? "DeepSeek" : name
             endpoint = "https://api.deepseek.com/v1"
             modelName = "deepseek-chat"
             apiStyle = .openAI
             enableModel("deepseek-chat")
         }
-        Button("OpenRouter") {
+        presetChip("OpenRouter") {
+            name = name.isEmpty ? "OpenRouter" : name
             endpoint = "https://openrouter.ai/api/v1"
             modelName = "anthropic/claude-sonnet-4.6"
             apiStyle = .openAI
             enableModel("anthropic/claude-sonnet-4.6")
             enableModel("openai/gpt-5.4")
         }
-        Button("Local (Ollama)") {
+        presetChip("Ollama", icon: "desktopcomputer") {
+            name = name.isEmpty ? "Ollama" : name
             endpoint = "http://localhost:11434/v1"
             modelName = "llama3"
             apiKey = "ollama"
@@ -605,33 +711,33 @@ struct LLMProviderEditView: View {
     }
 
     @ViewBuilder
-    private var videoPresetsContent: some View {
-        Button("Kling") {
+    private var videoPresetChips: some View {
+        presetChip("Kling") {
             name = name.isEmpty ? "Kling" : name
             endpoint = "https://api.klingai.com"
             modelName = "kling-v2"
             enableVideoModel("kling-v2", mode: .kling)
         }
-        Button("DashScope (Tongyi Wan)") {
+        presetChip("DashScope") {
             name = name.isEmpty ? "DashScope" : name
             endpoint = "https://dashscope.aliyuncs.com/api/v1"
             modelName = "wan2.6-t2v"
             enableVideoModel("wan2.6-t2v", mode: .dashScope)
             enableVideoModel("wan2.6-i2v", mode: .dashScope)
         }
-        Button("Google Veo") {
+        presetChip("Google Veo") {
             name = name.isEmpty ? "Google Veo" : name
             endpoint = "https://generativelanguage.googleapis.com/v1beta"
             modelName = "veo-3"
             enableVideoModel("veo-3", mode: .googleVeo)
         }
-        Button("OpenAI Sora") {
+        presetChip("Sora") {
             name = name.isEmpty ? "OpenAI Sora" : name
             endpoint = "https://api.openai.com/v1"
             modelName = "sora-2"
             enableVideoModel("sora-2", mode: .openAI)
         }
-        Button("ByteDance (Seedance)") {
+        presetChip("Seedance") {
             name = name.isEmpty ? "Seedance" : name
             endpoint = "https://ark.cn-beijing.volces.com/api/v3"
             modelName = "doubao-seedance-2-0"
@@ -640,39 +746,39 @@ struct LLMProviderEditView: View {
     }
 
     @ViewBuilder
-    private var imagePresetsContent: some View {
-        Button("OpenAI (DALL-E / GPT Image)") {
+    private var imagePresetChips: some View {
+        presetChip("OpenAI") {
             name = name.isEmpty ? "OpenAI Image" : name
             endpoint = "https://api.openai.com/v1"
             modelName = "gpt-image-1"
             enableImageModel("gpt-image-1", mode: .dedicatedAPI)
             enableImageModel("dall-e-3", mode: .dedicatedAPI)
         }
-        Button("Google Gemini (Imagen)") {
+        presetChip("Gemini Imagen") {
             name = name.isEmpty ? "Google Imagen" : name
             endpoint = "https://generativelanguage.googleapis.com/v1beta"
             modelName = "gemini-2.0-flash-preview-image-generation"
             enableImageModel("gemini-2.0-flash-preview-image-generation", mode: .chatInline)
         }
-        Button("ByteDance (Seedream)") {
+        presetChip("Seedream") {
             name = name.isEmpty ? "Seedream" : name
             endpoint = "https://ark.cn-beijing.volces.com/api/v3"
             modelName = "doubao-seedream-4.5"
             enableImageModel("doubao-seedream-4.5", mode: .dedicatedAPI)
         }
-        Button("DashScope (Tongyi Wan)") {
+        presetChip("DashScope") {
             name = name.isEmpty ? "DashScope Image" : name
             endpoint = "https://dashscope.aliyuncs.com/api/v1"
             modelName = "wan-x2.1"
             enableImageModel("wan-x2.1", mode: .dedicatedAPI)
         }
-        Button("Flux") {
+        presetChip("Flux") {
             name = name.isEmpty ? "Flux" : name
             endpoint = "https://api.us1.bfl.ai/v1"
             modelName = "flux-pro-1.1"
             enableImageModel("flux-pro-1.1", mode: .dedicatedAPI)
         }
-        Button("Stable Diffusion") {
+        presetChip("Stable Diffusion") {
             name = name.isEmpty ? "Stable Diffusion" : name
             endpoint = "https://api.stability.ai/v1"
             modelName = "sd3-medium"
@@ -720,15 +826,12 @@ struct LLMProviderEditView: View {
             return json
         }()
 
-        let defaultCaps = modelCapabilities[modelName] ?? .default
-
         if let p = existingProvider {
             p.name = name
             p.endpoint = endpoint
             p.apiKey = apiKey
             p.modelName = modelName
             p.maxTokens = maxTokens
-            p.thinkingBudget = thinkingBudget
             p.temperature = temperature
             // Write raw stored properties directly (not through computed setters)
             p.apiStyleRaw = apiStyle.rawValue
@@ -736,11 +839,6 @@ struct LLMProviderEditView: View {
             p.modelCapabilitiesJSON = capsJSON
             p.enabledModels = Array(enabledModels)
             p.cachedModelList = fetchedModels
-
-            // Sync legacy flags from default model for backward compatibility
-            p.supportsVision = defaultCaps.supportsVision
-            p.supportsToolUse = defaultCaps.supportsToolUse
-            p.supportsImageGeneration = defaultCaps.supportsImageGeneration
 
             viewModel.updateProvider(p)
         } else {
@@ -754,14 +852,9 @@ struct LLMProviderEditView: View {
                 temperature: temperature
             )
             // Write raw stored properties directly
-            provider.thinkingBudget = thinkingBudget
             provider.apiStyleRaw = apiStyle.rawValue
             provider.providerTypeRaw = providerType.rawValue
             provider.modelCapabilitiesJSON = capsJSON
-
-            provider.supportsVision = defaultCaps.supportsVision
-            provider.supportsToolUse = defaultCaps.supportsToolUse
-            provider.supportsImageGeneration = defaultCaps.supportsImageGeneration
 
             provider.enabledModels = Array(enabledModels)
             provider.cachedModelList = fetchedModels
