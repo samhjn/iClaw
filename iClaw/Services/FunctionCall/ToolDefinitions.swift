@@ -403,10 +403,10 @@ enum ToolDefinitions {
 
     static let setModelTool = ToolDefinitionBuilder.build(
         name: "set_model",
-        description: "Configure model settings for this agent. Roles: 'primary' sets the main model, 'fallback' replaces the entire fallback chain, 'add_fallback' appends one model to the chain, 'sub_agent' sets the default model for sub-agents.",
+        description: "Configure model settings for this agent. LLM roles: 'primary' sets the main chat model (LLM only), 'fallback' replaces the entire fallback chain (LLM only), 'add_fallback' appends one model to the chain (LLM only), 'sub_agent' sets the default model for sub-agents (LLM only). Media roles: 'image' sets the image generation model, 'video' sets the text-to-video model, 'i2v' sets the image-to-video model. Pass model_id to set, or omit model_id to clear.",
         properties: [
-            "role": ToolDefinitionBuilder.enumParam("Which model slot to configure", values: ["primary", "fallback", "add_fallback", "sub_agent"]),
-            "model_id": ToolDefinitionBuilder.stringParam("UUID of the LLM provider to set. Use list_models to see available providers."),
+            "role": ToolDefinitionBuilder.enumParam("Which model slot to configure", values: ["primary", "fallback", "add_fallback", "sub_agent", "image", "video", "i2v"]),
+            "model_id": ToolDefinitionBuilder.stringParam("UUID of the provider to set. Use list_models to see available providers. Omit to clear the current setting."),
             "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name on the provider. If omitted, uses the provider's default model."),
             "model_ids": .init(type: "array", description: "Array of provider UUIDs (for 'fallback' role to set the entire chain)", items: .init(type: "string", description: nil))
         ],
@@ -415,14 +415,14 @@ enum ToolDefinitions {
 
     static let getModelTool = ToolDefinitionBuilder.build(
         name: "get_model",
-        description: "Get the current model configuration for this agent, including primary model, fallback chain, and sub-agent default.",
+        description: "Get the current model configuration for this agent, including LLM models (primary, fallback chain, sub-agent), image generation model, and video generation models (T2V/I2V).",
         properties: [:],
         required: []
     )
 
     static let listModelsTool = ToolDefinitionBuilder.build(
         name: "list_models",
-        description: "List all available LLM providers/models that can be assigned to agents.",
+        description: "List all available providers/models grouped by category: LLM, image generation, and video generation.",
         properties: [:],
         required: []
     )
@@ -1075,7 +1075,9 @@ enum ToolDefinitions {
             "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the image to generate. Be specific about style, composition, colors, and subject matter."),
             "size": ToolDefinitionBuilder.stringParam("Image size. Common values: 1024x1024, 1792x1024, 1024x1792. Optional, defaults to model default."),
             "quality": ToolDefinitionBuilder.enumParam("Image quality level. Optional.", values: ["standard", "hd"]),
-            "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1.")
+            "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1."),
+            "provider_id": ToolDefinitionBuilder.stringParam("Optional: UUID of a specific provider to use for this request, overriding the agent's default image provider. Use list_models to see available providers."),
+            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name to use for this request, overriding the default. Must be used together with provider_id.")
         ],
         required: ["prompt"]
     )
@@ -1089,7 +1091,9 @@ enum ToolDefinitions {
             "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the video to generate. Be specific about the scene, action, camera movement, style, and mood."),
             "duration": ToolDefinitionBuilder.stringParam("Desired video duration. Common values: '5s', '10s'. Optional, defaults to model default."),
             "aspect_ratio": ToolDefinitionBuilder.stringParam("Aspect ratio. Common values: '16:9', '9:16', '1:1'. Optional, defaults to model default."),
-            "image_url": ToolDefinitionBuilder.stringParam("Optional URL or agentfile:// reference of an image to use as the first frame (image-to-video). Only supported by some models.")
+            "image_url": ToolDefinitionBuilder.stringParam("Optional URL or agentfile:// reference of an image to use as the first frame (image-to-video). Only supported by some models."),
+            "provider_id": ToolDefinitionBuilder.stringParam("Optional: UUID of a specific provider to use for this request, overriding the agent's default video provider. Use list_models to see available providers."),
+            "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name to use for this request, overriding the default. Must be used together with provider_id.")
         ],
         required: ["prompt"]
     )

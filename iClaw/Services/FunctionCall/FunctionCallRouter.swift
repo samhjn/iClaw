@@ -418,17 +418,28 @@ final class FunctionCallRouter {
             return ToolCallResult("[Error] Missing required parameter: prompt")
         }
 
-        guard let imageProviderId = agent.imageProviderId else {
-            return ToolCallResult("[Error] No image generation provider configured for this agent. Please configure one in Agent Settings → Model → Image Generation.")
-        }
-
         let router = ModelRouter(modelContext: modelContext)
-        guard let provider = router.providerById(imageProviderId) else {
-            return ToolCallResult("[Error] Image generation provider not found. It may have been deleted.")
-        }
 
-        let modelOverride = agent.imageModelNameOverride
-        let effectiveModel = modelOverride ?? provider.modelName
+        // Allow per-call provider/model override
+        let provider: LLMProvider
+        let effectiveModel: String
+        if let overrideIdStr = arguments["provider_id"] as? String,
+           let overrideId = UUID(uuidString: overrideIdStr) {
+            guard let p = router.providerById(overrideId) else {
+                return ToolCallResult("[Error] Provider not found with id: \(overrideIdStr)")
+            }
+            provider = p
+            effectiveModel = (arguments["model_name"] as? String) ?? p.modelName
+        } else {
+            guard let imageProviderId = agent.imageProviderId else {
+                return ToolCallResult("[Error] No image generation provider configured for this agent. Please configure one in Agent Settings → Model → Image Generation.")
+            }
+            guard let p = router.providerById(imageProviderId) else {
+                return ToolCallResult("[Error] Image generation provider not found. It may have been deleted.")
+            }
+            provider = p
+            effectiveModel = agent.imageModelNameOverride ?? p.modelName
+        }
 
         let n = (arguments["n"] as? Int) ?? 1
         let size = arguments["size"] as? String
@@ -466,27 +477,39 @@ final class FunctionCallRouter {
         let imageURL = arguments["image_url"] as? String
         let isI2V = imageURL != nil && !imageURL!.isEmpty
 
-        // Resolve provider: use separate I2V provider if configured, else fall back to T2V provider
-        let resolvedProviderId: UUID?
-        let resolvedModelOverride: String?
-        if isI2V, let i2vId = agent.i2vProviderId {
-            resolvedProviderId = i2vId
-            resolvedModelOverride = agent.i2vModelNameOverride
-        } else {
-            resolvedProviderId = agent.videoProviderId
-            resolvedModelOverride = agent.videoModelNameOverride
-        }
-
-        guard let providerId = resolvedProviderId else {
-            return ToolCallResult("[Error] No video generation provider configured for this agent. Please configure one in Agent Settings → Model → Video Generation.")
-        }
-
         let router = ModelRouter(modelContext: modelContext)
-        guard let provider = router.providerById(providerId) else {
-            return ToolCallResult("[Error] Video generation provider not found. It may have been deleted.")
-        }
 
-        let effectiveModel = resolvedModelOverride ?? provider.modelName
+        // Allow per-call provider/model override
+        let provider: LLMProvider
+        let effectiveModel: String
+        if let overrideIdStr = arguments["provider_id"] as? String,
+           let overrideId = UUID(uuidString: overrideIdStr) {
+            guard let p = router.providerById(overrideId) else {
+                return ToolCallResult("[Error] Provider not found with id: \(overrideIdStr)")
+            }
+            provider = p
+            effectiveModel = (arguments["model_name"] as? String) ?? p.modelName
+        } else {
+            // Resolve provider: use separate I2V provider if configured, else fall back to T2V provider
+            let resolvedProviderId: UUID?
+            let resolvedModelOverride: String?
+            if isI2V, let i2vId = agent.i2vProviderId {
+                resolvedProviderId = i2vId
+                resolvedModelOverride = agent.i2vModelNameOverride
+            } else {
+                resolvedProviderId = agent.videoProviderId
+                resolvedModelOverride = agent.videoModelNameOverride
+            }
+
+            guard let providerId = resolvedProviderId else {
+                return ToolCallResult("[Error] No video generation provider configured for this agent. Please configure one in Agent Settings → Model → Video Generation.")
+            }
+            guard let p = router.providerById(providerId) else {
+                return ToolCallResult("[Error] Video generation provider not found. It may have been deleted.")
+            }
+            provider = p
+            effectiveModel = resolvedModelOverride ?? p.modelName
+        }
         let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
 
         let service = VideoGenerationService(provider: provider, modelName: effectiveModel)
