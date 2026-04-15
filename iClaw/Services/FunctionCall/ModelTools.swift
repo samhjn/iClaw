@@ -22,6 +22,9 @@ struct ModelTools {
             guard let p = allProviders.first(where: { $0.id == uuid }) else {
                 return "[Error] No provider found with id: \(modelId)"
             }
+            if p.isMediaOnly {
+                return "[Error] Cannot set \(p.name) as primary model — only LLM providers are allowed. Image/video generation providers cannot be used as chat models."
+            }
             let modelName = arguments["model_name"] as? String
             let effectiveModel = modelName ?? p.modelName
             if !agent.isModelAllowed(providerId: uuid, modelName: effectiveModel) {
@@ -45,6 +48,10 @@ struct ModelTools {
             var acceptedModelNames: [String] = []
             for (i, uid) in valid.enumerated() {
                 guard let p = router.providerById(uid) else { continue }
+                if p.isMediaOnly {
+                    rejected.append("\(p.name) (media-only provider)")
+                    continue
+                }
                 let mn = (modelNames != nil && i < modelNames!.count && !modelNames![i].isEmpty) ? modelNames![i] : nil
                 let effectiveModel = mn ?? p.modelName
                 if agent.isModelAllowed(providerId: uid, modelName: effectiveModel) {
@@ -78,6 +85,9 @@ struct ModelTools {
             guard let p = allProviders.first(where: { $0.id == uuid }) else {
                 return "[Error] No provider found with id: \(modelId)"
             }
+            if p.isMediaOnly {
+                return "[Error] Cannot add \(p.name) as fallback — only LLM providers are allowed. Image/video generation providers cannot be used as chat models."
+            }
             let modelName = arguments["model_name"] as? String
             let effectiveModel = modelName ?? p.modelName
             if !agent.isModelAllowed(providerId: uuid, modelName: effectiveModel) {
@@ -98,6 +108,9 @@ struct ModelTools {
             if let modelId, let uuid = UUID(uuidString: modelId) {
                 guard let p = allProviders.first(where: { $0.id == uuid }) else {
                     return "[Error] No provider found with id: \(modelId)"
+                }
+                if p.isMediaOnly {
+                    return "[Error] Cannot set \(p.name) as sub-agent model — only LLM providers are allowed. Image/video generation providers cannot be used as chat models."
                 }
                 let effectiveModel = modelName ?? p.modelName
                 if !agent.isModelAllowed(providerId: uuid, modelName: effectiveModel) {
@@ -172,6 +185,9 @@ struct ModelTools {
         var providerCount = 0
 
         for p in providers {
+            // Only list LLM providers — image/video generation providers cannot be used as chat models
+            guard !p.isMediaOnly else { continue }
+
             let models: [String]
             if hasWhitelist {
                 models = p.enabledModels.filter { model in
