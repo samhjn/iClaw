@@ -1,13 +1,17 @@
 import Foundation
 import SwiftData
 
-/// API communication style.
+/// LLM API protocol style.
 ///
-/// Controls both authentication method and wire protocol:
-/// - `.openAI`: Bearer token auth, OpenAI-compatible endpoints (used by most providers)
-/// - `.anthropic`: x-api-key header auth, Anthropic Messages API
+/// Specifies which API protocol to use for chat completions, image generation, etc.
+/// Each case represents a distinct wire protocol (endpoint paths, request/response
+/// format, authentication). Follows the same pattern as `VideoGenMode` for video.
 enum APIStyle: String, Codable, CaseIterable {
+    /// OpenAI-compatible protocol: `/chat/completions`, `/images/generations`,
+    /// Bearer token auth. Used by most providers (OpenAI, DeepSeek, OpenRouter, Ollama, etc.).
     case openAI = "openai"
+    /// Anthropic protocol: `/messages` endpoint, `x-api-key` header auth,
+    /// extended thinking support. For Anthropic's native API.
     case anthropic = "anthropic"
 
     var displayName: String {

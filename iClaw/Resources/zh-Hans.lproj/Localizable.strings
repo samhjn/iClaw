@@ -354,8 +354,6 @@
 "provider.videoGenMode.none" = "不支持";
 "provider.videoGenMode.auto" = "自动检测";
 "provider.videoGenMode.restPolling" = "REST 轮询 (Sora, Runway, Luma)";
-"provider.apiStyle.openAI" = "Bearer Token (OpenAI 兼容)";
-"provider.apiStyle.anthropic" = "API Key 头 (Anthropic)";
 "provider.testConnection" = "测试连接";
 "provider.testConnectionSuccess" = "%lld 个模型";
 "provider.testConnectionOK" = "OK";
@@ -376,8 +374,10 @@
 "provider.providerType.image" = "图片生成 (实验性)";
 "provider.providerType.video" = "视频生成 (实验性)";
 "provider.providerTypeFooter" = "LLM 提供商处理对话补全。视频提供商专用于 Kling、Veo、DashScope 等视频生成 API。";
-"provider.apiStyle" = "API 风格";
-"provider.apiStyleFooter" = "OpenAI：兼容 OpenAI 的 chat/completions 接口。Anthropic：原生 Anthropic Messages API，支持扩展思考。";
+"provider.apiStyle" = "API 协议";
+"provider.apiStyle.openAI" = "OpenAI 兼容";
+"provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyleFooter" = "指定请求使用的 API 协议。OpenAI 兼容适用于大多数提供商（OpenAI、DeepSeek、OpenRouter、Ollama 等）。Anthropic 用于 Anthropic 原生 Messages API。";
 "provider.modelCapabilities" = "模型能力";
 "provider.presets" = "预设";
 

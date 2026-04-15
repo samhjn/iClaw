@@ -353,8 +353,6 @@
 "provider.videoGenMode.none" = "없음";
 "provider.videoGenMode.auto" = "자동 감지";
 "provider.videoGenMode.restPolling" = "REST 폴링 (Sora, Runway, Luma)";
-"provider.apiStyle.openAI" = "Bearer Token (OpenAI 호환)";
-"provider.apiStyle.anthropic" = "API Key 헤더 (Anthropic)";
 "provider.testConnection" = "연결 테스트";
 "provider.testConnectionSuccess" = "%lld개 모델";
 "provider.testConnectionOK" = "OK";
@@ -375,8 +373,10 @@
 "provider.providerType.image" = "이미지 생성 (실험적)";
 "provider.providerType.video" = "동영상 생성 (실험적)";
 "provider.providerTypeFooter" = "LLM 제공자는 채팅 완성을 처리합니다. 동영상 제공자는 Kling, Veo, DashScope 등 동영상 생성 API 전용입니다.";
-"provider.apiStyle" = "API 스타일";
-"provider.apiStyleFooter" = "OpenAI: OpenAI 호환 chat/completions 엔드포인트. Anthropic: 네이티브 Anthropic Messages API, 확장 사고 지원.";
+"provider.apiStyle" = "API 프로토콜";
+"provider.apiStyle.openAI" = "OpenAI 호환";
+"provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyleFooter" = "요청에 사용할 API 프로토콜을 지정합니다. OpenAI 호환은 대부분의 제공업체(OpenAI, DeepSeek, OpenRouter, Ollama 등)에서 사용됩니다. Anthropic은 Anthropic 네이티브 Messages API입니다.";
 "provider.modelCapabilities" = "모델 기능";
 "provider.presets" = "프리셋";
 

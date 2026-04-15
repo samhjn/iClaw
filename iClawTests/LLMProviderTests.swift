@@ -78,8 +78,10 @@ final class LLMProviderTests: XCTestCase {
 
     @MainActor
     func testAPIStyleDisplayNames() {
-        XCTAssertEqual(APIStyle.openAI.displayName, "OpenAI")
-        XCTAssertEqual(APIStyle.anthropic.displayName, "Anthropic")
+        // Display names come from L10n; just verify they're non-empty and distinct
+        XCTAssertFalse(APIStyle.openAI.displayName.isEmpty)
+        XCTAssertFalse(APIStyle.anthropic.displayName.isEmpty)
+        XCTAssertNotEqual(APIStyle.openAI.displayName, APIStyle.anthropic.displayName)
     }
 
     @MainActor
