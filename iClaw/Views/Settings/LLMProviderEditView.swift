@@ -173,7 +173,7 @@ struct LLMProviderEditView: View {
                         } else {
                             Image(systemName: "bolt.horizontal")
                         }
-                        Text("Test Connection")
+                        Text(L10n.Provider.testConnection)
                     }
                 }
                 .disabled(endpoint.isEmpty || isTestingConnection)
@@ -186,7 +186,7 @@ struct LLMProviderEditView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
-                            Text(count > 0 ? "\(count) models" : "OK")
+                            Text(count > 0 ? L10n.Provider.testConnectionSuccess(count) : L10n.Provider.testConnectionOK)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -735,7 +735,7 @@ struct LLMProviderEditView: View {
             name = name.isEmpty ? "OpenAI Sora" : name
             endpoint = "https://api.openai.com/v1"
             modelName = "sora-2"
-            enableVideoModel("sora-2", mode: .openAI)
+            enableVideoModel("sora-2", mode: .restPolling)
         }
         presetChip("Seedance") {
             name = name.isEmpty ? "Seedance" : name

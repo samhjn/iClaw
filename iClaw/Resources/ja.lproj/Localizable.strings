@@ -352,7 +352,10 @@
 "provider.imageGenMode.dedicatedAPI" = "専用API";
 "provider.videoGenMode.none" = "なし";
 "provider.videoGenMode.auto" = "自動検出";
-"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.restPolling" = "REST ポーリング (Sora, Runway, Luma)";
+"provider.testConnection" = "接続テスト";
+"provider.testConnectionSuccess" = "%lldモデル";
+"provider.testConnectionOK" = "OK";
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (通義万象)";
 "provider.videoGenMode.kling" = "Kling";
@@ -370,8 +373,10 @@
 "provider.providerType.image" = "画像生成 (実験的)";
 "provider.providerType.video" = "動画生成 (実験的)";
 "provider.providerTypeFooter" = "LLMプロバイダーはチャット補完を処理します。動画プロバイダーはKling、Veo、DashScopeなどの動画生成APIに特化しています。";
-"provider.apiStyle" = "APIスタイル";
-"provider.apiStyleFooter" = "OpenAI：OpenAI互換のchat/completionsエンドポイント。Anthropic：ネイティブAnthropic Messages API、拡張思考対応。";
+"provider.apiStyle" = "APIプロトコル";
+"provider.apiStyle.openAI" = "OpenAI互換";
+"provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyleFooter" = "リクエストに使用するAPIプロトコルを指定します。OpenAI互換は多くのプロバイダー（OpenAI、DeepSeek、OpenRouter、Ollamaなど）で使用されます。AnthropicはAnthropic独自のMessages APIです。";
 "provider.modelCapabilities" = "モデル機能";
 "provider.presets" = "プリセット";
 

@@ -1,15 +1,23 @@
 import Foundation
 import SwiftData
 
-/// API communication style.
+/// LLM API protocol style.
+///
+/// Specifies which API protocol to use for chat completions, image generation, etc.
+/// Each case represents a distinct wire protocol (endpoint paths, request/response
+/// format, authentication). Follows the same pattern as `VideoGenMode` for video.
 enum APIStyle: String, Codable, CaseIterable {
+    /// OpenAI-compatible protocol: `/chat/completions`, `/images/generations`,
+    /// Bearer token auth. Used by most providers (OpenAI, DeepSeek, OpenRouter, Ollama, etc.).
     case openAI = "openai"
+    /// Anthropic protocol: `/messages` endpoint, `x-api-key` header auth,
+    /// extended thinking support. For Anthropic's native API.
     case anthropic = "anthropic"
 
     var displayName: String {
         switch self {
-        case .openAI: return "OpenAI"
-        case .anthropic: return "Anthropic"
+        case .openAI: return L10n.Provider.apiStyleOpenAI
+        case .anthropic: return L10n.Provider.apiStyleAnthropic
         }
     }
 }
@@ -121,8 +129,8 @@ enum VideoGenMode: String, Codable, CaseIterable {
     case none
     /// Auto-detect from endpoint hostname and model name.
     case auto
-    /// OpenAI-compatible REST pattern (Sora, Runway, Luma AI, etc.).
-    case openAI
+    /// Generic REST submit/poll/download pattern (Sora, Runway, Luma AI, etc.).
+    case restPolling = "openai"
     /// Google Gemini API `predictLongRunning` pattern (Veo 2/3/3.1).
     case googleVeo
     /// Alibaba Cloud DashScope pattern (Tongyi Wan series).
@@ -136,7 +144,7 @@ enum VideoGenMode: String, Codable, CaseIterable {
         switch self {
         case .none: return L10n.Provider.videoGenModeNone
         case .auto: return L10n.Provider.videoGenModeAuto
-        case .openAI: return L10n.Provider.videoGenModeOpenAI
+        case .restPolling: return L10n.Provider.videoGenModeRestPolling
         case .googleVeo: return L10n.Provider.videoGenModeGoogleVeo
         case .dashScope: return L10n.Provider.videoGenModeDashScope
         case .kling: return L10n.Provider.videoGenModeKling
@@ -319,7 +327,7 @@ struct ModelCapabilities: Codable, Equatable {
     /// in `VideoGenProvider.autoDetect`. Returns `nil` if not a video gen model.
     private static func inferVideoGenerationMode(_ name: String) -> VideoGenMode? {
         // OpenAI Sora
-        if name.hasPrefix("sora") { return .openAI }
+        if name.hasPrefix("sora") { return .restPolling }
         // Google Veo
         if name.hasPrefix("veo-") || name.hasPrefix("veo_") { return .googleVeo }
         // Alibaba Wan series (wan2.6-t2v, wan2.7-t2v-turbo, wan2.6-i2v-flash, etc.)
@@ -327,13 +335,13 @@ struct ModelCapabilities: Codable, Equatable {
             || name.contains("-r2v") || name.contains("-kf2v")
             || name.contains("-s2v") || name.contains("-vace")) { return .dashScope }
         // Runway
-        if name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4") { return .openAI }
+        if name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4") { return .restPolling }
         // Luma AI
-        if name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-") { return .openAI }
+        if name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-") { return .restPolling }
         // Kling
         if name.hasPrefix("kling") { return .kling }
         // MiniMax / Hailuo
-        if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return .openAI }
+        if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return .restPolling }
         // ByteDance Seedance
         if name.hasPrefix("doubao-seedance") { return .seedance }
         return nil

@@ -353,7 +353,10 @@
 "provider.imageGenMode.dedicatedAPI" = "Dedicated API";
 "provider.videoGenMode.none" = "None";
 "provider.videoGenMode.auto" = "Auto Detect";
-"provider.videoGenMode.openAI" = "OpenAI (Sora, Runway, Luma)";
+"provider.videoGenMode.restPolling" = "REST Polling (Sora, Runway, Luma)";
+"provider.testConnection" = "Test Connection";
+"provider.testConnectionSuccess" = "%lld models";
+"provider.testConnectionOK" = "OK";
 "provider.videoGenMode.googleVeo" = "Google Veo";
 "provider.videoGenMode.dashScope" = "DashScope (Tongyi Wan)";
 "provider.videoGenMode.kling" = "Kling";
@@ -371,8 +374,10 @@
 "provider.providerType.image" = "Image Generation (Experimental)";
 "provider.providerType.video" = "Video Generation (Experimental)";
 "provider.providerTypeFooter" = "LLM providers handle chat completions. Video providers are dedicated to video generation APIs like Kling, Veo, or DashScope.";
-"provider.apiStyle" = "API Style";
-"provider.apiStyleFooter" = "OpenAI: OpenAI-compatible chat/completions endpoint. Anthropic: Native Anthropic Messages API with extended thinking support.";
+"provider.apiStyle" = "API Protocol";
+"provider.apiStyle.openAI" = "OpenAI Compatible";
+"provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyleFooter" = "Specifies the API protocol for requests. OpenAI Compatible is used by most providers (OpenAI, DeepSeek, OpenRouter, Ollama, etc.). Anthropic is for Anthropic's native Messages API.";
 "provider.modelCapabilities" = "Model Capabilities";
 "provider.presets" = "Presets";
 

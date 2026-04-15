@@ -78,8 +78,10 @@ final class LLMProviderTests: XCTestCase {
 
     @MainActor
     func testAPIStyleDisplayNames() {
-        XCTAssertEqual(APIStyle.openAI.displayName, "OpenAI")
-        XCTAssertEqual(APIStyle.anthropic.displayName, "Anthropic")
+        // Display names come from L10n; just verify they're non-empty and distinct
+        XCTAssertFalse(APIStyle.openAI.displayName.isEmpty)
+        XCTAssertFalse(APIStyle.anthropic.displayName.isEmpty)
+        XCTAssertNotEqual(APIStyle.openAI.displayName, APIStyle.anthropic.displayName)
     }
 
     @MainActor
@@ -445,20 +447,20 @@ final class LLMProviderTests: XCTestCase {
     func testInferredCapabilities_DedicatedVideoGenModels() {
         // Each model should infer a specific VideoGenMode (not .auto)
         let videoModels: [(String, String, VideoGenMode)] = [
-            ("sora-2", "Sora", .openAI),
+            ("sora-2", "Sora", .restPolling),
             ("veo-3", "Veo", .googleVeo),
             ("veo_2", "Veo underscore", .googleVeo),
             ("wan2.6-t2v", "Wan T2V", .dashScope),
             ("wan2.7-i2v-flash", "Wan I2V", .dashScope),
             ("wan2.6-vace", "Wan VACE", .dashScope),
-            ("runway-gen4", "Runway", .openAI),
-            ("gen-3-alpha", "Gen-3", .openAI),
-            ("gen-4-turbo", "Gen-4", .openAI),
-            ("luma-photon", "Luma", .openAI),
-            ("dream-machine-v1", "Dream Machine", .openAI),
+            ("runway-gen4", "Runway", .restPolling),
+            ("gen-3-alpha", "Gen-3", .restPolling),
+            ("gen-4-turbo", "Gen-4", .restPolling),
+            ("luma-photon", "Luma", .restPolling),
+            ("dream-machine-v1", "Dream Machine", .restPolling),
             ("kling-v2", "Kling", .kling),
-            ("minimax-video-01", "MiniMax Video", .openAI),
-            ("hailuo-01", "Hailuo", .openAI),
+            ("minimax-video-01", "MiniMax Video", .restPolling),
+            ("hailuo-01", "Hailuo", .restPolling),
             ("doubao-seedance-2-0", "Seedance 2.0", .seedance),
             ("doubao-seedance-1-5-pro-251215", "Seedance 1.5 pro", .seedance),
             ("doubao-seedance-1-0-lite-t2v", "Seedance 1.0 lite t2v", .seedance),
