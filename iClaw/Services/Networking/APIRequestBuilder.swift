@@ -29,11 +29,12 @@ enum APIRequestBuilder {
     static func applyAuth(to request: inout URLRequest, apiKey: String, style: APIStyle) {
         guard !apiKey.isEmpty else { return }
         switch style {
-        case .openAI:
-            request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         case .anthropic:
             request.addValue(apiKey, forHTTPHeaderField: "x-api-key")
             request.addValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        case .openAI, .googleVeo, .dashScope, .kling, .seedance:
+            // All non-Anthropic protocols use Bearer token auth
+            request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
     }
 

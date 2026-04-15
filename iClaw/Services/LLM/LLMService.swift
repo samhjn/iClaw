@@ -68,10 +68,11 @@ final class LLMService: @unchecked Sendable {
     private func createAdapter() -> LLMAPIAdapter {
         let ctx = LLMAdapterContext(provider: provider)
         switch apiStyle {
-        case .openAI:
-            return OpenAIAdapter(context: ctx)
         case .anthropic:
             return AnthropicAdapter(context: ctx)
+        case .openAI, .googleVeo, .dashScope, .kling, .seedance:
+            // Video-specific protocols use OpenAI-compatible chat for any LLM operations
+            return OpenAIAdapter(context: ctx)
         }
     }
 
@@ -87,8 +88,9 @@ final class LLMService: @unchecked Sendable {
         let ctx = LLMAdapterContext(provider: LLMProvider(name: "_temp", endpoint: endpoint, apiKey: apiKey))
         let adapter: LLMAPIAdapter
         switch apiStyle {
-        case .openAI: adapter = OpenAIAdapter(context: ctx)
         case .anthropic: adapter = AnthropicAdapter(context: ctx)
+        case .openAI, .googleVeo, .dashScope, .kling, .seedance:
+            adapter = OpenAIAdapter(context: ctx)
         }
 
         var request = try adapter.buildModelsRequest()
