@@ -38,7 +38,7 @@ enum APIStyle: String, Codable, CaseIterable {
     /// Cases relevant for LLM providers.
     static let llmCases: [APIStyle] = [.openAI, .anthropic]
     /// Cases relevant for image-only providers.
-    static let imageCases: [APIStyle] = [.openAI]
+    static let imageCases: [APIStyle] = [.openAI, .dashScope]
     /// Cases relevant for video-only providers.
     static let videoCases: [APIStyle] = [.openAI, .googleVeo, .dashScope, .kling, .seedance]
 
@@ -112,12 +112,15 @@ enum ImageGenMode: String, Codable, CaseIterable {
     case chatInline
     /// Generates images via dedicated `/images/generations` endpoint (e.g. DALL-E, FLUX, SD3).
     case dedicatedAPI
+    /// Generates images via DashScope async task API (e.g. wan2.7-image-pro, wan2.7-image).
+    case dashScope
 
     var displayName: String {
         switch self {
         case .none: return L10n.Provider.imageGenModeNone
         case .chatInline: return L10n.Provider.imageGenModeChatInline
         case .dedicatedAPI: return L10n.Provider.imageGenModeDedicatedAPI
+        case .dashScope: return L10n.Provider.imageGenModeDashScope
         }
     }
 }
@@ -272,6 +275,16 @@ struct ModelCapabilities: Codable, Equatable {
             )
         }
 
+        // DashScope image generation models (wan2.7-image series)
+        if inferDashScopeImageGen(base) {
+            return ModelCapabilities(
+                supportsVision: false,
+                supportsToolUse: false,
+                imageGenerationMode: .dashScope,
+                supportsReasoning: false
+            )
+        }
+
         // Dedicated image generation models
         if inferDedicatedImageGen(base) {
             return ModelCapabilities(
@@ -331,6 +344,11 @@ struct ModelCapabilities: Codable, Equatable {
             || name.hasPrefix("kling")
             || (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo")
             || name.hasPrefix("doubao-seedance")
+    }
+
+    /// Detect DashScope image generation models (wan2.7-image series).
+    private static func inferDashScopeImageGen(_ name: String) -> Bool {
+        name.hasPrefix("wan") && name.contains("image")
     }
 
     /// Detect models that use the dedicated /images/generations API.

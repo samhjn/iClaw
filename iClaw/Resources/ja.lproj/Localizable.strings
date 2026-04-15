@@ -350,6 +350,7 @@
 "provider.imageGenMode.none" = "なし";
 "provider.imageGenMode.chatInline" = "チャットインライン";
 "provider.imageGenMode.dedicatedAPI" = "専用API";
+"provider.imageGenMode.dashScope" = "DashScope";
 "provider.videoGenMode.none" = "なし";
 "provider.videoGenMode.auto" = "自動検出";
 "provider.videoGenMode.restPolling" = "REST ポーリング (Sora, Runway, Luma)";

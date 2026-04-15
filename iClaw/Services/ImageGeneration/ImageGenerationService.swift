@@ -89,6 +89,10 @@ final class ImageGenerationService: @unchecked Sendable {
             return try await callChatInline(
                 prompt: prompt, agentId: agentId
             )
+        case .dashScope:
+            return try await callDashScopeAPI(
+                prompt: prompt, n: n, size: size, agentId: agentId
+            )
         case .none:
             throw ImageGenerationError.noProviderConfigured
         }
@@ -222,6 +226,182 @@ final class ImageGenerationService: @unchecked Sendable {
         ).trimmingCharacters(in: .whitespacesAndNewlines)
 
         return (attachments, textContent?.isEmpty == false ? textContent : nil)
+    }
+
+    // MARK: - DashScope Async Task API (wan2.7-image series)
+
+    private func callDashScopeAPI(
+        prompt: String, n: Int, size: String?, agentId: UUID
+    ) async throws -> (images: [ImageAttachment], revisedPrompt: String?) {
+        let taskId = try await dashScopeSubmitTask(prompt: prompt, n: n, size: size)
+        let imageURLs = try await dashScopePollUntilDone(taskId: taskId)
+
+        var attachments: [ImageAttachment] = []
+        for urlStr in imageURLs {
+            try Task.checkCancellation()
+            if let imageData = try? await downloadImage(from: urlStr) {
+                let mimeType = urlStr.lowercased().contains(".png") ? "image/png" : "image/jpeg"
+                if let attachment = createAttachment(from: imageData, mimeType: mimeType, agentId: agentId) {
+                    attachments.append(attachment)
+                }
+            }
+        }
+
+        guard !attachments.isEmpty else {
+            throw ImageGenerationError.invalidImageData
+        }
+        return (attachments, nil)
+    }
+
+    /// Submit an image generation task to DashScope and return the task ID.
+    private func dashScopeSubmitTask(prompt: String, n: Int, size: String?) async throws -> String {
+        let baseURL = provider.endpoint.hasSuffix("/")
+            ? String(provider.endpoint.dropLast()) : provider.endpoint
+        let urlStr = "\(baseURL)/services/aigc/image-generation/generation"
+        guard let url = URL(string: urlStr) else {
+            throw ImageGenerationError.invalidURL(urlStr)
+        }
+
+        let dsSize = mapDashScopeSize(size)
+
+        var parameters: [String: Any] = [
+            "n": min(max(n, 1), 4),
+            "watermark": false,
+        ]
+        if let dsSize { parameters["size"] = dsSize }
+
+        let body: [String: Any] = [
+            "model": modelName,
+            "input": [
+                "messages": [
+                    [
+                        "role": "user",
+                        "content": [
+                            ["text": prompt]
+                        ]
+                    ]
+                ]
+            ],
+            "parameters": parameters,
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("enable", forHTTPHeaderField: "X-DashScope-Async")
+        APIRequestBuilder.applyCommonHeaders(to: &request)
+        APIRequestBuilder.applyBearerAuth(to: &request, apiKey: provider.apiKey)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        do {
+            try APIRequestBuilder.validate(data: data, response: response)
+        } catch let error as APIRequestError {
+            throw ImageGenerationError.apiError(
+                statusCode: error.statusCode ?? 0,
+                message: error.messageBody ?? "Unknown error"
+            )
+        }
+
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let output = json["output"] as? [String: Any],
+              let taskId = output["task_id"] as? String else {
+            // Check for error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let code = json["code"] as? String {
+                let message = json["message"] as? String ?? code
+                throw ImageGenerationError.apiError(statusCode: 0, message: message)
+            }
+            throw ImageGenerationError.apiError(statusCode: 0, message: "No task_id in DashScope response")
+        }
+
+        return taskId
+    }
+
+    /// Poll DashScope task until completion, returning image URLs.
+    private func dashScopePollUntilDone(taskId: String) async throws -> [String] {
+        let baseURL = provider.endpoint.hasSuffix("/")
+            ? String(provider.endpoint.dropLast()) : provider.endpoint
+        let urlStr = "\(baseURL)/tasks/\(taskId)"
+        guard let url = URL(string: urlStr) else {
+            throw ImageGenerationError.invalidURL(urlStr)
+        }
+
+        let maxAttempts = 120 // up to ~4 minutes with 2s interval
+        for _ in 0..<maxAttempts {
+            try Task.checkCancellation()
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            APIRequestBuilder.applyCommonHeaders(to: &request)
+            APIRequestBuilder.applyBearerAuth(to: &request, apiKey: provider.apiKey)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            do {
+                try APIRequestBuilder.validate(data: data, response: response)
+            } catch let error as APIRequestError {
+                throw ImageGenerationError.apiError(
+                    statusCode: error.statusCode ?? 0,
+                    message: error.messageBody ?? "Unknown error"
+                )
+            }
+
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let output = json["output"] as? [String: Any] else {
+                throw ImageGenerationError.apiError(statusCode: 0, message: "Invalid DashScope poll response")
+            }
+
+            let status = (output["task_status"] as? String)?.uppercased() ?? ""
+
+            switch status {
+            case "SUCCEEDED":
+                return extractDashScopeImageURLs(from: output)
+            case "FAILED":
+                let reason = output["message"] as? String
+                    ?? (json["message"] as? String) ?? "Image generation failed"
+                throw ImageGenerationError.apiError(statusCode: 0, message: reason)
+            case "CANCELED":
+                throw ImageGenerationError.apiError(statusCode: 0, message: "Task was canceled")
+            default:
+                // PENDING, RUNNING – wait and retry
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+        }
+
+        throw ImageGenerationError.apiError(statusCode: 0, message: "DashScope image generation timed out")
+    }
+
+    /// Extract image URLs from DashScope task output.
+    private func extractDashScopeImageURLs(from output: [String: Any]) -> [String] {
+        guard let choices = output["choices"] as? [[String: Any]] else { return [] }
+        var urls: [String] = []
+        for choice in choices {
+            guard let message = choice["message"] as? [String: Any],
+                  let content = message["content"] as? [[String: Any]] else { continue }
+            for item in content {
+                if let imageURL = item["image"] as? String {
+                    urls.append(imageURL)
+                }
+            }
+        }
+        return urls
+    }
+
+    /// Map standard size strings to DashScope format.
+    private func mapDashScopeSize(_ size: String?) -> String? {
+        guard let size, !size.isEmpty else { return "2K" }
+        let s = size.lowercased()
+        // Already in DashScope format
+        if s == "1k" || s == "2k" || s == "4k" { return size.uppercased() }
+        // WxH pixel format (e.g. "1024x1024") → convert to DashScope "W*H" format
+        if s.contains("x") {
+            return s.replacingOccurrences(of: "x", with: "*")
+        }
+        // Already DashScope W*H format
+        if s.contains("*") { return size }
+        return size
     }
 
     // MARK: - Helpers
