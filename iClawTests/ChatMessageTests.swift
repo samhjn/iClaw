@@ -68,7 +68,7 @@ final class ChatMessageTests: XCTestCase {
         let original = LLMChatMessage.assistant("Let me read that.", toolCalls: [toolCall])
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(LLMChatMessage.self, from: data)
-        XCTAssertEqual(decoded.role, "assistant")
+        XCTAssertEqual(decoded.role, .assistant)
         XCTAssertEqual(decoded.content, "Let me read that.")
         XCTAssertEqual(decoded.toolCalls?.count, 1)
         XCTAssertEqual(decoded.toolCalls?.first?.id, "call_abc")

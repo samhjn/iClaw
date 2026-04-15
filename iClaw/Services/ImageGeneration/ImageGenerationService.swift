@@ -110,16 +110,13 @@ final class ImageGenerationService: @unchecked Sendable {
 
         let encoder = JSONEncoder()
         let bodyData = try encoder.encode(body)
-        var request = try APIRequestBuilder.jsonPOST(
+        let request = try APIRequestBuilder.jsonPOST(
             base: provider.endpoint,
             path: "/images/generations",
             apiKey: provider.apiKey,
             style: provider.apiStyle,
             body: bodyData
         )
-        // Image generation endpoints commonly use Bearer auth regardless of provider style
-        // but we respect the provider's configured style for compatibility with proxies
-        _ = request // suppress unused warning - already built by jsonPOST
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

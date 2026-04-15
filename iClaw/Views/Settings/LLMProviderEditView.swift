@@ -826,8 +826,6 @@ struct LLMProviderEditView: View {
             return json
         }()
 
-        let defaultCaps = modelCapabilities[modelName] ?? .default
-
         if let p = existingProvider {
             p.name = name
             p.endpoint = endpoint
