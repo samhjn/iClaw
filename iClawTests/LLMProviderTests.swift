@@ -555,7 +555,7 @@ final class LLMProviderTests: XCTestCase {
 
     func testAPIStyleCaseSubsets() {
         XCTAssertEqual(APIStyle.llmCases, [.openAI, .anthropic])
-        XCTAssertEqual(APIStyle.imageCases, [.openAI])
+        XCTAssertEqual(APIStyle.imageCases, [.openAI, .dashScope])
         XCTAssertTrue(APIStyle.videoCases.contains(.openAI))
         XCTAssertTrue(APIStyle.videoCases.contains(.googleVeo))
         XCTAssertTrue(APIStyle.videoCases.contains(.kling))
