@@ -377,6 +377,10 @@
 "provider.apiStyle" = "API 協議";
 "provider.apiStyle.openAI" = "OpenAI 相容";
 "provider.apiStyle.anthropic" = "Anthropic";
+"provider.apiStyle.googleVeo" = "Google Veo";
+"provider.apiStyle.dashScope" = "DashScope (通義萬相)";
+"provider.apiStyle.kling" = "可靈";
+"provider.apiStyle.seedance" = "即夢 (字節跳動)";
 "provider.apiStyleFooter" = "指定請求使用的 API 協議。OpenAI 相容適用於大多數提供商（OpenAI、DeepSeek、OpenRouter、Ollama 等）。Anthropic 用於 Anthropic 原生 Messages API。";
 "provider.modelCapabilities" = "模型能力";
 "provider.presets" = "預設";

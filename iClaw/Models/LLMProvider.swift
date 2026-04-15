@@ -1,25 +1,49 @@
 import Foundation
 import SwiftData
 
-/// LLM API protocol style.
+/// API protocol used by a provider.
 ///
-/// Specifies which API protocol to use for chat completions, image generation, etc.
-/// Each case represents a distinct wire protocol (endpoint paths, request/response
-/// format, authentication). Follows the same pattern as `VideoGenMode` for video.
+/// Specifies the wire protocol for all API interactions (chat, image, video).
+/// Each case represents a distinct API interface. The provider's `ProviderType`
+/// determines which subset of protocols is shown in the UI.
 enum APIStyle: String, Codable, CaseIterable {
-    /// OpenAI-compatible protocol: `/chat/completions`, `/images/generations`,
-    /// Bearer token auth. Used by most providers (OpenAI, DeepSeek, OpenRouter, Ollama, etc.).
+    // LLM / Image protocols
+    /// OpenAI-compatible: `/chat/completions`, `/images/generations`, `/videos/generations`.
+    /// Bearer token auth. Used by most providers.
     case openAI = "openai"
-    /// Anthropic protocol: `/messages` endpoint, `x-api-key` header auth,
-    /// extended thinking support. For Anthropic's native API.
+    /// Anthropic: `/messages` endpoint, `x-api-key` header, extended thinking.
     case anthropic = "anthropic"
+
+    // Video-specific protocols
+    /// Google Gemini `predictLongRunning` pattern (Veo 2/3/3.1).
+    case googleVeo
+    /// Alibaba Cloud DashScope async task pattern (Tongyi Wan series).
+    case dashScope
+    /// Kuaishou Kling API pattern.
+    case kling
+    /// ByteDance Volcengine Ark pattern (Seedance).
+    case seedance
 
     var displayName: String {
         switch self {
         case .openAI: return L10n.Provider.apiStyleOpenAI
         case .anthropic: return L10n.Provider.apiStyleAnthropic
+        case .googleVeo: return L10n.Provider.apiStyleGoogleVeo
+        case .dashScope: return L10n.Provider.apiStyleDashScope
+        case .kling: return L10n.Provider.apiStyleKling
+        case .seedance: return L10n.Provider.apiStyleSeedance
         }
     }
+
+    /// Cases relevant for LLM providers.
+    static let llmCases: [APIStyle] = [.openAI, .anthropic]
+    /// Cases relevant for image-only providers.
+    static let imageCases: [APIStyle] = [.openAI]
+    /// Cases relevant for video-only providers.
+    static let videoCases: [APIStyle] = [.openAI, .googleVeo, .dashScope, .kling, .seedance]
+
+    /// Whether this style supports the LLM adapter (chat completions).
+    var isLLMCapable: Bool { self == .openAI || self == .anthropic }
 }
 
 /// Thinking / reasoning intensity level.
@@ -119,40 +143,6 @@ enum ProviderType: String, Codable, CaseIterable {
     }
 }
 
-/// Video generation API adaptation mode for a model.
-///
-/// All video generation APIs are asynchronous (submit → poll → download).
-/// This enum specifies which API protocol/format to use, allowing users to
-/// manually override auto-detection when using proxies or relay services.
-enum VideoGenMode: String, Codable, CaseIterable {
-    /// Model does not support video generation.
-    case none
-    /// Auto-detect from endpoint hostname and model name.
-    case auto
-    /// Generic REST submit/poll/download pattern (Sora, Runway, Luma AI, etc.).
-    case restPolling = "openai"
-    /// Google Gemini API `predictLongRunning` pattern (Veo 2/3/3.1).
-    case googleVeo
-    /// Alibaba Cloud DashScope pattern (Tongyi Wan series).
-    case dashScope
-    /// Kuaishou Kling API pattern.
-    case kling
-    /// ByteDance Volcengine Ark pattern (Seedance).
-    case seedance
-
-    var displayName: String {
-        switch self {
-        case .none: return L10n.Provider.videoGenModeNone
-        case .auto: return L10n.Provider.videoGenModeAuto
-        case .restPolling: return L10n.Provider.videoGenModeRestPolling
-        case .googleVeo: return L10n.Provider.videoGenModeGoogleVeo
-        case .dashScope: return L10n.Provider.videoGenModeDashScope
-        case .kling: return L10n.Provider.videoGenModeKling
-        case .seedance: return L10n.Provider.videoGenModeSeedance
-        }
-    }
-}
-
 /// Per-model capability flags and parameter overrides.
 struct ModelCapabilities: Codable, Equatable {
     var supportsVision: Bool = false
@@ -160,8 +150,9 @@ struct ModelCapabilities: Codable, Equatable {
     var imageGenerationMode: ImageGenMode = .none
     /// Whether this model supports video input (e.g. Gemini 2+, Qwen-VL).
     var supportsVideoInput: Bool = false
-    /// Video generation API mode. `.none` = not supported, `.auto` = detect from endpoint/model.
-    var videoGenerationMode: VideoGenMode = .none
+    /// Whether this model supports video generation.
+    /// The video API protocol is determined by the provider's `apiStyle`, not per-model.
+    var supportsVideoGeneration: Bool = false
     /// Legacy flag kept for backward compatibility with existing persisted data.
     /// New code should use `thinkingLevel` instead.
     var supportsReasoning: Bool = false
@@ -178,29 +169,27 @@ struct ModelCapabilities: Codable, Equatable {
         set { imageGenerationMode = newValue ? .chatInline : .none }
     }
 
-    /// Whether this model supports video generation.
-    var supportsVideoGeneration: Bool { videoGenerationMode != .none }
-
     static let `default` = ModelCapabilities()
 
     enum CodingKeys: String, CodingKey {
         case supportsVision, supportsToolUse, imageGenerationMode, supportsVideoInput
-        case videoGenerationMode
+        case supportsVideoGeneration
         case supportsReasoning, thinkingLevel
         case maxTokens, temperature
         case _legacyImageGen = "supportsImageGeneration"
+        case _legacyVideoGenMode = "videoGenerationMode"
     }
 
     init(supportsVision: Bool = false, supportsToolUse: Bool = true,
          imageGenerationMode: ImageGenMode = .none, supportsVideoInput: Bool = false,
-         videoGenerationMode: VideoGenMode = .none,
+         supportsVideoGeneration: Bool = false,
          supportsReasoning: Bool = false, thinkingLevel: ThinkingLevel = .off,
          maxTokens: Int? = nil, temperature: Double? = nil) {
         self.supportsVision = supportsVision
         self.supportsToolUse = supportsToolUse
         self.imageGenerationMode = imageGenerationMode
         self.supportsVideoInput = supportsVideoInput
-        self.videoGenerationMode = videoGenerationMode
+        self.supportsVideoGeneration = supportsVideoGeneration
         self.supportsReasoning = supportsReasoning
         self.thinkingLevel = thinkingLevel
         self.maxTokens = maxTokens
@@ -221,7 +210,15 @@ struct ModelCapabilities: Codable, Equatable {
         supportsVision = try c.decodeIfPresent(Bool.self, forKey: .supportsVision) ?? false
         supportsToolUse = try c.decodeIfPresent(Bool.self, forKey: .supportsToolUse) ?? true
         supportsVideoInput = try c.decodeIfPresent(Bool.self, forKey: .supportsVideoInput) ?? false
-        videoGenerationMode = try c.decodeIfPresent(VideoGenMode.self, forKey: .videoGenerationMode) ?? .none
+        // Video generation: try new bool first, migrate from legacy VideoGenMode enum
+        if let videoGen = try c.decodeIfPresent(Bool.self, forKey: .supportsVideoGeneration) {
+            supportsVideoGeneration = videoGen
+        } else if let legacyRaw = try? c.decodeIfPresent(String.self, forKey: ._legacyVideoGenMode),
+                  legacyRaw != "none" {
+            supportsVideoGeneration = true
+        } else {
+            supportsVideoGeneration = false
+        }
         supportsReasoning = try c.decodeIfPresent(Bool.self, forKey: .supportsReasoning) ?? false
         // ImageGenMode: try new enum first, fall back to legacy bool
         if let mode = try? c.decodeIfPresent(ImageGenMode.self, forKey: .imageGenerationMode) {
@@ -247,7 +244,7 @@ struct ModelCapabilities: Codable, Equatable {
         try container.encode(supportsToolUse, forKey: .supportsToolUse)
         try container.encode(imageGenerationMode, forKey: .imageGenerationMode)
         try container.encode(supportsVideoInput, forKey: .supportsVideoInput)
-        try container.encode(videoGenerationMode, forKey: .videoGenerationMode)
+        try container.encode(supportsVideoGeneration, forKey: .supportsVideoGeneration)
         try container.encode(supportsReasoning, forKey: .supportsReasoning)
         try container.encode(thinkingLevel, forKey: .thinkingLevel)
         try container.encodeIfPresent(maxTokens, forKey: .maxTokens)
@@ -286,11 +283,11 @@ struct ModelCapabilities: Codable, Equatable {
         }
 
         // Dedicated video generation models
-        if let videoMode = inferVideoGenerationMode(base) {
+        if inferVideoGenModel(base) {
             return ModelCapabilities(
                 supportsVision: false,
                 supportsToolUse: false,
-                videoGenerationMode: videoMode,
+                supportsVideoGeneration: true,
                 supportsReasoning: false
             )
         }
@@ -321,30 +318,19 @@ struct ModelCapabilities: Codable, Equatable {
         return .default
     }
 
-    /// Detect dedicated video generation models and return the specific VideoGenMode.
-    ///
-    /// Returns a specific mode instead of `.auto` to avoid redundant re-detection
-    /// in `VideoGenProvider.autoDetect`. Returns `nil` if not a video gen model.
-    private static func inferVideoGenerationMode(_ name: String) -> VideoGenMode? {
-        // OpenAI Sora
-        if name.hasPrefix("sora") { return .restPolling }
-        // Google Veo
-        if name.hasPrefix("veo-") || name.hasPrefix("veo_") { return .googleVeo }
-        // Alibaba Wan series (wan2.6-t2v, wan2.7-t2v-turbo, wan2.6-i2v-flash, etc.)
-        if name.hasPrefix("wan") && (name.contains("-t2v") || name.contains("-i2v")
-            || name.contains("-r2v") || name.contains("-kf2v")
-            || name.contains("-s2v") || name.contains("-vace")) { return .dashScope }
-        // Runway
-        if name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4") { return .restPolling }
-        // Luma AI
-        if name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-") { return .restPolling }
-        // Kling
-        if name.hasPrefix("kling") { return .kling }
-        // MiniMax / Hailuo
-        if (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo") { return .restPolling }
-        // ByteDance Seedance
-        if name.hasPrefix("doubao-seedance") { return .seedance }
-        return nil
+    /// Detect dedicated video generation models.
+    /// The API protocol is determined by the provider's `apiStyle`, not the model name.
+    private static func inferVideoGenModel(_ name: String) -> Bool {
+        name.hasPrefix("sora")
+            || name.hasPrefix("veo-") || name.hasPrefix("veo_")
+            || (name.hasPrefix("wan") && (name.contains("-t2v") || name.contains("-i2v")
+                || name.contains("-r2v") || name.contains("-kf2v")
+                || name.contains("-s2v") || name.contains("-vace")))
+            || name.hasPrefix("runway-") || name.hasPrefix("gen-3") || name.hasPrefix("gen-4")
+            || name.hasPrefix("luma-") || name.hasPrefix("dream-machine") || name.hasPrefix("ray-")
+            || name.hasPrefix("kling")
+            || (name.hasPrefix("minimax") && name.contains("video")) || name.hasPrefix("hailuo")
+            || name.hasPrefix("doubao-seedance")
     }
 
     /// Detect models that use the dedicated /images/generations API.

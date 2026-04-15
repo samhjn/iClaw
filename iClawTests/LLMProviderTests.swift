@@ -445,32 +445,31 @@ final class LLMProviderTests: XCTestCase {
     }
 
     func testInferredCapabilities_DedicatedVideoGenModels() {
-        // Each model should infer a specific VideoGenMode (not .auto)
-        let videoModels: [(String, String, VideoGenMode)] = [
-            ("sora-2", "Sora", .restPolling),
-            ("veo-3", "Veo", .googleVeo),
-            ("veo_2", "Veo underscore", .googleVeo),
-            ("wan2.6-t2v", "Wan T2V", .dashScope),
-            ("wan2.7-i2v-flash", "Wan I2V", .dashScope),
-            ("wan2.6-vace", "Wan VACE", .dashScope),
-            ("runway-gen4", "Runway", .restPolling),
-            ("gen-3-alpha", "Gen-3", .restPolling),
-            ("gen-4-turbo", "Gen-4", .restPolling),
-            ("luma-photon", "Luma", .restPolling),
-            ("dream-machine-v1", "Dream Machine", .restPolling),
-            ("kling-v2", "Kling", .kling),
-            ("minimax-video-01", "MiniMax Video", .restPolling),
-            ("hailuo-01", "Hailuo", .restPolling),
-            ("doubao-seedance-2-0", "Seedance 2.0", .seedance),
-            ("doubao-seedance-1-5-pro-251215", "Seedance 1.5 pro", .seedance),
-            ("doubao-seedance-1-0-lite-t2v", "Seedance 1.0 lite t2v", .seedance),
+        // Video gen models should infer supportsVideoGeneration = true
+        // The API protocol is now determined by provider's apiStyle, not per-model
+        let videoModels: [(String, String)] = [
+            ("sora-2", "Sora"),
+            ("veo-3", "Veo"),
+            ("veo_2", "Veo underscore"),
+            ("wan2.6-t2v", "Wan T2V"),
+            ("wan2.7-i2v-flash", "Wan I2V"),
+            ("wan2.6-vace", "Wan VACE"),
+            ("runway-gen4", "Runway"),
+            ("gen-3-alpha", "Gen-3"),
+            ("gen-4-turbo", "Gen-4"),
+            ("luma-photon", "Luma"),
+            ("dream-machine-v1", "Dream Machine"),
+            ("kling-v2", "Kling"),
+            ("minimax-video-01", "MiniMax Video"),
+            ("hailuo-01", "Hailuo"),
+            ("doubao-seedance-2-0", "Seedance 2.0"),
+            ("doubao-seedance-1-5-pro-251215", "Seedance 1.5 pro"),
+            ("doubao-seedance-1-0-lite-t2v", "Seedance 1.0 lite t2v"),
         ]
-        for (model, label, expectedMode) in videoModels {
+        for (model, label) in videoModels {
             let caps = ModelCapabilities.inferred(from: model)
             XCTAssertTrue(caps.supportsVideoGeneration,
                           "\(label) (\(model)): expected videoGen=true")
-            XCTAssertEqual(caps.videoGenerationMode, expectedMode,
-                           "\(label) (\(model)): expected videoGenMode=.\(expectedMode)")
             XCTAssertFalse(caps.supportsToolUse,
                            "\(label) (\(model)): video-only models should NOT support tool use")
         }
@@ -528,48 +527,47 @@ final class LLMProviderTests: XCTestCase {
                           "Inferred and custom should differ — caller decides which to use")
     }
 
-    // MARK: - VideoGenMode
+    // MARK: - APIStyle (video protocol cases)
 
-    func testVideoGenModeCodableRoundTrip() throws {
-        for mode in VideoGenMode.allCases {
-            let data = try JSONEncoder().encode(mode)
-            let decoded = try JSONDecoder().decode(VideoGenMode.self, from: data)
-            XCTAssertEqual(decoded, mode,
-                           "VideoGenMode.\(mode.rawValue) should survive encode/decode")
-        }
+    func testAPIStyleVideoProtocolCases() {
+        // Verify video protocol cases exist in APIStyle
+        XCTAssertTrue(APIStyle.allCases.contains(.googleVeo))
+        XCTAssertTrue(APIStyle.allCases.contains(.dashScope))
+        XCTAssertTrue(APIStyle.allCases.contains(.kling))
+        XCTAssertTrue(APIStyle.allCases.contains(.seedance))
     }
 
-    func testVideoGenModeSeedanceRawValue() {
-        XCTAssertEqual(VideoGenMode.seedance.rawValue, "seedance")
+    func testAPIStyleCaseSubsets() {
+        XCTAssertEqual(APIStyle.llmCases, [.openAI, .anthropic])
+        XCTAssertEqual(APIStyle.imageCases, [.openAI])
+        XCTAssertTrue(APIStyle.videoCases.contains(.openAI))
+        XCTAssertTrue(APIStyle.videoCases.contains(.googleVeo))
+        XCTAssertTrue(APIStyle.videoCases.contains(.kling))
     }
 
-    func testVideoGenModeAllCasesIncludesSeedance() {
-        XCTAssertTrue(VideoGenMode.allCases.contains(.seedance))
-    }
+    // MARK: - ModelCapabilities with supportsVideoGeneration
 
-    // MARK: - ModelCapabilities with VideoGenerationMode
-
-    func testCapabilitiesVideoGenModeCodableRoundTrip() throws {
-        let caps = ModelCapabilities(
-            supportsVision: false,
-            supportsToolUse: false,
-            videoGenerationMode: .seedance
-        )
+    func testCapabilitiesVideoGenBoolCodableRoundTrip() throws {
+        let caps = ModelCapabilities(supportsVideoGeneration: true)
         let data = try JSONEncoder().encode(caps)
         let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: data)
-        XCTAssertEqual(decoded.videoGenerationMode, .seedance)
         XCTAssertTrue(decoded.supportsVideoGeneration)
         XCTAssertEqual(decoded, caps)
     }
 
-    func testCapabilitiesVideoGenNoneMeansNoSupport() {
-        let caps = ModelCapabilities(videoGenerationMode: .none)
+    func testCapabilitiesVideoGenDefaultIsFalse() {
+        let caps = ModelCapabilities()
         XCTAssertFalse(caps.supportsVideoGeneration)
     }
 
-    func testCapabilitiesVideoGenAutoMeansSupported() {
-        let caps = ModelCapabilities(videoGenerationMode: .auto)
-        XCTAssertTrue(caps.supportsVideoGeneration)
+    func testCapabilitiesLegacyVideoGenModeMigration() throws {
+        // Old data with videoGenerationMode enum should migrate to supportsVideoGeneration bool
+        let json = """
+        {"supportsVision":false,"supportsToolUse":false,"videoGenerationMode":"seedance"}
+        """
+        let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: json.data(using: .utf8)!)
+        XCTAssertTrue(decoded.supportsVideoGeneration,
+                      "Legacy videoGenerationMode != none should migrate to supportsVideoGeneration=true")
     }
 
     func testCapabilitiesLegacyJSONWithoutVideoGenMode() throws {
@@ -577,9 +575,8 @@ final class LLMProviderTests: XCTestCase {
         {"supportsVision":true,"supportsToolUse":true,"supportsImageGeneration":false,"supportsReasoning":false}
         """
         let decoded = try JSONDecoder().decode(ModelCapabilities.self, from: json.data(using: .utf8)!)
-        XCTAssertEqual(decoded.videoGenerationMode, .none,
-                       "Legacy data without videoGenerationMode should default to .none")
-        XCTAssertFalse(decoded.supportsVideoGeneration)
+        XCTAssertFalse(decoded.supportsVideoGeneration,
+                       "Legacy data without video fields should default to false")
     }
 
     // MARK: - ProviderType

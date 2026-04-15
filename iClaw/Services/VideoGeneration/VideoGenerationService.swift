@@ -88,15 +88,9 @@ struct VideoGenProvider: @unchecked Sendable {
 
     // MARK: - Provider Resolution
 
-    /// Resolve the provider configuration based on the user's explicit mode choice,
-    /// falling back to auto-detection from endpoint hostname and model name.
-    static func resolve(mode: VideoGenMode, endpoint: String, modelName: String) -> VideoGenProvider {
-        switch mode {
-        case .none:
-            // Should not reach here; caller should check before calling.
-            return restPollingProvider()
-        case .restPolling:
-            return restPollingProvider()
+    /// Resolve the video provider adapter based on the provider's API style.
+    static func resolve(apiStyle: APIStyle) -> VideoGenProvider {
+        switch apiStyle {
         case .googleVeo:
             return googleVeoProvider()
         case .dashScope:
@@ -105,35 +99,10 @@ struct VideoGenProvider: @unchecked Sendable {
             return klingProvider()
         case .seedance:
             return seedanceProvider()
-        case .auto:
-            return autoDetect(endpoint: endpoint, modelName: modelName)
+        case .openAI, .anthropic:
+            // OpenAI-compatible REST polling (Sora, Runway, Luma, etc.)
+            return restPollingProvider()
         }
-    }
-
-    private static func autoDetect(endpoint: String, modelName: String) -> VideoGenProvider {
-        let host = URL(string: endpoint)?.host?.lowercased() ?? ""
-        let model = modelName.lowercased()
-
-        // Google Veo
-        if host.contains("generativelanguage.googleapis.com") || model.hasPrefix("veo-") || model.hasPrefix("veo_") {
-            return googleVeoProvider()
-        }
-        // Alibaba DashScope
-        if host.contains("dashscope") || (model.hasPrefix("wan") &&
-            (model.contains("-t2v") || model.contains("-i2v") || model.contains("-r2v")
-             || model.contains("-kf2v") || model.contains("-s2v") || model.contains("-vace"))) {
-            return dashScopeProvider()
-        }
-        // Kling
-        if host.contains("klingai.com") || model.hasPrefix("kling") {
-            return klingProvider()
-        }
-        // ByteDance Seedance (Volcengine Ark)
-        if host.contains("volces.com") || model.hasPrefix("doubao-seedance") {
-            return seedanceProvider()
-        }
-        // Default: generic REST submit/poll pattern (Sora, Runway, Luma, etc.)
-        return restPollingProvider()
     }
 }
 
@@ -702,12 +671,7 @@ final class VideoGenerationService: @unchecked Sendable {
         pollingConfig: VideoPollingConfig = VideoPollingConfig(),
         onProgress: (@Sendable (VideoGenerationPhase) -> Void)? = nil
     ) async throws -> VideoAttachment {
-        let caps = provider.capabilities(for: modelName)
-        let videoProvider = VideoGenProvider.resolve(
-            mode: caps.videoGenerationMode,
-            endpoint: provider.endpoint,
-            modelName: modelName
-        )
+        let videoProvider = VideoGenProvider.resolve(apiStyle: provider.apiStyle)
 
         // Resolve image data if image_url is provided
         let imageData: Data? = try await resolveImageData(from: imageURL, agentId: agentId)
@@ -755,12 +719,7 @@ final class VideoGenerationService: @unchecked Sendable {
         imageURL: String? = nil,
         agentId: UUID
     ) async throws -> SubmitResult {
-        let caps = provider.capabilities(for: modelName)
-        let videoProvider = VideoGenProvider.resolve(
-            mode: caps.videoGenerationMode,
-            endpoint: provider.endpoint,
-            modelName: modelName
-        )
+        let videoProvider = VideoGenProvider.resolve(apiStyle: provider.apiStyle)
 
         let imageData: Data? = try await resolveImageData(from: imageURL, agentId: agentId)
 

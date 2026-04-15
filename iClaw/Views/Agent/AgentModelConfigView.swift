@@ -453,7 +453,7 @@ struct AgentModelConfigView: View {
     private var videoCapableProviderModels: [ProviderModel] {
         allProviderModels.filter { pm in
             let caps = pm.provider.capabilities(for: pm.modelName)
-            return caps.videoGenerationMode != .none
+            return caps.supportsVideoGeneration
         }
     }
 
