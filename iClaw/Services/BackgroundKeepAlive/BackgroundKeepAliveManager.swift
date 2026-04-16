@@ -23,6 +23,8 @@ final class BackgroundKeepAliveManager {
     private var activeSessions: Set<UUID> = []
     /// Maps active session IDs to their display names.
     private var sessionNames: [UUID: String] = [:]
+    /// Maps active session IDs to their latest silent-mode brief (text + SF symbol icon).
+    private var sessionBriefs: [UUID: (text: String, icon: String)] = [:]
     /// Index for rotating through session names in the Live Activity.
     private var rotationIndex: Int = 0
     /// Timer for rotating session names in the Dynamic Island.
@@ -138,10 +140,30 @@ final class BackgroundKeepAliveManager {
         startOrUpdateActivity()
     }
 
+    /// Called by ChatViewModel/CronExecutor whenever a session's silent-mode
+    /// progress changes (e.g. "think:2", "tool:browser_navigate").
+    ///
+    /// The raw status string (and optional last-tool hint) is formatted into
+    /// a localized brief + SF Symbol icon and pushed to the Live Activity
+    /// when the updated session is the one currently being displayed.
+    func onSessionStatusUpdate(sessionId: UUID, silentStatus: String, lastTool: String?) {
+        guard activeSessions.contains(sessionId) else { return }
+        let brief = Self.formatSilentStatusBrief(silentStatus: silentStatus, lastTool: lastTool)
+        sessionBriefs[sessionId] = brief
+
+        guard isEnabled, !isShowingCompletion else { return }
+        // Only refresh the Live Activity when the updated session is the one
+        // currently on screen (rotation-aware) to avoid thrashing it.
+        if sessionId == currentRotationSessionId() {
+            startOrUpdateActivity()
+        }
+    }
+
     /// Called when any agent task completes.
     func onSessionCompleted(sessionId: UUID, sessionName: String, isError: Bool) {
         activeSessions.remove(sessionId)
         sessionNames.removeValue(forKey: sessionId)
+        sessionBriefs.removeValue(forKey: sessionId)
         updatePreserveFlag()
 
         guard isEnabled else { return }
@@ -168,7 +190,9 @@ final class BackgroundKeepAliveManager {
 
     private func startOrUpdateActivity() {
         let count = activeSessions.count
-        let name = currentRotationName()
+        let currentId = currentRotationSessionId()
+        let name = currentId.flatMap { sessionNames[$0] } ?? ""
+        let brief = currentId.flatMap { sessionBriefs[$0] } ?? (text: "", icon: "")
 
         let statusText: String
         if count > 0 {
@@ -181,13 +205,17 @@ final class BackgroundKeepAliveManager {
             liveActivityManager.update(
                 activeAgentCount: count,
                 sessionName: name,
-                statusText: statusText
+                statusText: statusText,
+                statusBrief: brief.text,
+                statusBriefIcon: brief.icon
             )
         } else {
             liveActivityManager.start(
                 activeAgentCount: max(count, 1),
                 sessionName: name,
-                statusText: statusText
+                statusText: statusText,
+                statusBrief: brief.text,
+                statusBriefIcon: brief.icon
             )
         }
 
@@ -199,12 +227,13 @@ final class BackgroundKeepAliveManager {
         }
     }
 
-    /// Returns the session name for the current rotation index.
-    private func currentRotationName() -> String {
-        let names = Array(sessionNames.values)
-        guard !names.isEmpty else { return "" }
-        let index = rotationIndex % names.count
-        return names[index]
+    /// Returns the session ID for the current rotation index (stable ordering
+    /// by UUID so index → session mapping is deterministic).
+    private func currentRotationSessionId() -> UUID? {
+        let ids = activeSessions.sorted { $0.uuidString < $1.uuidString }
+        guard !ids.isEmpty else { return nil }
+        let index = rotationIndex % ids.count
+        return ids[index]
     }
 
     private func startRotationTimer() {
@@ -237,5 +266,36 @@ final class BackgroundKeepAliveManager {
     /// Keep the nonisolated flag in sync with current state.
     private func updatePreserveFlag() {
         _shouldPreserveStreams = isEnabled && !activeSessions.isEmpty
+    }
+
+    // MARK: - Silent-Mode Brief Formatting
+
+    /// Turns a raw silent-mode status string (as stored by ChatViewModel) into
+    /// a localized, human-readable brief suitable for display on the Live
+    /// Activity. Mirrors the parsing in `ChatView.silentLabel` so what the
+    /// user sees in the app matches what appears on the Lock Screen /
+    /// Dynamic Island.
+    ///
+    /// - Parameters:
+    ///   - silentStatus: One of `"think:N"`, `"tool:<name>"`, or empty.
+    ///   - lastTool: Most recently executed tool name, used as a visual hint
+    ///               while the agent is thinking between tool batches.
+    /// - Returns: A tuple of (display text, SF Symbol icon name).
+    static func formatSilentStatusBrief(silentStatus: String,
+                                        lastTool: String?) -> (text: String, icon: String) {
+        if silentStatus.hasPrefix("tool:") {
+            let name = String(silentStatus.dropFirst(5))
+            let meta = ToolMeta.resolve(name)
+            return (meta.displayName, meta.icon)
+        }
+        if silentStatus.hasPrefix("think:"),
+           let n = Int(silentStatus.dropFirst(6)), n > 1 {
+            let icon = lastTool.map { ToolMeta.resolve($0).icon } ?? "brain.head.profile"
+            return (L10n.Chat.silentThinking(n), icon)
+        }
+        if silentStatus.isEmpty {
+            return ("", "")
+        }
+        return (L10n.Chat.thinking, "brain.head.profile")
     }
 }

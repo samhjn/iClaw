@@ -16,5 +16,10 @@ struct CronActivityAttributes: ActivityAttributes {
         var isCompleted: Bool = false
         /// Whether the last completed task finished with an error.
         var isError: Bool = false
+        /// Short, pre-localized status brief mirroring the silent-mode progress
+        /// (e.g. "Thinking (round 2)", "Browse"). Empty when no in-flight activity.
+        var statusBrief: String = ""
+        /// SF Symbol name for the accompanying brief icon (e.g. "globe", "brain.head.profile").
+        var statusBriefIcon: String = ""
     }
 }
