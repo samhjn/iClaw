@@ -72,7 +72,10 @@ final class ChatViewModel {
 
     var silentStatus: String {
         get { Self.silentStatuses[session.id] ?? "" }
-        set { Self.silentStatuses[session.id] = newValue }
+        set {
+            Self.silentStatuses[session.id] = newValue
+            notifyLiveActivityStatusUpdate()
+        }
     }
     private var silentRound: Int {
         get { Self.silentRounds[session.id] ?? 0 }
@@ -80,6 +83,22 @@ final class ChatViewModel {
     }
     var silentLastTool: String? {
         Self.silentLastTools[session.id]
+    }
+
+    /// Push the current silent-mode status (`think:N` / `tool:X`) and
+    /// last-executed tool to the Live Activity so the Lock Screen / Dynamic
+    /// Island can display a brief mirroring the in-app silent-mode banner.
+    private func notifyLiveActivityStatusUpdate() {
+        let sid = session.id
+        let status = Self.silentStatuses[sid] ?? ""
+        let lastTool = Self.silentLastTools[sid]
+        Task { @MainActor in
+            Self.keepAliveManager?.onSessionStatusUpdate(
+                sessionId: sid,
+                silentStatus: status,
+                lastTool: lastTool
+            )
+        }
     }
 
 
@@ -939,6 +958,8 @@ final class ChatViewModel {
         if let lastCall = results.last {
             Self.silentLastTools[session.id] = lastCall.1.function.name
         }
+        // Setting silentStatus triggers notifyLiveActivityStatusUpdate, which
+        // will also pick up the freshly-recorded last-tool icon above.
         silentStatus = "think:\(silentRound)"
         try? modelContext.save()
         loadMessages()

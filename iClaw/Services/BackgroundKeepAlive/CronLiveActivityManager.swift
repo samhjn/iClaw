@@ -13,7 +13,9 @@ final class CronLiveActivityManager {
     /// Starts (or updates) the Live Activity with the current task info.
     func start(activeAgentCount: Int = 1,
                sessionName: String = "",
-               statusText: String? = nil) {
+               statusText: String? = nil,
+               statusBrief: String = "",
+               statusBriefIcon: String = "") {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             print("[LiveActivity] Live Activities are not enabled")
             return
@@ -22,7 +24,9 @@ final class CronLiveActivityManager {
         let state = CronActivityAttributes.ContentState(
             activeAgentCount: activeAgentCount,
             sessionName: sessionName,
-            statusText: statusText ?? L10n.LiveActivity.running
+            statusText: statusText ?? L10n.LiveActivity.running,
+            statusBrief: statusBrief,
+            statusBriefIcon: statusBriefIcon
         )
 
         if let existing = currentActivity {
@@ -53,14 +57,18 @@ final class CronLiveActivityManager {
                 sessionName: String = "",
                 statusText: String? = nil,
                 isCompleted: Bool = false,
-                isError: Bool = false) {
+                isError: Bool = false,
+                statusBrief: String = "",
+                statusBriefIcon: String = "") {
         guard let activity = currentActivity else { return }
         let state = CronActivityAttributes.ContentState(
             activeAgentCount: activeAgentCount,
             sessionName: sessionName,
             statusText: statusText ?? L10n.LiveActivity.running,
             isCompleted: isCompleted,
-            isError: isError
+            isError: isError,
+            statusBrief: statusBrief,
+            statusBriefIcon: statusBriefIcon
         )
         Task {
             await activity.update(

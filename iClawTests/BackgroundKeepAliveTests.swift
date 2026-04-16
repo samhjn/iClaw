@@ -395,6 +395,227 @@ final class CronActivityAttributesTests: XCTestCase {
         let set: Set = [s1, s2, s3]
         XCTAssertEqual(set.count, 2)
     }
+
+    // MARK: StatusBrief fields
+
+    func testContentStateStatusBriefDefaultsToEmpty() {
+        let state = CronActivityAttributes.ContentState(
+            activeAgentCount: 1,
+            sessionName: "S",
+            statusText: "Running"
+        )
+        XCTAssertEqual(state.statusBrief, "")
+        XCTAssertEqual(state.statusBriefIcon, "")
+    }
+
+    func testContentStateStatusBriefRoundTrips() throws {
+        let state = CronActivityAttributes.ContentState(
+            activeAgentCount: 2,
+            sessionName: "S",
+            statusText: "2 Agents running",
+            statusBrief: "Thinking (round 3)",
+            statusBriefIcon: "globe"
+        )
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(CronActivityAttributes.ContentState.self, from: data)
+        XCTAssertEqual(decoded.statusBrief, "Thinking (round 3)")
+        XCTAssertEqual(decoded.statusBriefIcon, "globe")
+    }
+
+    func testContentStateInequalityByStatusBrief() {
+        let a = CronActivityAttributes.ContentState(
+            activeAgentCount: 1, sessionName: "S", statusText: "Running",
+            statusBrief: "Thinking", statusBriefIcon: "brain.head.profile"
+        )
+        let b = CronActivityAttributes.ContentState(
+            activeAgentCount: 1, sessionName: "S", statusText: "Running",
+            statusBrief: "Browsing", statusBriefIcon: "brain.head.profile"
+        )
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testContentStateInequalityByStatusBriefIcon() {
+        let a = CronActivityAttributes.ContentState(
+            activeAgentCount: 1, sessionName: "S", statusText: "Running",
+            statusBrief: "Thinking", statusBriefIcon: "brain.head.profile"
+        )
+        let b = CronActivityAttributes.ContentState(
+            activeAgentCount: 1, sessionName: "S", statusText: "Running",
+            statusBrief: "Thinking", statusBriefIcon: "globe"
+        )
+        XCTAssertNotEqual(a, b)
+    }
+
+    /// Older payloads (without the brief fields) must still decode into
+    /// defaulted empty values to keep Live Activities backward compatible.
+    func testContentStateDecodesLegacyPayloadWithoutBrief() throws {
+        let json = """
+        {"activeAgentCount": 1, "sessionName": "Legacy", "statusText": "Running", "isCompleted": false, "isError": false}
+        """.data(using: .utf8)!
+        let state = try JSONDecoder().decode(CronActivityAttributes.ContentState.self, from: json)
+        XCTAssertEqual(state.sessionName, "Legacy")
+        XCTAssertEqual(state.statusBrief, "")
+        XCTAssertEqual(state.statusBriefIcon, "")
+    }
+}
+
+// MARK: - Silent-Mode Brief Formatting Tests
+
+@MainActor
+final class SilentStatusBriefFormatterTests: XCTestCase {
+
+    func testEmptyStatusProducesEmptyBrief() {
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(silentStatus: "", lastTool: nil)
+        XCTAssertEqual(brief.text, "")
+        XCTAssertEqual(brief.icon, "")
+    }
+
+    func testToolStatusUsesToolMetaDisplayAndIcon() {
+        // file_read maps to icon "doc.text"
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "tool:file_read", lastTool: nil
+        )
+        XCTAssertEqual(brief.icon, "doc.text")
+        XCTAssertFalse(brief.text.isEmpty, "Known tool should produce non-empty display name")
+    }
+
+    func testToolStatusWithUnknownToolFallsBackToWrench() {
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "tool:super_secret_tool", lastTool: nil
+        )
+        XCTAssertEqual(brief.icon, "wrench")
+        XCTAssertEqual(brief.text, "super_secret_tool",
+                       "Unknown tool falls back to its raw name per ToolMeta default")
+    }
+
+    func testThinkStatusRoundOneFallsBackToThinking() {
+        // "think:1" is treated as the initial round → generic thinking label.
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "think:1", lastTool: nil
+        )
+        XCTAssertEqual(brief.icon, "brain.head.profile")
+        XCTAssertEqual(brief.text, L10n.Chat.thinking)
+    }
+
+    func testThinkStatusRoundTwoUsesSilentThinkingText() {
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "think:2", lastTool: nil
+        )
+        XCTAssertEqual(brief.text, L10n.Chat.silentThinking(2))
+        XCTAssertEqual(brief.icon, "brain.head.profile",
+                       "No last tool → default brain icon")
+    }
+
+    func testThinkStatusAdoptsLastToolIcon() {
+        // With a recent tool, the think brief should borrow that tool's icon
+        // so the user knows which capability was last used.
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "think:3", lastTool: "browser_navigate"
+        )
+        XCTAssertEqual(brief.icon, "globe", "browser_navigate resolves to globe")
+        XCTAssertEqual(brief.text, L10n.Chat.silentThinking(3))
+    }
+
+    func testMalformedStatusFallsBackToThinking() {
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "garbage", lastTool: nil
+        )
+        XCTAssertEqual(brief.icon, "brain.head.profile")
+        XCTAssertEqual(brief.text, L10n.Chat.thinking)
+    }
+
+    func testThinkStatusWithNonNumericRoundFallsBackToThinking() {
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "think:abc", lastTool: nil
+        )
+        XCTAssertEqual(brief.icon, "brain.head.profile")
+        XCTAssertEqual(brief.text, L10n.Chat.thinking)
+    }
+
+    func testToolStatusWithEmptyNameFallsBackGracefully() {
+        let brief = BackgroundKeepAliveManager.formatSilentStatusBrief(
+            silentStatus: "tool:", lastTool: nil
+        )
+        // Unknown empty tool still resolves through ToolMeta.default → wrench icon.
+        XCTAssertEqual(brief.icon, "wrench")
+    }
+}
+
+// MARK: - onSessionStatusUpdate Behavior Tests
+
+final class BackgroundKeepAliveStatusUpdateTests: XCTestCase {
+
+    private let testKey = BackgroundKeepAliveManager.enabledKey
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        super.tearDown()
+    }
+
+    @MainActor
+    func testStatusUpdateForUnknownSessionIsNoOp() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        // No session started — update must not crash or throw.
+        manager.onSessionStatusUpdate(
+            sessionId: UUID(),
+            silentStatus: "tool:file_read",
+            lastTool: nil
+        )
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testStatusUpdateForActiveSessionDoesNotCrash() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Task")
+        manager.onSessionStatusUpdate(sessionId: id, silentStatus: "tool:file_read", lastTool: nil)
+        manager.onSessionStatusUpdate(sessionId: id, silentStatus: "think:2", lastTool: "file_read")
+        manager.onSessionStatusUpdate(sessionId: id, silentStatus: "", lastTool: nil)
+        manager.onSessionCompleted(sessionId: id, sessionName: "Task", isError: false)
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testStatusUpdateWhenDisabledIsSafe() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let manager = BackgroundKeepAliveManager()
+        // Disabled: session tracking never happens, so the update short-circuits.
+        manager.onSessionStatusUpdate(
+            sessionId: UUID(),
+            silentStatus: "tool:file_read",
+            lastTool: nil
+        )
+    }
+
+    @MainActor
+    func testStatusUpdateAfterCompletionIsSafe() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id = UUID()
+        manager.onSessionStarted(sessionId: id, sessionName: "Task")
+        manager.onSessionCompleted(sessionId: id, sessionName: "Task", isError: false)
+        // Late status update (e.g. coalesced dispatch) must not re-activate anything.
+        manager.onSessionStatusUpdate(sessionId: id, silentStatus: "tool:file_read", lastTool: nil)
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
+
+    @MainActor
+    func testMultipleSessionsReceiveIndependentStatusUpdates() {
+        let manager = BackgroundKeepAliveManager()
+        manager.isEnabled = true
+        let id1 = UUID()
+        let id2 = UUID()
+        manager.onSessionStarted(sessionId: id1, sessionName: "A")
+        manager.onSessionStarted(sessionId: id2, sessionName: "B")
+        manager.onSessionStatusUpdate(sessionId: id1, silentStatus: "tool:browser_navigate", lastTool: nil)
+        manager.onSessionStatusUpdate(sessionId: id2, silentStatus: "think:2", lastTool: "file_read")
+        manager.onSessionCompleted(sessionId: id1, sessionName: "A", isError: false)
+        manager.onSessionCompleted(sessionId: id2, sessionName: "B", isError: false)
+        XCTAssertFalse(manager.hasActiveSessions)
+    }
 }
 
 // MARK: - CronLiveActivityManager State Tests

@@ -39,9 +39,14 @@ struct CronActivityWidget: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text(context.state.statusText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(context.state.statusText)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        if !context.state.statusBrief.isEmpty {
+                            briefRow(state: context.state)
+                        }
+                    }
                 }
             } compactLeading: {
                 Image(systemName: leadingIcon(context: context))
@@ -50,13 +55,16 @@ struct CronActivityWidget: Widget {
                 if context.state.isCompleted || context.state.isError {
                     Image(systemName: context.state.isError ? "xmark.circle.fill" : "checkmark.circle.fill")
                         .foregroundStyle(context.state.isError ? .red : .green)
+                } else if !context.state.statusBriefIcon.isEmpty {
+                    Image(systemName: context.state.statusBriefIcon)
+                        .foregroundStyle(.blue)
                 } else {
                     Text("\(context.state.activeAgentCount)")
                         .font(.caption.bold())
                         .foregroundStyle(.blue)
                 }
             } minimal: {
-                Image(systemName: leadingIcon(context: context))
+                Image(systemName: minimalIcon(context: context))
                     .foregroundStyle(leadingColor(context: context))
             }
         }
@@ -74,6 +82,15 @@ struct CronActivityWidget: Widget {
         }
     }
 
+    /// Minimal presentation uses the brief icon when available so the user can
+    /// glance what the agent is doing; falls back to the generic bolt otherwise.
+    private func minimalIcon(context: ActivityViewContext<CronActivityAttributes>) -> String {
+        if context.state.isError { return "xmark.circle.fill" }
+        if context.state.isCompleted { return "checkmark.circle.fill" }
+        if !context.state.statusBriefIcon.isEmpty { return context.state.statusBriefIcon }
+        return "bolt.fill"
+    }
+
     private func leadingColor(context: ActivityViewContext<CronActivityAttributes>) -> Color {
         if context.state.isError {
             return .red
@@ -81,6 +98,21 @@ struct CronActivityWidget: Widget {
             return .green
         } else {
             return .blue
+        }
+    }
+
+    @ViewBuilder
+    private func briefRow(state: CronActivityAttributes.ContentState) -> some View {
+        HStack(spacing: 6) {
+            if !state.statusBriefIcon.isEmpty {
+                Image(systemName: state.statusBriefIcon)
+                    .font(.caption2)
+                    .foregroundStyle(.blue)
+            }
+            Text(state.statusBrief)
+                .font(.caption2)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
         }
     }
 
@@ -102,6 +134,9 @@ struct CronActivityWidget: Widget {
                 Text(context.state.statusText)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                if !context.state.statusBrief.isEmpty {
+                    briefRow(state: context.state)
+                }
             }
 
             Spacer()
