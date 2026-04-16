@@ -679,7 +679,9 @@ struct ToolMeta {
     /// Skill-defined custom tools arrive as `skill_<sanitized_skill_name>_<tool>`
     /// (see `PromptBuilder.skillToolName`); we strip the prefix and tag the
     /// card with a "Skill" scope so it visually matches other skill UI.
-    /// Anything else gets generic identifier humanization.
+    /// Any other unknown tool name is returned raw with a wrench icon —
+    /// this preserves the documented invariant relied on by
+    /// `BackgroundKeepAliveManager.formatSilentStatusBrief` and its tests.
     private static func humanizeUnknown(_ raw: String) -> ToolMeta {
         if raw.hasPrefix("skill_") {
             let body = String(raw.dropFirst("skill_".count))
@@ -691,7 +693,7 @@ struct ToolMeta {
                 scope: L10n.ToolCard.skillScope
             )
         }
-        return ToolMeta(displayName: humanizeIdentifier(raw), icon: "wrench", color: .gray)
+        return ToolMeta(displayName: raw, icon: "wrench", color: .gray)
     }
 
     /// Splits snake_case / kebab-case / camelCase / PascalCase identifiers
