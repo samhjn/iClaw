@@ -574,6 +574,7 @@
 "toolCard.recallSession" = "回憶對話";
 "toolCard.generateImage" = "生成圖片";
 "toolCard.generateVideo" = "生成影片";
+"toolCard.skillScope" = "技能";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "標準輸出";

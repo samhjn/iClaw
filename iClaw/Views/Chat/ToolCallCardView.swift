@@ -669,95 +669,29 @@ struct ToolMeta {
         case "recall_session":
             return ToolMeta(displayName: L10n.ToolCard.recallSession, icon: "bubble.left.and.text.bubble.right.fill", color: .purple)
         default:
-            if let builtin = claudeBuiltin(toolName) { return builtin }
             return humanizeUnknown(toolName)
         }
     }
 
     // MARK: - Humanization for unmapped tool names
 
-    /// Common Claude / agent built-in tools that show up in skill outputs.
-    /// Mapped explicitly so they get a friendly label, icon, and color
-    /// instead of the raw camel-cased identifier.
-    private static func claudeBuiltin(_ name: String) -> ToolMeta? {
-        switch name {
-        case "Bash":
-            return ToolMeta(displayName: "Terminal", icon: "terminal.fill", color: .green)
-        case "Read":
-            return ToolMeta(displayName: "Read File", icon: "doc.text", color: .cyan)
-        case "Write":
-            return ToolMeta(displayName: "Write File", icon: "doc.badge.plus", color: .cyan)
-        case "Edit", "MultiEdit":
-            return ToolMeta(displayName: "Edit File", icon: "pencil.line", color: .cyan)
-        case "Glob":
-            return ToolMeta(displayName: "Find Files", icon: "doc.text.magnifyingglass", color: .cyan)
-        case "Grep":
-            return ToolMeta(displayName: "Search Code", icon: "text.magnifyingglass", color: .cyan)
-        case "TodoWrite":
-            return ToolMeta(displayName: "Update Todos", icon: "checklist", color: .green)
-        case "Task", "Agent":
-            return ToolMeta(displayName: "Run Agent", icon: "person.crop.circle.badge.plus", color: .orange)
-        case "WebFetch":
-            return ToolMeta(displayName: "Fetch URL", icon: "globe", color: .cyan)
-        case "WebSearch":
-            return ToolMeta(displayName: "Web Search", icon: "magnifyingglass", color: .cyan)
-        case "NotebookEdit":
-            return ToolMeta(displayName: "Edit Notebook", icon: "book.pages", color: .cyan)
-        case "Skill":
-            return ToolMeta(displayName: "Run Skill", icon: "sparkles", color: .indigo)
-        case "ToolSearch":
-            return ToolMeta(displayName: "Search Tools", icon: "magnifyingglass.circle", color: .gray)
-        case "AskUserQuestion":
-            return ToolMeta(displayName: "Ask User", icon: "questionmark.bubble", color: .blue)
-        case "ExitPlanMode":
-            return ToolMeta(displayName: "Finish Plan", icon: "checkmark.circle", color: .green)
-        case "Monitor":
-            return ToolMeta(displayName: "Monitor Process", icon: "waveform.path.ecg", color: .blue)
-        case "PushNotification":
-            return ToolMeta(displayName: "Push Notification", icon: "bell.badge", color: .orange)
-        default:
-            return nil
-        }
-    }
-
-    /// Fallback for unknown tool names: detect MCP namespace if present,
-    /// then convert the identifier to a Title-Case readable label.
+    /// Fallback for tool names not covered by the explicit switch above.
+    /// Skill-defined custom tools arrive as `skill_<sanitized_skill_name>_<tool>`
+    /// (see `PromptBuilder.skillToolName`); we strip the prefix and tag the
+    /// card with a "Skill" scope so it visually matches other skill UI.
+    /// Anything else gets generic identifier humanization.
     private static func humanizeUnknown(_ raw: String) -> ToolMeta {
-        // MCP-style: "mcp__<server>__<action>"
-        if raw.hasPrefix("mcp__") {
-            let parts = raw.dropFirst("mcp__".count).components(separatedBy: "__")
-            if parts.count >= 2 {
-                let server = parts[0]
-                let action = parts.dropFirst().joined(separator: "_")
-                let style = mcpServerStyle(server)
-                return ToolMeta(
-                    displayName: humanizeIdentifier(action),
-                    icon: style.icon,
-                    color: style.color,
-                    scope: humanizeIdentifier(server)
-                )
-            }
+        if raw.hasPrefix("skill_") {
+            let body = String(raw.dropFirst("skill_".count))
+            let label = humanizeIdentifier(body)
+            return ToolMeta(
+                displayName: label.isEmpty ? raw : label,
+                icon: "sparkles",
+                color: .indigo,
+                scope: L10n.ToolCard.skillScope
+            )
         }
         return ToolMeta(displayName: humanizeIdentifier(raw), icon: "wrench", color: .gray)
-    }
-
-    private static func mcpServerStyle(_ server: String) -> (icon: String, color: Color) {
-        switch server.lowercased() {
-        case "github":
-            return ("chevron.left.forwardslash.chevron.right", .indigo)
-        case "gitlab":
-            return ("chevron.left.forwardslash.chevron.right", .orange)
-        case "slack":
-            return ("number", .purple)
-        case "linear":
-            return ("arrow.up.right.square", .indigo)
-        case "notion":
-            return ("doc.richtext", .primary)
-        case "jira":
-            return ("ladybug", .blue)
-        default:
-            return ("puzzlepiece.extension", .gray)
-        }
     }
 
     /// Splits snake_case / kebab-case / camelCase / PascalCase identifiers
@@ -765,15 +699,14 @@ struct ToolMeta {
     private static func humanizeIdentifier(_ raw: String) -> String {
         guard !raw.isEmpty else { return raw }
 
-        // First normalize separators.
         let normalized = raw
             .replacingOccurrences(of: "__", with: " ")
             .replacingOccurrences(of: "_", with: " ")
             .replacingOccurrences(of: "-", with: " ")
 
         // Split camelCase / PascalCase by inserting spaces before uppercase
-        // letters that follow a lowercase letter or that precede a lowercase
-        // letter (handles runs like "URLPath" -> "URL Path").
+        // letters that follow a lowercase letter, or that precede a lowercase
+        // letter inside an uppercase run (so "URLPath" -> "URL Path").
         var spaced = ""
         let chars = Array(normalized)
         for i in chars.indices {
@@ -792,10 +725,8 @@ struct ToolMeta {
 
         let acronyms: Set<String> = [
             "URL", "URI", "API", "JS", "JSON", "HTML", "CSS", "SQL", "ID",
-            "UI", "UX", "HTTP", "HTTPS", "IO", "PR", "CI", "CD", "AI", "ML",
-            "LLM", "MCP", "AWS", "GCP", "TLS", "SSL", "OS", "IP", "TCP",
-            "UDP", "DNS", "SDK", "CLI", "GUI", "JWT", "MD", "PDF", "CSV",
-            "XML", "YAML", "TOML", "RAG", "PR", "QA"
+            "UI", "HTTP", "HTTPS", "IO", "AI", "ML", "SDK", "CLI", "PDF",
+            "CSV", "XML", "YAML", "TOML", "OS", "IP", "DNS"
         ]
 
         let words = spaced

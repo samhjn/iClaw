@@ -573,6 +573,7 @@
 "toolCard.recallSession" = "세션 회상";
 "toolCard.generateImage" = "이미지 생성";
 "toolCard.generateVideo" = "동영상 생성";
+"toolCard.skillScope" = "스킬";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "표준 출력";

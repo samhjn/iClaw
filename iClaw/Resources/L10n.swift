@@ -716,6 +716,7 @@ enum L10n {
         static var recallSession: String { tr("toolCard.recallSession") }
         static var generateImage: String { tr("toolCard.generateImage") }
         static var generateVideo: String { tr("toolCard.generateVideo") }
+        static var skillScope: String { tr("toolCard.skillScope") }
     }
 
     // MARK: - Tool Result

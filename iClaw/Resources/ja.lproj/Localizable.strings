@@ -573,6 +573,7 @@
 "toolCard.recallSession" = "セッション想起";
 "toolCard.generateImage" = "画像生成";
 "toolCard.generateVideo" = "動画生成";
+"toolCard.skillScope" = "スキル";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "標準出力";
