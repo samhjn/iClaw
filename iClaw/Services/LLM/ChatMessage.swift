@@ -445,7 +445,10 @@ struct LLMUsage: Codable {
     let promptTokens: Int?
     let completionTokens: Int?
     let totalTokens: Int?
+    /// Tokens written to the cache (Anthropic: `cache_creation_input_tokens`).
     var cacheCreationInputTokens: Int?
+    /// Tokens read from cache (Anthropic: `cache_read_input_tokens`,
+    /// OpenAI: `prompt_tokens_details.cached_tokens`).
     var cacheReadInputTokens: Int?
 
     enum CodingKeys: String, CodingKey {
@@ -454,6 +457,54 @@ struct LLMUsage: Codable {
         case totalTokens = "total_tokens"
         case cacheCreationInputTokens = "cache_creation_input_tokens"
         case cacheReadInputTokens = "cache_read_input_tokens"
+        case promptTokensDetails = "prompt_tokens_details"
+    }
+
+    // Custom decoder: merge Anthropic (`cache_read_input_tokens`) and
+    // OpenAI (`prompt_tokens_details.cached_tokens`) into one field.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        promptTokens = try c.decodeIfPresent(Int.self, forKey: .promptTokens)
+        completionTokens = try c.decodeIfPresent(Int.self, forKey: .completionTokens)
+        totalTokens = try c.decodeIfPresent(Int.self, forKey: .totalTokens)
+        cacheCreationInputTokens = try c.decodeIfPresent(Int.self, forKey: .cacheCreationInputTokens)
+
+        // Anthropic puts it at `cache_read_input_tokens`
+        var cacheRead = try c.decodeIfPresent(Int.self, forKey: .cacheReadInputTokens)
+
+        // OpenAI nests it inside `prompt_tokens_details.cached_tokens`
+        if cacheRead == nil,
+           let details = try c.decodeIfPresent(PromptTokensDetails.self, forKey: .promptTokensDetails) {
+            cacheRead = details.cachedTokens
+        }
+        cacheReadInputTokens = cacheRead
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(promptTokens, forKey: .promptTokens)
+        try c.encodeIfPresent(completionTokens, forKey: .completionTokens)
+        try c.encodeIfPresent(totalTokens, forKey: .totalTokens)
+        try c.encodeIfPresent(cacheCreationInputTokens, forKey: .cacheCreationInputTokens)
+        try c.encodeIfPresent(cacheReadInputTokens, forKey: .cacheReadInputTokens)
+    }
+
+    /// Memberwise init for manual construction.
+    init(promptTokens: Int?, completionTokens: Int?, totalTokens: Int?,
+         cacheCreationInputTokens: Int? = nil, cacheReadInputTokens: Int? = nil) {
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+        self.totalTokens = totalTokens
+        self.cacheCreationInputTokens = cacheCreationInputTokens
+        self.cacheReadInputTokens = cacheReadInputTokens
+    }
+
+    /// OpenAI `prompt_tokens_details` nested object.
+    private struct PromptTokensDetails: Decodable {
+        let cachedTokens: Int?
+        enum CodingKeys: String, CodingKey {
+            case cachedTokens = "cached_tokens"
+        }
     }
 }
 
