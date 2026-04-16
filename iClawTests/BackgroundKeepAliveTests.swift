@@ -461,6 +461,7 @@ final class CronActivityAttributesTests: XCTestCase {
 
 // MARK: - Silent-Mode Brief Formatting Tests
 
+@MainActor
 final class SilentStatusBriefFormatterTests: XCTestCase {
 
     func testEmptyStatusProducesEmptyBrief() {
