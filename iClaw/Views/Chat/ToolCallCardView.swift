@@ -34,11 +34,24 @@ private struct SingleToolCallCard: View {
                         .background(toolMeta.color.opacity(0.12))
                         .clipShape(RoundedRectangle(cornerRadius: 5))
 
+                    if let scope = toolMeta.scope {
+                        Text(scope)
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(toolMeta.color)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(toolMeta.color.opacity(0.12))
+                            .clipShape(Capsule())
+                            .fixedSize()
+                    }
+
                     Text(toolMeta.displayName)
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
-                        .fixedSize(horizontal: true, vertical: false)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
 
                     if let summary = parseSummary(call) {
                         Text(summary)
@@ -293,10 +306,24 @@ struct ToolResultCardView: View {
                     .font(.caption)
                     .foregroundStyle(toolMeta.color)
 
+                if let scope = toolMeta.scope {
+                    Text(scope)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(toolMeta.color)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(toolMeta.color.opacity(0.12))
+                        .clipShape(Capsule())
+                        .fixedSize()
+                }
+
                 Text(toolMeta.displayName)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
                 Spacer(minLength: 4)
 
@@ -458,6 +485,7 @@ struct ToolMeta {
     let displayName: String
     let icon: String
     let color: Color
+    var scope: String? = nil
 
     static func resolve(_ toolName: String) -> ToolMeta {
         switch toolName {
@@ -641,7 +669,77 @@ struct ToolMeta {
         case "recall_session":
             return ToolMeta(displayName: L10n.ToolCard.recallSession, icon: "bubble.left.and.text.bubble.right.fill", color: .purple)
         default:
-            return ToolMeta(displayName: toolName, icon: "wrench", color: .gray)
+            return humanizeUnknown(toolName)
         }
+    }
+
+    // MARK: - Humanization for unmapped tool names
+
+    /// Fallback for tool names not covered by the explicit switch above.
+    /// Skill-defined custom tools arrive as `skill_<sanitized_skill_name>_<tool>`
+    /// (see `PromptBuilder.skillToolName`); we strip the prefix and tag the
+    /// card with a "Skill" scope so it visually matches other skill UI.
+    /// Any other unknown tool name is returned raw with a wrench icon —
+    /// this preserves the documented invariant relied on by
+    /// `BackgroundKeepAliveManager.formatSilentStatusBrief` and its tests.
+    private static func humanizeUnknown(_ raw: String) -> ToolMeta {
+        if raw.hasPrefix("skill_") {
+            let body = String(raw.dropFirst("skill_".count))
+            let label = humanizeIdentifier(body)
+            return ToolMeta(
+                displayName: label.isEmpty ? raw : label,
+                icon: "sparkles",
+                color: .indigo,
+                scope: L10n.ToolCard.skillScope
+            )
+        }
+        return ToolMeta(displayName: raw, icon: "wrench", color: .gray)
+    }
+
+    /// Splits snake_case / kebab-case / camelCase / PascalCase identifiers
+    /// into space-separated Title Case words, preserving common acronyms.
+    private static func humanizeIdentifier(_ raw: String) -> String {
+        guard !raw.isEmpty else { return raw }
+
+        let normalized = raw
+            .replacingOccurrences(of: "__", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+
+        // Split camelCase / PascalCase by inserting spaces before uppercase
+        // letters that follow a lowercase letter, or that precede a lowercase
+        // letter inside an uppercase run (so "URLPath" -> "URL Path").
+        var spaced = ""
+        let chars = Array(normalized)
+        for i in chars.indices {
+            let ch = chars[i]
+            if i > 0 {
+                let prev = chars[i - 1]
+                let next: Character? = i + 1 < chars.count ? chars[i + 1] : nil
+                if ch.isUppercase && prev.isLowercase {
+                    spaced.append(" ")
+                } else if let next, ch.isUppercase && prev.isUppercase && next.isLowercase {
+                    spaced.append(" ")
+                }
+            }
+            spaced.append(ch)
+        }
+
+        let acronyms: Set<String> = [
+            "URL", "URI", "API", "JS", "JSON", "HTML", "CSS", "SQL", "ID",
+            "UI", "HTTP", "HTTPS", "IO", "AI", "ML", "SDK", "CLI", "PDF",
+            "CSV", "XML", "YAML", "TOML", "OS", "IP", "DNS"
+        ]
+
+        let words = spaced
+            .split(whereSeparator: { $0.isWhitespace })
+            .map { word -> String in
+                let upper = word.uppercased()
+                if acronyms.contains(upper) { return upper }
+                let first = word.prefix(1).uppercased()
+                let rest = word.dropFirst().lowercased()
+                return first + rest
+            }
+        return words.joined(separator: " ")
     }
 }

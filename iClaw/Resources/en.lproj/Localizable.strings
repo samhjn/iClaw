@@ -574,6 +574,7 @@
 "toolCard.recallSession" = "Recall Session";
 "toolCard.generateImage" = "Generate Image";
 "toolCard.generateVideo" = "Generate Video";
+"toolCard.skillScope" = "Skill";
 
 // MARK: - Tool Result
 "toolResult.stdout" = "stdout";
