@@ -34,11 +34,24 @@ private struct SingleToolCallCard: View {
                         .background(toolMeta.color.opacity(0.12))
                         .clipShape(RoundedRectangle(cornerRadius: 5))
 
+                    if let scope = toolMeta.scope {
+                        Text(scope)
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(toolMeta.color)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(toolMeta.color.opacity(0.12))
+                            .clipShape(Capsule())
+                            .fixedSize()
+                    }
+
                     Text(toolMeta.displayName)
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
-                        .fixedSize(horizontal: true, vertical: false)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
 
                     if let summary = parseSummary(call) {
                         Text(summary)
@@ -293,10 +306,24 @@ struct ToolResultCardView: View {
                     .font(.caption)
                     .foregroundStyle(toolMeta.color)
 
+                if let scope = toolMeta.scope {
+                    Text(scope)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(toolMeta.color)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(toolMeta.color.opacity(0.12))
+                        .clipShape(Capsule())
+                        .fixedSize()
+                }
+
                 Text(toolMeta.displayName)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
                 Spacer(minLength: 4)
 
@@ -458,6 +485,7 @@ struct ToolMeta {
     let displayName: String
     let icon: String
     let color: Color
+    var scope: String? = nil
 
     static func resolve(_ toolName: String) -> ToolMeta {
         switch toolName {
@@ -641,7 +669,144 @@ struct ToolMeta {
         case "recall_session":
             return ToolMeta(displayName: L10n.ToolCard.recallSession, icon: "bubble.left.and.text.bubble.right.fill", color: .purple)
         default:
-            return ToolMeta(displayName: toolName, icon: "wrench", color: .gray)
+            if let builtin = claudeBuiltin(toolName) { return builtin }
+            return humanizeUnknown(toolName)
         }
+    }
+
+    // MARK: - Humanization for unmapped tool names
+
+    /// Common Claude / agent built-in tools that show up in skill outputs.
+    /// Mapped explicitly so they get a friendly label, icon, and color
+    /// instead of the raw camel-cased identifier.
+    private static func claudeBuiltin(_ name: String) -> ToolMeta? {
+        switch name {
+        case "Bash":
+            return ToolMeta(displayName: "Terminal", icon: "terminal.fill", color: .green)
+        case "Read":
+            return ToolMeta(displayName: "Read File", icon: "doc.text", color: .cyan)
+        case "Write":
+            return ToolMeta(displayName: "Write File", icon: "doc.badge.plus", color: .cyan)
+        case "Edit", "MultiEdit":
+            return ToolMeta(displayName: "Edit File", icon: "pencil.line", color: .cyan)
+        case "Glob":
+            return ToolMeta(displayName: "Find Files", icon: "doc.text.magnifyingglass", color: .cyan)
+        case "Grep":
+            return ToolMeta(displayName: "Search Code", icon: "text.magnifyingglass", color: .cyan)
+        case "TodoWrite":
+            return ToolMeta(displayName: "Update Todos", icon: "checklist", color: .green)
+        case "Task", "Agent":
+            return ToolMeta(displayName: "Run Agent", icon: "person.crop.circle.badge.plus", color: .orange)
+        case "WebFetch":
+            return ToolMeta(displayName: "Fetch URL", icon: "globe", color: .cyan)
+        case "WebSearch":
+            return ToolMeta(displayName: "Web Search", icon: "magnifyingglass", color: .cyan)
+        case "NotebookEdit":
+            return ToolMeta(displayName: "Edit Notebook", icon: "book.pages", color: .cyan)
+        case "Skill":
+            return ToolMeta(displayName: "Run Skill", icon: "sparkles", color: .indigo)
+        case "ToolSearch":
+            return ToolMeta(displayName: "Search Tools", icon: "magnifyingglass.circle", color: .gray)
+        case "AskUserQuestion":
+            return ToolMeta(displayName: "Ask User", icon: "questionmark.bubble", color: .blue)
+        case "ExitPlanMode":
+            return ToolMeta(displayName: "Finish Plan", icon: "checkmark.circle", color: .green)
+        case "Monitor":
+            return ToolMeta(displayName: "Monitor Process", icon: "waveform.path.ecg", color: .blue)
+        case "PushNotification":
+            return ToolMeta(displayName: "Push Notification", icon: "bell.badge", color: .orange)
+        default:
+            return nil
+        }
+    }
+
+    /// Fallback for unknown tool names: detect MCP namespace if present,
+    /// then convert the identifier to a Title-Case readable label.
+    private static func humanizeUnknown(_ raw: String) -> ToolMeta {
+        // MCP-style: "mcp__<server>__<action>"
+        if raw.hasPrefix("mcp__") {
+            let parts = raw.dropFirst("mcp__".count).components(separatedBy: "__")
+            if parts.count >= 2 {
+                let server = parts[0]
+                let action = parts.dropFirst().joined(separator: "_")
+                let style = mcpServerStyle(server)
+                return ToolMeta(
+                    displayName: humanizeIdentifier(action),
+                    icon: style.icon,
+                    color: style.color,
+                    scope: humanizeIdentifier(server)
+                )
+            }
+        }
+        return ToolMeta(displayName: humanizeIdentifier(raw), icon: "wrench", color: .gray)
+    }
+
+    private static func mcpServerStyle(_ server: String) -> (icon: String, color: Color) {
+        switch server.lowercased() {
+        case "github":
+            return ("chevron.left.forwardslash.chevron.right", .indigo)
+        case "gitlab":
+            return ("chevron.left.forwardslash.chevron.right", .orange)
+        case "slack":
+            return ("number", .purple)
+        case "linear":
+            return ("arrow.up.right.square", .indigo)
+        case "notion":
+            return ("doc.richtext", .primary)
+        case "jira":
+            return ("ladybug", .blue)
+        default:
+            return ("puzzlepiece.extension", .gray)
+        }
+    }
+
+    /// Splits snake_case / kebab-case / camelCase / PascalCase identifiers
+    /// into space-separated Title Case words, preserving common acronyms.
+    private static func humanizeIdentifier(_ raw: String) -> String {
+        guard !raw.isEmpty else { return raw }
+
+        // First normalize separators.
+        let normalized = raw
+            .replacingOccurrences(of: "__", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+
+        // Split camelCase / PascalCase by inserting spaces before uppercase
+        // letters that follow a lowercase letter or that precede a lowercase
+        // letter (handles runs like "URLPath" -> "URL Path").
+        var spaced = ""
+        let chars = Array(normalized)
+        for i in chars.indices {
+            let ch = chars[i]
+            if i > 0 {
+                let prev = chars[i - 1]
+                let next: Character? = i + 1 < chars.count ? chars[i + 1] : nil
+                if ch.isUppercase && prev.isLowercase {
+                    spaced.append(" ")
+                } else if let next, ch.isUppercase && prev.isUppercase && next.isLowercase {
+                    spaced.append(" ")
+                }
+            }
+            spaced.append(ch)
+        }
+
+        let acronyms: Set<String> = [
+            "URL", "URI", "API", "JS", "JSON", "HTML", "CSS", "SQL", "ID",
+            "UI", "UX", "HTTP", "HTTPS", "IO", "PR", "CI", "CD", "AI", "ML",
+            "LLM", "MCP", "AWS", "GCP", "TLS", "SSL", "OS", "IP", "TCP",
+            "UDP", "DNS", "SDK", "CLI", "GUI", "JWT", "MD", "PDF", "CSV",
+            "XML", "YAML", "TOML", "RAG", "PR", "QA"
+        ]
+
+        let words = spaced
+            .split(whereSeparator: { $0.isWhitespace })
+            .map { word -> String in
+                let upper = word.uppercased()
+                if acronyms.contains(upper) { return upper }
+                let first = word.prefix(1).uppercased()
+                let rest = word.dropFirst().lowercased()
+                return first + rest
+            }
+        return words.joined(separator: " ")
     }
 }
