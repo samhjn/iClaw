@@ -111,7 +111,9 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 chunks.append(.usage(LLMUsage(
                     promptTokens: msgUsage.inputTokens,
                     completionTokens: msgUsage.outputTokens,
-                    totalTokens: nil
+                    totalTokens: nil,
+                    cacheCreationInputTokens: msgUsage.cacheCreationInputTokens,
+                    cacheReadInputTokens: msgUsage.cacheReadInputTokens
                 )))
             }
 
@@ -158,7 +160,9 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 chunks.append(.usage(LLMUsage(
                     promptTokens: usage.inputTokens,
                     completionTokens: usage.outputTokens,
-                    totalTokens: nil
+                    totalTokens: nil,
+                    cacheCreationInputTokens: usage.cacheCreationInputTokens,
+                    cacheReadInputTokens: usage.cacheReadInputTokens
                 )))
             }
             if let stopReason = streamEvent.delta?.stopReason,
@@ -300,6 +304,27 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
 
         let effectiveTemperature = thinking != nil ? 1.0 : temperature
 
+        // -- Apply prompt-caching breakpoints --
+        // Breakpoint 1: last system block (caches the full system prompt)
+        if !systemBlocks.isEmpty {
+            systemBlocks[systemBlocks.count - 1].cacheControl = .ephemeral
+        }
+
+        // Breakpoint 2: last tool definition (caches system + tools)
+        if var tools = anthropicTools, !tools.isEmpty {
+            tools[tools.count - 1].cacheControl = .ephemeral
+            anthropicTools = tools
+        }
+
+        // Breakpoint 3: penultimate user turn (caches conversation prefix)
+        // Find the second-to-last user message so that only the final
+        // user turn is uncached — maximising cache hits across turns.
+        let userIndices = anthropicMessages.indices.filter { anthropicMessages[$0].role == "user" }
+        if userIndices.count >= 2 {
+            let penultimateIdx = userIndices[userIndices.count - 2]
+            anthropicMessages[penultimateIdx].cacheControlOnLast = .ephemeral
+        }
+
         return AnthropicRequest(
             model: model,
             maxTokens: effectiveMaxTokens,
@@ -357,7 +382,9 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
         let usage = LLMUsage(
             promptTokens: resp.usage?.inputTokens,
             completionTokens: resp.usage?.outputTokens,
-            totalTokens: nil
+            totalTokens: nil,
+            cacheCreationInputTokens: resp.usage?.cacheCreationInputTokens,
+            cacheReadInputTokens: resp.usage?.cacheReadInputTokens
         )
         return LLMChatResponse(id: resp.id, choices: [choice], usage: usage)
     }

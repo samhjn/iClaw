@@ -445,15 +445,27 @@ struct LLMUsage: Codable {
     let promptTokens: Int?
     let completionTokens: Int?
     let totalTokens: Int?
+    var cacheCreationInputTokens: Int?
+    var cacheReadInputTokens: Int?
 
     enum CodingKeys: String, CodingKey {
         case promptTokens = "prompt_tokens"
         case completionTokens = "completion_tokens"
         case totalTokens = "total_tokens"
+        case cacheCreationInputTokens = "cache_creation_input_tokens"
+        case cacheReadInputTokens = "cache_read_input_tokens"
     }
 }
 
 // MARK: - Anthropic API types
+
+/// Anthropic prompt-caching control. Attach to a system block, tool, or
+/// the last content block in a message to mark a cache breakpoint.
+struct CacheControl: Encodable {
+    let type: String
+
+    static let ephemeral = CacheControl(type: "ephemeral")
+}
 
 struct AnthropicRequest: Encodable {
     let model: String
@@ -474,6 +486,12 @@ struct AnthropicRequest: Encodable {
 struct AnthropicSystemBlock: Encodable {
     let type: String
     let text: String
+    var cacheControl: CacheControl?
+
+    enum CodingKeys: String, CodingKey {
+        case type, text
+        case cacheControl = "cache_control"
+    }
 }
 
 struct AnthropicThinking: Encodable {
@@ -493,6 +511,46 @@ struct AnthropicThinking: Encodable {
 struct AnthropicMessage: Encodable {
     let role: String
     let content: [AnthropicContentBlock]
+    /// When set, `cache_control` is appended to the last content block during encoding.
+    var cacheControlOnLast: CacheControl?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(role, forKey: .role)
+
+        if let cc = cacheControlOnLast, !content.isEmpty {
+            var arr = container.nestedUnkeyedContainer(forKey: .content)
+            for (i, block) in content.enumerated() {
+                if i == content.count - 1 {
+                    try arr.encode(CachedBlock(block: block, cacheControl: cc))
+                } else {
+                    try arr.encode(block)
+                }
+            }
+        } else {
+            try container.encode(content, forKey: .content)
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case role, content
+    }
+
+    /// Wrapper that encodes a content block with an additional `cache_control` key.
+    private struct CachedBlock: Encodable {
+        let block: AnthropicContentBlock
+        let cacheControl: CacheControl
+
+        func encode(to encoder: Encoder) throws {
+            try block.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(cacheControl, forKey: .cacheControl)
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case cacheControl = "cache_control"
+        }
+    }
 }
 
 enum AnthropicContentBlock: Encodable {
@@ -581,10 +639,12 @@ struct AnthropicTool: Encodable {
     let name: String
     let description: String
     let inputSchema: JSONSchema
+    var cacheControl: CacheControl?
 
     enum CodingKeys: String, CodingKey {
         case name, description
         case inputSchema = "input_schema"
+        case cacheControl = "cache_control"
     }
 }
 
@@ -666,10 +726,14 @@ struct AnthropicStreamDelta: Decodable {
 struct AnthropicUsage: Decodable {
     var inputTokens: Int?
     var outputTokens: Int?
+    var cacheCreationInputTokens: Int?
+    var cacheReadInputTokens: Int?
 
     enum CodingKeys: String, CodingKey {
         case inputTokens = "input_tokens"
         case outputTokens = "output_tokens"
+        case cacheCreationInputTokens = "cache_creation_input_tokens"
+        case cacheReadInputTokens = "cache_read_input_tokens"
     }
 }
 
