@@ -445,15 +445,78 @@ struct LLMUsage: Codable {
     let promptTokens: Int?
     let completionTokens: Int?
     let totalTokens: Int?
+    /// Tokens written to the cache (Anthropic: `cache_creation_input_tokens`).
+    var cacheCreationInputTokens: Int?
+    /// Tokens read from cache (Anthropic: `cache_read_input_tokens`,
+    /// OpenAI: `prompt_tokens_details.cached_tokens`).
+    var cacheReadInputTokens: Int?
 
     enum CodingKeys: String, CodingKey {
         case promptTokens = "prompt_tokens"
         case completionTokens = "completion_tokens"
         case totalTokens = "total_tokens"
+        case cacheCreationInputTokens = "cache_creation_input_tokens"
+        case cacheReadInputTokens = "cache_read_input_tokens"
+        case promptTokensDetails = "prompt_tokens_details"
+    }
+
+    // Custom decoder: merge Anthropic (`cache_read_input_tokens`) and
+    // OpenAI (`prompt_tokens_details.cached_tokens`) into one field.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        promptTokens = try c.decodeIfPresent(Int.self, forKey: .promptTokens)
+        completionTokens = try c.decodeIfPresent(Int.self, forKey: .completionTokens)
+        totalTokens = try c.decodeIfPresent(Int.self, forKey: .totalTokens)
+        cacheCreationInputTokens = try c.decodeIfPresent(Int.self, forKey: .cacheCreationInputTokens)
+
+        // Anthropic puts it at `cache_read_input_tokens`
+        var cacheRead = try c.decodeIfPresent(Int.self, forKey: .cacheReadInputTokens)
+
+        // OpenAI nests it inside `prompt_tokens_details.cached_tokens`
+        if cacheRead == nil,
+           let details = try c.decodeIfPresent(PromptTokensDetails.self, forKey: .promptTokensDetails) {
+            cacheRead = details.cachedTokens
+        }
+        cacheReadInputTokens = cacheRead
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(promptTokens, forKey: .promptTokens)
+        try c.encodeIfPresent(completionTokens, forKey: .completionTokens)
+        try c.encodeIfPresent(totalTokens, forKey: .totalTokens)
+        try c.encodeIfPresent(cacheCreationInputTokens, forKey: .cacheCreationInputTokens)
+        try c.encodeIfPresent(cacheReadInputTokens, forKey: .cacheReadInputTokens)
+    }
+
+    /// Memberwise init for manual construction.
+    init(promptTokens: Int?, completionTokens: Int?, totalTokens: Int?,
+         cacheCreationInputTokens: Int? = nil, cacheReadInputTokens: Int? = nil) {
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+        self.totalTokens = totalTokens
+        self.cacheCreationInputTokens = cacheCreationInputTokens
+        self.cacheReadInputTokens = cacheReadInputTokens
+    }
+
+    /// OpenAI `prompt_tokens_details` nested object.
+    private struct PromptTokensDetails: Decodable {
+        let cachedTokens: Int?
+        enum CodingKeys: String, CodingKey {
+            case cachedTokens = "cached_tokens"
+        }
     }
 }
 
 // MARK: - Anthropic API types
+
+/// Anthropic prompt-caching control. Attach to a system block, tool, or
+/// the last content block in a message to mark a cache breakpoint.
+struct CacheControl: Encodable {
+    let type: String
+
+    static let ephemeral = CacheControl(type: "ephemeral")
+}
 
 struct AnthropicRequest: Encodable {
     let model: String
@@ -474,6 +537,12 @@ struct AnthropicRequest: Encodable {
 struct AnthropicSystemBlock: Encodable {
     let type: String
     let text: String
+    var cacheControl: CacheControl?
+
+    enum CodingKeys: String, CodingKey {
+        case type, text
+        case cacheControl = "cache_control"
+    }
 }
 
 struct AnthropicThinking: Encodable {
@@ -493,6 +562,46 @@ struct AnthropicThinking: Encodable {
 struct AnthropicMessage: Encodable {
     let role: String
     let content: [AnthropicContentBlock]
+    /// When set, `cache_control` is appended to the last content block during encoding.
+    var cacheControlOnLast: CacheControl?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(role, forKey: .role)
+
+        if let cc = cacheControlOnLast, !content.isEmpty {
+            var arr = container.nestedUnkeyedContainer(forKey: .content)
+            for (i, block) in content.enumerated() {
+                if i == content.count - 1 {
+                    try arr.encode(CachedBlock(block: block, cacheControl: cc))
+                } else {
+                    try arr.encode(block)
+                }
+            }
+        } else {
+            try container.encode(content, forKey: .content)
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case role, content
+    }
+
+    /// Wrapper that encodes a content block with an additional `cache_control` key.
+    private struct CachedBlock: Encodable {
+        let block: AnthropicContentBlock
+        let cacheControl: CacheControl
+
+        func encode(to encoder: Encoder) throws {
+            try block.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(cacheControl, forKey: .cacheControl)
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case cacheControl = "cache_control"
+        }
+    }
 }
 
 enum AnthropicContentBlock: Encodable {
@@ -581,10 +690,12 @@ struct AnthropicTool: Encodable {
     let name: String
     let description: String
     let inputSchema: JSONSchema
+    var cacheControl: CacheControl?
 
     enum CodingKeys: String, CodingKey {
         case name, description
         case inputSchema = "input_schema"
+        case cacheControl = "cache_control"
     }
 }
 
@@ -666,10 +777,14 @@ struct AnthropicStreamDelta: Decodable {
 struct AnthropicUsage: Decodable {
     var inputTokens: Int?
     var outputTokens: Int?
+    var cacheCreationInputTokens: Int?
+    var cacheReadInputTokens: Int?
 
     enum CodingKeys: String, CodingKey {
         case inputTokens = "input_tokens"
         case outputTokens = "output_tokens"
+        case cacheCreationInputTokens = "cache_creation_input_tokens"
+        case cacheReadInputTokens = "cache_read_input_tokens"
     }
 }
 
