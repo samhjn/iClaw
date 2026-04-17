@@ -140,7 +140,8 @@ final class PromptBuilder {
         if isEnabled(.skills, for: agent) {
             parts.append("""
             ### Skills Management
-            - `create_skill`: Create a reusable skill (methodology, instructions, or knowledge) in the skill library
+            - `create_skill`: Create a reusable skill (methodology, instructions, or knowledge) in the skill library — can include `scripts` (JS code snippets) and `tools` (custom function-call tools) at creation time
+            - `edit_skill`: Update an existing skill's metadata, scripts, or custom tools (cannot edit built-in skills; `scripts`/`tools` replace the whole array — call `read_skill` first to preserve existing entries)
             - `delete_skill`: Remove a skill from the library (cannot delete built-in skills)
             - `install_skill`: Install a library skill onto the current agent (adds to system prompt)
             - `uninstall_skill`: Remove a skill from the current agent

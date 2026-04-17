@@ -167,6 +167,10 @@ final class FunctionCallRouter {
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
                     .createSkill(arguments: arguments))
+        case "edit_skill":
+            return ToolCallResult(
+                SkillTools(agent: agent, modelContext: modelContext)
+                    .editSkill(arguments: arguments))
         case "delete_skill":
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)

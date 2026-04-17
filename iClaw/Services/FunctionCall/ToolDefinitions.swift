@@ -45,6 +45,7 @@ enum ToolDefinitions {
             unscheduleCronTool,
             listCronTool,
             createSkillTool,
+            editSkillTool,
             deleteSkillTool,
             installSkillTool,
             uninstallSkillTool,
@@ -337,7 +338,7 @@ enum ToolDefinitions {
 
     static let createSkillTool = ToolDefinitionBuilder.build(
         name: "create_skill",
-        description: "Create a new reusable skill in the skill library. A skill can include: markdown instructions (injected into system prompt), JavaScript scripts (registered as code snippets), and custom tools (callable functions backed by JS). Once created, it can be installed on any agent.",
+        description: "Create a new reusable skill in the skill library. A skill can include: markdown instructions (injected into system prompt), JavaScript scripts (registered as code snippets), and custom tools (callable functions backed by JS). Once created, it can be installed on any agent. Use `edit_skill` to modify metadata, scripts, or custom tools after creation.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("A unique name for the skill"),
             "summary": ToolDefinitionBuilder.stringParam("A brief one-line description of what the skill does"),
@@ -347,6 +348,22 @@ enum ToolDefinitions {
             "tools": ToolDefinitionBuilder.stringParam("JSON array of custom tools: [{\"name\": \"...\", \"description\": \"...\", \"parameters\": [{\"name\": \"...\", \"type\": \"string\", \"description\": \"...\", \"required\": true}], \"implementation\": \"...(JS code)...\"}]. Each tool becomes a callable function for the agent.")
         ],
         required: ["name", "content"]
+    )
+
+    static let editSkillTool = ToolDefinitionBuilder.build(
+        name: "edit_skill",
+        description: "Update an existing skill in the library. Identify the skill by `name` or `skill_id`. All other parameters are optional; only provided fields are modified. `scripts` and `tools` use the same JSON shape as `create_skill` and REPLACE the entire array when provided — call `read_skill` first if you want to preserve existing entries. Cannot edit built-in skills.",
+        properties: [
+            "skill_id": ToolDefinitionBuilder.stringParam("UUID of the skill to edit"),
+            "name": ToolDefinitionBuilder.stringParam("Current name of the skill (alternative to skill_id)"),
+            "new_name": ToolDefinitionBuilder.stringParam("Optional: rename the skill to this new name"),
+            "summary": ToolDefinitionBuilder.stringParam("Optional: new one-line summary"),
+            "content": ToolDefinitionBuilder.stringParam("Optional: new markdown content"),
+            "tags": ToolDefinitionBuilder.stringParam("Optional: comma-separated tags (replaces the existing tag list)"),
+            "scripts": ToolDefinitionBuilder.stringParam("Optional JSON array of scripts (same shape as create_skill). Replaces the entire scripts array. Provide `[]` to clear all scripts."),
+            "tools": ToolDefinitionBuilder.stringParam("Optional JSON array of custom tools (same shape as create_skill). Replaces the entire custom tools array. Provide `[]` to clear all custom tools.")
+        ],
+        required: []
     )
 
     static let deleteSkillTool = ToolDefinitionBuilder.build(
