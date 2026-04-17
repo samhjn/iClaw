@@ -92,6 +92,7 @@ final class ToolDefinitionsTests: XCTestCase {
 
         // Skills
         XCTAssertTrue(names.contains("create_skill"))
+        XCTAssertTrue(names.contains("edit_skill"))
         XCTAssertTrue(names.contains("install_skill"))
         XCTAssertTrue(names.contains("uninstall_skill"))
         XCTAssertTrue(names.contains("list_skills"))

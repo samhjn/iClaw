@@ -66,6 +66,79 @@ struct SkillTools {
         return result
     }
 
+    func editSkill(arguments: [String: Any]) -> String {
+        guard let skillId = resolveSkillId(arguments) else {
+            return "[Error] Provide either 'skill_id' (UUID) or 'name' to identify the skill"
+        }
+        guard let skill = service.fetchSkill(id: skillId) else {
+            return "[Error] Skill not found"
+        }
+        if skill.isBuiltIn {
+            return "[Error] Cannot edit built-in skills (they are overwritten on launch)."
+        }
+
+        // metadata
+        let newNameRaw = (arguments["new_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newName = (newNameRaw?.isEmpty ?? true) ? nil : newNameRaw
+        let summary = arguments["summary"] as? String
+        let content = arguments["content"] as? String
+        let tagsArg = arguments["tags"] as? String
+        let tags: [String]? = tagsArg.map { raw in
+            raw.isEmpty ? [] : raw.components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
+
+        // scripts / tools — only if caller provided the key
+        var scriptsUpdate: [SkillScript]? = nil
+        if let scriptsJson = arguments["scripts"] as? String {
+            guard let parsed = try? JSONDecoder().decode([SkillScript].self, from: Data(scriptsJson.utf8)) else {
+                return "[Error] Invalid 'scripts' JSON. Expected an array of {name, code, language?, description?}."
+            }
+            scriptsUpdate = parsed
+        }
+
+        var toolsUpdate: [SkillToolDefinition]? = nil
+        if let toolsJson = arguments["tools"] as? String {
+            guard let parsed = try? JSONDecoder().decode([SkillToolDefinition].self, from: Data(toolsJson.utf8)) else {
+                return "[Error] Invalid 'tools' JSON. Expected an array of {name, description, parameters, implementation}."
+            }
+            toolsUpdate = parsed
+        }
+
+        if newName == nil && summary == nil && content == nil && tags == nil
+            && scriptsUpdate == nil && toolsUpdate == nil {
+            return "[Error] Nothing to update. Provide at least one of: new_name, summary, content, tags, scripts, tools."
+        }
+
+        // Rename uniqueness check
+        if let n = newName, n.lowercased() != skill.nameLowercase,
+           service.fetchSkill(name: n) != nil {
+            return "[Error] Another skill named '\(n)' already exists."
+        }
+
+        let oldName = skill.name
+        service.updateSkill(skill, name: newName, summary: summary, content: content, tags: tags)
+        if let scriptsUpdate { skill.scripts = scriptsUpdate }
+        if let toolsUpdate { skill.customTools = toolsUpdate }
+        try? modelContext.save()
+
+        // Re-sync CodeSnippets on every agent that has this skill installed when
+        // scripts change or the skill is renamed (snippet names embed the skill name).
+        if scriptsUpdate != nil || (newName != nil && newName != oldName) {
+            resyncInstalledSnippets(skill: skill, oldSkillName: oldName)
+        }
+
+        var changes: [String] = []
+        if newName != nil { changes.append("renamed to '\(skill.name)'") }
+        if summary != nil { changes.append("summary") }
+        if content != nil { changes.append("content") }
+        if tags != nil { changes.append("tags") }
+        if let s = scriptsUpdate { changes.append("scripts (\(s.count))") }
+        if let t = toolsUpdate { changes.append("custom tools (\(t.count))") }
+        return "Skill '\(skill.name)' updated: \(changes.joined(separator: ", "))."
+    }
+
     func deleteSkill(arguments: [String: Any]) -> String {
         guard let skillId = resolveSkillId(arguments) else {
             return "[Error] Provide either 'skill_id' (UUID) or 'name' to identify the skill"
@@ -177,6 +250,32 @@ struct SkillTools {
     }
 
     // MARK: - Helpers
+
+    /// Re-register skill scripts as CodeSnippets on every agent that has the skill
+    /// installed. Purges snippets that used the old skill name prefix, then inserts
+    /// fresh snippets matching the skill's current scripts.
+    private func resyncInstalledSnippets(skill: Skill, oldSkillName: String) {
+        for installation in skill.installations {
+            guard let a = installation.agent else { continue }
+            let oldPrefix = "skill:\(oldSkillName):"
+            let stale = a.codeSnippets.filter { $0.name.hasPrefix(oldPrefix) }
+            for snip in stale {
+                a.codeSnippets.removeAll { $0.id == snip.id }
+                modelContext.delete(snip)
+            }
+            for script in skill.scripts {
+                let snip = CodeSnippet(
+                    name: "skill:\(skill.name):\(script.name)",
+                    language: script.language,
+                    code: script.code
+                )
+                modelContext.insert(snip)
+                a.codeSnippets.append(snip)
+            }
+            a.updatedAt = Date()
+        }
+        try? modelContext.save()
+    }
 
     private func resolveSkillId(_ arguments: [String: Any]) -> UUID? {
         if let idStr = arguments["skill_id"] as? String, let id = UUID(uuidString: idStr) {

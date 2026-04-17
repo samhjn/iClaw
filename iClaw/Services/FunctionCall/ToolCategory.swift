@@ -204,7 +204,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .cron:
             return ["schedule_cron", "unschedule_cron"]
         case .skills:
-            return ["create_skill", "delete_skill", "install_skill", "uninstall_skill"]
+            return ["create_skill", "edit_skill", "delete_skill", "install_skill", "uninstall_skill"]
         case .config:
             return ["write_config"]
         case .model:
