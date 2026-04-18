@@ -16,6 +16,10 @@ struct iClawApp: App {
     init() {
         Self.installExceptionHandler()
 
+        if let prior = CrashDiagnostics.consume() {
+            print("[iClawApp] Prior NSException recovered: \(prior.name) @ \(prior.source) — \(prior.reason) (\(prior.timestamp))")
+        }
+
         let schema = Schema([
             Agent.self,
             AgentConfig.self,
@@ -71,14 +75,21 @@ struct iClawApp: App {
 
     private static func installExceptionHandler() {
         NSSetUncaughtExceptionHandler { exception in
-            let info = """
+            // Persist `name`/`reason` so the next launch can log the trigger.
+            // Running inside the uncaught-handler must stay short — the process
+            // is about to terminate regardless of what we do here.
+            CrashDiagnostics.record(
+                source: "UncaughtExceptionHandler",
+                name: exception.name.rawValue,
+                reason: exception.reason ?? "nil"
+            )
+            print("""
             [iClawApp] Uncaught NSException: \(exception.name.rawValue)
             Reason: \(exception.reason ?? "unknown")
             User Info: \(exception.userInfo ?? [:])
             Stack:
             \(exception.callStackSymbols.joined(separator: "\n"))
-            """
-            print(info)
+            """)
         }
     }
 
@@ -89,7 +100,7 @@ struct iClawApp: App {
         let descriptor = FetchDescriptor<Session>(
             predicate: #Predicate<Session> { $0.isActive == true }
         )
-        guard let stale = try? context.fetch(descriptor), !stale.isEmpty else { return }
+        guard let stale = SafeFetch.perform(context, descriptor), !stale.isEmpty else { return }
         for session in stale {
             session.isActive = false
         }
