@@ -158,7 +158,9 @@ final class ContextManager {
                    let images = try? JSONDecoder().decode([ImageAttachment].self, from: imgData),
                    !images.isEmpty {
                     let (live, deleted) = Self.partitionLiveImages(images)
-                    pendingImages.append(contentsOf: live)
+                    for img in live where !pendingImages.contains(where: { $0.id == img.id }) {
+                        pendingImages.append(img)
+                    }
                     var suffix = "\n\n[The \(images.count) image(s) generated above are forwarded as attachments in the next user message due to API constraints.]"
                     if deleted > 0 {
                         suffix += "\n[\(deleted) image(s) were deleted by the user.]"
@@ -173,7 +175,9 @@ final class ContextManager {
                    let videos = try? JSONDecoder().decode([VideoAttachment].self, from: vidData),
                    !videos.isEmpty {
                     let live = videos.filter { !$0.isFileDeleted }
-                    pendingVideos.append(contentsOf: live)
+                    for vid in live where !pendingVideos.contains(where: { $0.id == vid.id }) {
+                        pendingVideos.append(vid)
+                    }
                 }
 
             case .tool:
