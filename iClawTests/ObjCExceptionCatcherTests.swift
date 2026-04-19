@@ -4,7 +4,7 @@ import XCTest
 final class ObjCExceptionCatcherTests: XCTestCase {
 
     func testCatchesRaisedNSException() {
-        let caught = ObjCExceptionCatcher.tryBlock {
+        let caught = ObjCExceptionCatcher.catching {
             NSException(
                 name: .internalInconsistencyException,
                 reason: "test reason",
@@ -18,7 +18,7 @@ final class ObjCExceptionCatcherTests: XCTestCase {
 
     func testReturnsNilWhenBlockDoesNotRaise() {
         var ran = false
-        let caught = ObjCExceptionCatcher.tryBlock {
+        let caught = ObjCExceptionCatcher.catching {
             ran = true
         }
         XCTAssertNil(caught)

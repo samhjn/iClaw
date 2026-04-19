@@ -9,7 +9,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// from Objective-C code (e.g. Core Data validation, fault realization) bypass
 /// Swift's error handling and abort the process. Use this bridge at the
 /// narrowest possible call sites that cross into ObjC frameworks.
-+ (nullable NSException *)tryBlock:(NS_NOESCAPE void (^)(void))block;
++ (nullable NSException *)tryBlock:(NS_NOESCAPE void (^)(void))block
+    NS_SWIFT_NAME(catching(_:));
 
 @end
 

@@ -19,7 +19,7 @@ enum SafeFetch {
     ) -> [T]? {
         var result: [T]?
         var swiftError: Error?
-        let nsException = ObjCExceptionCatcher.tryBlock {
+        let nsException = ObjCExceptionCatcher.catching {
             do {
                 result = try context.fetch(descriptor)
             } catch {
