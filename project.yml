@@ -67,8 +67,11 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        com.apple.security.application-groups:
+          - group.com.iclaw.app
     dependencies:
       - target: iClawWidgets
+      - target: iClawShareExtension
 
   iClawWidgets:
     type: app-extension
@@ -93,6 +96,38 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: ActivityKit.framework
+
+  iClawShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: iClawShareExtension
+        excludes:
+          - Info.plist
+          - iClawShareExtension.entitlements
+      - path: iClaw/Services/Share/SharedContainer.swift
+      - path: iClaw/Services/Share/AgentSnapshot.swift
+      - path: iClaw/Services/Share/HandoffManifest.swift
+    settings:
+      base:
+        INFOPLIST_FILE: iClawShareExtension/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.iclaw.app.share
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_EMIT_LOC_STRINGS: "YES"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: "NO"
+        SKIP_INSTALL: "YES"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../../Frameworks"
+    entitlements:
+      path: iClawShareExtension/iClawShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.iclaw.app
+    dependencies:
+      - sdk: UIKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: UniformTypeIdentifiers.framework
 
   iClawTests:
     type: bundle.unit-test

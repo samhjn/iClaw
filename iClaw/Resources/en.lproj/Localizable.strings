@@ -72,6 +72,7 @@
 "chat.photosAndVideos" = "Photos & Videos";
 "chat.camera" = "Camera";
 "chat.pasteFromClipboard" = "Paste from Clipboard";
+"chat.chooseFile" = "Choose File";
 "chat.imagePlaceholder" = "[Image]";
 "chat.saveImageToPhotos" = "Save Image";
 "chat.imageSaved" = "Saved to Photos";

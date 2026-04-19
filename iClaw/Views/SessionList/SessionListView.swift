@@ -4,6 +4,7 @@ import SwiftData
 struct SessionListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismissSearch) private var dismissSearch
+    @Environment(PendingSessionRouter.self) private var router
     @State private var viewModel: SessionListViewModel?
     @State private var showNewSessionSheet = false
     @State private var selectedSession: Session?
@@ -85,6 +86,12 @@ struct SessionListView: View {
             if oldValue != nil && newValue == nil {
                 viewModel?.fetchSessions()
             }
+        }
+        .onChange(of: router.pendingSession) { _, newValue in
+            guard let session = newValue else { return }
+            viewModel?.fetchSessions()
+            selectedSession = session
+            router.pendingSession = nil
         }
     }
 

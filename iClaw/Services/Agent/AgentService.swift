@@ -26,6 +26,9 @@ final class AgentService {
             parentAgent.subAgents.append(agent)
         }
         try? modelContext.save()
+        if parentAgent == nil {
+            AgentSnapshotExporter.export(context: modelContext)
+        }
         return agent
     }
 

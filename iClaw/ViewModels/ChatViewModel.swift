@@ -20,6 +20,7 @@ final class ChatViewModel {
     var streamingThinking: String = ""
     var pendingImages: [ImageAttachment] = []
     var pendingVideos: [VideoAttachment] = []
+    var pendingFiles: [FileAttachment] = []
     /// Error message shown when a video fails validation (e.g. too large/long).
     var videoValidationError: String?
     var errorMessage: String? {
@@ -143,6 +144,8 @@ final class ChatViewModel {
     private static var cachedPendingImages: [UUID: [ImageAttachment]] = [:]
     /// Draft pending videos — survives ViewModel recreation.
     private static var cachedPendingVideos: [UUID: [VideoAttachment]] = [:]
+    /// Draft pending generic files — survives ViewModel recreation.
+    private static var cachedPendingFiles: [UUID: [FileAttachment]] = [:]
 
     /// Return cached pending images for a session (used by file browser to exclude draft files).
     static func cachedPendingImages(for sessionId: UUID) -> [ImageAttachment] {
@@ -160,7 +163,55 @@ final class ChatViewModel {
         if let videos = cachedPendingVideos[sessionId], !videos.isEmpty {
             return true
         }
+        if let files = cachedPendingFiles[sessionId], !files.isEmpty {
+            return true
+        }
         return false
+    }
+
+    // MARK: - Share-handoff seeds
+
+    /// Notification broadcast whenever the pending-attachment cache is
+    /// updated from outside the ViewModel (e.g. by async video metadata
+    /// extraction in `ShareHandoff`). Live ViewModels subscribe so their
+    /// `pendingImages` / `pendingVideos` / `pendingFiles` stay in sync.
+    static let pendingAttachmentsDidChange = Notification.Name("iClawPendingAttachmentsDidChange")
+
+    private static func notifyPendingAttachmentsChanged(sessionId: UUID) {
+        NotificationCenter.default.post(
+            name: pendingAttachmentsDidChange,
+            object: nil,
+            userInfo: ["sessionId": sessionId]
+        )
+    }
+
+    /// Append images to the pending-attachment cache for a session. Used by
+    /// `ShareHandoff` to pre-populate the compose area of a newly-created
+    /// session before its `ChatViewModel` is constructed.
+    static func seedPendingImages(for sessionId: UUID, append images: [ImageAttachment]) {
+        guard !images.isEmpty else { return }
+        var current = cachedPendingImages[sessionId] ?? []
+        current.append(contentsOf: images)
+        cachedPendingImages[sessionId] = current
+        notifyPendingAttachmentsChanged(sessionId: sessionId)
+    }
+
+    /// Append videos — parallel to `seedPendingImages`.
+    static func seedPendingVideos(for sessionId: UUID, append videos: [VideoAttachment]) {
+        guard !videos.isEmpty else { return }
+        var current = cachedPendingVideos[sessionId] ?? []
+        current.append(contentsOf: videos)
+        cachedPendingVideos[sessionId] = current
+        notifyPendingAttachmentsChanged(sessionId: sessionId)
+    }
+
+    /// Append generic file attachments — parallel to `seedPendingImages`.
+    static func seedPendingFiles(for sessionId: UUID, append files: [FileAttachment]) {
+        guard !files.isEmpty else { return }
+        var current = cachedPendingFiles[sessionId] ?? []
+        current.append(contentsOf: files)
+        cachedPendingFiles[sessionId] = current
+        notifyPendingAttachmentsChanged(sessionId: sessionId)
     }
     /// Sessions where the user explicitly dismissed the retry/error banner.
     private static var dismissedSessions: Set<UUID> = []
@@ -236,6 +287,15 @@ final class ChatViewModel {
                   let videos = try? JSONDecoder().decode([VideoAttachment].self, from: data), !videos.isEmpty {
             self.pendingVideos = videos
             Self.cachedPendingVideos[session.id] = videos
+        }
+        // Restore draft files. Cache-only — generic files don't persist to
+        // Session.draft* yet; the cache is populated by the share-extension
+        // handoff and by addFile(_:) during the chat session.
+        if let cached = Self.cachedPendingFiles[session.id], !cached.isEmpty {
+            self.pendingFiles = cached.filter { !$0.isFileDeleted }
+            if self.pendingFiles.count != cached.count {
+                Self.cachedPendingFiles[session.id] = self.pendingFiles
+            }
         }
         // Load messages synchronously during init so subsequent recovery
         // methods see the current message list immediately.
@@ -491,7 +551,7 @@ final class ChatViewModel {
 
     func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty || !pendingImages.isEmpty || !pendingVideos.isEmpty else { return }
+        guard !text.isEmpty || !pendingImages.isEmpty || !pendingVideos.isEmpty || !pendingFiles.isEmpty else { return }
         guard !isLoading, Self.activeGenerations[session.id] == nil else { return }
 
         checkActiveSessionLock()
@@ -526,6 +586,12 @@ final class ChatViewModel {
         Self.cachedPendingVideos.removeValue(forKey: session.id)
         session.draftVideosData = nil
 
+        // Finalize pending file attachments (already file-backed from addFile).
+        let finalFiles = pendingFiles.filter { !$0.isFileDeleted }
+        let fileData: Data? = finalFiles.isEmpty ? nil : try? JSONEncoder().encode(finalFiles)
+        pendingFiles = []
+        Self.cachedPendingFiles.removeValue(forKey: session.id)
+
         // Embed agentfile:// refs into message content so images are part of the
         // file/ref system and visible in the AI context via resolveAgentFileImages.
         var messageContent = text
@@ -534,10 +600,15 @@ final class ChatViewModel {
                 messageContent += "\n![image](\(ref))"
             }
         }
+        // Append generic file references so the agent can read them from disk.
+        for f in finalFiles {
+            messageContent += "\n[\(f.name)](\(f.fileReference))"
+        }
 
         let userMessage = Message(role: .user, content: messageContent)
         userMessage.imageAttachmentsData = imageData
         userMessage.videoAttachmentsData = videoData
+        userMessage.fileAttachmentsData = fileData
         if imageData != nil || videoData != nil { userMessage.recalculateTokenEstimate() }
         modelContext.insert(userMessage)
         session.messages.append(userMessage)
@@ -1142,6 +1213,7 @@ final class ChatViewModel {
         recoverRetryState()
         startMonitoringIfNeeded()
         checkToolUseCapability()
+        refreshPendingAttachmentsFromCache()
     }
 
     private func recoverRetryState() {
@@ -1443,6 +1515,52 @@ final class ChatViewModel {
     private func persistDraftVideos() {
         Self.cachedPendingVideos[session.id] = pendingVideos
         session.draftVideosData = pendingVideos.isEmpty ? nil : try? JSONEncoder().encode(pendingVideos)
+    }
+
+    // MARK: - Generic File Management
+
+    /// Attach a generic file from a source URL by copying it into the agent's
+    /// file folder. Used by the document picker and any other in-app flow;
+    /// the share extension seeds `cachedPendingFiles` directly and does not
+    /// call this.
+    func addFile(from url: URL) {
+        guard let agent = session.agent else { return }
+        let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        guard let attachment = FileAttachment.from(url: url, agentId: agentId) else { return }
+        pendingFiles.append(attachment)
+        persistPendingFiles()
+    }
+
+    func removeFile(id: UUID) {
+        pendingFiles.removeAll { $0.id == id }
+        persistPendingFiles()
+    }
+
+    /// File attachments are cache-only (no Session.draft* yet); persistence
+    /// across ViewModel recreation is handled via `cachedPendingFiles`.
+    private func persistPendingFiles() {
+        Self.cachedPendingFiles[session.id] = pendingFiles
+    }
+
+    /// Refresh pending attachments from the shared static cache. Called from
+    /// `onViewAppear` so session handoffs whose async work (e.g. video
+    /// metadata extraction) lands after the ViewModel was constructed are
+    /// picked up on the next view appearance.
+    func refreshPendingAttachmentsFromCache() {
+        if let cachedImgs = Self.cachedPendingImages[session.id],
+           cachedImgs.map(\.id) != pendingImages.map(\.id) {
+            pendingImages = cachedImgs
+        }
+        if let cachedVids = Self.cachedPendingVideos[session.id],
+           cachedVids.map(\.id) != pendingVideos.map(\.id) {
+            pendingVideos = cachedVids
+        }
+        if let cachedFiles = Self.cachedPendingFiles[session.id],
+           cachedFiles.map(\.id) != pendingFiles.map(\.id) {
+            pendingFiles = cachedFiles
+        }
     }
 
     // MARK: - Think Tag Extraction

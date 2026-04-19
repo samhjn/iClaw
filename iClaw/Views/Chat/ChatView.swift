@@ -26,6 +26,10 @@ struct ChatView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
             viewModel?.prepareForBackground()
         }
+        .onReceive(NotificationCenter.default.publisher(for: ChatViewModel.pendingAttachmentsDidChange)) { note in
+            guard let sid = note.userInfo?["sessionId"] as? UUID, sid == session.id else { return }
+            viewModel?.refreshPendingAttachmentsFromCache()
+        }
     }
 
     @ViewBuilder
@@ -510,6 +514,7 @@ private struct ChatContentView: View {
                 cancelFailureReason: vm.cancelFailureReason,
                 pendingImages: vm.pendingImages,
                 pendingVideos: vm.pendingVideos,
+                pendingFiles: vm.pendingFiles,
                 isImageDisabled: vm.isImageInputDisabled,
                 isVideoDisabled: vm.isImageInputDisabled,
                 onSend: {
@@ -523,7 +528,9 @@ private struct ChatContentView: View {
                 onAddImage: { vm.addImage($0) },
                 onRemoveImage: { vm.removeImage(id: $0) },
                 onAddVideo: { vm.addVideo(from: $0) },
-                onRemoveVideo: { vm.removeVideo(id: $0) }
+                onRemoveVideo: { vm.removeVideo(id: $0) },
+                onAddFile: { vm.addFile(from: $0) },
+                onRemoveFile: { vm.removeFile(id: $0) }
             )
         }
         .animation(.easeInOut(duration: 0.25), value: vm.canRetry)

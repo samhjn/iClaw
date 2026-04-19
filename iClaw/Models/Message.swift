@@ -20,6 +20,7 @@ final class Message {
     var thinkingContent: String?
     var imageAttachmentsData: Data?
     var videoAttachmentsData: Data?
+    var fileAttachmentsData: Data?
     var timestamp: Date
     var tokenEstimate: Int
 

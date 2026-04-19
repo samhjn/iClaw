@@ -12,6 +12,7 @@ struct InputBarView: View {
     var cancelFailureReason: String?
     var pendingImages: [ImageAttachment] = []
     var pendingVideos: [VideoAttachment] = []
+    var pendingFiles: [FileAttachment] = []
     var isImageDisabled: Bool = false
     var isVideoDisabled: Bool = false
     let onSend: () -> Void
@@ -23,17 +24,23 @@ struct InputBarView: View {
     var onRemoveImage: ((UUID) -> Void)?
     var onAddVideo: ((URL) -> Void)?
     var onRemoveVideo: ((UUID) -> Void)?
+    var onAddFile: ((URL) -> Void)?
+    var onRemoveFile: ((UUID) -> Void)?
 
     @State private var isInputFocused = false
     @State private var showImageSourcePicker = false
     @State private var showImageDisabledToast = false
     @State private var showMediaPicker = false
     @State private var showCamera = false
+    @State private var showFilePicker = false
 
     private var isBusy: Bool { isLoading || isCompressing }
 
     private var canSendMessage: Bool {
-        (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingImages.isEmpty || !pendingVideos.isEmpty) && !isBusy && !isBlocked
+        (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+         || !pendingImages.isEmpty
+         || !pendingVideos.isEmpty
+         || !pendingFiles.isEmpty) && !isBusy && !isBlocked
     }
 
     var body: some View {
@@ -63,6 +70,13 @@ struct InputBarView: View {
             if !pendingVideos.isEmpty {
                 VideoAttachmentBar(videos: pendingVideos) { id in
                     onRemoveVideo?(id)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            if !pendingFiles.isEmpty {
+                FileAttachmentBar(files: pendingFiles) { id in
+                    onRemoveFile?(id)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -133,6 +147,7 @@ struct InputBarView: View {
         .animation(.easeInOut(duration: 0.2), value: cancelFailureReason != nil)
         .animation(.easeInOut(duration: 0.2), value: pendingImages.count)
         .animation(.easeInOut(duration: 0.2), value: pendingVideos.count)
+        .animation(.easeInOut(duration: 0.2), value: pendingFiles.count)
         .animation(.easeInOut(duration: 0.2), value: canRetry)
         .confirmationDialog(L10n.Chat.addMedia, isPresented: $showImageSourcePicker) {
             Button(L10n.Chat.photosAndVideos) {
@@ -140,6 +155,11 @@ struct InputBarView: View {
             }
             Button(L10n.Chat.camera) {
                 showCamera = true
+            }
+            if onAddFile != nil {
+                Button(L10n.Chat.chooseFile) {
+                    showFilePicker = true
+                }
             }
             if UIPasteboard.general.hasImages {
                 Button(L10n.Chat.pasteFromClipboard) {
@@ -149,6 +169,16 @@ struct InputBarView: View {
                 }
             }
             Button(L10n.Common.cancel, role: .cancel) {}
+        }
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else { return }
+            for url in urls {
+                onAddFile?(url)
+            }
         }
         .fullScreenCover(isPresented: $showMediaPicker) {
             MediaPickerView(
