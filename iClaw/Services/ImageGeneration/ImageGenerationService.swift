@@ -86,9 +86,17 @@ final class ImageGenerationService: @unchecked Sendable {
                 prompt: prompt, n: n, size: size, quality: quality, agentId: agentId
             )
         case .chatInline:
-            return try await callChatInline(
-                prompt: prompt, agentId: agentId
-            )
+            let clamped = min(max(n, 1), 4)
+            var all: [ImageAttachment] = []
+            var firstRevised: String?
+            for _ in 0..<clamped {
+                try Task.checkCancellation()
+                let (imgs, rp) = try await callChatInline(prompt: prompt, agentId: agentId)
+                all.append(contentsOf: imgs)
+                if firstRevised == nil { firstRevised = rp }
+            }
+            guard !all.isEmpty else { throw ImageGenerationError.noImageReturned }
+            return (all, firstRevised)
         case .dashScope:
             return try await callDashScopeAPI(
                 prompt: prompt, n: n, size: size, agentId: agentId

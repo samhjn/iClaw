@@ -525,6 +525,86 @@ final class AgentFileReferenceTests: XCTestCase {
         XCTAssertEqual(imagePartCount, 1, "Tool image should be forwarded to next user message")
     }
 
+    // MARK: - Multi-image generation: tool + assistant dedup
+
+    /// When `generate_image` returns N images, ChatViewModel stores the same
+    /// attachments on BOTH the tool message and the following assistant message
+    /// (via attachPendingToolMedia). Without id-based dedup in the assistant
+    /// branch, the next user message would receive 2*N images. Verify that the
+    /// forwarded set collapses back to N.
+    func testMultiImageToolThenAssistantDedupedToSingleSet() {
+        let cm = ContextManager()
+        let imgA = makeSavedAttachment()
+        let imgB = makeSavedAttachment()
+
+        // Tool produces [A, B]
+        let toolMsg = Message(role: .tool, content: "Generated 2 images.", toolCallId: "tc1", name: "generate_image")
+        attachImages([imgA, imgB], to: toolMsg)
+
+        // Next assistant reply also carries [A, B] (same UUIDs) because
+        // attachPendingToolMedia duplicates them onto the assistant bubble.
+        let assistantMsg = Message(role: .assistant, content: "Here are two images.")
+        attachImages([imgA, imgB], to: assistantMsg)
+
+        let nextUserMsg = Message(role: .user, content: "Thanks")
+
+        let result = cm.convertWithImageForwarding([toolMsg, assistantMsg, nextUserMsg])
+
+        XCTAssertEqual(result.count, 3)
+        let lastMsg = result[2]
+        XCTAssertEqual(lastMsg.role, .user)
+        let imagePartCount = lastMsg.contentParts?.filter {
+            if case .imageURL = $0 { return true }; return false
+        }.count ?? 0
+        XCTAssertEqual(imagePartCount, 2,
+                       "Duplicated tool+assistant images should dedupe by id to exactly 2")
+    }
+
+    /// An assistant message carrying genuinely unique images (no prior tool
+    /// duplication) must still have ALL of them forwarded intact.
+    func testMultiImageAssistantOnlyAllForwarded() {
+        let cm = ContextManager()
+        let imgA = makeSavedAttachment()
+        let imgB = makeSavedAttachment()
+        let imgC = makeSavedAttachment()
+
+        let assistantMsg = Message(role: .assistant, content: "Three unique images.")
+        attachImages([imgA, imgB, imgC], to: assistantMsg)
+        let nextUserMsg = Message(role: .user, content: "Got it")
+
+        let result = cm.convertWithImageForwarding([assistantMsg, nextUserMsg])
+
+        XCTAssertEqual(result.count, 2)
+        let imagePartCount = result[1].contentParts?.filter {
+            if case .imageURL = $0 { return true }; return false
+        }.count ?? 0
+        XCTAssertEqual(imagePartCount, 3, "All 3 unique images should be forwarded")
+    }
+
+    /// When assistant carries images that partially overlap with a preceding
+    /// tool message, only the non-duplicates should add to the forwarded set.
+    func testMultiImagePartialOverlapDedup() {
+        let cm = ContextManager()
+        let shared = makeSavedAttachment()
+        let onlyAssistant = makeSavedAttachment()
+
+        let toolMsg = Message(role: .tool, content: "tool out", toolCallId: "tc1", name: "generate_image")
+        attachImages([shared], to: toolMsg)
+
+        let assistantMsg = Message(role: .assistant, content: "two in total")
+        attachImages([shared, onlyAssistant], to: assistantMsg)
+
+        let nextUserMsg = Message(role: .user, content: "ok")
+
+        let result = cm.convertWithImageForwarding([toolMsg, assistantMsg, nextUserMsg])
+
+        let imagePartCount = result.last?.contentParts?.filter {
+            if case .imageURL = $0 { return true }; return false
+        }.count ?? 0
+        XCTAssertEqual(imagePartCount, 2,
+                       "Overlap should dedupe shared image; unique assistant image still forwarded")
+    }
+
     // MARK: - convertWithImageForwarding: user-sent images with agentfile refs
 
     func testUserMessageWithAgentFileRefsResolvesImages() {
