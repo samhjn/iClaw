@@ -52,7 +52,7 @@ final class SessionListViewModel {
         let descriptor = FetchDescriptor<Session>(
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        let all = (try? modelContext.fetch(descriptor)) ?? []
+        let all = SafeFetch.perform(modelContext, descriptor) ?? []
         allSessions = all.filter { !$0.isArchived && $0.agent?.parentAgent == nil }
         applySearch()
     }
