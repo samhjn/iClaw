@@ -85,11 +85,25 @@ final class ShareViewController: UIViewController {
             cancel()
             return
         }
-        let opened = OpenURLHelper.open(url, from: self)
-        NSLog("[iClawShare] openHostApp url=%@ opened=%@", url.absoluteString, opened ? "YES" : "NO")
-        os_log(.default, log: vcLog, "Opening host app url=%{public}@ opened=%{public}@",
-               url.absoluteString, opened ? "true" : "false")
-        extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        NSLog("[iClawShare] openHostApp url=%@", url.absoluteString)
+        os_log(.default, log: vcLog, "Opening host app url=%{public}@", url.absoluteString)
+
+        // iOS 18 fully disabled the legacy responder-chain `openURL:` private
+        // selector. `NSExtensionContext.open(_:completionHandler:)` is the
+        // supported API; it works from share extensions targeting the host
+        // app's registered URL scheme.
+        guard let context = extensionContext else {
+            NSLog("[iClawShare] No extension context — cannot open host app")
+            cancel()
+            return
+        }
+
+        context.open(url) { [weak context] success in
+            NSLog("[iClawShare] context.open returned success=%@", success ? "YES" : "NO")
+            DispatchQueue.main.async {
+                context?.completeRequest(returningItems: [], completionHandler: nil)
+            }
+        }
     }
 
     private func cancel() {

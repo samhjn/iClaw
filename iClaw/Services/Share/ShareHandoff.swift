@@ -3,7 +3,10 @@ import SwiftData
 import os.log
 
 /// Processes `iclaw://session/new?agentId=<uuid>&handoffId=<uuid>` deep links
-/// emitted by the Share Extension.
+/// emitted by the Share Extension. When the deep-link open fails (Apple
+/// disabled the legacy `openURL:` selector in iOS 18), the main app falls
+/// back to `processPending(…)` on launch / foreground to pick up any
+/// unclaimed staged directories.
 ///
 /// Responsibilities:
 /// 1. Look up the target root agent.
@@ -30,7 +33,7 @@ enum ShareHandoff {
         return components.first == "new"
     }
 
-    /// Process the deep link. Must run on the main actor because it touches
+    /// Process a deep link. Must run on the main actor because it touches
     /// SwiftData relationships.
     @MainActor
     static func apply(
@@ -40,34 +43,96 @@ enum ShareHandoff {
     ) {
         guard isHandoffURL(url) else { return }
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let agentIdStr = components.queryItems?.first(where: { $0.name == "agentId" })?.value,
-              let agentId = UUID(uuidString: agentIdStr),
               let handoffIdStr = components.queryItems?.first(where: { $0.name == "handoffId" })?.value,
               let handoffId = UUID(uuidString: handoffIdStr) else {
             os_log(.error, log: log, "Invalid handoff URL: %{public}@", url.absoluteString)
             return
         }
+        _ = applyStagedHandoff(
+            handoffId: handoffId,
+            modelContainer: modelContainer,
+            router: router
+        )
+    }
 
-        let context = modelContainer.mainContext
-        guard let agent = fetchRootAgent(id: agentId, context: context) else {
-            os_log(.error, log: log, "Unknown agent: %{public}@", agentId.uuidString)
-            cleanupStaging(handoffId: handoffId)
-            return
+    /// Scan the staging directory for unclaimed handoffs and process the
+    /// newest one (if any). Called on app launch and foreground so a share
+    /// eventually lands even if the extension couldn't open a deep link.
+    @MainActor
+    static func processPending(
+        modelContainer: ModelContainer,
+        router: PendingSessionRouter
+    ) {
+        guard let staging = SharedContainer.stagingDirectory,
+              FileManager.default.fileExists(atPath: staging.path) else { return }
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: staging,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        // Collect (handoffId, mtime) for directories with a valid manifest,
+        // sorted newest-first.
+        struct Pending {
+            let id: UUID
+            let mtime: Date
         }
+        let candidates: [Pending] = entries.compactMap { url in
+            guard let id = UUID(uuidString: url.lastPathComponent) else { return nil }
+            guard HandoffManifest.load(from: url) != nil else { return nil }
+            let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate ?? .distantPast
+            return Pending(id: id, mtime: m)
+        }.sorted { $0.mtime > $1.mtime }
 
+        guard !candidates.isEmpty else { return }
+
+        os_log(.default, log: log, "Found %d pending handoff(s) on foreground", candidates.count)
+
+        // Process all candidates, but only the newest drives navigation —
+        // earlier ones still populate their sessions so nothing is lost.
+        for (index, pending) in candidates.enumerated() {
+            let navigateForThis = (index == 0)
+            _ = applyStagedHandoff(
+                handoffId: pending.id,
+                modelContainer: modelContainer,
+                router: navigateForThis ? router : PendingSessionRouter()
+            )
+        }
+    }
+
+    // MARK: - Core handoff
+
+    /// Materialize a single staged handoff. Returns the created session, or
+    /// `nil` if the handoff was missing / empty / for an unknown agent.
+    @MainActor
+    @discardableResult
+    private static func applyStagedHandoff(
+        handoffId: UUID,
+        modelContainer: ModelContainer,
+        router: PendingSessionRouter
+    ) -> Session? {
         guard let stagingDir = SharedContainer.stagingDirectory(handoffId: handoffId),
               FileManager.default.fileExists(atPath: stagingDir.path),
               let manifest = HandoffManifest.load(from: stagingDir) else {
-            os_log(.error, log: log, "Missing or invalid staging dir for handoff %{public}@", handoffId.uuidString)
-            return
+            os_log(.error, log: log, "Missing or invalid staging dir for handoff %{public}@",
+                   handoffId.uuidString)
+            return nil
         }
 
-        os_log(.info, log: log, "Applying handoff %{public}@: %d files for agent %{public}@",
+        let context = modelContainer.mainContext
+        guard let agent = fetchRootAgent(id: manifest.agentId, context: context) else {
+            os_log(.error, log: log, "Unknown agent in manifest: %{public}@",
+                   manifest.agentId.uuidString)
+            cleanupStaging(handoffId: handoffId)
+            return nil
+        }
+
+        os_log(.default, log: log, "Applying handoff %{public}@: %d files for agent %{public}@",
                handoffId.uuidString, manifest.files.count, agent.name)
 
         let resolvedAgentId = AgentFileManager.shared.resolveAgentId(for: agent)
 
-        // First pass: move bytes into the agent folder and classify them.
         var pendingImages: [ImageAttachment] = []
         var pendingFiles: [FileAttachment] = []
         var pendingVideoRefs: [String] = []
@@ -105,17 +170,12 @@ enum ShareHandoff {
             }
         }
 
-        // Skip if nothing usable arrived.
         guard !(pendingImages.isEmpty && pendingFiles.isEmpty && pendingVideoRefs.isEmpty) else {
             os_log(.error, log: log, "Handoff %{public}@ had no usable files", handoffId.uuidString)
             cleanupStaging(handoffId: handoffId)
-            return
+            return nil
         }
 
-        // Create the session on the *main* context so SessionListView's
-        // FetchDescriptor-based list picks it up without a cross-context save
-        // round trip. Seed caches BEFORE publishing the session so the
-        // ChatView's init reads them on first mount.
         let session = Session(title: L10n.Chat.newChat)
         context.insert(session)
         session.agent = agent
@@ -124,7 +184,7 @@ enum ShareHandoff {
         } catch {
             os_log(.error, log: log, "Failed to save new session: %{public}@", String(describing: error))
             cleanupStaging(handoffId: handoffId)
-            return
+            return nil
         }
 
         if !pendingImages.isEmpty {
@@ -133,10 +193,9 @@ enum ShareHandoff {
         if !pendingFiles.isEmpty {
             ChatViewModel.seedPendingFiles(for: session.id, append: pendingFiles)
         }
-        os_log(.info, log: log, "Seeded %d images, %d files, %d video refs pending for session %{public}@",
+        os_log(.default, log: log, "Seeded %d images, %d files, %d video refs pending for session %{public}@",
                pendingImages.count, pendingFiles.count, pendingVideoRefs.count, session.id.uuidString)
 
-        // Video metadata extraction is async; seed as each completes.
         let sessionId = session.id
         for ref in pendingVideoRefs {
             Task { @MainActor in
@@ -148,13 +207,13 @@ enum ShareHandoff {
 
         router.pendingSession = session
         cleanupStaging(handoffId: handoffId)
+        return session
     }
 
     // MARK: - Orphan sweep
 
-    /// On launch, delete any staging directories older than `maxAge` seconds.
-    /// Covers the case where the user cancelled out of the Share Extension or
-    /// force-quit the host app before the handoff was consumed.
+    /// Delete staging directories older than `maxAge` seconds. Covers the
+    /// case where a user shared something but never returned to iClaw.
     static func sweepOrphans(maxAge: TimeInterval = 24 * 60 * 60) {
         guard let staging = SharedContainer.stagingDirectory,
               FileManager.default.fileExists(atPath: staging.path) else { return }

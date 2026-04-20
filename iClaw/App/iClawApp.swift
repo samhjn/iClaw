@@ -119,6 +119,7 @@ struct iClawApp: App {
                 .onAppear {
                     launchTaskManager.runAll()
                     startCronScheduler()
+                    ShareHandoff.processPending(modelContainer: modelContainer, router: sessionRouter)
                 }
                 .onOpenURL { url in
                     handleDeepLink(url)
@@ -150,6 +151,10 @@ struct iClawApp: App {
             case .active:
                 cronScheduler?.resume()
                 keepAliveManager.onReturnToForeground()
+                // Pick up any share-extension handoffs that couldn't open
+                // the host app via deep link (iOS 18 disabled the legacy
+                // openURL: responder-chain trick).
+                ShareHandoff.processPending(modelContainer: modelContainer, router: sessionRouter)
             default:
                 break
             }
