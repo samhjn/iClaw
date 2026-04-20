@@ -51,8 +51,10 @@ struct HandoffManifest: Codable, Equatable {
         let url = directory.appendingPathComponent(filename)
         guard let data = try? Data(contentsOf: url) else { return nil }
 
-        // Primary: strict Codable decode.
-        if let m = try? JSONDecoder().decode(HandoffManifest.self, from: data) {
+        // Primary: strict Codable decode. An empty `files` array is useless
+        // — reject it here so the tolerant path and the strict path agree.
+        if let m = try? JSONDecoder().decode(HandoffManifest.self, from: data),
+           !m.files.isEmpty {
             return m
         }
 
