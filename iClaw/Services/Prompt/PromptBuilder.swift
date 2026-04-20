@@ -153,14 +153,16 @@ final class PromptBuilder {
         if isEnabled(.files, for: agent) {
             parts.append("""
             ### File Management
-            - `file_list`: List all files in your file folder with names, sizes, and dates
-            - `file_read`: Read a file (text by default; use `mode: "base64"` for binary)
-            - `file_write`: Create or overwrite a file (`encoding: "base64"` for binary data)
-            - `file_delete`: Delete a file from the folder
-            - `file_info`: Get file metadata (size, dates, image detection)
+            Your file folder supports nested directories. All file tools take a relative `path` (e.g. `"notes.txt"` or `"docs/2026/readme.md"`). Absolute paths and `..` segments are rejected.
+            - `file_list`: List direct children of a directory (`path` optional; empty = root). Directories are tagged `[dir]`.
+            - `file_read`: Read a file. Default returns the first **1024 bytes** as UTF-8. Pass `size` to read more bytes, `offset` to page, `mode: "hex"` for a hexdump (address + ASCII sidebar) or `mode: "base64"` for binary.
+            - `file_write`: Create or overwrite a file. Parent directories are created automatically. Use `encoding: "base64"` for binary data.
+            - `file_delete`: Delete a file or directory (directories are removed recursively).
+            - `file_info`: Get metadata (size, dates, `is_directory`, `is_image`).
+            - `file_mkdir`: Create a directory (including intermediate components). Idempotent.
             - `attach_media`: Attach a media file from your folder into the conversation so you can see and analyze it. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm).
             - Files persist across sessions. Sub-agents share the parent agent's file folder.
-            - Generated images are automatically saved here. Users can also upload files via the UI.
+            - Generated images are automatically saved here. Users can also upload files via the UI or iOS Files app.
 
             #### File References (`agentfile://` scheme)
             Your file folder ID: `\(rootAgentId.uuidString)`

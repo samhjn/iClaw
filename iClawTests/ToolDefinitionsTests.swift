@@ -109,6 +109,7 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertTrue(names.contains("file_write"))
         XCTAssertTrue(names.contains("file_delete"))
         XCTAssertTrue(names.contains("file_info"))
+        XCTAssertTrue(names.contains("file_mkdir"))
     }
 
     func testAppleEcosystemToolsExist() {
@@ -171,17 +172,25 @@ final class ToolDefinitionsTests: XCTestCase {
     func testFileToolsParameters() {
         let readTool = ToolDefinitions.fileReadTool
         XCTAssertEqual(readTool.function.name, "file_read")
-        XCTAssertEqual(readTool.function.parameters.required, ["name"])
-        XCTAssertNotNil(readTool.function.parameters.properties?["name"])
+        XCTAssertEqual(readTool.function.parameters.required, ["path"])
+        XCTAssertNotNil(readTool.function.parameters.properties?["path"])
         XCTAssertNotNil(readTool.function.parameters.properties?["mode"])
+        XCTAssertNotNil(readTool.function.parameters.properties?["size"])
+        XCTAssertNotNil(readTool.function.parameters.properties?["offset"])
+        XCTAssertEqual(readTool.function.parameters.properties?["mode"]?.enumValues, ["text", "base64", "hex"])
 
         let writeTool = ToolDefinitions.fileWriteTool
         XCTAssertEqual(writeTool.function.name, "file_write")
-        XCTAssertEqual(writeTool.function.parameters.required, ["name", "content"])
+        XCTAssertEqual(writeTool.function.parameters.required, ["path", "content"])
 
         let listTool = ToolDefinitions.fileListTool
         XCTAssertEqual(listTool.function.name, "file_list")
         XCTAssertNil(listTool.function.parameters.required)
+        XCTAssertNotNil(listTool.function.parameters.properties?["path"])
+
+        let mkdirTool = ToolDefinitions.fileMkdirTool
+        XCTAssertEqual(mkdirTool.function.name, "file_mkdir")
+        XCTAssertEqual(mkdirTool.function.parameters.required, ["path"])
     }
 
     // MARK: - ToolDefinitionBuilder

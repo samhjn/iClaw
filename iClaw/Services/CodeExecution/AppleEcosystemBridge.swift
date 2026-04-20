@@ -11,7 +11,7 @@ private let bridgeLog = OSLog(subsystem: "com.iclaw.jsruntime", category: "apple
 /// and receive results inline.
 ///
 /// The bridge installs two global objects:
-/// - `fs` — standalone file system API: `fs.list()`, `fs.read()`, `fs.write()`, `fs.delete()`, `fs.info()`
+/// - `fs` — standalone file system API: `fs.list()`, `fs.read()`, `fs.write()`, `fs.delete()`, `fs.info()`, `fs.mkdir()`
 /// - `apple` — Apple ecosystem APIs: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`,
 ///   `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*`
 ///
@@ -109,22 +109,39 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         // --- Files ---
         case "files.list":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            let files = AgentFileManager.shared.listFiles(agentId: agentId)
+            let path = (args["path"] as? String) ?? ""
+            let files = AgentFileManager.shared.listFiles(agentId: agentId, path: path)
             if files.isEmpty { return "[]" }
-            let items = files.map { "{\"name\":\"\($0.name)\",\"size\":\($0.size),\"is_image\":\($0.isImage)}" }
+            let items = files.map {
+                "{\"name\":\"\($0.name)\",\"size\":\($0.size),\"is_image\":\($0.isImage),\"is_dir\":\($0.isDirectory)}"
+            }
             return "[\(items.joined(separator: ","))]"
         case "files.read":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             let mode = args["mode"] as? String ?? "text"
+            let requestedSize = intArg(args["size"])
+            let offset = max(0, intArg(args["offset"]) ?? 0)
+            let size = requestedSize ?? FileTools.defaultReadSize
             do {
-                let data = try AgentFileManager.shared.readFile(agentId: agentId, name: name)
-                if mode == "base64" { return data.base64EncodedString() }
-                return String(data: data, encoding: .utf8) ?? "[Error] Binary file; use mode='base64'."
+                let data = try AgentFileManager.shared.readFile(agentId: agentId, name: path)
+                let total = data.count
+                let start = min(offset, total)
+                let end = min(start + max(size, 0), total)
+                let slice = data.subdata(in: start..<end)
+                let truncated = end < total
+                let suffix = truncated ? "\n[truncated: read \(end - start) of \(total) bytes, next offset=\(end)]" : ""
+                switch mode {
+                case "base64": return slice.base64EncodedString() + suffix
+                case "hex": return HexDump.format(slice, startOffset: start) + suffix
+                default:
+                    if let text = String(data: slice, encoding: .utf8) { return text + suffix }
+                    return "[Error] Binary file; use mode='hex' or mode='base64'."
+                }
             } catch { return "[Error] \(error.localizedDescription)" }
         case "files.write":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             let content = args["content"] as? String ?? ""
             let encoding = args["encoding"] as? String ?? "text"
             let data: Data
@@ -132,18 +149,23 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
                 guard let d = Data(base64Encoded: content, options: .ignoreUnknownCharacters) else { return "[Error] Invalid base64." }
                 data = d
             } else { data = Data(content.utf8) }
-            do { try AgentFileManager.shared.writeFile(agentId: agentId, name: name, data: data); return "OK" }
+            do { try AgentFileManager.shared.writeFile(agentId: agentId, name: path, data: data); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
         case "files.delete":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
-            do { try AgentFileManager.shared.deleteFile(agentId: agentId, name: name); return "OK" }
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+            do { try AgentFileManager.shared.deleteFile(agentId: agentId, name: path); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
         case "files.info":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            guard let name = args["name"] as? String else { return "[Error] Missing 'name' argument." }
-            guard let info = AgentFileManager.shared.fileInfo(agentId: agentId, name: name) else { return "[Error] File not found." }
-            return "{\"name\":\"\(info.name)\",\"size\":\(info.size),\"is_image\":\(info.isImage)}"
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+            guard let info = AgentFileManager.shared.fileInfo(agentId: agentId, name: path) else { return "[Error] File not found." }
+            return "{\"name\":\"\(info.name)\",\"size\":\(info.size),\"is_image\":\(info.isImage),\"is_dir\":\(info.isDirectory)}"
+        case "files.mkdir":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+            do { try AgentFileManager.shared.makeDirectory(agentId: agentId, path: path); return "OK" }
+            catch { return "[Error] \(error.localizedDescription)" }
 
         // --- Calendar ---
         case "calendar.listCalendars":
@@ -255,6 +277,23 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         }
     }
 
+    // MARK: - Argument Helpers
+
+    /// Accept `path` as the canonical key, fall back to legacy `name`.
+    private func filePathArg(_ args: [String: Any]) -> String? {
+        if let p = args["path"] as? String, !p.isEmpty { return p }
+        if let n = args["name"] as? String, !n.isEmpty { return n }
+        return nil
+    }
+
+    private func intArg(_ value: Any?) -> Int? {
+        if let i = value as? Int { return i }
+        if let i = value as? Int64 { return Int(i) }
+        if let d = value as? Double { return Int(d) }
+        if let s = value as? String, let i = Int(s) { return i }
+        return nil
+    }
+
     // MARK: - JavaScript Preamble
 
     /// Generate a JS preamble for the `apple.*` API with per-execution permission enforcement.
@@ -280,11 +319,12 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         }
 
         var fs = {
-            list: function() { return __bridgeCall('files.list', {}); },
-            read: function(name, opts) { var a = opts || {}; a.name = name; return __bridgeCall('files.read', a); },
-            write: function(name, content, opts) { var a = opts || {}; a.name = name; a.content = content; return __bridgeCall('files.write', a); },
-            delete: function(name) { return __bridgeCall('files.delete', {name: name}); },
-            info: function(name) { return __bridgeCall('files.info', {name: name}); }
+            list: function(path) { return __bridgeCall('files.list', {path: path || ''}); },
+            read: function(path, opts) { var a = opts || {}; a.path = path; return __bridgeCall('files.read', a); },
+            write: function(path, content, opts) { var a = opts || {}; a.path = path; a.content = content; return __bridgeCall('files.write', a); },
+            delete: function(path) { return __bridgeCall('files.delete', {path: path}); },
+            info: function(path) { return __bridgeCall('files.info', {path: path}); },
+            mkdir: function(path) { return __bridgeCall('files.mkdir', {path: path}); }
         };
 
         var apple = (function() {

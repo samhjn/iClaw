@@ -8,41 +8,75 @@ struct FileTools {
 
     private var agentId: UUID { fm.resolveAgentId(for: agent) }
 
+    /// Default byte limit when the LLM does not specify a `size`.
+    static let defaultReadSize = 1024
+
+    /// Accept `path` as the canonical parameter name; fall back to `name` for backward compat.
+    private static func argPath(_ arguments: [String: Any]) -> String? {
+        if let p = arguments["path"] as? String, !p.isEmpty { return p }
+        if let n = arguments["name"] as? String, !n.isEmpty { return n }
+        return nil
+    }
+
     func listFiles(arguments: [String: Any]) -> String {
-        let files = fm.listFiles(agentId: agentId)
+        let path = (arguments["path"] as? String) ?? ""
+        let files = fm.listFiles(agentId: agentId, path: path)
+        let header = path.isEmpty ? "Files" : "Files in '\(path)'"
         if files.isEmpty {
-            return "Agent file folder is empty."
+            return "\(header): (empty)"
         }
-        var lines = ["Files (\(files.count)):"]
+        var lines = ["\(header) (\(files.count)):"]
         for f in files {
-            let badge = f.isImage ? " [image]" : ""
+            let badge: String
+            if f.isDirectory { badge = " [dir]" }
+            else if f.isImage { badge = " [image]" }
+            else if f.isVideo { badge = " [video]" }
+            else { badge = "" }
             lines.append("  \(f.name) — \(f.formattedSize)\(badge)  (modified: \(Self.dateFormatter.string(from: f.modifiedAt)))")
         }
         return lines.joined(separator: "\n")
     }
 
     func readFile(arguments: [String: Any]) -> String {
-        guard let name = arguments["name"] as? String, !name.isEmpty else {
-            return "[Error] Missing required parameter: name"
+        guard let path = Self.argPath(arguments) else {
+            return "[Error] Missing required parameter: path"
         }
         let mode = (arguments["mode"] as? String) ?? "text"
+        let requestedSize = Self.intArg(arguments["size"])
+        let offset = max(0, Self.intArg(arguments["offset"]) ?? 0)
+        let size = requestedSize ?? Self.defaultReadSize
+
         do {
-            let data = try fm.readFile(agentId: agentId, name: name)
-            if mode == "base64" {
-                return data.base64EncodedString()
+            let data = try fm.readFile(agentId: agentId, name: path)
+            let total = data.count
+            let start = min(offset, total)
+            let end = min(start + max(size, 0), total)
+            let slice = data.subdata(in: start..<end)
+            let truncated = end < total
+            let suffix: String = {
+                guard truncated else { return "" }
+                return "\n[truncated: read \(end - start) of \(total) bytes, next offset=\(end)]"
+            }()
+
+            switch mode {
+            case "base64":
+                return slice.base64EncodedString() + suffix
+            case "hex":
+                return HexDump.format(slice, startOffset: start) + suffix
+            default: // "text"
+                if let text = String(data: slice, encoding: .utf8) {
+                    return text + suffix
+                }
+                return "[Error] File is binary; use mode='hex' or mode='base64' to read."
             }
-            if let text = String(data: data, encoding: .utf8) {
-                return text
-            }
-            return "[Error] File is binary; use mode='base64' to read."
         } catch {
             return "[Error] \(error.localizedDescription)"
         }
     }
 
     func writeFile(arguments: [String: Any]) -> String {
-        guard let name = arguments["name"] as? String, !name.isEmpty else {
-            return "[Error] Missing required parameter: name"
+        guard let path = Self.argPath(arguments) else {
+            return "[Error] Missing required parameter: path"
         }
         let content = arguments["content"] as? String ?? ""
         let encoding = (arguments["encoding"] as? String) ?? "text"
@@ -58,39 +92,53 @@ struct FileTools {
         }
 
         do {
-            try fm.writeFile(agentId: agentId, name: name, data: data)
-            return "File '\(name)' written successfully (\(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file)))."
+            try fm.writeFile(agentId: agentId, name: path, data: data)
+            return "File '\(path)' written successfully (\(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file)))."
         } catch {
             return "[Error] \(error.localizedDescription)"
         }
     }
 
     func deleteFile(arguments: [String: Any]) -> String {
-        guard let name = arguments["name"] as? String, !name.isEmpty else {
-            return "[Error] Missing required parameter: name"
+        guard let path = Self.argPath(arguments) else {
+            return "[Error] Missing required parameter: path"
         }
         do {
-            try fm.deleteFile(agentId: agentId, name: name)
-            return "File '\(name)' deleted."
+            try fm.deleteFile(agentId: agentId, name: path)
+            return "Deleted '\(path)'."
         } catch {
             return "[Error] \(error.localizedDescription)"
         }
     }
 
     func fileInfo(arguments: [String: Any]) -> String {
-        guard let name = arguments["name"] as? String, !name.isEmpty else {
-            return "[Error] Missing required parameter: name"
+        guard let path = Self.argPath(arguments) else {
+            return "[Error] Missing required parameter: path"
         }
-        guard let info = fm.fileInfo(agentId: agentId, name: name) else {
-            return "[Error] File not found: \(name)"
+        guard let info = fm.fileInfo(agentId: agentId, name: path) else {
+            return "[Error] File not found: \(path)"
         }
         return """
+        path: \(path)
         name: \(info.name)
         size: \(info.formattedSize)
+        is_directory: \(info.isDirectory)
         is_image: \(info.isImage)
         created: \(Self.dateFormatter.string(from: info.createdAt))
         modified: \(Self.dateFormatter.string(from: info.modifiedAt))
         """
+    }
+
+    func makeDirectory(arguments: [String: Any]) -> String {
+        guard let path = Self.argPath(arguments) else {
+            return "[Error] Missing required parameter: path"
+        }
+        do {
+            try fm.makeDirectory(agentId: agentId, path: path)
+            return "Directory '\(path)' created."
+        } catch {
+            return "[Error] \(error.localizedDescription)"
+        }
     }
 
     // MARK: - Multimodal
@@ -100,8 +148,8 @@ struct FileTools {
     ]
 
     func attachMedia(arguments: [String: Any]) async -> ToolCallResult {
-        guard let name = arguments["name"] as? String, !name.isEmpty else {
-            return ToolCallResult("[Error] Missing required parameter: name")
+        guard let name = Self.argPath(arguments) else {
+            return ToolCallResult("[Error] Missing required parameter: path")
         }
 
         let ext = (name as NSString).pathExtension.lowercased()
@@ -192,6 +240,14 @@ struct FileTools {
         case "tiff", "tif": return "image/tiff"
         default: return "image/jpeg"
         }
+    }
+
+    private static func intArg(_ value: Any?) -> Int? {
+        if let i = value as? Int { return i }
+        if let i = value as? Int64 { return Int(i) }
+        if let d = value as? Double { return Int(d) }
+        if let s = value as? String, let i = Int(s) { return i }
+        return nil
     }
 
     private static let dateFormatter: DateFormatter = {

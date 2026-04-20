@@ -36,6 +36,8 @@
 "common.add" = "新增";
 "common.name" = "名稱";
 "common.unknown" = "未知";
+"common.confirm" = "確定";
+"common.import" = "匯入";
 
 // MARK: - Chat
 "chat.messagePlaceholder" = "輸入訊息…";
@@ -606,6 +608,9 @@
 "agentFiles.deleteConfirmTitle" = "刪除檔案";
 "agentFiles.deleteConfirmMessage" = "確定要刪除「%@」嗎？此操作無法復原。";
 "agentFiles.imagePermissionDisabled" = "此智能體的檔案存取權限已關閉";
+"agentFiles.newFolder" = "新增資料夾";
+"agentFiles.folderName" = "資料夾名稱";
+"agentFiles.invalidFolderName" = "無效的資料夾名稱";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[錯誤] 日曆存取被拒絕。請在「設定 > 隱私 > 日曆」中啟用。";

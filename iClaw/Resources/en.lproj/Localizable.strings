@@ -36,6 +36,8 @@
 "common.add" = "Add";
 "common.name" = "Name";
 "common.unknown" = "unknown";
+"common.confirm" = "OK";
+"common.import" = "Import";
 
 // MARK: - Chat
 "chat.messagePlaceholder" = "Message...";
@@ -606,6 +608,9 @@
 "agentFiles.deleteConfirmTitle" = "Delete File";
 "agentFiles.deleteConfirmMessage" = "Are you sure you want to delete \"%@\"? This cannot be undone.";
 "agentFiles.imagePermissionDisabled" = "File access is disabled for this agent";
+"agentFiles.newFolder" = "New Folder";
+"agentFiles.folderName" = "Folder name";
+"agentFiles.invalidFolderName" = "Invalid folder name";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[Error] Calendar access denied. Please enable in Settings > Privacy > Calendars.";
