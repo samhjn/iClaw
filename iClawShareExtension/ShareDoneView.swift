@@ -14,9 +14,9 @@ struct ShareDoneView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 64))
                     .foregroundStyle(.green)
-                Text("Saved to iClaw")
+                Text(ShareL10n.doneTitle)
                     .font(.title3.weight(.semibold))
-                Text("Open iClaw to continue the conversation — your files are already attached.")
+                Text(ShareL10n.doneMessage)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -25,7 +25,7 @@ struct ShareDoneView: View {
                 Button {
                     onDismiss()
                 } label: {
-                    Text("Done")
+                    Text(ShareL10n.doneButton)
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -38,7 +38,7 @@ struct ShareDoneView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
-            .navigationTitle("iClaw")
+            .navigationTitle(ShareL10n.title)
             .navigationBarTitleDisplayMode(.inline)
         }
     }

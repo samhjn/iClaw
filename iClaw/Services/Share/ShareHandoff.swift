@@ -253,16 +253,26 @@ enum ShareHandoff {
     /// Delete staging directories older than `maxAge` seconds. Covers the
     /// case where a user shared something but never returned to iClaw.
     static func sweepOrphans(maxAge: TimeInterval = 24 * 60 * 60) {
-        guard let staging = SharedContainer.stagingDirectory,
-              FileManager.default.fileExists(atPath: staging.path) else { return }
+        guard let staging = SharedContainer.stagingDirectory else { return }
+        sweepOrphans(in: staging, maxAge: maxAge, now: Date())
+    }
+
+    /// Internal helper, test-visible. Sweeps a caller-provided staging root.
+    static func sweepOrphans(
+        in stagingRoot: URL,
+        maxAge: TimeInterval,
+        now: Date
+    ) {
+        guard FileManager.default.fileExists(atPath: stagingRoot.path) else { return }
         guard let entries = try? FileManager.default.contentsOfDirectory(
-            at: staging,
+            at: stagingRoot,
             includingPropertiesForKeys: [.contentModificationDateKey],
             options: [.skipsHiddenFiles]
         ) else { return }
-        let cutoff = Date().addingTimeInterval(-maxAge)
+        let cutoff = now.addingTimeInterval(-maxAge)
         for url in entries {
-            let mtime = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            let mtime = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate ?? .distantPast
             if mtime < cutoff {
                 try? FileManager.default.removeItem(at: url)
             }

@@ -22,11 +22,11 @@ struct SharePickerView: View {
                     agentList
                 }
             }
-            .navigationTitle("iClaw")
+            .navigationTitle(ShareL10n.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button(ShareL10n.cancel, action: onCancel)
                         .disabled(isStaging)
                 }
             }
@@ -38,9 +38,9 @@ struct SharePickerView: View {
             Image(systemName: "cpu")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
-            Text("No agents yet")
+            Text(ShareL10n.noAgentsTitle)
                 .font(.headline)
-            Text("Open iClaw and create an agent before sharing files.")
+            Text(ShareL10n.noAgentsMessage)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -54,9 +54,9 @@ struct SharePickerView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(.orange)
-            Text("App Group not configured")
+            Text(ShareL10n.appGroupMissingTitle)
                 .font(.headline)
-            Text("iClaw needs the 'group.com.iclaw.app' App Group enabled on both the app and this extension. Open the project in Xcode, go to Signing & Capabilities, and add App Groups to both targets.")
+            Text(ShareL10n.appGroupMissingMessage)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -90,7 +90,7 @@ struct SharePickerView: View {
                     .disabled(isStaging)
                 }
             } header: {
-                Text("Send to Agent")
+                Text(ShareL10n.sectionHeader)
             }
         }
     }

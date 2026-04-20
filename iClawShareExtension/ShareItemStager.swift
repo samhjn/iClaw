@@ -70,7 +70,6 @@ enum ShareItemStager {
 
         let manifest = HandoffManifest(
             version: HandoffManifest.currentVersion,
-            createdAt: Date(),
             agentId: agentId,
             files: files
         )

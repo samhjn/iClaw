@@ -62,7 +62,7 @@ final class ShareViewController: UIViewController {
             await MainActor.run {
                 guard let handoffId else {
                     NSLog("[iClawShare] stager returned nil — nothing to share")
-                    self.finish(withError: "Nothing to share. Check that iClaw has App Group access.")
+                    self.finish(withError: ShareL10n.errorNothingToShare)
                     return
                 }
                 NSLog("[iClawShare] stager produced handoffId=%@", handoffId.uuidString)
@@ -147,7 +147,7 @@ final class ShareViewController: UIViewController {
 
     private func finish(withError message: String) {
         let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: ShareL10n.errorOK, style: .default) { [weak self] _ in
             self?.cancel()
         })
         present(alert, animated: true)
