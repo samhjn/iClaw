@@ -9,7 +9,7 @@ private let vcLog = OSLog(subsystem: "com.iclaw.share", category: "viewcontrolle
 /// stage attachments → open host app via deep link.
 final class ShareViewController: UIViewController {
 
-    private var hostingController: UIHostingController<SharePickerView>?
+    private var hostingController: UIViewController?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -85,25 +85,56 @@ final class ShareViewController: UIViewController {
             cancel()
             return
         }
-        NSLog("[iClawShare] openHostApp url=%@", url.absoluteString)
         os_log(.default, log: vcLog, "Opening host app url=%{public}@", url.absoluteString)
 
-        // iOS 18 fully disabled the legacy responder-chain `openURL:` private
-        // selector. `NSExtensionContext.open(_:completionHandler:)` is the
-        // supported API; it works from share extensions targeting the host
-        // app's registered URL scheme.
         guard let context = extensionContext else {
-            NSLog("[iClawShare] No extension context — cannot open host app")
+            os_log(.error, log: vcLog, "No extension context")
             cancel()
             return
         }
 
-        context.open(url) { [weak context] success in
-            NSLog("[iClawShare] context.open returned success=%@", success ? "YES" : "NO")
+        // Best-effort: NSExtensionContext.open is documented only for
+        // messaging/action/Today extensions, but on some iOS versions it
+        // opens the host for share extensions too. We try it; regardless of
+        // the outcome, the host app's foreground-sweep will materialize the
+        // staged handoff the next time the user opens iClaw.
+        context.open(url) { [weak self, weak context] success in
+            os_log(.default, log: vcLog,
+                   "context.open returned success=%{public}@",
+                   success ? "true" : "false")
             DispatchQueue.main.async {
-                context?.completeRequest(returningItems: [], completionHandler: nil)
+                if success {
+                    context?.completeRequest(returningItems: [], completionHandler: nil)
+                } else {
+                    self?.showOpenIClawPrompt(handoffId: handoffId)
+                }
             }
         }
+    }
+
+    /// Swap the agent picker for a success screen instructing the user to
+    /// open iClaw manually, since iOS won't let a share extension foreground
+    /// its host app.
+    private func showOpenIClawPrompt(handoffId: UUID) {
+        let promptView = ShareDoneView { [weak self] in
+            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        }
+        hostingController?.willMove(toParent: nil)
+        hostingController?.view.removeFromSuperview()
+        hostingController?.removeFromParent()
+
+        let host = UIHostingController(rootView: promptView)
+        addChild(host)
+        view.addSubview(host.view)
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            host.view.topAnchor.constraint(equalTo: view.topAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
+        host.didMove(toParent: self)
+        hostingController = host
     }
 
     private func cancel() {
