@@ -48,7 +48,7 @@ enum ShareHandoff {
             return
         }
 
-        let context = ModelContext(modelContainer)
+        let context = modelContainer.mainContext
         guard let agent = fetchRootAgent(id: agentId, context: context) else {
             os_log(.error, log: log, "Unknown agent: %{public}@", agentId.uuidString)
             cleanupStaging(handoffId: handoffId)
@@ -61,6 +61,9 @@ enum ShareHandoff {
             os_log(.error, log: log, "Missing or invalid staging dir for handoff %{public}@", handoffId.uuidString)
             return
         }
+
+        os_log(.info, log: log, "Applying handoff %{public}@: %d files for agent %{public}@",
+               handoffId.uuidString, manifest.files.count, agent.name)
 
         let resolvedAgentId = AgentFileManager.shared.resolveAgentId(for: agent)
 
@@ -109,12 +112,20 @@ enum ShareHandoff {
             return
         }
 
-        // Create the session, then seed caches so ChatView picks them up on
-        // first mount.
+        // Create the session on the *main* context so SessionListView's
+        // FetchDescriptor-based list picks it up without a cross-context save
+        // round trip. Seed caches BEFORE publishing the session so the
+        // ChatView's init reads them on first mount.
         let session = Session(title: L10n.Chat.newChat)
         context.insert(session)
         session.agent = agent
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            os_log(.error, log: log, "Failed to save new session: %{public}@", String(describing: error))
+            cleanupStaging(handoffId: handoffId)
+            return
+        }
 
         if !pendingImages.isEmpty {
             ChatViewModel.seedPendingImages(for: session.id, append: pendingImages)
@@ -122,6 +133,8 @@ enum ShareHandoff {
         if !pendingFiles.isEmpty {
             ChatViewModel.seedPendingFiles(for: session.id, append: pendingFiles)
         }
+        os_log(.info, log: log, "Seeded %d images, %d files, %d video refs pending for session %{public}@",
+               pendingImages.count, pendingFiles.count, pendingVideoRefs.count, session.id.uuidString)
 
         // Video metadata extraction is async; seed as each completes.
         let sessionId = session.id

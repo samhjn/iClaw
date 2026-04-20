@@ -1,6 +1,9 @@
 import Foundation
 import UniformTypeIdentifiers
 import UIKit
+import os.log
+
+private let stagerLog = OSLog(subsystem: "com.iclaw.share", category: "stager")
 
 /// Extracts attachments from `NSExtensionItem`s, writes each one to the App
 /// Group's staging directory, and emits a `HandoffManifest`.
@@ -15,13 +18,18 @@ enum ShareItemStager {
         items: [NSExtensionItem],
         agentId: UUID
     ) async -> UUID? {
-        guard let stagingRoot = SharedContainer.ensureStagingDirectory() else { return nil }
+        guard let stagingRoot = SharedContainer.ensureStagingDirectory() else {
+            os_log(.error, log: stagerLog,
+                   "App Group container unavailable — check that group.com.iclaw.app is enabled on both targets' entitlements")
+            return nil
+        }
 
         let handoffId = UUID()
         let dir = stagingRoot.appendingPathComponent(handoffId.uuidString, isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
+            os_log(.error, log: stagerLog, "Failed to create staging dir: %{public}@", String(describing: error))
             return nil
         }
 
@@ -35,6 +43,10 @@ enum ShareItemStager {
                 } else if let text = await extractText(from: provider) {
                     if !collectedText.isEmpty { collectedText += "\n\n" }
                     collectedText += text
+                } else {
+                    os_log(.info, log: stagerLog,
+                           "Provider yielded no file or text; registeredTypeIdentifiers=%{public}@",
+                           provider.registeredTypeIdentifiers.joined(separator: ","))
                 }
             }
         }
@@ -50,6 +62,8 @@ enum ShareItemStager {
         }
 
         guard !files.isEmpty else {
+            os_log(.error, log: stagerLog, "No files staged for handoff %{public}@ — aborting",
+                   handoffId.uuidString)
             try? FileManager.default.removeItem(at: dir)
             return nil
         }
@@ -63,10 +77,13 @@ enum ShareItemStager {
         do {
             try manifest.write(to: dir)
         } catch {
+            os_log(.error, log: stagerLog, "Failed to write manifest: %{public}@",
+                   String(describing: error))
             try? FileManager.default.removeItem(at: dir)
             return nil
         }
 
+        os_log(.info, log: stagerLog, "Staged %d files in %{public}@", files.count, handoffId.uuidString)
         return handoffId
     }
 

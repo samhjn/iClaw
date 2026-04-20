@@ -1,5 +1,8 @@
 import UIKit
 import SwiftUI
+import os.log
+
+private let vcLog = OSLog(subsystem: "com.iclaw.share", category: "viewcontroller")
 
 /// Principal class for the Share Extension. Hosts `SharePickerView` and
 /// orchestrates the lifecycle: load agent snapshot → user picks agent →
@@ -63,9 +66,14 @@ final class ShareViewController: UIViewController {
             URLQueryItem(name: "agentId", value: agentId.uuidString),
             URLQueryItem(name: "handoffId", value: handoffId.uuidString),
         ]
-        if let url = components.url {
-            OpenURLHelper.open(url, from: self)
+        guard let url = components.url else {
+            os_log(.error, log: vcLog, "Could not build handoff URL")
+            cancel()
+            return
         }
+        let opened = OpenURLHelper.open(url, from: self)
+        os_log(.info, log: vcLog, "Opening host app url=%{public}@ opened=%{public}@",
+               url.absoluteString, opened ? "true" : "false")
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
 
