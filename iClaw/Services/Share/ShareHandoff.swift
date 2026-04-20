@@ -94,6 +94,7 @@ enum ShareHandoff {
             let id: UUID
             let mtime: Date
         }
+        let staleCutoff = Date().addingTimeInterval(-5 * 60) // 5 minutes
         let candidates: [Pending] = entries.compactMap { url in
             guard let id = UUID(uuidString: url.lastPathComponent) else {
                 os_log(.default, log: log,
@@ -101,14 +102,21 @@ enum ShareHandoff {
                        url.lastPathComponent)
                 return nil
             }
+            let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate ?? .distantPast
             guard HandoffManifest.load(from: url) != nil else {
                 os_log(.default, log: log,
                        "processPending: skipping %{public}@ (no manifest)",
                        url.lastPathComponent)
+                // Clean up a broken/manifestless leftover so it doesn't linger.
+                if m < staleCutoff {
+                    try? FileManager.default.removeItem(at: url)
+                    os_log(.default, log: log,
+                           "processPending: removed stale manifestless %{public}@",
+                           url.lastPathComponent)
+                }
                 return nil
             }
-            let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
-                .contentModificationDate ?? .distantPast
             return Pending(id: id, mtime: m)
         }.sorted { $0.mtime > $1.mtime }
 

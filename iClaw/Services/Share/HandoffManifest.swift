@@ -37,7 +37,9 @@ struct HandoffManifest: Codable {
     static func load(from directory: URL) -> HandoffManifest? {
         let url = directory.appendingPathComponent(filename)
         guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(HandoffManifest.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(HandoffManifest.self, from: data)
     }
 
     /// Persist the manifest into a staging directory.
