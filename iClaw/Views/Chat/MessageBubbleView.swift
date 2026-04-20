@@ -12,6 +12,7 @@ struct MessageBubbleView: View {
         var toolCalls: [LLMToolCall]??
         var imageAttachments: [ImageAttachment]?
         var videoAttachments: [VideoAttachment]?
+        var fileAttachments: [FileAttachment]?
     }
 
     private var role: MessageRole {
@@ -88,16 +89,30 @@ struct MessageBubbleView: View {
         return result
     }
 
+    private var fileAttachments: [FileAttachment] {
+        if let cached = cache.fileAttachments { return cached }
+        let result: [FileAttachment] = {
+            guard let data = message?.fileAttachmentsData,
+                  let decoded = try? JSONDecoder().decode([FileAttachment].self, from: data) else {
+                return []
+            }
+            return decoded
+        }()
+        cache.fileAttachments = result
+        return result
+    }
+
     /// True when the rendered content already references images inline via `attachment:N` or `agentfile://`.
     private var contentHasInlineImageRefs: Bool {
         content.contains("attachment:") || content.contains("agentfile://")
     }
 
-    /// User message display content with `agentfile://` image refs stripped
-    /// (images are already shown in the grid via imageAttachmentsData).
+    /// User message display content with `agentfile://` image and file refs
+    /// stripped (images are shown in the grid via imageAttachmentsData; files
+    /// are shown as chips via fileAttachmentsData).
     private var userDisplayContent: String {
         guard content.contains("agentfile://") else { return content }
-        let pattern = "\\n?!\\[[^\\]]*\\]\\(agentfile://[^)]+\\)"
+        let pattern = "\\n?!?\\[[^\\]]*\\]\\(agentfile://[^)]+\\)"
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return content }
         let range = NSRange(content.startIndex..., in: content)
         return regex.stringByReplacingMatches(in: content, range: range, withTemplate: "")
@@ -198,6 +213,9 @@ struct MessageBubbleView: View {
                 if !videoAttachments.isEmpty {
                     MessageVideoGrid(videos: videoAttachments)
                 }
+                if !fileAttachments.isEmpty {
+                    MessageFileList(files: fileAttachments)
+                }
                 if !userDisplayContent.isEmpty {
                     Text(userDisplayContent)
                         .font(.body)
@@ -237,6 +255,9 @@ struct MessageBubbleView: View {
                 if !videoAttachments.isEmpty {
                     MessageVideoGrid(videos: videoAttachments)
                 }
+                if !fileAttachments.isEmpty {
+                    MessageFileList(files: fileAttachments)
+                }
             }
         }
     }
@@ -263,6 +284,9 @@ struct MessageBubbleView: View {
             }
             if !videoAttachments.isEmpty {
                 MessageVideoGrid(videos: videoAttachments)
+            }
+            if !fileAttachments.isEmpty {
+                MessageFileList(files: fileAttachments)
             }
 
             if isVerbose {
@@ -578,6 +602,57 @@ private struct StreamingDotsView: View {
         .padding(.top, 2)
         .onReceive(timer) { _ in
             phase = (phase + 1) % 3
+        }
+    }
+}
+
+// MARK: - File Attachment Chips
+
+/// Vertical list of file chips shown in a message bubble. Tapping a chip
+/// routes to the existing `agentfile://` preview pipeline registered in
+/// `iClawApp.handleAgentFileLink`.
+private struct MessageFileList: View {
+    let files: [FileAttachment]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(files) { file in
+                Button {
+                    if let url = URL(string: file.fileReference) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: file.systemIconName)
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 32, height: 40)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.accentColor.opacity(0.1))
+                            )
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(file.name)
+                                .font(.caption.weight(.medium))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text(file.fileSizeString)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: 260, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(.systemGray6))
+                    )
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+            }
         }
     }
 }

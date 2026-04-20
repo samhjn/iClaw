@@ -72,6 +72,7 @@
 "chat.photosAndVideos" = "사진 및 동영상";
 "chat.camera" = "촬영";
 "chat.pasteFromClipboard" = "클립보드에서 붙여넣기";
+"chat.chooseFile" = "파일 선택";
 "chat.imagePlaceholder" = "[이미지]";
 "chat.saveImageToPhotos" = "이미지 저장";
 "chat.imageSaved" = "사진에 저장되었습니다";

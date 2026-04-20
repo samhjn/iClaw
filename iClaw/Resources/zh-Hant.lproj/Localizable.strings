@@ -72,6 +72,7 @@
 "chat.photosAndVideos" = "照片和影片";
 "chat.camera" = "拍攝";
 "chat.pasteFromClipboard" = "從剪貼簿貼上";
+"chat.chooseFile" = "選擇檔案";
 "chat.imagePlaceholder" = "[圖片]";
 "chat.saveImageToPhotos" = "儲存圖片";
 "chat.imageSaved" = "已儲存至相簿";

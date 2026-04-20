@@ -111,6 +111,7 @@ enum L10n {
         static var photosAndVideos: String { tr("chat.photosAndVideos") }
         static var camera: String { tr("chat.camera") }
         static var pasteFromClipboard: String { tr("chat.pasteFromClipboard") }
+        static var chooseFile: String { tr("chat.chooseFile") }
         static var imagePlaceholder: String { tr("chat.imagePlaceholder") }
         static var saveImageToPhotos: String { tr("chat.saveImageToPhotos") }
         static var imageSaved: String { tr("chat.imageSaved") }

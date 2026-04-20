@@ -72,6 +72,7 @@
 "chat.photosAndVideos" = "写真とビデオ";
 "chat.camera" = "撮影";
 "chat.pasteFromClipboard" = "クリップボードから貼り付け";
+"chat.chooseFile" = "ファイルを選択";
 "chat.imagePlaceholder" = "[画像]";
 "chat.saveImageToPhotos" = "画像を保存";
 "chat.imageSaved" = "写真に保存しました";

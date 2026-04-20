@@ -62,6 +62,7 @@ final class AgentViewModel {
         modelContext.insert(agent)
         try? modelContext.save()
         fetchAgents()
+        AgentSnapshotExporter.export(context: modelContext)
         return agent
     }
 
@@ -76,6 +77,7 @@ final class AgentViewModel {
         modelContext.delete(agent)
         try? modelContext.save()
         AgentFileManager.shared.cleanupAgentFiles(agentId: agentId)
+        AgentSnapshotExporter.export(context: modelContext)
         // No fetchAgents() — array is already correct from step 1.
     }
 
@@ -103,5 +105,6 @@ final class AgentViewModel {
         agent.updatedAt = Date()
         try? modelContext.save()
         fetchAgents()
+        AgentSnapshotExporter.export(context: modelContext)
     }
 }

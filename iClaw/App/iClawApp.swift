@@ -8,6 +8,7 @@ struct iClawApp: App {
     @State private var cronScheduler: CronScheduler?
     @State private var launchTaskManager: LaunchTaskManager
     @State private var showMigrationResetAlert: Bool
+    @State private var sessionRouter = PendingSessionRouter()
     private let bgTaskCoordinator: CronBGTaskCoordinator
     private let keepAliveManager = BackgroundKeepAliveManager()
     /// Store URL that needs to be deleted if the user confirms a migration reset.
@@ -56,6 +57,18 @@ struct iClawApp: App {
         let coordinator = CronBGTaskCoordinator()
         coordinator.registerCronTask()
         bgTaskCoordinator = coordinator
+
+        // Publish the root-agent snapshot for the Share Extension and sweep
+        // any abandoned share-staging directories from earlier sessions.
+        Self.refreshAgentSnapshot(in: modelContainer)
+        ShareHandoff.sweepOrphans()
+    }
+
+    /// Publish a read-only snapshot of root agents to the App Group so the
+    /// Share Extension can list them without touching SwiftData.
+    private static func refreshAgentSnapshot(in container: ModelContainer) {
+        let context = ModelContext(container)
+        AgentSnapshotExporter.export(context: context)
     }
 
     /// Delete the on-disk store files and terminate so the next launch starts fresh.
@@ -117,6 +130,7 @@ struct iClawApp: App {
                 .onAppear {
                     launchTaskManager.runAll()
                     startCronScheduler()
+                    ShareHandoff.processPending(modelContainer: modelContainer, router: sessionRouter)
                 }
                 .onOpenURL { url in
                     handleDeepLink(url)
@@ -139,6 +153,7 @@ struct iClawApp: App {
                 }
         }
         .modelContainer(modelContainer)
+        .environment(sessionRouter)
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .background:
@@ -147,6 +162,10 @@ struct iClawApp: App {
             case .active:
                 cronScheduler?.resume()
                 keepAliveManager.onReturnToForeground()
+                // Pick up any share-extension handoffs that couldn't open
+                // the host app via deep link (iOS 18 disabled the legacy
+                // openURL: responder-chain trick).
+                ShareHandoff.processPending(modelContainer: modelContainer, router: sessionRouter)
             default:
                 break
             }
@@ -165,7 +184,10 @@ struct iClawApp: App {
 
     // MARK: - Deep Link Handling
 
-    /// Handles URL scheme: iclaw://cron/trigger/{jobId} and iclaw://cron/run-due
+    /// Handles URL schemes:
+    /// - `iclaw://cron/trigger/{jobId}` / `iclaw://cron/run-due` — cron triggers
+    /// - `iclaw://session/new?agentId=...&handoffId=...` — Share Extension handoff
+    /// - `agentfile://<agentId>/<filename>` — in-app file preview
     private func handleDeepLink(_ url: URL) {
         if url.scheme == "agentfile" {
             handleAgentFileLink(url)
@@ -173,6 +195,13 @@ struct iClawApp: App {
         }
 
         guard url.scheme == "iclaw" else { return }
+
+        if ShareHandoff.isHandoffURL(url) {
+            Task { @MainActor in
+                ShareHandoff.apply(url: url, modelContainer: modelContainer, router: sessionRouter)
+            }
+            return
+        }
 
         let pathComponents = url.pathComponents.filter { $0 != "/" }
         let host = url.host ?? ""
