@@ -44,7 +44,7 @@ enum ShareItemStager {
                     if !collectedText.isEmpty { collectedText += "\n\n" }
                     collectedText += text
                 } else {
-                    os_log(.info, log: stagerLog,
+                    os_log(.default, log: stagerLog,
                            "Provider yielded no file or text; registeredTypeIdentifiers=%{public}@",
                            provider.registeredTypeIdentifiers.joined(separator: ","))
                 }
@@ -83,7 +83,7 @@ enum ShareItemStager {
             return nil
         }
 
-        os_log(.info, log: stagerLog, "Staged %d files in %{public}@", files.count, handoffId.uuidString)
+        os_log(.default, log: stagerLog, "Staged %d files in %{public}@", files.count, handoffId.uuidString)
         return handoffId
     }
 

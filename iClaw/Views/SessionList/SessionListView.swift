@@ -78,6 +78,16 @@ struct SessionListView: View {
                 viewModel?.fetchSessions()
             }
             viewModel?.startAutoRefresh()
+
+            // `onChange(of: router.pendingSession)` only fires on mutations,
+            // not on the initial value. If the main-app's foreground sweep
+            // already set `pendingSession` before this view mounted, catch
+            // it here so the shared session still gets selected.
+            if let session = router.pendingSession {
+                viewModel?.fetchSessions()
+                selectedSession = session
+                router.pendingSession = nil
+            }
         }
         .onDisappear {
             viewModel?.stopAutoRefresh()

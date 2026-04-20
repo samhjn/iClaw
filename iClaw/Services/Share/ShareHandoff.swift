@@ -63,13 +63,30 @@ enum ShareHandoff {
         modelContainer: ModelContainer,
         router: PendingSessionRouter
     ) {
-        guard let staging = SharedContainer.stagingDirectory,
-              FileManager.default.fileExists(atPath: staging.path) else { return }
+        guard let staging = SharedContainer.stagingDirectory else {
+            os_log(.error, log: log,
+                   "processPending: App Group container unavailable — entitlement missing on main app?")
+            return
+        }
+        guard FileManager.default.fileExists(atPath: staging.path) else {
+            os_log(.default, log: log,
+                   "processPending: no staging directory at %{public}@ (nothing to process)",
+                   staging.path)
+            return
+        }
         guard let entries = try? FileManager.default.contentsOfDirectory(
             at: staging,
             includingPropertiesForKeys: [.contentModificationDateKey],
             options: [.skipsHiddenFiles]
-        ) else { return }
+        ) else {
+            os_log(.error, log: log,
+                   "processPending: could not enumerate %{public}@", staging.path)
+            return
+        }
+
+        os_log(.default, log: log,
+               "processPending: scanning %{public}@, %d entries",
+               staging.path, entries.count)
 
         // Collect (handoffId, mtime) for directories with a valid manifest,
         // sorted newest-first.
@@ -78,16 +95,29 @@ enum ShareHandoff {
             let mtime: Date
         }
         let candidates: [Pending] = entries.compactMap { url in
-            guard let id = UUID(uuidString: url.lastPathComponent) else { return nil }
-            guard HandoffManifest.load(from: url) != nil else { return nil }
+            guard let id = UUID(uuidString: url.lastPathComponent) else {
+                os_log(.default, log: log,
+                       "processPending: skipping non-uuid entry %{public}@",
+                       url.lastPathComponent)
+                return nil
+            }
+            guard HandoffManifest.load(from: url) != nil else {
+                os_log(.default, log: log,
+                       "processPending: skipping %{public}@ (no manifest)",
+                       url.lastPathComponent)
+                return nil
+            }
             let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
                 .contentModificationDate ?? .distantPast
             return Pending(id: id, mtime: m)
         }.sorted { $0.mtime > $1.mtime }
 
-        guard !candidates.isEmpty else { return }
+        guard !candidates.isEmpty else {
+            os_log(.default, log: log, "processPending: no valid handoffs to process")
+            return
+        }
 
-        os_log(.default, log: log, "Found %d pending handoff(s) on foreground", candidates.count)
+        os_log(.default, log: log, "Found %d pending handoff(s)", candidates.count)
 
         // Process all candidates, but only the newest drives navigation —
         // earlier ones still populate their sessions so nothing is lost.
