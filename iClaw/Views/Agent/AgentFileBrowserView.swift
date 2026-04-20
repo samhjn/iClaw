@@ -6,15 +6,22 @@ import UniformTypeIdentifiers
 
 struct AgentFileBrowserView: View {
     let agent: Agent
+    /// Relative path within the agent's folder (`""` = root).
+    var currentPath: String = ""
+
     @State private var files: [FileInfo] = []
     @State private var showDocumentPicker = false
     @State private var showDeleteConfirm: FileInfo?
     @State private var showDeleteAlert = false
+    @State private var showNewFolderAlert = false
+    @State private var newFolderName = ""
     @State private var errorMessage: String?
 
     private var agentId: UUID {
         AgentFileManager.shared.resolveAgentId(for: agent)
     }
+
+    private var isRoot: Bool { currentPath.isEmpty }
 
     var body: some View {
         List {
@@ -26,7 +33,7 @@ struct AgentFileBrowserView: View {
                 )
             } else {
                 ForEach(files) { file in
-                    FileRowView(file: file, agentId: agentId)
+                    rowForFile(file)
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 showDeleteConfirm = file
@@ -36,10 +43,12 @@ struct AgentFileBrowserView: View {
                             }
                         }
                         .contextMenu {
-                            Button {
-                                shareFile(file)
-                            } label: {
-                                Label(L10n.Chat.share, systemImage: "square.and.arrow.up")
+                            if !file.isDirectory {
+                                Button {
+                                    shareFile(file)
+                                } label: {
+                                    Label(L10n.Chat.share, systemImage: "square.and.arrow.up")
+                                }
                             }
                             Button(role: .destructive) {
                                 showDeleteConfirm = file
@@ -51,12 +60,22 @@ struct AgentFileBrowserView: View {
                 }
             }
         }
-        .navigationTitle(L10n.AgentFiles.title)
+        .navigationTitle(isRoot ? L10n.AgentFiles.title : (currentPath as NSString).lastPathComponent)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showDocumentPicker = true
+                Menu {
+                    Button {
+                        showDocumentPicker = true
+                    } label: {
+                        Label(L10n.Common.import, systemImage: "square.and.arrow.down")
+                    }
+                    Button {
+                        newFolderName = ""
+                        showNewFolderAlert = true
+                    } label: {
+                        Label(L10n.AgentFiles.newFolder, systemImage: "folder.badge.plus")
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -68,10 +87,16 @@ struct AgentFileBrowserView: View {
                 importFiles(urls)
             }
         }
+        .alert(L10n.AgentFiles.newFolder, isPresented: $showNewFolderAlert) {
+            TextField(L10n.AgentFiles.folderName, text: $newFolderName)
+                .textInputAutocapitalization(.never)
+            Button(L10n.Common.cancel, role: .cancel) { }
+            Button(L10n.Common.confirm) { createFolder() }
+        }
         .alert(L10n.AgentFiles.deleteConfirmTitle, isPresented: $showDeleteAlert) {
             Button(L10n.Common.delete, role: .destructive) {
                 if let file = showDeleteConfirm {
-                    deleteFile(file)
+                    deleteItem(file)
                 }
                 showDeleteConfirm = nil
             }
@@ -103,16 +128,33 @@ struct AgentFileBrowserView: View {
         }
     }
 
+    @ViewBuilder
+    private func rowForFile(_ file: FileInfo) -> some View {
+        if file.isDirectory {
+            NavigationLink {
+                AgentFileBrowserView(agent: agent, currentPath: join(currentPath, file.name))
+            } label: {
+                FileRowView(file: file, agentId: agentId, parentPath: currentPath)
+            }
+        } else {
+            FileRowView(file: file, agentId: agentId, parentPath: currentPath)
+        }
+    }
+
     private func refreshFiles() {
-        let allFiles = AgentFileManager.shared.listFiles(agentId: agentId)
-        let draftFilenames = collectDraftFilenames()
-        files = draftFilenames.isEmpty ? allFiles : allFiles.filter { !draftFilenames.contains($0.name) }
+        let allFiles = AgentFileManager.shared.listFiles(agentId: agentId, path: currentPath)
+        if isRoot {
+            let draftFilenames = collectDraftFilenames()
+            files = draftFilenames.isEmpty ? allFiles : allFiles.filter { !draftFilenames.contains($0.name) }
+        } else {
+            files = allFiles
+        }
     }
 
     /// Collect filenames referenced by unsent draft images across all sessions of this agent.
+    /// Only applied at root because drafts always live at the root of the agent folder.
     private func collectDraftFilenames() -> Set<String> {
         var names = Set<String>()
-        // Check in-memory cache first.
         for session in agent.sessions {
             for attachment in ChatViewModel.cachedPendingImages(for: session.id) {
                 if let ref = attachment.fileReference,
@@ -120,7 +162,6 @@ struct AgentFileBrowserView: View {
                     names.insert(filename)
                 }
             }
-            // Also check persisted draft data (survives app restart).
             if let data = session.draftImagesData,
                let images = try? JSONDecoder().decode([ImageAttachment].self, from: data) {
                 for img in images {
@@ -134,9 +175,24 @@ struct AgentFileBrowserView: View {
         return names
     }
 
-    private func deleteFile(_ file: FileInfo) {
+    private func deleteItem(_ file: FileInfo) {
         do {
-            try AgentFileManager.shared.deleteFile(agentId: agentId, name: file.name)
+            try AgentFileManager.shared.deleteFile(agentId: agentId, name: join(currentPath, file.name))
+            refreshFiles()
+        } catch {
+            withAnimation { errorMessage = error.localizedDescription }
+        }
+    }
+
+    private func createFolder() {
+        let trimmed = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard AgentFileManager.isSafeFilename(trimmed) else {
+            withAnimation { errorMessage = L10n.AgentFiles.invalidFolderName }
+            return
+        }
+        do {
+            try AgentFileManager.shared.makeDirectory(agentId: agentId, path: join(currentPath, trimmed))
             refreshFiles()
         } catch {
             withAnimation { errorMessage = error.localizedDescription }
@@ -150,7 +206,7 @@ struct AgentFileBrowserView: View {
             guard let data = try? Data(contentsOf: url) else { continue }
             let name = url.lastPathComponent
             do {
-                try AgentFileManager.shared.writeFile(agentId: agentId, name: name, data: data)
+                try AgentFileManager.shared.writeFile(agentId: agentId, name: join(currentPath, name), data: data)
             } catch {
                 withAnimation { errorMessage = error.localizedDescription }
             }
@@ -159,7 +215,7 @@ struct AgentFileBrowserView: View {
     }
 
     private func shareFile(_ file: FileInfo) {
-        let url = AgentFileManager.shared.fileURL(agentId: agentId, name: file.name)
+        let url = AgentFileManager.shared.fileURL(agentId: agentId, name: join(currentPath, file.name))
         let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
@@ -173,6 +229,10 @@ struct AgentFileBrowserView: View {
             topVC.present(activityVC, animated: true)
         }
     }
+
+    private func join(_ base: String, _ component: String) -> String {
+        base.isEmpty ? component : "\(base)/\(component)"
+    }
 }
 
 // MARK: - File Row
@@ -180,21 +240,27 @@ struct AgentFileBrowserView: View {
 private struct FileRowView: View {
     let file: FileInfo
     let agentId: UUID
+    let parentPath: String
     @State private var showVideoPlayer = false
     @State private var videoThumbnail: UIImage?
 
+    private var relativePath: String {
+        parentPath.isEmpty ? file.name : "\(parentPath)/\(file.name)"
+    }
+
     private var fileURL: URL {
-        AgentFileManager.shared.fileURL(agentId: agentId, name: file.name)
+        AgentFileManager.shared.fileURL(agentId: agentId, name: relativePath)
     }
 
     var body: some View {
         Button {
-            if file.isImage, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
+            guard !file.isDirectory else { return }
+            if file.isImage, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: relativePath),
                let img = UIImage(data: data) {
                 ImagePreviewCoordinator.shared.show(img)
             } else if file.isVideo {
                 showVideoPlayer = true
-            } else if file.isTextPreviewable, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
+            } else if file.isTextPreviewable, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: relativePath),
                       let text = String(data: data, encoding: .utf8) {
                 TextFilePreviewCoordinator.shared.show(content: text, filename: file.name)
             }
@@ -231,7 +297,15 @@ private struct FileRowView: View {
 
     @ViewBuilder
     private var fileIcon: some View {
-        if file.isImage, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: file.name),
+        if file.isDirectory {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.accentColor)
+            }
+        } else if file.isImage, let data = try? AgentFileManager.shared.readFile(agentId: agentId, name: relativePath),
            let img = UIImage(data: data) {
             Image(uiImage: img)
                 .resizable()

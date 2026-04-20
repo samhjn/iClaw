@@ -105,6 +105,100 @@ final class AgentFileManagerTests: XCTestCase {
         XCTAssertTrue(AgentFileManager.isSafeFilename("file-name_v2.tar.gz"))
     }
 
+    // MARK: - Relative Path Support
+
+    func testSafeRelativePathAccepted() {
+        XCTAssertTrue(AgentFileManager.isSafeRelativePath("notes.txt"))
+        XCTAssertTrue(AgentFileManager.isSafeRelativePath("docs/notes.md"))
+        XCTAssertTrue(AgentFileManager.isSafeRelativePath("a/b/c/d.txt"))
+        XCTAssertTrue(AgentFileManager.isSafeRelativePath("图片/风景.jpg"))
+    }
+
+    func testSafeRelativePathRejected() {
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath(""))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("/abs/path"))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("../escape"))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("a/../b"))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("a//b"))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("a/./b"))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("a\\b"))
+        XCTAssertFalse(AgentFileManager.isSafeRelativePath("a\0b"))
+    }
+
+    func testWriteReadInSubdirectory() throws {
+        try fm.writeFile(agentId: testAgentId, name: "docs/notes.md", data: Data("hello".utf8))
+        let read = try fm.readFile(agentId: testAgentId, name: "docs/notes.md")
+        XCTAssertEqual(String(data: read, encoding: .utf8), "hello")
+    }
+
+    func testWriteAutoCreatesParentDirectories() throws {
+        try fm.writeFile(agentId: testAgentId, name: "a/b/c/deep.txt", data: Data("x".utf8))
+        XCTAssertTrue(fm.fileExists(agentId: testAgentId, name: "a/b/c/deep.txt"))
+    }
+
+    func testListFilesWithPath() throws {
+        try fm.writeFile(agentId: testAgentId, name: "docs/a.txt", data: Data("a".utf8))
+        try fm.writeFile(agentId: testAgentId, name: "docs/b.txt", data: Data("b".utf8))
+        try fm.writeFile(agentId: testAgentId, name: "other.txt", data: Data("o".utf8))
+
+        let docs = fm.listFiles(agentId: testAgentId, path: "docs")
+        XCTAssertEqual(docs.count, 2)
+        XCTAssertEqual(Set(docs.map(\.name)), ["a.txt", "b.txt"])
+
+        let root = fm.listFiles(agentId: testAgentId, path: "")
+        let rootNames = Set(root.map(\.name))
+        XCTAssertTrue(rootNames.contains("docs"))
+        XCTAssertTrue(rootNames.contains("other.txt"))
+        XCTAssertEqual(root.first(where: { $0.name == "docs" })?.isDirectory, true)
+    }
+
+    func testDeleteRecursivelyRemovesDirectory() throws {
+        try fm.writeFile(agentId: testAgentId, name: "trash/a.txt", data: Data("a".utf8))
+        try fm.writeFile(agentId: testAgentId, name: "trash/sub/b.txt", data: Data("b".utf8))
+        try fm.deleteFile(agentId: testAgentId, name: "trash")
+        XCTAssertFalse(fm.fileExists(agentId: testAgentId, name: "trash/a.txt"))
+        XCTAssertFalse(fm.fileExists(agentId: testAgentId, name: "trash/sub/b.txt"))
+        XCTAssertFalse(fm.fileExists(agentId: testAgentId, name: "trash"))
+    }
+
+    func testMakeDirectoryIdempotent() throws {
+        try fm.makeDirectory(agentId: testAgentId, path: "a/b/c")
+        XCTAssertTrue(fm.fileInfo(agentId: testAgentId, name: "a/b/c")?.isDirectory ?? false)
+        // Second call must not throw
+        XCTAssertNoThrow(try fm.makeDirectory(agentId: testAgentId, path: "a/b/c"))
+    }
+
+    func testMakeDirectoryFailsIfFileExists() throws {
+        try fm.writeFile(agentId: testAgentId, name: "notafolder", data: Data("x".utf8))
+        XCTAssertThrowsError(try fm.makeDirectory(agentId: testAgentId, path: "notafolder")) { error in
+            if case FileToolError.fileAlreadyExists = error {} else {
+                XCTFail("Expected fileAlreadyExists, got \(error)")
+            }
+        }
+    }
+
+    func testPathTraversalRejectedEvenAfterPathJoin() {
+        XCTAssertThrowsError(try fm.writeFile(agentId: testAgentId, name: "../escape.txt", data: Data())) { error in
+            if case FileToolError.unsafeFilename = error {} else {
+                XCTFail("Expected unsafeFilename error")
+            }
+        }
+        XCTAssertThrowsError(try fm.readFile(agentId: testAgentId, name: "docs/../../boom.txt")) { error in
+            if case FileToolError.unsafeFilename = error {} else {
+                XCTFail("Expected unsafeFilename error")
+            }
+        }
+    }
+
+    func testReadFileWhenPathIsDirectory() throws {
+        try fm.makeDirectory(agentId: testAgentId, path: "docs")
+        XCTAssertThrowsError(try fm.readFile(agentId: testAgentId, name: "docs")) { error in
+            if case FileToolError.fileNotFound = error {} else {
+                XCTFail("Expected fileNotFound, got \(error)")
+            }
+        }
+    }
+
     // MARK: - File Reference
 
     func testMakeAndParseFileReference() {

@@ -210,7 +210,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .model:
             return ["set_model"]
         case .files:
-            return ["file_write", "file_delete"]
+            return ["file_write", "file_delete", "file_mkdir"]
         case .imageGeneration:
             return ["generate_image"]
         case .videoGeneration:
@@ -269,7 +269,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
                 "health.writeBodyTemperature", "health.writeHeartRate", "health.writeWorkout",
             ]
         case .files:
-            return ["files.write", "files.delete"]
+            return ["files.write", "files.delete", "files.mkdir"]
         case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration, .videoGeneration:
             return []
         }

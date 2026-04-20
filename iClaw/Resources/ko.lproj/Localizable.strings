@@ -36,6 +36,8 @@
 "common.add" = "추가";
 "common.name" = "이름";
 "common.unknown" = "알 수 없음";
+"common.confirm" = "확인";
+"common.import" = "가져오기";
 
 // MARK: - Chat
 "chat.messagePlaceholder" = "메시지…";
@@ -605,6 +607,9 @@
 "agentFiles.deleteConfirmTitle" = "파일 삭제";
 "agentFiles.deleteConfirmMessage" = "\"%@\"을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.";
 "agentFiles.imagePermissionDisabled" = "이 에이전트의 파일 접근 권한이 비활성화되었습니다";
+"agentFiles.newFolder" = "새 폴더";
+"agentFiles.folderName" = "폴더 이름";
+"agentFiles.invalidFolderName" = "잘못된 폴더 이름";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[오류] 캘린더 접근이 거부되었습니다. 「설정 > 개인 정보 보호 > 캘린더」에서 활성화하세요.";

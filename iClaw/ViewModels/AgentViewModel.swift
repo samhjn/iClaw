@@ -63,6 +63,7 @@ final class AgentViewModel {
         try? modelContext.save()
         fetchAgents()
         AgentSnapshotExporter.export(context: modelContext)
+        AgentDirectoryPublisher.shared.syncAll(agents: agents)
         return agent
     }
 
@@ -77,6 +78,8 @@ final class AgentViewModel {
         modelContext.delete(agent)
         try? modelContext.save()
         AgentFileManager.shared.cleanupAgentFiles(agentId: agentId)
+        AgentDirectoryPublisher.shared.removeLinks(pointingTo: agentId)
+        AgentDirectoryPublisher.shared.syncAll(agents: agents)
         AgentSnapshotExporter.export(context: modelContext)
         // No fetchAgents() — array is already correct from step 1.
     }
@@ -106,5 +109,6 @@ final class AgentViewModel {
         try? modelContext.save()
         fetchAgents()
         AgentSnapshotExporter.export(context: modelContext)
+        AgentDirectoryPublisher.shared.syncAll(agents: agents)
     }
 }

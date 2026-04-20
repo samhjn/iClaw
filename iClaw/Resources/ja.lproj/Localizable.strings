@@ -36,6 +36,8 @@
 "common.add" = "追加";
 "common.name" = "名前";
 "common.unknown" = "不明";
+"common.confirm" = "OK";
+"common.import" = "インポート";
 
 // MARK: - Chat
 "chat.messagePlaceholder" = "メッセージ…";
@@ -605,6 +607,9 @@
 "agentFiles.deleteConfirmTitle" = "ファイルを削除";
 "agentFiles.deleteConfirmMessage" = "「%@」を削除してもよろしいですか？この操作は取り消せません。";
 "agentFiles.imagePermissionDisabled" = "このエージェントのファイルアクセス権限は無効です";
+"agentFiles.newFolder" = "新規フォルダ";
+"agentFiles.folderName" = "フォルダ名";
+"agentFiles.invalidFolderName" = "無効なフォルダ名";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[エラー] カレンダーへのアクセスが拒否されました。「設定 > プライバシー > カレンダー」で有効にしてください。";

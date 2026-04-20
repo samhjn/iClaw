@@ -8,13 +8,17 @@ private let fileLog = OSLog(subsystem: "com.iclaw.files", category: "agent-file-
 ///
 /// Directory layout: `<Documents>/AgentFiles/<agentId>/`
 /// Sub-agents share the top-level parent agent's folder via `resolveAgentId(for:)`.
+///
+/// File paths accepted by CRUD methods may be either a bare filename (e.g. `notes.txt`)
+/// or a relative path with forward-slash separators (e.g. `docs/2026/notes.md`).
+/// Absolute paths and path traversal (`..`) are rejected.
 final class AgentFileManager {
 
     static let shared = AgentFileManager()
 
     private let fm = FileManager.default
 
-    private var rootDirectory: URL {
+    var rootDirectory: URL {
         fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("AgentFiles", isDirectory: true)
     }
@@ -49,59 +53,85 @@ final class AgentFileManager {
         return dir
     }
 
+    /// Resolve a relative path under the agent's directory. Validates against path
+    /// traversal and ensures the final URL stays within the agent's directory
+    /// (second line of defense against symlink escapes).
+    func resolvedURL(agentId: UUID, path: String) throws -> URL {
+        guard Self.isSafeRelativePath(path) else {
+            throw FileToolError.unsafeFilename(path)
+        }
+        let base = agentDirectory(for: agentId).standardizedFileURL
+        let target = base.appendingPathComponent(path).standardizedFileURL
+        let basePath = base.path.hasSuffix("/") ? base.path : base.path + "/"
+        guard target.path == base.path || target.path.hasPrefix(basePath) else {
+            throw FileToolError.unsafeFilename(path)
+        }
+        return target
+    }
+
     // MARK: - File CRUD
 
-    func listFiles(agentId: UUID) -> [FileInfo] {
-        let dir = agentDirectory(for: agentId)
+    /// List direct children of the given subdirectory (relative `path`, default root).
+    func listFiles(agentId: UUID, path: String = "") -> [FileInfo] {
+        let dir: URL
+        if path.isEmpty {
+            dir = agentDirectory(for: agentId)
+        } else {
+            guard let resolved = try? resolvedURL(agentId: agentId, path: path) else { return [] }
+            dir = resolved
+        }
         guard let contents = try? fm.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey],
+            at: dir,
+            includingPropertiesForKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey, .isDirectoryKey],
             options: [.skipsHiddenFiles]
         ) else { return [] }
 
         return contents.compactMap { url in
-            guard let attrs = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey]) else {
+            guard let attrs = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey, .isDirectoryKey]) else {
                 return nil
             }
             let name = url.lastPathComponent
             let ext = url.pathExtension.lowercased()
+            let isDir = attrs.isDirectory ?? false
             return FileInfo(
                 name: name,
                 size: Int64(attrs.fileSize ?? 0),
                 createdAt: attrs.creationDate ?? Date(),
                 modifiedAt: attrs.contentModificationDate ?? Date(),
-                isImage: Self.imageExtensions.contains(ext),
-                isVideo: Self.videoExtensions.contains(ext)
+                isImage: !isDir && Self.imageExtensions.contains(ext),
+                isVideo: !isDir && Self.videoExtensions.contains(ext),
+                isDirectory: isDir
             )
-        }.sorted { $0.modifiedAt > $1.modifiedAt }
+        }.sorted { lhs, rhs in
+            if lhs.isDirectory != rhs.isDirectory { return lhs.isDirectory && !rhs.isDirectory }
+            return lhs.modifiedAt > rhs.modifiedAt
+        }
     }
 
     @discardableResult
     func writeFile(agentId: UUID, name: String, data: Data) throws -> URL {
-        guard Self.isSafeFilename(name) else {
-            throw FileToolError.unsafeFilename(name)
+        try ensureDirectory(for: agentId)
+        let url = try resolvedURL(agentId: agentId, path: name)
+        let parent = url.deletingLastPathComponent()
+        if !fm.fileExists(atPath: parent.path) {
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
         }
-        let dir = try ensureDirectory(for: agentId)
-        let url = dir.appendingPathComponent(name)
         try data.write(to: url, options: .atomic)
         return url
     }
 
     func readFile(agentId: UUID, name: String) throws -> Data {
-        guard Self.isSafeFilename(name) else {
-            throw FileToolError.unsafeFilename(name)
-        }
-        let url = agentDirectory(for: agentId).appendingPathComponent(name)
-        guard fm.fileExists(atPath: url.path) else {
+        let url = try resolvedURL(agentId: agentId, path: name)
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue else {
             throw FileToolError.fileNotFound(name)
         }
         return try Data(contentsOf: url)
     }
 
+    /// Delete a file or directory (recursive for directories) at the given relative path.
     func deleteFile(agentId: UUID, name: String) throws {
-        guard Self.isSafeFilename(name) else {
-            throw FileToolError.unsafeFilename(name)
-        }
-        let url = agentDirectory(for: agentId).appendingPathComponent(name)
+        let url = try resolvedURL(agentId: agentId, path: name)
         guard fm.fileExists(atPath: url.path) else {
             throw FileToolError.fileNotFound(name)
         }
@@ -109,28 +139,45 @@ final class AgentFileManager {
     }
 
     func fileExists(agentId: UUID, name: String) -> Bool {
-        guard Self.isSafeFilename(name) else { return false }
-        return fm.fileExists(atPath: agentDirectory(for: agentId).appendingPathComponent(name).path)
+        guard let url = try? resolvedURL(agentId: agentId, path: name) else { return false }
+        return fm.fileExists(atPath: url.path)
     }
 
     func fileURL(agentId: UUID, name: String) -> URL {
-        agentDirectory(for: agentId).appendingPathComponent(name)
+        (try? resolvedURL(agentId: agentId, path: name))
+            ?? agentDirectory(for: agentId).appendingPathComponent(name)
     }
 
     func fileInfo(agentId: UUID, name: String) -> FileInfo? {
-        guard Self.isSafeFilename(name) else { return nil }
-        let url = agentDirectory(for: agentId).appendingPathComponent(name)
-        guard let attrs = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey]),
+        guard let url = try? resolvedURL(agentId: agentId, path: name) else { return nil }
+        guard let attrs = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey, .contentModificationDateKey, .isDirectoryKey]),
               fm.fileExists(atPath: url.path) else { return nil }
         let ext = url.pathExtension.lowercased()
+        let isDir = attrs.isDirectory ?? false
         return FileInfo(
-            name: name,
+            name: (name as NSString).lastPathComponent,
             size: Int64(attrs.fileSize ?? 0),
             createdAt: attrs.creationDate ?? Date(),
             modifiedAt: attrs.contentModificationDate ?? Date(),
-            isImage: Self.imageExtensions.contains(ext),
-            isVideo: Self.videoExtensions.contains(ext)
+            isImage: !isDir && Self.imageExtensions.contains(ext),
+            isVideo: !isDir && Self.videoExtensions.contains(ext),
+            isDirectory: isDir
         )
+    }
+
+    /// Create a directory (including intermediate components) under the agent's folder.
+    /// Idempotent — returns without error if the directory already exists.
+    @discardableResult
+    func makeDirectory(agentId: UUID, path: String) throws -> URL {
+        try ensureDirectory(for: agentId)
+        let url = try resolvedURL(agentId: agentId, path: path)
+        var isDir: ObjCBool = false
+        if fm.fileExists(atPath: url.path, isDirectory: &isDir) {
+            if isDir.boolValue { return url }
+            throw FileToolError.fileAlreadyExists(path)
+        }
+        try fm.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
     }
 
     // MARK: - Image Support
@@ -177,14 +224,14 @@ final class AgentFileManager {
         "\(fileReferenceScheme)://\(agentId.uuidString)/\(filename)"
     }
 
-    /// Parse `agentfile://<agentId>/<filename>` → (agentId, filename)
+    /// Parse `agentfile://<agentId>/<path>` → (agentId, path). Path may include subdirectories.
     static func parseFileReference(_ ref: String) -> (UUID, String)? {
         guard ref.hasPrefix("\(fileReferenceScheme)://") else { return nil }
         let path = String(ref.dropFirst("\(fileReferenceScheme)://".count))
         guard let slashIdx = path.firstIndex(of: "/") else { return nil }
         let idStr = String(path[..<slashIdx])
         let filename = String(path[path.index(after: slashIdx)...])
-        guard let uuid = UUID(uuidString: idStr), !filename.isEmpty, isSafeFilename(filename) else { return nil }
+        guard let uuid = UUID(uuidString: idStr), !filename.isEmpty, isSafeRelativePath(filename) else { return nil }
         return (uuid, filename)
     }
 
@@ -211,10 +258,26 @@ final class AgentFileManager {
 
     // MARK: - Safety
 
+    /// Single-component filename check: rejects any name containing `/` or `\`.
     static func isSafeFilename(_ name: String) -> Bool {
         guard !name.isEmpty, name.count <= 255 else { return false }
         if name.contains("/") || name.contains("\\") || name.contains("\0") { return false }
         if name == "." || name == ".." || name.hasPrefix("..") { return false }
+        return true
+    }
+
+    /// Relative-path check: allows `/` as component separator but rejects absolute paths,
+    /// empty components, `.`/`..` components, null bytes, and backslashes.
+    static func isSafeRelativePath(_ path: String) -> Bool {
+        guard !path.isEmpty, path.count <= 4096 else { return false }
+        if path.hasPrefix("/") || path.contains("\\") || path.contains("\0") { return false }
+        let components = path.split(separator: "/", omittingEmptySubsequences: false)
+        for comp in components {
+            let c = String(comp)
+            if c.isEmpty { return false }
+            if c == "." || c == ".." { return false }
+            if c.count > 255 { return false }
+        }
         return true
     }
 
@@ -251,6 +314,25 @@ struct FileInfo: Identifiable {
     let modifiedAt: Date
     let isImage: Bool
     let isVideo: Bool
+    let isDirectory: Bool
+
+    init(
+        name: String,
+        size: Int64,
+        createdAt: Date,
+        modifiedAt: Date,
+        isImage: Bool,
+        isVideo: Bool,
+        isDirectory: Bool = false
+    ) {
+        self.name = name
+        self.size = size
+        self.createdAt = createdAt
+        self.modifiedAt = modifiedAt
+        self.isImage = isImage
+        self.isVideo = isVideo
+        self.isDirectory = isDirectory
+    }
 
     var id: String { name }
 
@@ -260,7 +342,8 @@ struct FileInfo: Identifiable {
     }
 
     var formattedSize: String {
-        ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        if isDirectory { return "—" }
+        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
 }
 
@@ -273,7 +356,7 @@ enum FileToolError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsafeFilename(let name): return "Unsafe filename: \(name)"
+        case .unsafeFilename(let name): return "Unsafe path: \(name)"
         case .fileNotFound(let name): return "File not found: \(name)"
         case .fileAlreadyExists(let name): return "File already exists: \(name)"
         }

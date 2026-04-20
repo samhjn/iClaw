@@ -36,6 +36,8 @@
 "common.add" = "添加";
 "common.name" = "名称";
 "common.unknown" = "未知";
+"common.confirm" = "确定";
+"common.import" = "导入";
 
 // MARK: - Chat
 "chat.messagePlaceholder" = "输入消息…";
@@ -606,6 +608,9 @@
 "agentFiles.deleteConfirmTitle" = "删除文件";
 "agentFiles.deleteConfirmMessage" = "确定要删除「%@」吗？此操作无法撤销。";
 "agentFiles.imagePermissionDisabled" = "此智能体的文件访问权限已关闭";
+"agentFiles.newFolder" = "新建文件夹";
+"agentFiles.folderName" = "文件夹名";
+"agentFiles.invalidFolderName" = "无效的文件夹名";
 
 // MARK: - Permission Errors
 "permError.calendarDenied" = "[错误] 日历访问被拒绝。请在「设置 > 隐私 > 日历」中启用。";

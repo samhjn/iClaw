@@ -174,6 +174,7 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertEqual(ToolCategory.category(for: "file_write"), .files)
         XCTAssertEqual(ToolCategory.category(for: "file_delete"), .files)
         XCTAssertEqual(ToolCategory.category(for: "file_info"), .files)
+        XCTAssertEqual(ToolCategory.category(for: "file_mkdir"), .files)
         XCTAssertNil(ToolCategory.category(for: "unknown_tool"))
     }
 
@@ -184,6 +185,7 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertTrue(ToolCategory.isWriteTool("schedule_cron"))
         XCTAssertTrue(ToolCategory.isWriteTool("file_write"))
         XCTAssertTrue(ToolCategory.isWriteTool("file_delete"))
+        XCTAssertTrue(ToolCategory.isWriteTool("file_mkdir"))
         XCTAssertFalse(ToolCategory.isWriteTool("browser_get_page_info"))
         XCTAssertFalse(ToolCategory.isWriteTool("list_cron"))
         XCTAssertFalse(ToolCategory.isWriteTool("read_config"))

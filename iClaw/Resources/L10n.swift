@@ -62,6 +62,8 @@ enum L10n {
         static var refresh: String { tr("common.refresh") }
         static var name: String { tr("common.name") }
         static var unknown: String { tr("common.unknown") }
+        static var confirm: String { tr("common.confirm") }
+        static var `import`: String { tr("common.import") }
     }
 
     // MARK: - Chat
@@ -165,6 +167,9 @@ enum L10n {
         static var deleteConfirmTitle: String { tr("agentFiles.deleteConfirmTitle") }
         static func deleteConfirmMessage(_ name: String) -> String { tr("agentFiles.deleteConfirmMessage", name) }
         static var imagePermissionDisabled: String { tr("agentFiles.imagePermissionDisabled") }
+        static var newFolder: String { tr("agentFiles.newFolder") }
+        static var folderName: String { tr("agentFiles.folderName") }
+        static var invalidFolderName: String { tr("agentFiles.invalidFolderName") }
     }
 
     // MARK: - Agent Detail

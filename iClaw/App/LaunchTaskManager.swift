@@ -53,14 +53,18 @@ final class LaunchTaskManager {
     // MARK: - Cleanup orphan agent files
 
     private func cleanupOrphanAgentFiles() async {
-        let knownIds: Set<UUID> = await MainActor.run {
+        await MainActor.run {
             let context = ModelContext(container)
             let descriptor = FetchDescriptor<Agent>()
-            guard let allAgents = try? context.fetch(descriptor) else { return Set() }
-            return Set(allAgents.map(\.id))
+            let allAgents = (try? context.fetch(descriptor)) ?? []
+            let knownIds = Set(allAgents.map(\.id))
+            if !knownIds.isEmpty {
+                AgentFileManager.shared.cleanupOrphanDirectories(knownAgentIds: knownIds)
+            }
+            // Publish friendly-named symlinks in Documents/Agents/ so the iOS Files
+            // app can show folders by agent name instead of raw UUIDs.
+            AgentDirectoryPublisher.shared.syncAll(agents: allAgents)
         }
-        guard !knownIds.isEmpty else { return }
-        AgentFileManager.shared.cleanupOrphanDirectories(knownAgentIds: knownIds)
     }
 
     // MARK: - Backfill embeddings (CPU-throttled)

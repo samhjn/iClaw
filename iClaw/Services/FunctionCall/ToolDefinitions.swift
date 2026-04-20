@@ -70,6 +70,7 @@ enum ToolDefinitions {
             fileWriteTool,
             fileDeleteTool,
             fileInfoTool,
+            fileMkdirTool,
             attachMediaTool,
 
             // Image Generation
@@ -448,58 +449,71 @@ enum ToolDefinitions {
 
     static let fileListTool = ToolDefinitionBuilder.build(
         name: "file_list",
-        description: "List all files in the agent's file folder with name, size, and modification date.",
-        properties: [:],
+        description: "List direct children of a directory in the agent's file folder. Omit 'path' to list the root. Directories are tagged with [dir], images with [image], videos with [video].",
+        properties: [
+            "path": ToolDefinitionBuilder.stringParam("Relative directory path to list (e.g. 'docs/2026'). Empty or omitted lists the root.")
+        ],
         required: []
     )
 
     static let fileReadTool = ToolDefinitionBuilder.build(
         name: "file_read",
-        description: "Read a file from the agent's file folder. Text files are returned as UTF-8 text; use mode='base64' for binary files.",
+        description: "Read a file from the agent's file folder. Supports subdirectories via 'path' (e.g. 'docs/notes.md'). Reads at most 'size' bytes from 'offset'; if 'size' is omitted, defaults to 1024 bytes to protect the context window. Mode 'text' returns UTF-8, 'base64' returns base64-encoded bytes, 'hex' returns a hexdump with addresses and ASCII sidebar.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The filename to read"),
-            "mode": ToolDefinitionBuilder.enumParam("Read mode", values: ["text", "base64"])
+            "path": ToolDefinitionBuilder.stringParam("Relative file path to read (e.g. 'notes.txt' or 'docs/2026/readme.md')"),
+            "mode": ToolDefinitionBuilder.enumParam("Read mode (default 'text')", values: ["text", "base64", "hex"]),
+            "size": ToolDefinitionBuilder.intParam("Maximum bytes to read. If omitted, defaults to 1024. Pass a large value to read more at your own risk."),
+            "offset": ToolDefinitionBuilder.intParam("Byte offset to start reading from (default 0). Use with 'size' to page through large files.")
         ],
-        required: ["name"]
+        required: ["path"]
     )
 
     static let fileWriteTool = ToolDefinitionBuilder.build(
         name: "file_write",
-        description: "Write or create a file in the agent's file folder. Text content by default; use encoding='base64' to write binary data.",
+        description: "Write or create a file in the agent's file folder. Supports subdirectories via 'path'; missing parent directories are created automatically. Text content by default; use encoding='base64' to write binary data.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The filename to write (e.g. 'notes.txt', 'data.json')"),
+            "path": ToolDefinitionBuilder.stringParam("Relative file path to write (e.g. 'notes.txt', 'docs/data.json')"),
             "content": ToolDefinitionBuilder.stringParam("The content to write (text or base64-encoded)"),
             "encoding": ToolDefinitionBuilder.enumParam("Content encoding", values: ["text", "base64"])
         ],
-        required: ["name", "content"]
+        required: ["path", "content"]
     )
 
     static let fileDeleteTool = ToolDefinitionBuilder.build(
         name: "file_delete",
-        description: "Delete a file from the agent's file folder.",
+        description: "Delete a file or directory from the agent's file folder. Directories are removed recursively.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The filename to delete")
+            "path": ToolDefinitionBuilder.stringParam("Relative path to delete (file or directory)")
         ],
-        required: ["name"]
+        required: ["path"]
     )
 
     static let fileInfoTool = ToolDefinitionBuilder.build(
         name: "file_info",
-        description: "Get metadata about a file: size, creation date, modification date, and whether it's an image.",
+        description: "Get metadata about a file or directory: size, creation date, modification date, whether it's a directory or image.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The filename to get info for")
+            "path": ToolDefinitionBuilder.stringParam("Relative path to inspect")
         ],
-        required: ["name"]
+        required: ["path"]
+    )
+
+    static let fileMkdirTool = ToolDefinitionBuilder.build(
+        name: "file_mkdir",
+        description: "Create a directory in the agent's file folder, including intermediate directories. Idempotent — succeeds if the directory already exists.",
+        properties: [
+            "path": ToolDefinitionBuilder.stringParam("Relative directory path to create (e.g. 'docs/2026')")
+        ],
+        required: ["path"]
     )
 
     static let attachMediaTool = ToolDefinitionBuilder.build(
         name: "attach_media",
         description: "Attach a media file from the agent's folder as multimodal content in the conversation. The attached file becomes visible to the LLM for analysis. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm). Audio support planned.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The filename to attach (e.g. 'photo.jpg', 'chart.png')"),
+            "path": ToolDefinitionBuilder.stringParam("Relative file path to attach (e.g. 'photo.jpg', 'images/chart.png')"),
             "modality": ToolDefinitionBuilder.enumParam("Media type (auto-detected from extension if omitted)", values: ["image", "audio", "video"])
         ],
-        required: ["name"]
+        required: ["path"]
     )
 
     // MARK: - Browser Tools
