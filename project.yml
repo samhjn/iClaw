@@ -112,6 +112,7 @@ targets:
       base:
         INFOPLIST_FILE: iClawShareExtension/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.iclaw.app.share
+        PRODUCT_MODULE_NAME: iClawShareExtension
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
         SWIFT_EMIT_LOC_STRINGS: "YES"

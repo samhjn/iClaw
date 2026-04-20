@@ -4,6 +4,7 @@ import SwiftUI
 /// app and lets the user choose which agent should receive the shared files.
 struct SharePickerView: View {
     let agents: [AgentSnapshotEntry]
+    var containerAvailable: Bool = true
     let onSelect: (AgentSnapshotEntry) -> Void
     let onCancel: () -> Void
 
@@ -13,7 +14,9 @@ struct SharePickerView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if agents.isEmpty {
+                if !containerAvailable {
+                    containerMissingState
+                } else if agents.isEmpty {
                     emptyState
                 } else {
                     agentList
@@ -38,6 +41,22 @@ struct SharePickerView: View {
             Text("No agents yet")
                 .font(.headline)
             Text("Open iClaw and create an agent before sharing files.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var containerMissingState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+            Text("App Group not configured")
+                .font(.headline)
+            Text("iClaw needs the 'group.com.iclaw.app' App Group enabled on both the app and this extension. Open the project in Xcode, go to Signing & Capabilities, and add App Groups to both targets.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

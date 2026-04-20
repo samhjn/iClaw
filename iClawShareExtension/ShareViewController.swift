@@ -14,10 +14,20 @@ final class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let agents = AgentSnapshot.load()?.agents ?? []
+        let containerAvailable = SharedContainer.containerURL != nil
+        let snapshot = AgentSnapshot.load()
+        let agents = snapshot?.agents ?? []
+
+        NSLog("[iClawShare] viewDidLoad — containerAvailable=%@ snapshotAgents=%d",
+              containerAvailable ? "YES" : "NO",
+              agents.count)
+        os_log(.default, log: vcLog,
+               "viewDidLoad containerAvailable=%{public}@ snapshotAgents=%d",
+               containerAvailable ? "YES" : "NO", agents.count)
 
         let picker = SharePickerView(
             agents: agents,
+            containerAvailable: containerAvailable,
             onSelect: { [weak self] agent in
                 self?.handleSelection(agent: agent)
             },
@@ -44,14 +54,18 @@ final class ShareViewController: UIViewController {
 
     private func handleSelection(agent: AgentSnapshotEntry) {
         let items = (extensionContext?.inputItems as? [NSExtensionItem]) ?? []
+        NSLog("[iClawShare] handleSelection agent=%@ inputItems=%d",
+              agent.name, items.count)
         Task { [weak self] in
             guard let self else { return }
             let handoffId = await ShareItemStager.stage(items: items, agentId: agent.id)
             await MainActor.run {
                 guard let handoffId else {
-                    self.finish(withError: "Nothing to share.")
+                    NSLog("[iClawShare] stager returned nil — nothing to share")
+                    self.finish(withError: "Nothing to share. Check that iClaw has App Group access.")
                     return
                 }
+                NSLog("[iClawShare] stager produced handoffId=%@", handoffId.uuidString)
                 self.openHostApp(agentId: agent.id, handoffId: handoffId)
             }
         }
@@ -72,7 +86,8 @@ final class ShareViewController: UIViewController {
             return
         }
         let opened = OpenURLHelper.open(url, from: self)
-        os_log(.info, log: vcLog, "Opening host app url=%{public}@ opened=%{public}@",
+        NSLog("[iClawShare] openHostApp url=%@ opened=%@", url.absoluteString, opened ? "YES" : "NO")
+        os_log(.default, log: vcLog, "Opening host app url=%{public}@ opened=%{public}@",
                url.absoluteString, opened ? "true" : "false")
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
