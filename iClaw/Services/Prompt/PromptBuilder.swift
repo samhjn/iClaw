@@ -250,6 +250,12 @@ final class PromptBuilder {
         if isEnabled(.sessions, for: agent) {
             guidelines.append("When the user seems to reference past conversations or you need prior context, use `search_sessions` and `recall_session` to retrieve relevant history.")
         }
+        let hasBridgeSurface = isEnabled(.codeExecution, for: agent)
+            || isEnabled(.files, for: agent)
+            || ToolCategory.appleCategories.contains(where: { isEnabled($0, for: agent) })
+        if hasBridgeSurface {
+            guidelines.append("Permission levels cover every route to a capability: function-call tools, the `apple.*` / `fs.*` JavaScript namespaces, and any installed skills that wrap those bridges. Setting a category to Read Only blocks its write bridge actions whether they are reached via a tool, `execute_javascript`, or a skill custom tool — do not try to route around a restriction.")
+        }
         parts.append("### Important Guidelines\n" + guidelines.map { "- \($0)" }.joined(separator: "\n"))
 
         return parts.joined(separator: "\n\n")

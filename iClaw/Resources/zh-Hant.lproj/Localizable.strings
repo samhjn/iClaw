@@ -138,7 +138,7 @@
 
 // MARK: - Apple Permissions
 "applePermissions.title" = "Apple 權限";
-"applePermissions.description" = "設定此智能體可存取的 Apple 系統功能。讀取允許查詢資料；寫入允許建立、修改或刪除資料。";
+"applePermissions.description" = "設定此智能體可存取的 Apple 系統功能。讀取允許查詢資料；寫入允許建立、修改或刪除資料。相同的權限等級也會作用於程式碼執行所使用的對應 `apple.*` JavaScript API，以及任何封裝它的已安裝技能（例如 Health Plus）。";
 "applePermissions.readWrite" = "讀寫";
 "applePermissions.readOnly" = "僅讀取";
 "applePermissions.writeOnly" = "僅寫入";
@@ -608,7 +608,7 @@
 
 // MARK: - Tool Permissions
 "toolPermissions.title" = "功能權限";
-"toolPermissions.description" = "設定此智能體可以使用哪些工具和能力。讀取允許查詢資料；寫入允許建立、修改或刪除資料。";
+"toolPermissions.description" = "設定此智能體可以使用哪些工具和能力。讀取允許查詢資料；寫入允許建立、修改或刪除資料。對於同時開放 JavaScript 橋接（如 `apple.*`、`fs.*`）的類別，相同的權限等級也會作用於 `execute_javascript` 呼叫以及封裝這些橋接的內建技能（File Ops、Health Plus）。";
 "toolPermissions.browser" = "瀏覽器";
 "toolPermissions.codeExecution" = "程式碼執行";
 "toolPermissions.subAgents" = "子智能體";
