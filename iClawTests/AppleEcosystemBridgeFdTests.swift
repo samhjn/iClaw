@@ -115,9 +115,12 @@ final class AppleEcosystemBridgeFdTests: XCTestCase {
         try AgentFileManager.shared.writeFile(agentId: agentId, name: "f.txt", data: Data("0123456789".utf8))
         let fd = try await openFd("f.txt", flags: "r")
 
-        XCTAssertEqual(await call("files.seek", ["fd": fd, "offset": 3, "whence": "start"]), "3")
-        XCTAssertEqual(await call("files.seek", ["fd": fd, "offset": 2, "whence": "current"]), "5")
-        XCTAssertEqual(await call("files.seek", ["fd": fd, "offset": -1, "whence": "end"]), "9")
+        let r1 = await call("files.seek", ["fd": fd, "offset": 3, "whence": "start"])
+        XCTAssertEqual(r1, "3")
+        let r2 = await call("files.seek", ["fd": fd, "offset": 2, "whence": "current"])
+        XCTAssertEqual(r2, "5")
+        let r3 = await call("files.seek", ["fd": fd, "offset": -1, "whence": "end"])
+        XCTAssertEqual(r3, "9")
 
         _ = await call("files.close", ["fd": fd])
     }
@@ -179,7 +182,8 @@ final class AppleEcosystemBridgeFdTests: XCTestCase {
         XCTAssertTrue(stat.contains("\"position\":2"), "fstat should report current position, got: \(stat)")
         XCTAssertTrue(stat.contains("\"size\":5"))
 
-        XCTAssertEqual(await call("files.tell", ["fd": fd]), "2")
+        let tell = await call("files.tell", ["fd": fd])
+        XCTAssertEqual(tell, "2")
 
         _ = await call("files.close", ["fd": fd])
     }
@@ -252,17 +256,25 @@ final class AppleEcosystemBridgeFdTests: XCTestCase {
 
     func testCpAndMvDispatch() async throws {
         _ = await call("files.writeFile", ["path": "src.txt", "content": "data"])
-        XCTAssertEqual(await call("files.cp", ["src": "src.txt", "dest": "copy.txt"]), "OK")
-        XCTAssertEqual(await call("files.readFile", ["path": "copy.txt"]), "data")
 
-        XCTAssertEqual(await call("files.mv", ["src": "copy.txt", "dest": "renamed.txt"]), "OK")
-        XCTAssertEqual(await call("files.exists", ["path": "copy.txt"]), "false")
-        XCTAssertEqual(await call("files.exists", ["path": "renamed.txt"]), "true")
+        let cp = await call("files.cp", ["src": "src.txt", "dest": "copy.txt"])
+        XCTAssertEqual(cp, "OK")
+        let readCopy = await call("files.readFile", ["path": "copy.txt"])
+        XCTAssertEqual(readCopy, "data")
+
+        let mv = await call("files.mv", ["src": "copy.txt", "dest": "renamed.txt"])
+        XCTAssertEqual(mv, "OK")
+        let existsCopy = await call("files.exists", ["path": "copy.txt"])
+        XCTAssertEqual(existsCopy, "false")
+        let existsRenamed = await call("files.exists", ["path": "renamed.txt"])
+        XCTAssertEqual(existsRenamed, "true")
     }
 
     func testExistsReturnsBooleanString() async throws {
         try AgentFileManager.shared.writeFile(agentId: agentId, name: "here.txt", data: Data())
-        XCTAssertEqual(await call("files.exists", ["path": "here.txt"]), "true")
-        XCTAssertEqual(await call("files.exists", ["path": "missing.txt"]), "false")
+        let here = await call("files.exists", ["path": "here.txt"])
+        XCTAssertEqual(here, "true")
+        let missing = await call("files.exists", ["path": "missing.txt"])
+        XCTAssertEqual(missing, "false")
     }
 }
