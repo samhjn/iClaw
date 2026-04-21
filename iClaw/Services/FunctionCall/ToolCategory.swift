@@ -136,10 +136,12 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .map:
             return ["map_search_places", "map_get_directions"]
         case .health:
+            // Long-tail reads (blood pressure/glucose/oxygen, body temperature) live in the
+            // "Health Plus" built-in skill; bridgeReadActions still includes them so the
+            // skill's JS wrappers route through the `health` permission gate.
             return [
                 "health_read_steps", "health_read_heart_rate", "health_read_sleep",
-                "health_read_body_mass", "health_read_blood_pressure", "health_read_blood_glucose",
-                "health_read_blood_oxygen", "health_read_body_temperature",
+                "health_read_body_mass",
             ]
         case .browser:
             return ["browser_get_page_info", "browser_extract"]
@@ -183,12 +185,12 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .map:
             return []
         case .health:
+            // Long-tail writes (macronutrients, blood pressure/glucose/oxygen, body
+            // fat/height/temperature, heart-rate writes, workouts) live in the "Health Plus"
+            // built-in skill; bridgeWriteActions still includes them so the skill's JS
+            // wrappers route through the `health` permission gate.
             return [
                 "health_write_dietary_energy", "health_write_body_mass", "health_write_dietary_water",
-                "health_write_dietary_carbohydrates", "health_write_dietary_protein",
-                "health_write_dietary_fat", "health_write_blood_pressure", "health_write_body_fat",
-                "health_write_height", "health_write_blood_glucose", "health_write_blood_oxygen",
-                "health_write_body_temperature", "health_write_heart_rate", "health_write_workout",
             ]
         case .browser:
             return [

@@ -115,29 +115,18 @@ enum ToolDefinitions {
             mapGetDirectionsTool,
 
             // Apple Ecosystem — Health (Read)
+            // Long-tail reads (blood pressure/glucose/oxygen, body temperature) live in the
+            // built-in "Health Plus" skill, not as default tools.
             healthReadStepsTool,
             healthReadHeartRateTool,
             healthReadSleepTool,
             healthReadBodyMassTool,
-            healthReadBloodPressureTool,
-            healthReadBloodGlucoseTool,
-            healthReadBloodOxygenTool,
-            healthReadBodyTemperatureTool,
             // Apple Ecosystem — Health (Write)
+            // Long-tail writes (blood pressure/glucose/oxygen, body fat/height/temperature,
+            // heart-rate writes, macronutrients, workouts) live in the "Health Plus" skill.
             healthWriteDietaryEnergyTool,
             healthWriteBodyMassTool,
             healthWriteDietaryWaterTool,
-            healthWriteDietaryCarbohydratesTool,
-            healthWriteDietaryProteinTool,
-            healthWriteDietaryFatTool,
-            healthWriteBloodPressureTool,
-            healthWriteBodyFatTool,
-            healthWriteHeightTool,
-            healthWriteBloodGlucoseTool,
-            healthWriteBloodOxygenTool,
-            healthWriteBodyTemperatureTool,
-            healthWriteHeartRateTool,
-            healthWriteWorkoutTool,
         ]
     }
 
@@ -927,165 +916,9 @@ enum ToolDefinitions {
         required: ["ml"]
     )
 
-    static let healthWriteDietaryCarbohydratesTool = ToolDefinitionBuilder.build(
-        name: "health_write_dietary_carbohydrates",
-        description: "Write dietary carbohydrates (grams) to Apple Health.",
-        properties: [
-            "grams": ToolDefinitionBuilder.numberParam("Carbohydrates in grams"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["grams"]
-    )
-
-    static let healthWriteDietaryProteinTool = ToolDefinitionBuilder.build(
-        name: "health_write_dietary_protein",
-        description: "Write dietary protein (grams) to Apple Health.",
-        properties: [
-            "grams": ToolDefinitionBuilder.numberParam("Protein in grams"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["grams"]
-    )
-
-    static let healthWriteDietaryFatTool = ToolDefinitionBuilder.build(
-        name: "health_write_dietary_fat",
-        description: "Write dietary fat (grams) to Apple Health.",
-        properties: [
-            "grams": ToolDefinitionBuilder.numberParam("Fat in grams"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["grams"]
-    )
-
-    static let healthWriteWorkoutTool = ToolDefinitionBuilder.build(
-        name: "health_write_workout",
-        description: "Write a workout session to Apple Health with activity type, start/end time, and optional energy/distance.",
-        properties: [
-            "activity_type": ToolDefinitionBuilder.stringParam("Workout activity type, e.g. running, walking, cycling, swimming, yoga, strength"),
-            "start_date": ToolDefinitionBuilder.stringParam("Workout start time (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "end_date": ToolDefinitionBuilder.stringParam("Workout end time (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "energy_kcal": ToolDefinitionBuilder.numberParam("Optional active energy burned in kcal"),
-            "distance_km": ToolDefinitionBuilder.numberParam("Optional distance in kilometers")
-        ],
-        required: ["start_date", "end_date"]
-    )
-
-    // MARK: - Apple Health Tools (New)
-
-    static let healthReadBloodPressureTool = ToolDefinitionBuilder.build(
-        name: "health_read_blood_pressure",
-        description: "Read blood pressure (systolic/diastolic) samples from Apple Health in a date range (defaults to last 30 days).",
-        properties: [
-            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)")
-        ],
-        required: []
-    )
-
-    static let healthReadBloodGlucoseTool = ToolDefinitionBuilder.build(
-        name: "health_read_blood_glucose",
-        description: "Read blood glucose samples from Apple Health in a date range (defaults to last 30 days).",
-        properties: [
-            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)")
-        ],
-        required: []
-    )
-
-    static let healthReadBloodOxygenTool = ToolDefinitionBuilder.build(
-        name: "health_read_blood_oxygen",
-        description: "Read blood oxygen saturation (SpO₂) samples from Apple Health in a date range (defaults to last 7 days).",
-        properties: [
-            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)")
-        ],
-        required: []
-    )
-
-    static let healthReadBodyTemperatureTool = ToolDefinitionBuilder.build(
-        name: "health_read_body_temperature",
-        description: "Read body temperature samples from Apple Health in a date range (defaults to last 30 days).",
-        properties: [
-            "start_date": ToolDefinitionBuilder.stringParam("Start date (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "end_date": ToolDefinitionBuilder.stringParam("End date (ISO 8601 or yyyy-MM-dd HH:mm)"),
-            "unit": ToolDefinitionBuilder.enumParam("Temperature unit", values: ["c", "f"])
-        ],
-        required: []
-    )
-
-    static let healthWriteBloodPressureTool = ToolDefinitionBuilder.build(
-        name: "health_write_blood_pressure",
-        description: "Write blood pressure reading (systolic/diastolic mmHg) to Apple Health. Useful for recording blood pressure monitor readings.",
-        properties: [
-            "systolic": ToolDefinitionBuilder.numberParam("Systolic pressure in mmHg (e.g. 120)"),
-            "diastolic": ToolDefinitionBuilder.numberParam("Diastolic pressure in mmHg (e.g. 80)"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["systolic", "diastolic"]
-    )
-
-    static let healthWriteBodyFatTool = ToolDefinitionBuilder.build(
-        name: "health_write_body_fat",
-        description: "Write body fat percentage to Apple Health. Useful for recording smart scale readings.",
-        properties: [
-            "percentage": ToolDefinitionBuilder.numberParam("Body fat percentage (e.g. 22.5)"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["percentage"]
-    )
-
-    static let healthWriteHeightTool = ToolDefinitionBuilder.build(
-        name: "health_write_height",
-        description: "Write height to Apple Health.",
-        properties: [
-            "value": ToolDefinitionBuilder.numberParam("Height value"),
-            "unit": ToolDefinitionBuilder.enumParam("Unit for value", values: ["cm", "m", "in", "ft"]),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["value"]
-    )
-
-    static let healthWriteBloodGlucoseTool = ToolDefinitionBuilder.build(
-        name: "health_write_blood_glucose",
-        description: "Write blood glucose reading to Apple Health. Useful for recording glucose meter readings.",
-        properties: [
-            "value": ToolDefinitionBuilder.numberParam("Blood glucose value"),
-            "unit": ToolDefinitionBuilder.enumParam("Unit for value", values: ["mmol/l", "mg/dl"]),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["value"]
-    )
-
-    static let healthWriteBloodOxygenTool = ToolDefinitionBuilder.build(
-        name: "health_write_blood_oxygen",
-        description: "Write blood oxygen saturation (SpO₂ %) to Apple Health. Useful for recording pulse oximeter readings.",
-        properties: [
-            "percentage": ToolDefinitionBuilder.numberParam("SpO₂ percentage (e.g. 98)"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["percentage"]
-    )
-
-    static let healthWriteBodyTemperatureTool = ToolDefinitionBuilder.build(
-        name: "health_write_body_temperature",
-        description: "Write body temperature to Apple Health. Useful for recording thermometer readings.",
-        properties: [
-            "value": ToolDefinitionBuilder.numberParam("Temperature value"),
-            "unit": ToolDefinitionBuilder.enumParam("Temperature unit", values: ["c", "f"]),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["value"]
-    )
-
-    static let healthWriteHeartRateTool = ToolDefinitionBuilder.build(
-        name: "health_write_heart_rate",
-        description: "Write heart rate (bpm) to Apple Health. Useful for recording manual pulse readings.",
-        properties: [
-            "bpm": ToolDefinitionBuilder.numberParam("Heart rate in beats per minute"),
-            "date": ToolDefinitionBuilder.stringParam("Entry time (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to now.")
-        ],
-        required: ["bpm"]
-    )
+    // Long-tail Health tools (blood pressure/glucose/oxygen, body fat/height/temperature,
+    // heart-rate writes, macronutrients, workouts) now live in the built-in "Health Plus"
+    // skill as JS wrappers around `apple.health.*`. See SkillService.swift → BuiltInSkills.
 
     // MARK: - Image Generation
 

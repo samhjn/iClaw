@@ -127,8 +127,19 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertTrue(names.contains("notification_schedule"))
         XCTAssertTrue(names.contains("location_get_current"))
         XCTAssertTrue(names.contains("map_search_places"))
+        // Default Health menu: steps/heart rate/sleep/body mass reads + body mass/dietary
+        // energy/dietary water writes. Long-tail tools live in the "Health Plus" skill.
         XCTAssertTrue(names.contains("health_read_steps"))
+        XCTAssertTrue(names.contains("health_read_heart_rate"))
+        XCTAssertTrue(names.contains("health_read_sleep"))
+        XCTAssertTrue(names.contains("health_read_body_mass"))
         XCTAssertTrue(names.contains("health_write_dietary_energy"))
+        XCTAssertTrue(names.contains("health_write_body_mass"))
+        XCTAssertTrue(names.contains("health_write_dietary_water"))
+        XCTAssertFalse(names.contains("health_read_blood_pressure"))
+        XCTAssertFalse(names.contains("health_write_blood_pressure"))
+        XCTAssertFalse(names.contains("health_write_workout"))
+        XCTAssertFalse(names.contains("health_write_dietary_carbohydrates"))
     }
 
     // MARK: - Specific Tool Parameters

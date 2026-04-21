@@ -165,6 +165,8 @@ final class SkillService {
         let existing = (try? modelContext.fetch(descriptor)) ?? []
         let existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
 
+        let templateNames = Set(BuiltInSkills.all.map(\.name))
+
         for template in BuiltInSkills.all {
             if let skill = existingByName[template.name] {
                 // Upgrade existing built-in skill if template has changed
@@ -184,6 +186,16 @@ final class SkillService {
                 modelContext.insert(skill)
             }
         }
+
+        // Demote any previously-built-in skill whose template has been removed.
+        // Keep the record so existing installations keep working, but flip
+        // `isBuiltIn` so users can edit/delete them like ordinary skills.
+        for skill in existing where !templateNames.contains(skill.name) {
+            skill.isBuiltIn = false
+            skill.author = "system (legacy)"
+            skill.updatedAt = Date()
+        }
+
         save()
     }
 
@@ -372,89 +384,12 @@ enum BuiltInSkills {
                 )
             ]
         ),
-        Template(
-            name: "Code Review",
-            summary: "Structured code review with security, performance, and maintainability checks",
-            content: """
-            # Code Review Skill
-
-            When reviewing code, systematically check:
-
-            ## Checklist
-            1. **Correctness**: Does the code do what it's supposed to?
-            2. **Security**: SQL injection, XSS, auth issues, secret leaks?
-            3. **Performance**: N+1 queries, unnecessary allocations, algorithmic complexity?
-            4. **Readability**: Clear naming, appropriate comments, consistent style?
-            5. **Maintainability**: DRY, single responsibility, proper abstractions?
-            6. **Edge Cases**: Null handling, boundary conditions, error states?
-            7. **Testing**: Adequate coverage, meaningful assertions?
-
-            ## Output Format
-            - Severity levels: CRITICAL / WARNING / SUGGESTION / NITPICK
-            - Reference specific line numbers or code sections
-            - Provide concrete fix suggestions, not just complaints
-            - Summarize overall assessment at the end
-            """,
-            tags: ["coding", "review", "quality"]
-        ),
-        Template(
-            name: "Daily Planner",
-            summary: "Help organize daily tasks with priorities and time blocks",
-            content: """
-            # Daily Planner Skill
-
-            Help the user organize their day effectively.
-
-            ## Process
-            1. Gather the user's tasks and commitments
-            2. Categorize by urgency/importance (Eisenhower matrix)
-            3. Estimate time needed for each task
-            4. Create time-blocked schedule
-            5. Save the plan to MEMORY.md
-
-            ## Principles
-            - Front-load cognitively demanding tasks
-            - Include buffer time between blocks
-            - Schedule breaks (Pomodoro-style)
-            - Flag tasks that could be delegated or eliminated
-            - Review and adjust at midday
-
-            ## Output
-            - Formatted schedule with time slots
-            - Priority flags for must-do items
-            - Reminder to check back for adjustments
-            """,
-            tags: ["productivity", "planning", "daily"]
-        ),
-        Template(
-            name: "Creative Writer",
-            summary: "Creative writing assistance with style adaptation and narrative techniques",
-            content: """
-            # Creative Writer Skill
-
-            Assist with creative writing in any genre or format.
-
-            ## Capabilities
-            - **Fiction**: Plot development, character arcs, dialogue, world-building
-            - **Non-fiction**: Structuring arguments, narrative non-fiction, essays
-            - **Poetry**: Meter, rhyme schemes, imagery, forms
-            - **Copywriting**: Headlines, hooks, CTAs, brand voice
-
-            ## Process
-            1. Understand the target audience and purpose
-            2. Establish voice, tone, and style parameters
-            3. Create outline or structure
-            4. Draft with attention to pacing and flow
-            5. Revise for clarity, impact, and consistency
-
-            ## Guidelines
-            - Show, don't tell
-            - Use active voice by default
-            - Vary sentence length for rhythm
-            - Save style preferences to MEMORY.md for consistency
-            """,
-            tags: ["writing", "creative", "content"]
-        ),
+        // Note: "Code Review", "Daily Planner", and "Creative Writer" were previously
+        // registered as built-in templates. They have been removed — their content was
+        // pure prose with no executable scripts or custom tools, so they add cognitive
+        // load without providing capabilities the model couldn't improvise on its own.
+        // `ensureBuiltInSkills()` demotes any pre-existing copies to user-owned skills
+        // so installed users can edit or delete them.
         Template(
             name: "File Ops",
             summary: "Advanced file operations: copy, move, directory management, rich stat",
@@ -596,6 +531,309 @@ enum BuiltInSkills {
                     implementation: """
                     const present = await fs.exists(args.path);
                     console.log(present ? 'true' : 'false');
+                    """
+                )
+            ]
+        ),
+        Template(
+            name: "Health Plus",
+            summary: "Advanced Apple Health metrics: blood pressure, glucose, oxygen, body temperature, macronutrients, workouts",
+            content: """
+            # Health Plus Skill
+
+            Install this skill when you need to read or log Apple Health metrics beyond the
+            default set (steps, heart rate, sleep, body mass, dietary energy, dietary water).
+
+            ## Reads
+            - `skill_health_plus_read_blood_pressure(start_date?, end_date?)` — systolic/diastolic samples (defaults to last 30 days).
+            - `skill_health_plus_read_blood_glucose(start_date?, end_date?)` — glucose samples (defaults to last 30 days).
+            - `skill_health_plus_read_blood_oxygen(start_date?, end_date?)` — SpO₂ samples (defaults to last 7 days).
+            - `skill_health_plus_read_body_temperature(start_date?, end_date?, unit?)` — temperature samples. `unit` is `"c"` (default) or `"f"`.
+
+            ## Writes — vitals & body composition
+            - `skill_health_plus_write_blood_pressure(systolic, diastolic, date?)` — mmHg.
+            - `skill_health_plus_write_blood_glucose(value, unit?, date?)` — `unit` is `"mmol/l"` (default) or `"mg/dl"`.
+            - `skill_health_plus_write_blood_oxygen(percentage, date?)` — SpO₂ percent (e.g. 98).
+            - `skill_health_plus_write_body_temperature(value, unit?, date?)` — `unit` is `"c"` (default) or `"f"`.
+            - `skill_health_plus_write_body_fat(percentage, date?)` — body fat percent (e.g. 22.5).
+            - `skill_health_plus_write_height(value, unit?, date?)` — `unit` is `"cm"`, `"m"`, `"in"`, or `"ft"`.
+            - `skill_health_plus_write_heart_rate(bpm, date?)` — manual pulse in beats per minute.
+
+            ## Writes — dietary macronutrients
+            - `skill_health_plus_write_dietary_carbohydrates(grams, date?)`
+            - `skill_health_plus_write_dietary_protein(grams, date?)`
+            - `skill_health_plus_write_dietary_fat(grams, date?)`
+
+            ## Writes — workouts
+            - `skill_health_plus_write_workout(activity_type?, start_date, end_date, energy_kcal?, distance_km?)` — `activity_type` e.g. `"running"`, `"walking"`, `"cycling"`, `"swimming"`, `"yoga"`, `"strength"`.
+
+            ## Dates & permissions
+            - All `date`/`start_date`/`end_date` params accept ISO 8601 or `yyyy-MM-dd HH:mm`.
+            - Writes default `date` to now; read ranges default as noted above.
+            - These tools route through the `health` permission category: reads require read permission; writes require write permission.
+
+            ## Bulk or scripted logging
+            For loops, conditional logic, or combining multiple metrics in one pass, use
+            `execute_javascript` with the `apple.health.*` namespace directly, e.g.:
+
+                await apple.health.writeBloodPressure({systolic: 120, diastolic: 80});
+                let readings = await apple.health.readBloodGlucose({});
+            """,
+            tags: ["health", "fitness", "wellness"],
+            customTools: [
+                SkillToolDefinition(
+                    name: "read_blood_pressure",
+                    description: "Read blood pressure (systolic/diastolic) samples from Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "start_date", type: "string",
+                                       description: "Start date (ISO 8601 or yyyy-MM-dd HH:mm). Defaults to 30 days ago.",
+                                       required: false),
+                        SkillToolParam(name: "end_date", type: "string",
+                                       description: "End date. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.readBloodPressure(args);
+                    console.log(JSON.stringify(res));
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "read_blood_glucose",
+                    description: "Read blood glucose samples from Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "start_date", type: "string",
+                                       description: "Start date. Defaults to 30 days ago.",
+                                       required: false),
+                        SkillToolParam(name: "end_date", type: "string",
+                                       description: "End date. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.readBloodGlucose(args);
+                    console.log(JSON.stringify(res));
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "read_blood_oxygen",
+                    description: "Read blood oxygen saturation (SpO₂) samples from Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "start_date", type: "string",
+                                       description: "Start date. Defaults to 7 days ago.",
+                                       required: false),
+                        SkillToolParam(name: "end_date", type: "string",
+                                       description: "End date. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.readBloodOxygen(args);
+                    console.log(JSON.stringify(res));
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "read_body_temperature",
+                    description: "Read body temperature samples from Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "start_date", type: "string",
+                                       description: "Start date. Defaults to 30 days ago.",
+                                       required: false),
+                        SkillToolParam(name: "end_date", type: "string",
+                                       description: "End date. Defaults to now.",
+                                       required: false),
+                        SkillToolParam(name: "unit", type: "string",
+                                       description: "Temperature unit",
+                                       required: false,
+                                       enumValues: ["c", "f"])
+                    ],
+                    implementation: """
+                    const res = await apple.health.readBodyTemperature(args);
+                    console.log(JSON.stringify(res));
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_blood_pressure",
+                    description: "Write a blood pressure reading (systolic/diastolic mmHg) to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "systolic", type: "number",
+                                       description: "Systolic pressure in mmHg (e.g. 120)"),
+                        SkillToolParam(name: "diastolic", type: "number",
+                                       description: "Diastolic pressure in mmHg (e.g. 80)"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeBloodPressure(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_blood_glucose",
+                    description: "Write a blood glucose reading to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "value", type: "number",
+                                       description: "Blood glucose value"),
+                        SkillToolParam(name: "unit", type: "string",
+                                       description: "Unit for value",
+                                       required: false,
+                                       enumValues: ["mmol/l", "mg/dl"]),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeBloodGlucose(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_blood_oxygen",
+                    description: "Write a blood oxygen saturation (SpO₂ %) reading to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "percentage", type: "number",
+                                       description: "SpO₂ percentage (e.g. 98)"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeBloodOxygen(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_body_temperature",
+                    description: "Write a body temperature reading to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "value", type: "number",
+                                       description: "Temperature value"),
+                        SkillToolParam(name: "unit", type: "string",
+                                       description: "Temperature unit",
+                                       required: false,
+                                       enumValues: ["c", "f"]),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeBodyTemperature(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_body_fat",
+                    description: "Write body fat percentage to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "percentage", type: "number",
+                                       description: "Body fat percentage (e.g. 22.5)"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeBodyFat(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_height",
+                    description: "Write height to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "value", type: "number",
+                                       description: "Height value"),
+                        SkillToolParam(name: "unit", type: "string",
+                                       description: "Unit for value",
+                                       required: false,
+                                       enumValues: ["cm", "m", "in", "ft"]),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeHeight(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_heart_rate",
+                    description: "Write a heart rate (bpm) sample to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "bpm", type: "number",
+                                       description: "Heart rate in beats per minute"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeHeartRate(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_dietary_carbohydrates",
+                    description: "Write dietary carbohydrates (grams) to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "grams", type: "number",
+                                       description: "Carbohydrates in grams"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeDietaryCarbohydrates(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_dietary_protein",
+                    description: "Write dietary protein (grams) to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "grams", type: "number",
+                                       description: "Protein in grams"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeDietaryProtein(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_dietary_fat",
+                    description: "Write dietary fat (grams) to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "grams", type: "number",
+                                       description: "Fat in grams"),
+                        SkillToolParam(name: "date", type: "string",
+                                       description: "Entry time. Defaults to now.",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeDietaryFat(args);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "write_workout",
+                    description: "Write a workout session to Apple Health.",
+                    parameters: [
+                        SkillToolParam(name: "activity_type", type: "string",
+                                       description: "Activity type, e.g. running, walking, cycling, swimming, yoga, strength",
+                                       required: false),
+                        SkillToolParam(name: "start_date", type: "string",
+                                       description: "Workout start time (ISO 8601 or yyyy-MM-dd HH:mm)"),
+                        SkillToolParam(name: "end_date", type: "string",
+                                       description: "Workout end time (ISO 8601 or yyyy-MM-dd HH:mm)"),
+                        SkillToolParam(name: "energy_kcal", type: "number",
+                                       description: "Active energy burned in kcal",
+                                       required: false),
+                        SkillToolParam(name: "distance_km", type: "number",
+                                       description: "Distance in kilometers",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const res = await apple.health.writeWorkout(args);
+                    console.log(res);
                     """
                 )
             ]

@@ -218,7 +218,7 @@ final class PromptBuilder {
             (.notifications, "Notifications: `notification_schedule`, `notification_cancel`, `notification_list`"),
             (.location, "Location: `location_get_current`, `location_geocode`, `location_reverse_geocode`"),
             (.map, "Maps: `map_search_places`, `map_get_directions`"),
-            (.health, "Health: read steps/heart rate/sleep/body mass/blood pressure/glucose/oxygen/temperature; write dietary/body/health metrics and workouts"),
+            (.health, "Health: read steps/heart rate/sleep/body mass; write body mass, dietary energy, dietary water. For blood pressure/glucose/oxygen, body temperature/fat/height, heart-rate writes, macronutrient writes (carbs/protein/fat), and workouts, install the built-in **Health Plus** skill which exposes `skill_health_plus_*` wrappers around the `apple.health.*` namespace."),
         ]
         let enabledApple = appleCategories.filter { isEnabled($0.0, for: agent) }
         if !enabledApple.isEmpty {

@@ -35,6 +35,31 @@ final class BuiltInSkillsTests: XCTestCase {
         }
     }
 
+    /// Built-in templates must ship real capabilities (scripts or custom tools).
+    /// Pure-prose templates like the earlier "Code Review" / "Daily Planner" /
+    /// "Creative Writer" were removed because the model can improvise that guidance
+    /// on its own, and carrying them as built-ins only inflated the library UI.
+    func testAllSkillsShipExecutableCapabilities() {
+        for template in BuiltInSkills.all {
+            let hasCapability = !template.scripts.isEmpty || !template.customTools.isEmpty
+            XCTAssertTrue(hasCapability,
+                           "Built-in skill '\(template.name)' must ship scripts or custom tools, not just prose")
+        }
+    }
+
+    func testExpectedBuiltInSkillsRegistered() {
+        let names = Set(BuiltInSkills.all.map(\.name))
+        XCTAssertEqual(names, Set(["Deep Research", "File Ops", "Health Plus"]),
+                        "Unexpected set of built-in skills; update this test intentionally when the list changes")
+    }
+
+    func testRemovedSkillsNoLongerRegistered() {
+        let names = Set(BuiltInSkills.all.map(\.name))
+        XCTAssertFalse(names.contains("Code Review"))
+        XCTAssertFalse(names.contains("Daily Planner"))
+        XCTAssertFalse(names.contains("Creative Writer"))
+    }
+
     // MARK: - Deep Research: Structure
 
     private var deepResearch: BuiltInSkills.Template {
@@ -303,5 +328,66 @@ final class BuiltInSkillsTests: XCTestCase {
     func testFileOpsTags() {
         let tags = Set(fileOps.tags)
         XCTAssertTrue(tags.contains("files"))
+    }
+
+    // MARK: - Health Plus: Structure
+
+    private var healthPlus: BuiltInSkills.Template {
+        BuiltInSkills.all.first(where: { $0.name == "Health Plus" })!
+    }
+
+    func testHealthPlusSkillExists() {
+        XCTAssertNotNil(BuiltInSkills.all.first(where: { $0.name == "Health Plus" }))
+    }
+
+    func testHealthPlusHasExpectedCustomTools() {
+        let names = Set(healthPlus.customTools.map(\.name))
+        XCTAssertEqual(names, Set([
+            "read_blood_pressure", "read_blood_glucose", "read_blood_oxygen", "read_body_temperature",
+            "write_blood_pressure", "write_blood_glucose", "write_blood_oxygen", "write_body_temperature",
+            "write_body_fat", "write_height", "write_heart_rate",
+            "write_dietary_carbohydrates", "write_dietary_protein", "write_dietary_fat",
+            "write_workout",
+        ]))
+    }
+
+    func testHealthPlusCustomToolCount() {
+        XCTAssertEqual(healthPlus.customTools.count, 15)
+    }
+
+    func testHealthPlusToolsHaveNonEmptyImplementations() {
+        for tool in healthPlus.customTools {
+            XCTAssertFalse(tool.implementation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                           "Health Plus tool '\(tool.name)' must have a non-empty implementation")
+        }
+    }
+
+    func testHealthPlusImplementationsUseAppleHealthNamespace() {
+        for tool in healthPlus.customTools {
+            XCTAssertTrue(tool.implementation.contains("apple.health."),
+                           "Health Plus tool '\(tool.name)' should delegate to the apple.health namespace")
+        }
+    }
+
+    func testHealthPlusWriteBloodPressureRequiredParams() {
+        let tool = healthPlus.customTools.first(where: { $0.name == "write_blood_pressure" })!
+        let required = Set(tool.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["systolic", "diastolic"]))
+    }
+
+    func testHealthPlusWriteWorkoutRequiredParams() {
+        let tool = healthPlus.customTools.first(where: { $0.name == "write_workout" })!
+        let required = Set(tool.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["start_date", "end_date"]))
+    }
+
+    func testHealthPlusContentMentionsAppleHealth() {
+        XCTAssertTrue(healthPlus.content.contains("apple.health."),
+                       "Health Plus skill should document the apple.health namespace")
+    }
+
+    func testHealthPlusTags() {
+        let tags = Set(healthPlus.tags)
+        XCTAssertTrue(tags.contains("health"))
     }
 }
