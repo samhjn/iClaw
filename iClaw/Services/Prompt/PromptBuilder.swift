@@ -162,7 +162,7 @@ final class PromptBuilder {
             - `attach_media`: Attach a media file from your folder into the conversation so you can see and analyze it. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm).
             - Files persist across sessions. Sub-agents share the parent agent's file folder.
             - Generated images are automatically saved here. Users can also upload files via the UI or iOS Files app.
-            - For directory management, copy/move, or fine-grained POSIX I/O (seek, truncate, fd-based read/write), use `execute_javascript` with the `fs` namespace, or install the built-in **File Ops** skill which exposes `skill_file_ops_*` wrappers.
+            - For directory management, copy/move, or fine-grained POSIX I/O (seek, truncate, fd-based read/write), install the built-in **File Ops** skill which exposes `skill_file_ops_*` wrappers around the `fs` namespace.
 
             #### File References (`agentfile://` scheme)
             Your file folder ID: `\(rootAgentId.uuidString)`
