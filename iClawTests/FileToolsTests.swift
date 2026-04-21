@@ -80,9 +80,10 @@ final class FileToolsTests: XCTestCase {
 
     // MARK: - Mkdir & list
 
-    func testMakeDirectoryCreatesFolder() {
-        let result = tools.makeDirectory(arguments: ["path": "docs/2026"])
-        XCTAssertTrue(result.contains("created"))
+    func testMakeDirectoryCreatesFolder() throws {
+        // file_mkdir is no longer a default LLM tool; the underlying File Ops skill
+        // (and the JS `fs.mkdir` API) both delegate to AgentFileManager.makeDirectory.
+        try AgentFileManager.shared.makeDirectory(agentId: agent.id, path: "docs/2026")
         XCTAssertTrue(AgentFileManager.shared.fileInfo(agentId: agent.id, name: "docs/2026")?.isDirectory ?? false)
     }
 

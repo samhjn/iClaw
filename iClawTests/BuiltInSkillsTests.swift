@@ -251,4 +251,57 @@ final class BuiltInSkillsTests: XCTestCase {
         XCTAssertTrue(fetchAndExtractTool.implementation.contains("5000"),
                        "Default max_length should be 5000")
     }
+
+    // MARK: - File Ops: Structure
+
+    private var fileOps: BuiltInSkills.Template {
+        BuiltInSkills.all.first(where: { $0.name == "File Ops" })!
+    }
+
+    func testFileOpsSkillExists() {
+        XCTAssertNotNil(BuiltInSkills.all.first(where: { $0.name == "File Ops" }))
+    }
+
+    func testFileOpsHasExpectedCustomTools() {
+        let names = Set(fileOps.customTools.map(\.name))
+        XCTAssertEqual(names, Set(["cp", "mv", "stat", "mkdir", "tree", "touch", "exists"]))
+    }
+
+    func testFileOpsToolsHaveNonEmptyImplementations() {
+        for tool in fileOps.customTools {
+            XCTAssertFalse(tool.implementation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                           "File Ops tool '\(tool.name)' must have a non-empty implementation")
+        }
+    }
+
+    func testFileOpsImplementationsUseFsNamespace() {
+        for tool in fileOps.customTools {
+            XCTAssertTrue(tool.implementation.contains("fs."),
+                           "File Ops tool '\(tool.name)' should delegate to the fs namespace")
+        }
+    }
+
+    func testFileOpsCpHasRequiredParams() {
+        let cp = fileOps.customTools.first(where: { $0.name == "cp" })!
+        let required = Set(cp.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["src", "dest"]))
+    }
+
+    func testFileOpsMvHasRequiredParams() {
+        let mv = fileOps.customTools.first(where: { $0.name == "mv" })!
+        let required = Set(mv.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["src", "dest"]))
+    }
+
+    func testFileOpsContentMentionsFdOps() {
+        XCTAssertTrue(fileOps.content.contains("fs.open"),
+                       "File Ops skill should document POSIX fd operations")
+        XCTAssertTrue(fileOps.content.contains("fs.seek"),
+                       "File Ops skill should document the seek operation")
+    }
+
+    func testFileOpsTags() {
+        let tags = Set(fileOps.tags)
+        XCTAssertTrue(tags.contains("files"))
+    }
 }

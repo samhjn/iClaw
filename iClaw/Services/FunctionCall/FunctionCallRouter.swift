@@ -217,8 +217,6 @@ final class FunctionCallRouter {
             return ToolCallResult(FileTools(agent: agent).deleteFile(arguments: arguments))
         case "file_info":
             return ToolCallResult(FileTools(agent: agent).fileInfo(arguments: arguments))
-        case "file_mkdir":
-            return ToolCallResult(FileTools(agent: agent).makeDirectory(arguments: arguments))
         case "attach_media":
             return await FileTools(agent: agent).attachMedia(arguments: arguments)
 

@@ -129,18 +129,6 @@ struct FileTools {
         """
     }
 
-    func makeDirectory(arguments: [String: Any]) -> String {
-        guard let path = Self.argPath(arguments) else {
-            return "[Error] Missing required parameter: path"
-        }
-        do {
-            try fm.makeDirectory(agentId: agentId, path: path)
-            return "Directory '\(path)' created."
-        } catch {
-            return "[Error] \(error.localizedDescription)"
-        }
-    }
-
     // MARK: - Multimodal
 
     private static let supportedImageExtensions: Set<String> = [

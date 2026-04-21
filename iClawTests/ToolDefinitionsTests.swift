@@ -109,7 +109,8 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertTrue(names.contains("file_write"))
         XCTAssertTrue(names.contains("file_delete"))
         XCTAssertTrue(names.contains("file_info"))
-        XCTAssertTrue(names.contains("file_mkdir"))
+        // file_mkdir was moved into the "File Ops" built-in skill; not a default tool.
+        XCTAssertFalse(names.contains("file_mkdir"))
     }
 
     func testAppleEcosystemToolsExist() {
@@ -187,10 +188,6 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertEqual(listTool.function.name, "file_list")
         XCTAssertNil(listTool.function.parameters.required)
         XCTAssertNotNil(listTool.function.parameters.properties?["path"])
-
-        let mkdirTool = ToolDefinitions.fileMkdirTool
-        XCTAssertEqual(mkdirTool.function.name, "file_mkdir")
-        XCTAssertEqual(mkdirTool.function.parameters.required, ["path"])
     }
 
     // MARK: - ToolDefinitionBuilder

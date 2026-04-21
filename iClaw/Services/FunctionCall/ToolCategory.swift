@@ -210,7 +210,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .model:
             return ["set_model"]
         case .files:
-            return ["file_write", "file_delete", "file_mkdir"]
+            return ["file_write", "file_delete"]
         case .imageGeneration:
             return ["generate_image"]
         case .videoGeneration:
@@ -245,7 +245,10 @@ enum ToolCategory: String, CaseIterable, Identifiable {
                 "health.readBloodOxygen", "health.readBodyTemperature",
             ]
         case .files:
-            return ["files.list", "files.read", "files.info"]
+            return [
+                "files.list", "files.read", "files.readFile", "files.info", "files.stat",
+                "files.exists", "files.close", "files.seek", "files.tell", "files.fstat",
+            ]
         case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration, .videoGeneration:
             return []
         }
@@ -269,7 +272,11 @@ enum ToolCategory: String, CaseIterable, Identifiable {
                 "health.writeBodyTemperature", "health.writeHeartRate", "health.writeWorkout",
             ]
         case .files:
-            return ["files.write", "files.delete", "files.mkdir"]
+            return [
+                "files.write", "files.writeFile", "files.appendFile", "files.delete",
+                "files.mkdir", "files.cp", "files.mv", "files.truncate",
+                "files.open", "files.fsync",
+            ]
         case .browser, .codeExecution, .subAgents, .sessions, .cron, .skills, .config, .model, .imageGeneration, .videoGeneration:
             return []
         }

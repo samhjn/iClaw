@@ -174,7 +174,8 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertEqual(ToolCategory.category(for: "file_write"), .files)
         XCTAssertEqual(ToolCategory.category(for: "file_delete"), .files)
         XCTAssertEqual(ToolCategory.category(for: "file_info"), .files)
-        XCTAssertEqual(ToolCategory.category(for: "file_mkdir"), .files)
+        // file_mkdir moved into the File Ops skill; no longer a registered default tool.
+        XCTAssertNil(ToolCategory.category(for: "file_mkdir"))
         XCTAssertNil(ToolCategory.category(for: "unknown_tool"))
     }
 
@@ -185,13 +186,14 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertTrue(ToolCategory.isWriteTool("schedule_cron"))
         XCTAssertTrue(ToolCategory.isWriteTool("file_write"))
         XCTAssertTrue(ToolCategory.isWriteTool("file_delete"))
-        XCTAssertTrue(ToolCategory.isWriteTool("file_mkdir"))
         XCTAssertFalse(ToolCategory.isWriteTool("browser_get_page_info"))
         XCTAssertFalse(ToolCategory.isWriteTool("list_cron"))
         XCTAssertFalse(ToolCategory.isWriteTool("read_config"))
         XCTAssertFalse(ToolCategory.isWriteTool("file_list"))
         XCTAssertFalse(ToolCategory.isWriteTool("file_read"))
         XCTAssertFalse(ToolCategory.isWriteTool("file_info"))
+        // file_mkdir no longer a registered tool after move to File Ops skill.
+        XCTAssertFalse(ToolCategory.isWriteTool("file_mkdir"))
         XCTAssertFalse(ToolCategory.isWriteTool("unknown_tool"))
     }
 
@@ -216,9 +218,20 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertFalse(ToolCategory.files.allBridgeActions.isEmpty)
         XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.list"))
         XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.read"))
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.readFile"))
         XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.info"))
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.stat"))
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.exists"))
+        XCTAssertTrue(ToolCategory.files.bridgeReadActions.contains("files.seek"))
         XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.write"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.writeFile"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.appendFile"))
         XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.delete"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.mkdir"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.cp"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.mv"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.open"))
+        XCTAssertTrue(ToolCategory.files.bridgeWriteActions.contains("files.truncate"))
     }
 
     func testAllBridgeActionNamesCoversAll() {
