@@ -70,7 +70,6 @@ enum ToolDefinitions {
             fileWriteTool,
             fileDeleteTool,
             fileInfoTool,
-            fileMkdirTool,
             attachMediaTool,
 
             // Image Generation
@@ -163,7 +162,7 @@ enum ToolDefinitions {
 
     static let executeJavaScriptTool = ToolDefinitionBuilder.build(
         name: "execute_javascript",
-        description: "Execute JavaScript code in a WKWebView sandbox. In 'repl' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). File system: `fs.list()`, `fs.read(name)`, `fs.write(name, content)`, `fs.delete(name)`, `fs.info(name)` — persistent agent file storage. Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — all return Promises, use `await` in script mode (e.g. `let events = await apple.calendar.searchEvents({})`). Parameter passing: use 'args' to inject a key-value object accessible as `args` in JS (e.g. `args.name`, `args.items`). Default timeout 60s (max 300s).",
+        description: "Execute JavaScript code in a WKWebView sandbox. In 'repl' mode, evaluates an expression and returns its result. In 'script' mode, runs a script and captures console output. Built-in: JSON, Math, Date, RegExp, Map/Set, Array methods, String methods. Network: synchronous fetch(url, options) returning {ok, status, text, json()}. Console: console.log/warn/error captured. Polyfills: TextEncoder/TextDecoder, atob/btoa, setTimeout (runs immediately). File system (Node-aligned, all Promise-returning): whole-file — `fs.list(path?)`, `fs.readFile(path, opts?)`, `fs.writeFile(path, content, opts?)`, `fs.appendFile`, `fs.delete`/`fs.unlink`, `fs.stat(path)`, `fs.exists`, `fs.mkdir`, `fs.cp(src, dest, {recursive})`, `fs.mv(src, dest)`/`fs.rename`, `fs.truncate(pathOrFd, length)`; POSIX fd-based — `fs.open(path, flags)`, `fs.close(fd)`, `fs.read(fd, length, position?)`, `fs.write(fd, content, position?, encoding?)`, `fs.seek(fd, offset, whence)`, `fs.tell(fd)`, `fs.fstat(fd)`, `fs.fsync(fd)`. Open flags: 'r','r+','w','w+','a','a+'. Whence: 'start','current','end'. fd's are scoped to this execution and auto-closed on exit. Legacy `fs.read(path)` / `fs.write(path, content)` still accepted (delegates to readFile/writeFile by arg type). Apple ecosystem: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`, `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*` — use `await` in script mode. Parameter passing: use 'args' to inject a key-value object accessible as `args` in JS. Default timeout 60s (max 300s).",
         properties: [
             "code": ToolDefinitionBuilder.stringParam("The JavaScript code to execute"),
             "mode": ToolDefinitionBuilder.enumParam("Execution mode", values: ["repl", "script"]),
@@ -493,15 +492,6 @@ enum ToolDefinitions {
         description: "Get metadata about a file or directory: size, creation date, modification date, whether it's a directory or image.",
         properties: [
             "path": ToolDefinitionBuilder.stringParam("Relative path to inspect")
-        ],
-        required: ["path"]
-    )
-
-    static let fileMkdirTool = ToolDefinitionBuilder.build(
-        name: "file_mkdir",
-        description: "Create a directory in the agent's file folder, including intermediate directories. Idempotent — succeeds if the directory already exists.",
-        properties: [
-            "path": ToolDefinitionBuilder.stringParam("Relative directory path to create (e.g. 'docs/2026')")
         ],
         required: ["path"]
     )

@@ -180,6 +180,100 @@ final class AgentFileManager {
         return url
     }
 
+    /// Copy a file or directory from `src` to `dest` (both relative to the agent's folder).
+    /// Creates missing destination parents. When the source is a directory, copies recursively
+    /// iff `recursive` is true; otherwise throws.
+    @discardableResult
+    func copyFile(agentId: UUID, src: String, dest: String, recursive: Bool = true) throws -> URL {
+        try ensureDirectory(for: agentId)
+        let srcURL = try resolvedURL(agentId: agentId, path: src)
+        let destURL = try resolvedURL(agentId: agentId, path: dest)
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: srcURL.path, isDirectory: &isDir) else {
+            throw FileToolError.fileNotFound(src)
+        }
+        if isDir.boolValue && !recursive {
+            throw FileToolError.isDirectory(src)
+        }
+        let parent = destURL.deletingLastPathComponent()
+        if !fm.fileExists(atPath: parent.path) {
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        }
+        if fm.fileExists(atPath: destURL.path) {
+            throw FileToolError.fileAlreadyExists(dest)
+        }
+        try fm.copyItem(at: srcURL, to: destURL)
+        return destURL
+    }
+
+    /// Move or rename a file/directory from `src` to `dest` (both relative to the agent's folder).
+    /// Creates missing destination parents. Fails if destination already exists.
+    @discardableResult
+    func moveFile(agentId: UUID, src: String, dest: String) throws -> URL {
+        try ensureDirectory(for: agentId)
+        let srcURL = try resolvedURL(agentId: agentId, path: src)
+        let destURL = try resolvedURL(agentId: agentId, path: dest)
+        guard fm.fileExists(atPath: srcURL.path) else {
+            throw FileToolError.fileNotFound(src)
+        }
+        let parent = destURL.deletingLastPathComponent()
+        if !fm.fileExists(atPath: parent.path) {
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        }
+        if fm.fileExists(atPath: destURL.path) {
+            throw FileToolError.fileAlreadyExists(dest)
+        }
+        try fm.moveItem(at: srcURL, to: destURL)
+        return destURL
+    }
+
+    /// Truncate a regular file to exactly `length` bytes. Extends with zero bytes if the
+    /// file is shorter than `length`; shrinks if longer. Creates the file if it doesn't exist.
+    func truncateFile(agentId: UUID, path: String, length: UInt64) throws {
+        try ensureDirectory(for: agentId)
+        let url = try resolvedURL(agentId: agentId, path: path)
+        let parent = url.deletingLastPathComponent()
+        if !fm.fileExists(atPath: parent.path) {
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        }
+        var isDir: ObjCBool = false
+        if !fm.fileExists(atPath: url.path, isDirectory: &isDir) {
+            fm.createFile(atPath: url.path, contents: nil)
+        } else if isDir.boolValue {
+            throw FileToolError.isDirectory(path)
+        }
+        let handle = try FileHandle(forUpdating: url)
+        defer { try? handle.close() }
+        let current = try handle.seekToEnd()
+        if length < current {
+            try handle.truncate(atOffset: length)
+        } else if length > current {
+            try handle.seek(toOffset: current)
+            let pad = Data(count: Int(length - current))
+            try handle.write(contentsOf: pad)
+        }
+    }
+
+    /// Append raw bytes to a file (creating the file + missing parent dirs as needed).
+    @discardableResult
+    func appendFile(agentId: UUID, name: String, data: Data) throws -> URL {
+        try ensureDirectory(for: agentId)
+        let url = try resolvedURL(agentId: agentId, path: name)
+        let parent = url.deletingLastPathComponent()
+        if !fm.fileExists(atPath: parent.path) {
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        }
+        if !fm.fileExists(atPath: url.path) {
+            try data.write(to: url, options: .atomic)
+            return url
+        }
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+        _ = try handle.seekToEnd()
+        try handle.write(contentsOf: data)
+        return url
+    }
+
     // MARK: - Image Support
 
     /// Save an image to the agent's folder, returning a `fileReference` string.
@@ -353,12 +447,20 @@ enum FileToolError: LocalizedError {
     case unsafeFilename(String)
     case fileNotFound(String)
     case fileAlreadyExists(String)
+    case isDirectory(String)
+    case invalidFlag(String)
+    case invalidFd(Int)
+    case tooManyFds
 
     var errorDescription: String? {
         switch self {
         case .unsafeFilename(let name): return "Unsafe path: \(name)"
         case .fileNotFound(let name): return "File not found: \(name)"
         case .fileAlreadyExists(let name): return "File already exists: \(name)"
+        case .isDirectory(let name): return "Is a directory: \(name)"
+        case .invalidFlag(let flag): return "Invalid open flag: \(flag)"
+        case .invalidFd(let fd): return "Invalid file descriptor: \(fd)"
+        case .tooManyFds: return "Too many open descriptors"
         }
     }
 }

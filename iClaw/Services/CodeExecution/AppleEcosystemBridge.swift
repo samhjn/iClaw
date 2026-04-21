@@ -11,7 +11,12 @@ private let bridgeLog = OSLog(subsystem: "com.iclaw.jsruntime", category: "apple
 /// and receive results inline.
 ///
 /// The bridge installs two global objects:
-/// - `fs` — standalone file system API: `fs.list()`, `fs.read()`, `fs.write()`, `fs.delete()`, `fs.info()`, `fs.mkdir()`
+/// - `fs` — Node-aligned file system API:
+///   - Whole-file: `fs.list`, `fs.readFile`, `fs.writeFile`, `fs.appendFile`, `fs.delete`/`fs.unlink`,
+///     `fs.stat`, `fs.exists`, `fs.mkdir`, `fs.cp`, `fs.mv`/`fs.rename`, `fs.truncate`
+///   - POSIX fd: `fs.open`, `fs.close`, `fs.read(fd,...)`, `fs.write(fd,...)`, `fs.seek`, `fs.tell`,
+///     `fs.fstat`, `fs.fsync`. fd's are auto-closed at the end of the JS execution.
+///   - Legacy `fs.read(path)` / `fs.write(path, content)` still work (arg-type dispatch).
 /// - `apple` — Apple ecosystem APIs: `apple.calendar.*`, `apple.reminders.*`, `apple.contacts.*`,
 ///   `apple.clipboard.*`, `apple.notifications.*`, `apple.location.*`, `apple.maps.*`, `apple.health.*`
 ///
@@ -31,9 +36,70 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
     /// Each JS execution registers a context before running and removes it after.
     private var executionContexts: [String: ExecutionContext] = [:]
 
-    struct ExecutionContext {
+    /// Cap on simultaneously-open file descriptors per execution context.
+    static let maxFdsPerContext = 32
+
+    /// Per-execution open-file descriptor entry. Each JS execution has its own fd space,
+    /// and all entries are force-closed when the execution context is unregistered.
+    final class FDEntry {
+        let url: URL
+        let handle: FileHandle
+        let mode: OpenMode
+        var position: UInt64
+
+        init(url: URL, handle: FileHandle, mode: OpenMode, position: UInt64) {
+            self.url = url
+            self.handle = handle
+            self.mode = mode
+            self.position = position
+        }
+    }
+
+    enum OpenMode: String {
+        case read       // "r"
+        case readWrite  // "r+"
+        case writeTrunc // "w"
+        case writePlus  // "w+"
+        case append     // "a"
+        case appendPlus // "a+"
+
+        var canRead: Bool {
+            switch self {
+            case .read, .readWrite, .writePlus, .appendPlus: return true
+            case .writeTrunc, .append: return false
+            }
+        }
+
+        var canWrite: Bool {
+            switch self {
+            case .read: return false
+            case .readWrite, .writeTrunc, .writePlus, .append, .appendPlus: return true
+            }
+        }
+
+        static func parse(_ flag: String) throws -> OpenMode {
+            switch flag {
+            case "r": return .read
+            case "r+": return .readWrite
+            case "w": return .writeTrunc
+            case "w+": return .writePlus
+            case "a": return .append
+            case "a+": return .appendPlus
+            default: throw FileToolError.invalidFlag(flag)
+            }
+        }
+    }
+
+    final class ExecutionContext {
         let permissionChecker: (String) -> Bool
         let agentId: UUID?
+        var fdTable: [Int: FDEntry] = [:]
+        var nextFdId: Int = 3  // reserve 0-2 for conventional stdio slots
+
+        init(permissionChecker: @escaping (String) -> Bool, agentId: UUID?) {
+            self.permissionChecker = permissionChecker
+            self.agentId = agentId
+        }
     }
 
     /// Permission checkers keyed by execution ID (legacy accessor).
@@ -65,9 +131,34 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         executionContexts[execId] = ExecutionContext(permissionChecker: checker, agentId: agentId)
     }
 
-    /// Unregister the execution context after completion.
+    /// Unregister the execution context after completion. Force-closes any fds the JS
+    /// execution left open (logging a warning for visibility).
     func unregisterPermissions(execId: String) {
-        executionContexts.removeValue(forKey: execId)
+        guard let ctx = executionContexts.removeValue(forKey: execId) else { return }
+        if !ctx.fdTable.isEmpty {
+            os_log(.info, log: bridgeLog, "[Bridge] Leaked fds on execId=%{public}@: %d",
+                   execId, ctx.fdTable.count)
+            for (_, entry) in ctx.fdTable {
+                try? entry.handle.close()
+            }
+        }
+    }
+
+    /// Internal entry point for tests: invoke a bridge action without going through
+    /// a live WKWebView. Enforces the same permission check as the real handler.
+    func dispatchForTesting(action: String, args: [String: Any], execId: String) async -> String {
+        guard let ctx = executionContexts[execId] else {
+            return "[Error] No execution context for execId \(execId)."
+        }
+        guard ctx.permissionChecker(action) else {
+            return "[Error] Action '\(action)' is not permitted for this agent."
+        }
+        return await dispatch(action: action, args: args, context: ctx)
+    }
+
+    /// Internal read-only accessor used by tests to observe fd-table state.
+    func fdCount(execId: String) -> Int {
+        executionContexts[execId]?.fdTable.count ?? 0
     }
 
     // MARK: - WKScriptMessageHandlerWithReply
@@ -106,7 +197,7 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
     private func dispatch(action: String, args: [String: Any], context: ExecutionContext? = nil) async -> String {
         switch action {
 
-        // --- Files ---
+        // --- Files (whole-file, Node-style) ---
         case "files.list":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             let path = (args["path"] as? String) ?? ""
@@ -116,56 +207,82 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
                 "{\"name\":\"\($0.name)\",\"size\":\($0.size),\"is_image\":\($0.isImage),\"is_dir\":\($0.isDirectory)}"
             }
             return "[\(items.joined(separator: ","))]"
-        case "files.read":
-            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
-            let mode = args["mode"] as? String ?? "text"
-            let requestedSize = intArg(args["size"])
-            let offset = max(0, intArg(args["offset"]) ?? 0)
-            let size = requestedSize ?? FileTools.defaultReadSize
-            do {
-                let data = try AgentFileManager.shared.readFile(agentId: agentId, name: path)
-                let total = data.count
-                let start = min(offset, total)
-                let end = min(start + max(size, 0), total)
-                let slice = data.subdata(in: start..<end)
-                let truncated = end < total
-                let suffix = truncated ? "\n[truncated: read \(end - start) of \(total) bytes, next offset=\(end)]" : ""
-                switch mode {
-                case "base64": return slice.base64EncodedString() + suffix
-                case "hex": return HexDump.format(slice, startOffset: start) + suffix
-                default:
-                    if let text = String(data: slice, encoding: .utf8) { return text + suffix }
-                    return "[Error] Binary file; use mode='hex' or mode='base64'."
-                }
-            } catch { return "[Error] \(error.localizedDescription)" }
-        case "files.write":
-            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
-            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
-            let content = args["content"] as? String ?? ""
-            let encoding = args["encoding"] as? String ?? "text"
-            let data: Data
-            if encoding == "base64" {
-                guard let d = Data(base64Encoded: content, options: .ignoreUnknownCharacters) else { return "[Error] Invalid base64." }
-                data = d
-            } else { data = Data(content.utf8) }
-            do { try AgentFileManager.shared.writeFile(agentId: agentId, name: path, data: data); return "OK" }
-            catch { return "[Error] \(error.localizedDescription)" }
+        case "files.readFile":
+            return readFileDispatch(args: args, context: context)
+        case "files.writeFile":
+            return writeFileDispatch(args: args, context: context, append: false)
+        case "files.appendFile":
+            return writeFileDispatch(args: args, context: context, append: true)
         case "files.delete":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             do { try AgentFileManager.shared.deleteFile(agentId: agentId, name: path); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
-        case "files.info":
+        case "files.info", "files.stat":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             guard let info = AgentFileManager.shared.fileInfo(agentId: agentId, name: path) else { return "[Error] File not found." }
-            return "{\"name\":\"\(info.name)\",\"size\":\(info.size),\"is_image\":\(info.isImage),\"is_dir\":\(info.isDirectory)}"
+            let mtime = Int64(info.modifiedAt.timeIntervalSince1970 * 1000)
+            let ctime = Int64(info.createdAt.timeIntervalSince1970 * 1000)
+            let isFile = !info.isDirectory
+            let jsonPath = jsonEscape(path)
+            let jsonName = jsonEscape(info.name)
+            return "{\"name\":\"\(jsonName)\",\"path\":\"\(jsonPath)\",\"size\":\(info.size),\"is_file\":\(isFile),\"is_dir\":\(info.isDirectory),\"is_image\":\(info.isImage),\"mtime_ms\":\(mtime),\"ctime_ms\":\(ctime)}"
+        case "files.exists":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+            return AgentFileManager.shared.fileExists(agentId: agentId, name: path) ? "true" : "false"
         case "files.mkdir":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             do { try AgentFileManager.shared.makeDirectory(agentId: agentId, path: path); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
+        case "files.cp":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let src = args["src"] as? String, !src.isEmpty else { return "[Error] Missing 'src' argument." }
+            guard let dest = args["dest"] as? String, !dest.isEmpty else { return "[Error] Missing 'dest' argument." }
+            let recursive = (args["recursive"] as? Bool) ?? true
+            do { try AgentFileManager.shared.copyFile(agentId: agentId, src: src, dest: dest, recursive: recursive); return "OK" }
+            catch { return "[Error] \(error.localizedDescription)" }
+        case "files.mv":
+            guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+            guard let src = args["src"] as? String, !src.isEmpty else { return "[Error] Missing 'src' argument." }
+            guard let dest = args["dest"] as? String, !dest.isEmpty else { return "[Error] Missing 'dest' argument." }
+            do { try AgentFileManager.shared.moveFile(agentId: agentId, src: src, dest: dest); return "OK" }
+            catch { return "[Error] \(error.localizedDescription)" }
+        case "files.truncate":
+            guard let agentId = context?.agentId, let ctx = context else { return "[Error] No agent context for file operations." }
+            let length = UInt64(max(intArg(args["length"]) ?? 0, 0))
+            if let fd = intArg(args["fd"]) {
+                guard let entry = ctx.fdTable[fd] else { return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)" }
+                guard entry.mode.canWrite else { return "[Error] fd \(fd) is read-only." }
+                do {
+                    try entry.handle.truncate(atOffset: length)
+                    if entry.position > length { entry.position = length }
+                    return "OK"
+                } catch { return "[Error] \(error.localizedDescription)" }
+            }
+            guard let path = filePathArg(args) else { return "[Error] Missing 'path' or 'fd' argument." }
+            do { try AgentFileManager.shared.truncateFile(agentId: agentId, path: path, length: length); return "OK" }
+            catch { return "[Error] \(error.localizedDescription)" }
+
+        // --- Files (POSIX fd-based) ---
+        case "files.open":
+            return openFdDispatch(args: args, context: context)
+        case "files.close":
+            return closeFdDispatch(args: args, context: context)
+        case "files.read":
+            return readFdDispatch(args: args, context: context)
+        case "files.write":
+            return writeFdDispatch(args: args, context: context)
+        case "files.seek":
+            return seekFdDispatch(args: args, context: context)
+        case "files.tell":
+            return tellFdDispatch(args: args, context: context)
+        case "files.fstat":
+            return fstatFdDispatch(args: args, context: context)
+        case "files.fsync":
+            return fsyncFdDispatch(args: args, context: context)
 
         // --- Calendar ---
         case "calendar.listCalendars":
@@ -277,6 +394,261 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         }
     }
 
+    // MARK: - File Dispatch Helpers
+
+    /// Whole-file read. Supports optional byte-slice via `offset`/`size`; when neither is
+    /// supplied, returns the entire file (no truncation note). Modes: `text` / `base64` / `hex`.
+    private func readFileDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+        guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+        let mode = args["mode"] as? String ?? "text"
+        let requestedSize = intArg(args["size"])
+        let offset = max(0, intArg(args["offset"]) ?? 0)
+        do {
+            let data = try AgentFileManager.shared.readFile(agentId: agentId, name: path)
+            let total = data.count
+            let start = min(offset, total)
+            let size = requestedSize ?? (total - start)
+            let end = min(start + max(size, 0), total)
+            let slice = data.subdata(in: start..<end)
+            let truncated = requestedSize != nil && end < total
+            let suffix = truncated ? "\n[truncated: read \(end - start) of \(total) bytes, next offset=\(end)]" : ""
+            switch mode {
+            case "base64": return slice.base64EncodedString() + suffix
+            case "hex": return HexDump.format(slice, startOffset: start) + suffix
+            default:
+                if let text = String(data: slice, encoding: .utf8) { return text + suffix }
+                return "[Error] Binary file; use mode='hex' or mode='base64'."
+            }
+        } catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    /// Whole-file write (or append). `encoding`: `text` (default) or `base64`.
+    private func writeFileDispatch(args: [String: Any], context: ExecutionContext?, append: Bool) -> String {
+        guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
+        guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+        let content = args["content"] as? String ?? ""
+        let encoding = args["encoding"] as? String ?? "text"
+        let data: Data
+        if encoding == "base64" {
+            guard let d = Data(base64Encoded: content, options: .ignoreUnknownCharacters) else { return "[Error] Invalid base64." }
+            data = d
+        } else { data = Data(content.utf8) }
+        do {
+            if append { try AgentFileManager.shared.appendFile(agentId: agentId, name: path, data: data) }
+            else { try AgentFileManager.shared.writeFile(agentId: agentId, name: path, data: data) }
+            return "OK"
+        } catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    /// Open a file and allocate an fd within the current execution context.
+    private func openFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context, let agentId = ctx.agentId else {
+            return "[Error] No agent context for file operations."
+        }
+        guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+        let flagStr = (args["flags"] as? String) ?? "r"
+        let mode: OpenMode
+        do { mode = try OpenMode.parse(flagStr) }
+        catch { return "[Error] \(error.localizedDescription)" }
+
+        if ctx.fdTable.count >= Self.maxFdsPerContext {
+            return "[Error] \(FileToolError.tooManyFds.localizedDescription)"
+        }
+
+        let url: URL
+        do { url = try AgentFileManager.shared.resolvedURL(agentId: agentId, path: path) }
+        catch { return "[Error] \(error.localizedDescription)" }
+
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        let exists = fm.fileExists(atPath: url.path, isDirectory: &isDir)
+        if exists && isDir.boolValue { return "[Error] \(FileToolError.isDirectory(path).localizedDescription)" }
+
+        do {
+            switch mode {
+            case .read:
+                guard exists else { return "[Error] \(FileToolError.fileNotFound(path).localizedDescription)" }
+            case .readWrite:
+                guard exists else { return "[Error] \(FileToolError.fileNotFound(path).localizedDescription)" }
+            case .writeTrunc, .writePlus:
+                // Ensure parent directory exists; truncate by replacing contents.
+                let parent = url.deletingLastPathComponent()
+                if !fm.fileExists(atPath: parent.path) {
+                    try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+                }
+                try Data().write(to: url, options: .atomic)
+            case .append, .appendPlus:
+                let parent = url.deletingLastPathComponent()
+                if !fm.fileExists(atPath: parent.path) {
+                    try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+                }
+                if !exists { try Data().write(to: url, options: .atomic) }
+            }
+
+            let handle: FileHandle
+            switch mode {
+            case .read: handle = try FileHandle(forReadingFrom: url)
+            case .readWrite, .writePlus, .appendPlus: handle = try FileHandle(forUpdating: url)
+            case .writeTrunc, .append: handle = try FileHandle(forWritingTo: url)
+            }
+            var position: UInt64 = 0
+            if mode == .append || mode == .appendPlus {
+                position = try handle.seekToEnd()
+            }
+            let fd = ctx.nextFdId
+            ctx.nextFdId += 1
+            ctx.fdTable[fd] = FDEntry(url: url, handle: handle, mode: mode, position: position)
+            return "\(fd)"
+        } catch {
+            return "[Error] \(error.localizedDescription)"
+        }
+    }
+
+    private func closeFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context else { return "[Error] No agent context for file operations." }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable.removeValue(forKey: fd) else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        do { try entry.handle.close(); return "OK" }
+        catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    /// POSIX read from fd. Reads up to `length` bytes at optional `position` (defaults to
+    /// current). Mode/encoding: `text` (default, UTF-8), `base64`, or `hex`.
+    private func readFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context else { return "[Error] No agent context for file operations." }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable[fd] else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        guard entry.mode.canRead else { return "[Error] fd \(fd) is not readable." }
+        let length = max(intArg(args["length"]) ?? 0, 0)
+        if length == 0 { return "" }
+        let mode = (args["encoding"] as? String) ?? (args["mode"] as? String) ?? "text"
+        do {
+            if let pos = intArg(args["position"]) {
+                try entry.handle.seek(toOffset: UInt64(max(pos, 0)))
+                entry.position = UInt64(max(pos, 0))
+            } else {
+                try entry.handle.seek(toOffset: entry.position)
+            }
+            let data = try entry.handle.read(upToCount: length) ?? Data()
+            entry.position = try entry.handle.offset()
+            switch mode {
+            case "base64": return data.base64EncodedString()
+            case "hex": return HexDump.format(data, startOffset: Int(entry.position) - data.count)
+            default:
+                if let text = String(data: data, encoding: .utf8) { return text }
+                return "[Error] Binary data; use encoding='hex' or 'base64'."
+            }
+        } catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    /// POSIX write to fd. `content` is UTF-8 text by default; set `encoding='base64'` for
+    /// binary data. Optional `position` seeks before writing. Returns `OK <bytes>`.
+    private func writeFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context else { return "[Error] No agent context for file operations." }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable[fd] else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        guard entry.mode.canWrite else { return "[Error] fd \(fd) is not writable." }
+        let content = args["content"] as? String ?? ""
+        let encoding = (args["encoding"] as? String) ?? "text"
+        let data: Data
+        if encoding == "base64" {
+            guard let d = Data(base64Encoded: content, options: .ignoreUnknownCharacters) else { return "[Error] Invalid base64." }
+            data = d
+        } else {
+            data = Data(content.utf8)
+        }
+        do {
+            if entry.mode == .append || entry.mode == .appendPlus {
+                // Append mode always writes at end regardless of requested position.
+                entry.position = try entry.handle.seekToEnd()
+            } else if let pos = intArg(args["position"]) {
+                try entry.handle.seek(toOffset: UInt64(max(pos, 0)))
+                entry.position = UInt64(max(pos, 0))
+            } else {
+                try entry.handle.seek(toOffset: entry.position)
+            }
+            try entry.handle.write(contentsOf: data)
+            entry.position = try entry.handle.offset()
+            return "OK \(data.count)"
+        } catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    /// POSIX lseek analog. `whence`: `start` (0) / `current` (1) / `end` (2).
+    private func seekFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context else { return "[Error] No agent context for file operations." }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable[fd] else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        let offset = Int64(intArg(args["offset"]) ?? 0)
+        let whence = args["whence"] as? String ?? "start"
+        do {
+            let base: Int64
+            switch whence {
+            case "start", "0": base = 0
+            case "current", "1": base = Int64(try entry.handle.offset())
+            case "end", "2": base = Int64(try entry.handle.seekToEnd())
+            default: return "[Error] Invalid 'whence': use 'start', 'current', or 'end'."
+            }
+            let newPos = max(base + offset, 0)
+            try entry.handle.seek(toOffset: UInt64(newPos))
+            entry.position = UInt64(newPos)
+            return "\(newPos)"
+        } catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    private func tellFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context else { return "[Error] No agent context for file operations." }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable[fd] else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        do {
+            entry.position = try entry.handle.offset()
+            return "\(entry.position)"
+        } catch { return "[Error] \(error.localizedDescription)" }
+    }
+
+    private func fstatFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context, let agentId = ctx.agentId else {
+            return "[Error] No agent context for file operations."
+        }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable[fd] else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        // Re-derive relative path by trimming the agent root.
+        let rootPath = AgentFileManager.shared.agentDirectory(for: agentId).standardizedFileURL.path
+        var rel = entry.url.standardizedFileURL.path
+        if rel.hasPrefix(rootPath + "/") { rel.removeFirst(rootPath.count + 1) }
+        guard let info = AgentFileManager.shared.fileInfo(agentId: agentId, name: rel) else {
+            return "[Error] File not found for fd \(fd)."
+        }
+        let mtime = Int64(info.modifiedAt.timeIntervalSince1970 * 1000)
+        let ctime = Int64(info.createdAt.timeIntervalSince1970 * 1000)
+        let isFile = !info.isDirectory
+        let jsonPath = jsonEscape(rel)
+        let jsonName = jsonEscape(info.name)
+        return "{\"name\":\"\(jsonName)\",\"path\":\"\(jsonPath)\",\"size\":\(info.size),\"is_file\":\(isFile),\"is_dir\":\(info.isDirectory),\"is_image\":\(info.isImage),\"mtime_ms\":\(mtime),\"ctime_ms\":\(ctime),\"position\":\(entry.position)}"
+    }
+
+    private func fsyncFdDispatch(args: [String: Any], context: ExecutionContext?) -> String {
+        guard let ctx = context else { return "[Error] No agent context for file operations." }
+        guard let fd = intArg(args["fd"]) else { return "[Error] Missing 'fd' argument." }
+        guard let entry = ctx.fdTable[fd] else {
+            return "[Error] \(FileToolError.invalidFd(fd).localizedDescription)"
+        }
+        do { try entry.handle.synchronize(); return "OK" }
+        catch { return "[Error] \(error.localizedDescription)" }
+    }
+
     // MARK: - Argument Helpers
 
     /// Accept `path` as the canonical key, fall back to legacy `name`.
@@ -292,6 +664,12 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         if let d = value as? Double { return Int(d) }
         if let s = value as? String, let i = Int(s) { return i }
         return nil
+    }
+
+    /// Minimal JSON string escaping for `\"` and `\\` inside double-quoted values.
+    private func jsonEscape(_ s: String) -> String {
+        s.replacingOccurrences(of: "\\", with: "\\\\")
+         .replacingOccurrences(of: "\"", with: "\\\"")
     }
 
     // MARK: - JavaScript Preamble
@@ -319,12 +697,74 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         }
 
         var fs = {
+            // Directory listing (JSON array).
             list: function(path) { return __bridgeCall('files.list', {path: path || ''}); },
-            read: function(path, opts) { var a = opts || {}; a.path = path; return __bridgeCall('files.read', a); },
-            write: function(path, content, opts) { var a = opts || {}; a.path = path; a.content = content; return __bridgeCall('files.write', a); },
+            readdir: function(path) { return __bridgeCall('files.list', {path: path || ''}); },
+
+            // Whole-file read/write (Node's fs.promises.readFile / writeFile shape).
+            readFile: function(path, opts) { var a = opts || {}; a.path = path; return __bridgeCall('files.readFile', a); },
+            writeFile: function(path, content, opts) { var a = opts || {}; a.path = path; a.content = content; return __bridgeCall('files.writeFile', a); },
+            appendFile: function(path, content, opts) { var a = opts || {}; a.path = path; a.content = content; return __bridgeCall('files.appendFile', a); },
+
+            // Unlink / delete.
             delete: function(path) { return __bridgeCall('files.delete', {path: path}); },
-            info: function(path) { return __bridgeCall('files.info', {path: path}); },
-            mkdir: function(path) { return __bridgeCall('files.mkdir', {path: path}); }
+            unlink: function(path) { return __bridgeCall('files.delete', {path: path}); },
+            rmdir: function(path) { return __bridgeCall('files.delete', {path: path}); },
+            rm: function(path) { return __bridgeCall('files.delete', {path: path}); },
+
+            // Metadata.
+            stat: function(path) { return __bridgeCall('files.stat', {path: path}); },
+            info: function(path) { return __bridgeCall('files.stat', {path: path}); },
+            exists: function(path) { return __bridgeCall('files.exists', {path: path}).then(function(r){return r==='true';}); },
+
+            // Directory + file-management.
+            mkdir: function(path, opts) { return __bridgeCall('files.mkdir', {path: path}); },
+            cp: function(src, dest, opts) {
+                var o = opts || {};
+                return __bridgeCall('files.cp', {src: src, dest: dest, recursive: o.recursive !== false});
+            },
+            mv: function(src, dest) { return __bridgeCall('files.mv', {src: src, dest: dest}); },
+            rename: function(src, dest) { return __bridgeCall('files.mv', {src: src, dest: dest}); },
+
+            // Truncate: accepts either a path or an fd as first arg.
+            truncate: function(pathOrFd, length) {
+                if (typeof pathOrFd === 'number') {
+                    return __bridgeCall('files.truncate', {fd: pathOrFd, length: length || 0});
+                }
+                return __bridgeCall('files.truncate', {path: pathOrFd, length: length || 0});
+            },
+            ftruncate: function(fd, length) { return __bridgeCall('files.truncate', {fd: fd, length: length || 0}); },
+
+            // POSIX-style file descriptor operations.
+            open: function(path, flags) { return __bridgeCall('files.open', {path: path, flags: flags || 'r'}); },
+            close: function(fd) { return __bridgeCall('files.close', {fd: fd}); },
+            fsync: function(fd) { return __bridgeCall('files.fsync', {fd: fd}); },
+            fstat: function(fd) { return __bridgeCall('files.fstat', {fd: fd}); },
+            seek: function(fd, offset, whence) {
+                return __bridgeCall('files.seek', {fd: fd, offset: offset || 0, whence: whence || 'start'});
+            },
+            tell: function(fd) { return __bridgeCall('files.tell', {fd: fd}); },
+
+            // Overloaded read/write: fd-based when first arg is a number, path-based otherwise.
+            read: function(a, b, c) {
+                if (typeof a === 'number') {
+                    var args = {fd: a, length: b || 0};
+                    if (c !== undefined && c !== null) args.position = c;
+                    return __bridgeCall('files.read', args);
+                }
+                var opts = b || {}; opts.path = a;
+                return __bridgeCall('files.readFile', opts);
+            },
+            write: function(a, b, c, d) {
+                if (typeof a === 'number') {
+                    var args = {fd: a, content: b};
+                    if (c !== undefined && c !== null) args.position = c;
+                    if (d) args.encoding = d;
+                    return __bridgeCall('files.write', args);
+                }
+                var opts = c || {}; opts.path = a; opts.content = b;
+                return __bridgeCall('files.writeFile', opts);
+            }
         };
 
         var apple = (function() {

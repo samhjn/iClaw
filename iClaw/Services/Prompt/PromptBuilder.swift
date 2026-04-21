@@ -159,10 +159,10 @@ final class PromptBuilder {
             - `file_write`: Create or overwrite a file. Parent directories are created automatically. Use `encoding: "base64"` for binary data.
             - `file_delete`: Delete a file or directory (directories are removed recursively).
             - `file_info`: Get metadata (size, dates, `is_directory`, `is_image`).
-            - `file_mkdir`: Create a directory (including intermediate components). Idempotent.
             - `attach_media`: Attach a media file from your folder into the conversation so you can see and analyze it. Supports images (jpg, png, gif, webp, heic, bmp, tiff) and videos (mp4, mov, m4v, webm).
             - Files persist across sessions. Sub-agents share the parent agent's file folder.
             - Generated images are automatically saved here. Users can also upload files via the UI or iOS Files app.
+            - For directory management, copy/move, or fine-grained POSIX I/O (seek, truncate, fd-based read/write), use `execute_javascript` with the `fs` namespace, or install the built-in **File Ops** skill which exposes `skill_file_ops_*` wrappers.
 
             #### File References (`agentfile://` scheme)
             Your file folder ID: `\(rootAgentId.uuidString)`
@@ -272,12 +272,11 @@ final class PromptBuilder {
         if isEnabled(.files, for: agent) {
             section += """
 
-              - File system: `fs.*` — persistent agent file storage, all methods return Promises:
-                - `await fs.list()` — list files in the agent folder
-                - `await fs.read(name, {mode: 'base64'})` — read a file (text or base64)
-                - `await fs.write(name, content, {encoding: 'base64'})` — write/create a file
-                - `await fs.delete(name)` — delete a file
-                - `await fs.info(name)` — get file metadata
+              - File system (Node-aligned `fs.*`, all Promise-returning; persistent agent storage):
+                - Whole-file: `fs.list`, `fs.readFile(path, {mode})`, `fs.writeFile(path, content, {encoding})`, `fs.appendFile`, `fs.delete`/`fs.unlink`, `fs.stat(path)`, `fs.exists(path)`, `fs.mkdir(path)`, `fs.cp(src, dest, {recursive})`, `fs.mv(src, dest)`/`fs.rename`, `fs.truncate(pathOrFd, len)`
+                - POSIX fd: `fs.open(path, flags)` → fd, `fs.close(fd)`, `fs.read(fd, length, position?)`, `fs.write(fd, content, position?, encoding?)`, `fs.seek(fd, offset, whence)`, `fs.tell(fd)`, `fs.fstat(fd)`, `fs.fsync(fd)`
+                - Open flags: 'r','r+','w','w+','a','a+'. Seek whence: 'start','current','end'. fd's auto-close when this execution ends.
+                - Legacy: `fs.read(path)` / `fs.write(path, content)` still accepted (arg-type dispatch delegates to readFile/writeFile).
             """
         }
 

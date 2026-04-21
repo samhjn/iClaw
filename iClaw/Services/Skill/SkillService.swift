@@ -455,5 +455,150 @@ enum BuiltInSkills {
             """,
             tags: ["writing", "creative", "content"]
         ),
+        Template(
+            name: "File Ops",
+            summary: "Advanced file operations: copy, move, directory management, rich stat",
+            content: """
+            # File Ops Skill
+
+            Install this skill when you need directory management, batch copies,
+            moves/renames, or rich metadata beyond what the default `file_*` tools provide.
+
+            ## When to use which tool
+            - **Create directory**: `skill_file_ops_mkdir(path)` — creates intermediate parents.
+            - **Copy**: `skill_file_ops_cp(src, dest, recursive?)` — `recursive` defaults to true.
+            - **Move / rename**: `skill_file_ops_mv(src, dest)`.
+            - **Rich metadata**: `skill_file_ops_stat(path)` — returns JSON `{name,path,size,is_file,is_dir,is_image,mtime_ms,ctime_ms}`.
+            - **Directory tree**: `skill_file_ops_tree(path?, max_depth?)` — recursive listing.
+            - **Check existence**: `skill_file_ops_exists(path)` — returns `"true"` or `"false"`.
+            - **Touch**: `skill_file_ops_touch(path)` — create an empty file if missing.
+
+            ## POSIX file descriptor operations
+            For fine-grained I/O (seek, partial reads/writes, truncate), use `execute_javascript`
+            with the `fs` namespace directly:
+
+                let fd = await fs.open("log.txt", "a+");
+                await fs.write(fd, "new line\\n");
+                await fs.seek(fd, 0, "start");
+                let head = await fs.read(fd, 100);
+                await fs.close(fd);
+
+            Open flags: `"r"`, `"r+"`, `"w"`, `"w+"`, `"a"`, `"a+"` (Node-compatible).
+            Whence for seek: `"start"` | `"current"` | `"end"` (or `0` | `1` | `2`).
+
+            File descriptors are scoped to a single `execute_javascript` call and
+            auto-closed when that call ends — but closing explicitly is good hygiene.
+            """,
+            tags: ["files", "filesystem", "utilities"],
+            customTools: [
+                SkillToolDefinition(
+                    name: "cp",
+                    description: "Copy a file or directory. Recursive by default for directories.",
+                    parameters: [
+                        SkillToolParam(name: "src", type: "string", description: "Source path"),
+                        SkillToolParam(name: "dest", type: "string", description: "Destination path"),
+                        SkillToolParam(name: "recursive", type: "boolean",
+                                       description: "Copy directories recursively (default: true)",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const recursive = args.recursive !== false;
+                    const res = await fs.cp(args.src, args.dest, {recursive: recursive});
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "mv",
+                    description: "Move or rename a file or directory.",
+                    parameters: [
+                        SkillToolParam(name: "src", type: "string", description: "Source path"),
+                        SkillToolParam(name: "dest", type: "string", description: "Destination path")
+                    ],
+                    implementation: """
+                    const res = await fs.mv(args.src, args.dest);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "stat",
+                    description: "Return JSON metadata for a file or directory (size, mtime_ms, ctime_ms, is_file, is_dir).",
+                    parameters: [
+                        SkillToolParam(name: "path", type: "string", description: "Path to inspect")
+                    ],
+                    implementation: """
+                    const res = await fs.stat(args.path);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "mkdir",
+                    description: "Create a directory (including intermediate components). Idempotent.",
+                    parameters: [
+                        SkillToolParam(name: "path", type: "string", description: "Directory path to create")
+                    ],
+                    implementation: """
+                    const res = await fs.mkdir(args.path);
+                    console.log(res);
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "tree",
+                    description: "Recursive directory listing with depth control. Returns a formatted text tree.",
+                    parameters: [
+                        SkillToolParam(name: "path", type: "string",
+                                       description: "Root path (default: agent root)",
+                                       required: false),
+                        SkillToolParam(name: "max_depth", type: "number",
+                                       description: "Maximum recursion depth (default: 4)",
+                                       required: false)
+                    ],
+                    implementation: """
+                    const maxDepth = args.max_depth || 4;
+                    async function walk(path, depth, lines) {
+                        if (depth > maxDepth) return;
+                        const raw = await fs.list(path);
+                        const entries = JSON.parse(raw);
+                        for (const entry of entries) {
+                            const rel = path ? path + '/' + entry.name : entry.name;
+                            const indent = '  '.repeat(depth);
+                            const tag = entry.is_dir ? '/' : '';
+                            lines.push(indent + entry.name + tag);
+                            if (entry.is_dir) await walk(rel, depth + 1, lines);
+                        }
+                    }
+                    const root = args.path || '';
+                    const lines = [root ? root + '/' : '.'];
+                    await walk(root, 1, lines);
+                    console.log(lines.join('\\n'));
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "touch",
+                    description: "Create an empty file if it doesn't exist (does nothing if the file already exists).",
+                    parameters: [
+                        SkillToolParam(name: "path", type: "string", description: "File path to touch")
+                    ],
+                    implementation: """
+                    const present = await fs.exists(args.path);
+                    if (present) { console.log('OK (already exists)'); }
+                    else {
+                        const res = await fs.writeFile(args.path, '');
+                        console.log(res);
+                    }
+                    """
+                ),
+                SkillToolDefinition(
+                    name: "exists",
+                    description: "Check whether a file or directory exists. Returns 'true' or 'false'.",
+                    parameters: [
+                        SkillToolParam(name: "path", type: "string", description: "Path to check")
+                    ],
+                    implementation: """
+                    const present = await fs.exists(args.path);
+                    console.log(present ? 'true' : 'false');
+                    """
+                )
+            ]
+        ),
     ]
 }
