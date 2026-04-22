@@ -254,7 +254,22 @@
 "shortcuts.headerTitle" = "使用捷徑輔助觸發排程任務";
 "shortcuts.headerSubtitle" = "確保 Cron Job 在背景也能可靠執行";
 "shortcuts.whyNeeded" = "為什麼需要捷徑？";
-"shortcuts.whyDescription" = "iOS 對背景任務有嚴格限制。系統可能延遲或跳過 BGAppRefreshTask，導致排程任務無法準時觸發。透過 Apple 捷徑的「自動化」功能，可以在指定時間自動開啟 iClaw 的 URL Scheme，確保任務準時執行。";
+"shortcuts.whyDescription" = "iOS 對背景任務有嚴格限制。系統可能延遲或跳過 BGAppRefreshTask，導致排程任務無法準時觸發。透過 Apple 捷徑的「自動化」搭配 iClaw 的 App Intent（或以 URL Scheme 作為備援方案），可以讓排程任務在指定時間可靠地執行。";
+
+"shortcuts.appIntentSection" = "推薦方式：App Intent（無需解鎖）";
+"shortcuts.appIntentDescription" = "使用 iClaw 原生 App Intent，讓捷徑自動化在背景直接執行排程任務，不會將 app 拉到前台。裝置鎖屏時也能執行，不會觸發 Face ID 或密碼驗證。";
+"shortcuts.appIntentStep1Title" = "建立個人自動化";
+"shortcuts.appIntentStep1Detail" = "在「捷徑」App 中前往 自動化 → 建立個人自動化 → 特定時間，設定觸發時間。";
+"shortcuts.appIntentStep2Title" = "加入 iClaw 動作";
+"shortcuts.appIntentStep2Detail" = "點一下「加入動作」，搜尋「iClaw」，選擇「Run Due Cron Jobs」（或「Trigger Cron Job」依名稱指定某個任務）。";
+"shortcuts.appIntentStep3Title" = "開啟「立即執行」";
+"shortcuts.appIntentStep3Detail" = "開啟「立即執行」並關閉「執行時通知」，自動化即可靜默執行，不會在鎖定螢幕上彈出確認。";
+"shortcuts.appIntentStep4Title" = "完成";
+"shortcuts.appIntentStep4Detail" = "儲存自動化。排程任務即會在指定時間準時執行，即使裝置處於鎖屏狀態也一樣。";
+
+"shortcuts.legacyFallbackSection" = "備援方案：URL Scheme";
+"shortcuts.legacyFallbackDescription" = "以下 URL Scheme 仍可使用，但「開啟 URL」動作會將 iClaw 切到前台，因此需要解鎖裝置。若要無人值守地觸發定時任務，請優先使用上方的 App Intent 方式。";
+
 "shortcuts.setupSteps" = "設定步驟";
 "shortcuts.step1Title" = "開啟捷徑 App";
 "shortcuts.step1Detail" = "前往「捷徑」App，選擇底部「自動化」標籤頁。";

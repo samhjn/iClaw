@@ -254,7 +254,22 @@
 "shortcuts.headerTitle" = "使用快捷指令辅助触发定时任务";
 "shortcuts.headerSubtitle" = "确保 Cron Job 在后台也能可靠执行";
 "shortcuts.whyNeeded" = "为什么需要快捷指令？";
-"shortcuts.whyDescription" = "iOS 对后台任务有严格限制。系统可能延迟或跳过 BGAppRefreshTask，导致定时任务无法准时触发。通过 Apple 快捷指令的「自动化」功能，可以在指定时间自动打开 iClaw 的 URL Scheme，确保任务准时执行。";
+"shortcuts.whyDescription" = "iOS 对后台任务有严格限制。系统可能延迟或跳过 BGAppRefreshTask，导致定时任务无法准时触发。通过 Apple 快捷指令的「自动化」搭配 iClaw 的 App Intent（或 URL Scheme 作为备用方案），可以让定时任务在指定时间可靠地执行。";
+
+"shortcuts.appIntentSection" = "推荐方式：App Intent（无需解锁）";
+"shortcuts.appIntentDescription" = "使用 iClaw 原生 App Intent，让快捷指令自动化在后台直接执行定时任务，不会把 app 拉到前台。设备锁屏时也能执行，不会触发 Face ID 或密码验证。";
+"shortcuts.appIntentStep1Title" = "创建个人自动化";
+"shortcuts.appIntentStep1Detail" = "在「快捷指令」App 中前往 自动化 → 创建个人自动化 → 特定时间，设置触发时间。";
+"shortcuts.appIntentStep2Title" = "添加 iClaw 操作";
+"shortcuts.appIntentStep2Detail" = "点击「添加操作」，搜索「iClaw」，选择「Run Due Cron Jobs」（或「Trigger Cron Job」按名称指定某个任务）。";
+"shortcuts.appIntentStep3Title" = "开启「立即执行」";
+"shortcuts.appIntentStep3Detail" = "打开「立即执行」并关闭「运行时提示」，自动化即可静默执行，不会在锁屏上弹出确认。";
+"shortcuts.appIntentStep4Title" = "完成";
+"shortcuts.appIntentStep4Detail" = "保存自动化。从此定时任务会在指定时间准时执行，即使手机处于锁屏状态也一样。";
+
+"shortcuts.legacyFallbackSection" = "备用方案：URL Scheme";
+"shortcuts.legacyFallbackDescription" = "以下 URL Scheme 仍然可用，但使用「打开 URL」动作时会把 iClaw 切到前台，因而需要解锁手机。无人值守的定时触发请优先使用上面的 App Intent 方式。";
+
 "shortcuts.setupSteps" = "设置步骤";
 "shortcuts.step1Title" = "打开快捷指令 App";
 "shortcuts.step1Detail" = "前往「快捷指令」App，选择底部「自动化」标签页。";

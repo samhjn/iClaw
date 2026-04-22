@@ -253,7 +253,22 @@
 "shortcuts.headerTitle" = "단축어로 예약 작업 트리거";
 "shortcuts.headerSubtitle" = "백그라운드에서 Cron 작업의 안정적 실행 보장";
 "shortcuts.whyNeeded" = "왜 단축어가 필요한가요?";
-"shortcuts.whyDescription" = "iOS는 백그라운드 작업에 엄격한 제한이 있습니다. 시스템이 BGAppRefreshTask를 지연하거나 건너뛸 수 있어 예약 작업이 정시에 트리거되지 않을 수 있습니다. Apple 단축어의 \"자동화\" 기능을 사용하면 지정된 시간에 자동으로 iClaw의 URL Scheme을 열어 작업이 예정대로 실행되도록 보장할 수 있습니다.";
+"shortcuts.whyDescription" = "iOS는 백그라운드 작업에 엄격한 제한이 있습니다. 시스템이 BGAppRefreshTask를 지연하거나 건너뛸 수 있어 예약 작업이 정시에 트리거되지 않을 수 있습니다. Apple 단축어의 \"자동화\"와 iClaw의 App Intent(또는 대체 수단으로 URL Scheme)를 결합하면 예약 작업이 지정된 시간에 안정적으로 실행됩니다.";
+
+"shortcuts.appIntentSection" = "권장: App Intent(잠금 해제 불필요)";
+"shortcuts.appIntentDescription" = "iClaw의 기본 App Intent를 사용하면 단축어 자동화가 앱을 전면으로 가져오지 않고도 백그라운드에서 예약 작업을 실행합니다. 기기가 잠겨 있어도 작동하며 Face ID나 암호 입력이 요구되지 않습니다.";
+"shortcuts.appIntentStep1Title" = "개인 자동화 만들기";
+"shortcuts.appIntentStep1Detail" = "단축어 앱에서 자동화 → 개인 자동화 만들기 → 시각을 선택하고 트리거 시간을 설정합니다.";
+"shortcuts.appIntentStep2Title" = "iClaw 동작 추가";
+"shortcuts.appIntentStep2Detail" = "\"동작 추가\"를 누르고 \"iClaw\"를 검색하여 \"Run Due Cron Jobs\"를 선택합니다(특정 작업을 이름으로 지정하려면 \"Trigger Cron Job\").";
+"shortcuts.appIntentStep3Title" = "\"즉시 실행\" 활성화";
+"shortcuts.appIntentStep3Detail" = "\"즉시 실행\"을 켜고 \"실행 시 알림\"을 끕니다. 그러면 자동화가 잠금 화면에서 확인 없이 조용히 실행됩니다.";
+"shortcuts.appIntentStep4Title" = "완료";
+"shortcuts.appIntentStep4Detail" = "자동화를 저장합니다. 이제 기기가 잠겨 있어도 예약 작업이 지정된 시간에 실행됩니다.";
+
+"shortcuts.legacyFallbackSection" = "대체 수단: URL Scheme";
+"shortcuts.legacyFallbackDescription" = "아래의 URL Scheme은 여전히 사용할 수 있지만, \"URL 열기\" 동작은 iClaw를 전면으로 가져오므로 기기 잠금을 해제해야 합니다. 무인 실행을 원한다면 위의 App Intent 방식을 우선 사용하세요.";
+
 "shortcuts.setupSteps" = "설정 단계";
 "shortcuts.step1Title" = "단축어 앱 열기";
 "shortcuts.step1Detail" = "\"단축어\" 앱으로 이동하여 하단의 \"자동화\" 탭을 선택합니다.";

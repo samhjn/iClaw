@@ -254,7 +254,22 @@
 "shortcuts.headerTitle" = "Use Shortcuts to Trigger Scheduled Tasks";
 "shortcuts.headerSubtitle" = "Ensure cron jobs run reliably in the background";
 "shortcuts.whyNeeded" = "Why Shortcuts?";
-"shortcuts.whyDescription" = "iOS has strict limits on background tasks. The system may delay or skip BGAppRefreshTask, causing scheduled tasks to not trigger on time. With Apple Shortcuts automation, you can automatically open iClaw's URL scheme at the specified time, ensuring tasks execute on schedule.";
+"shortcuts.whyDescription" = "iOS has strict limits on background tasks. The system may delay or skip BGAppRefreshTask, causing scheduled tasks to not trigger on time. You can pair iClaw's App Intents (or URL scheme as a fallback) with a Shortcuts automation to make cron runs land reliably at the scheduled time.";
+
+"shortcuts.appIntentSection" = "Recommended: App Intent (no unlock needed)";
+"shortcuts.appIntentDescription" = "Uses iClaw's native App Intent so Shortcuts can run cron jobs in the background without opening the app. Works even when your phone is locked — no Face ID or passcode prompt.";
+"shortcuts.appIntentStep1Title" = "Create Personal Automation";
+"shortcuts.appIntentStep1Detail" = "In the Shortcuts app go to Automation → Create Personal Automation → Time of Day, and set the trigger time.";
+"shortcuts.appIntentStep2Title" = "Add iClaw Action";
+"shortcuts.appIntentStep2Detail" = "Tap Add Action, search \"iClaw\", then pick \"Run Due Cron Jobs\" (or \"Trigger Cron Job\" to target a specific job by name).";
+"shortcuts.appIntentStep3Title" = "Enable Run Immediately";
+"shortcuts.appIntentStep3Detail" = "Turn on \"Run Immediately\" and turn off \"Notify When Run\". This lets the automation fire silently without any lock-screen prompt.";
+"shortcuts.appIntentStep4Title" = "Done";
+"shortcuts.appIntentStep4Detail" = "Save the automation. The cron job will now run at the scheduled time even while the phone is locked.";
+
+"shortcuts.legacyFallbackSection" = "Legacy Fallback: URL Scheme";
+"shortcuts.legacyFallbackDescription" = "The URL scheme below still works, but uses \"Open URL\" which brings iClaw to the foreground and therefore requires unlocking the phone. Prefer the App Intent path above for unattended runs.";
+
 "shortcuts.setupSteps" = "Setup Steps";
 "shortcuts.step1Title" = "Open Shortcuts App";
 "shortcuts.step1Detail" = "Go to the Shortcuts app and select the \"Automation\" tab at the bottom.";
