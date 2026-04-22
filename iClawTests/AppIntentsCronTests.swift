@@ -177,6 +177,112 @@ final class AppIntentsCronTests: XCTestCase {
         XCTAssertEqual(enabled.map(\.name), ["Alpha", "Gamma"])
     }
 
+    // MARK: - Regression: concurrent re-trigger after App Intent run
+    //
+    // Bug: after an App Intent ran a cron job, opening the app would re-trigger
+    // the same job. Cause was that `CronExecutor.executeJob` only advanced
+    // `nextRunAt` inside `finalizeJob` (after `runAgentLoop`); during the
+    // multi-second LLM round-trip a second drain (foreground scheduler resume,
+    // BGTask, or a second intent invocation) saw `nextRunAt <= now` and picked
+    // the same job up again. The fix advances `nextRunAt` at the START of
+    // `executeJob`, so any concurrent path observes a future schedule.
+
+    @MainActor
+    func test_claimNextRun_makesJobInvisibleToFetchDueJobs_immediately() {
+        // The targeted regression for the bug. `claimNextRun` is what
+        // `executeJob` calls *before* `runAgentLoop` to prevent a concurrent
+        // foreground drain (or second intent invocation) from picking up the
+        // same job mid-flight. Without this claim, the multi-second LLM round
+        // trip is a wide-open window for re-trigger.
+        let job = makeJob(name: "ClaimRegression", cron: "* * * * *",
+                          nextRunAt: Date().addingTimeInterval(-60))
+
+        let beforeCtx = ModelContext(container)
+        XCTAssertEqual(CronScheduler.fetchDueJobs(context: beforeCtx, now: Date()).count, 1,
+                       "Sanity check: job is initially due")
+
+        let executor = CronExecutor(modelContainer: container)
+        executor.claimNextRun(for: job, context: context)
+
+        let afterCtx = ModelContext(container)
+        let stillDue = CronScheduler.fetchDueJobs(context: afterCtx, now: Date())
+        XCTAssertTrue(stillDue.isEmpty,
+                      "After claimNextRun, the job must be invisible to fetchDueJobs even though the agent loop hasn't run yet")
+
+        let fresh = ModelContext(container)
+        let after = (try? fresh.fetch(FetchDescriptor<CronJob>()))?.first { $0.id == job.id }
+        XCTAssertGreaterThan(after?.nextRunAt ?? .distantPast, Date())
+        XCTAssertEqual(after?.runCount, 0, "Claim must not increment runCount — that's finalize's job")
+    }
+
+    @MainActor
+    func test_runAllDue_advancesNextRunAtBeforeAgentWork_soSecondDrainSkips() async {
+        // A cron `* * * * *` due 60s ago. After the first runAllDue, an
+        // immediate fetchDueJobs (mimicking the foreground CronScheduler
+        // resuming while the intent is still mid-flight or right after) must
+        // return zero entries — runCount stays at 1.
+        let job = makeJob(name: "EveryMinute", cron: "* * * * *",
+                          nextRunAt: Date().addingTimeInterval(-60))
+
+        let firstRan = await CronJobRunner.runAllDue(container: container)
+        XCTAssertEqual(firstRan, 1)
+
+        // Simulate the app foregrounding immediately afterwards.
+        let ctxAfter = ModelContext(container)
+        let stillDue = CronScheduler.fetchDueJobs(context: ctxAfter, now: Date())
+        XCTAssertTrue(stillDue.isEmpty,
+                      "Job's nextRunAt must be advanced so a foreground drain doesn't re-trigger it")
+
+        let secondRan = await CronJobRunner.runAllDue(container: container)
+        XCTAssertEqual(secondRan, 0, "Second back-to-back invocation must not re-execute the same job")
+
+        let fresh = ModelContext(container)
+        let after = (try? fresh.fetch(FetchDescriptor<CronJob>()))?.first { $0.id == job.id }
+        XCTAssertEqual(after?.runCount, 1, "Job must have executed exactly once across both drains")
+    }
+
+    @MainActor
+    func test_executeJob_persistsAdvancedNextRunAtBeforeAgentLoop() async {
+        // Direct CronExecutor test — confirms the claim is written and
+        // committed to the store *before* the agent loop runs (here exercised
+        // via the no-provider branch, which still goes through the same
+        // up-front claim + initial save).
+        let job = makeJob(name: "Claim", cron: "*/5 * * * *",
+                          nextRunAt: Date().addingTimeInterval(-60))
+        let agent = job.agent!
+
+        let executor = CronExecutor(modelContainer: container)
+        await executor.executeJob(job, agent: agent, context: context)
+
+        let fresh = ModelContext(container)
+        let after = (try? fresh.fetch(FetchDescriptor<CronJob>()))?.first { $0.id == job.id }
+        XCTAssertNotNil(after?.nextRunAt)
+        XCTAssertGreaterThan(after?.nextRunAt ?? .distantPast, Date(),
+                             "nextRunAt must be advanced into the future after executeJob")
+        XCTAssertNotNil(after?.lastRunAt)
+        XCTAssertEqual(after?.runCount, 1)
+    }
+
+    @MainActor
+    func test_runAllDue_concurrentInvocations_runJobOnlyOnce() async {
+        // Two CronJobRunner.runAllDue calls fired in parallel must not both
+        // execute the same job — the data-layer claim (nextRunAt advance + save
+        // before agent work) serializes them. This is the cross-trigger race
+        // case (e.g. App Intent + BGTask waking near the same instant).
+        _ = makeJob(name: "Concurrent", cron: "* * * * *",
+                    nextRunAt: Date().addingTimeInterval(-60))
+
+        async let firstCount = CronJobRunner.runAllDue(container: container)
+        async let secondCount = CronJobRunner.runAllDue(container: container)
+
+        let (a, b) = await (firstCount, secondCount)
+        XCTAssertEqual(a + b, 1, "Exactly one of the two concurrent drains may execute the job; got \(a + b)")
+
+        let fresh = ModelContext(container)
+        let allJobs = (try? fresh.fetch(FetchDescriptor<CronJob>())) ?? []
+        XCTAssertEqual(allJobs.first?.runCount, 1)
+    }
+
     // MARK: - Regression: openAppWhenRun must stay false
 
     func test_intents_doNotOpenAppWhenRun() {

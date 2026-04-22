@@ -293,6 +293,14 @@
 "shortcuts.tip3" = "複数のCronジョブがある場合、「期限到来タスクをすべて実行」URLでまとめてトリガーできます。";
 "shortcuts.tip4" = "URL Schemeの初回使用時にシステムが確認ダイアログを表示する場合があります。確認後、以降の呼び出しは静かに実行されます。";
 
+// MARK: - App Intents (cron)
+"appIntent.entity.cronJob" = "定期タスク";
+"appIntent.runDue.title" = "期限の来た定期タスクを実行";
+"appIntent.runDue.description" = "有効かつスケジュールが期限に達したiClawの定期タスクをすべて実行します。Appを前面に出さないため、ロック中でも自動化が動作します。";
+"appIntent.trigger.title" = "定期タスクを実行";
+"appIntent.trigger.description" = "選択したiClawの定期タスクをすぐに実行します。Appを前面に出さないため、ロック中でも自動化が動作します。";
+"appIntent.parameter.cronJob" = "定期タスク";
+
 // MARK: - Sessions
 "sessions.title" = "セッション";
 "sessions.noSessions" = "セッションなし";

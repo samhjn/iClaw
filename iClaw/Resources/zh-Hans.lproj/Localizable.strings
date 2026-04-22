@@ -294,6 +294,14 @@
 "shortcuts.tip3" = "如果有多个定时任务，可以使用「执行所有到期任务」URL 统一触发。";
 "shortcuts.tip4" = "首次使用 URL Scheme 时，系统可能会弹出确认对话框，确认后后续调用将静默执行。";
 
+// MARK: - App Intents (cron)
+"appIntent.entity.cronJob" = "定时任务";
+"appIntent.runDue.title" = "运行到期定时任务";
+"appIntent.runDue.description" = "运行所有到期且已启用的 iClaw 定时任务。不会把 app 拉到前台，因此锁屏状态下也能触发。";
+"appIntent.trigger.title" = "触发定时任务";
+"appIntent.trigger.description" = "立即运行选中的 iClaw 定时任务。不会把 app 拉到前台，因此锁屏状态下也能触发。";
+"appIntent.parameter.cronJob" = "定时任务";
+
 // MARK: - Sessions
 "sessions.title" = "会话";
 "sessions.noSessions" = "暂无会话";

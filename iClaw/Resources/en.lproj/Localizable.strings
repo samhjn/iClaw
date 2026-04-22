@@ -294,6 +294,14 @@
 "shortcuts.tip3" = "If you have multiple cron jobs, use the \"Run All Due Jobs\" URL to trigger them all at once.";
 "shortcuts.tip4" = "The first time a URL scheme is used, the system may show a confirmation dialog. After confirming, subsequent calls will run silently.";
 
+// MARK: - App Intents (cron)
+"appIntent.entity.cronJob" = "Cron Job";
+"appIntent.runDue.title" = "Run Due Cron Jobs";
+"appIntent.runDue.description" = "Runs every enabled iClaw cron job whose schedule is currently due. Does not open the app, so automations can fire while the phone is locked.";
+"appIntent.trigger.title" = "Trigger Cron Job";
+"appIntent.trigger.description" = "Runs the selected iClaw cron job now. Does not open the app, so automations can fire while the phone is locked.";
+"appIntent.parameter.cronJob" = "Cron Job";
+
 // MARK: - Sessions
 "sessions.title" = "Sessions";
 "sessions.noSessions" = "No Sessions";

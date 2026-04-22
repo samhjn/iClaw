@@ -4,10 +4,16 @@ import AppIntents
 /// background. Replacement for the `iclaw://cron/trigger/{jobId}` URL
 /// scheme for locked-device automations.
 struct TriggerCronJobIntent: AppIntent {
-    static var title: LocalizedStringResource = "Trigger Cron Job"
+    static var title: LocalizedStringResource = LocalizedStringResource(
+        "appIntent.trigger.title",
+        defaultValue: "Trigger Cron Job"
+    )
 
     static var description = IntentDescription(
-        "Runs the selected iClaw cron job now. Does not open the app, so automations can fire while the phone is locked."
+        LocalizedStringResource(
+            "appIntent.trigger.description",
+            defaultValue: "Runs the selected iClaw cron job now. Does not open the app, so automations can fire while the phone is locked."
+        )
     )
 
     /// Must remain `false` so the intent executes in the background without
@@ -15,7 +21,10 @@ struct TriggerCronJobIntent: AppIntent {
     static var openAppWhenRun: Bool = false
     static var isDiscoverable: Bool = true
 
-    @Parameter(title: "Cron Job")
+    @Parameter(title: LocalizedStringResource(
+        "appIntent.parameter.cronJob",
+        defaultValue: "Cron Job"
+    ))
     var job: CronJobEntity
 
     @MainActor

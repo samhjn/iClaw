@@ -10,7 +10,10 @@ struct CronJobEntity: AppEntity, Identifiable {
     let cronExpression: String
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        TypeDisplayRepresentation(name: "Cron Job")
+        TypeDisplayRepresentation(name: LocalizedStringResource(
+            "appIntent.entity.cronJob",
+            defaultValue: "Cron Job"
+        ))
     }
 
     var displayRepresentation: DisplayRepresentation {

@@ -28,7 +28,9 @@ final class CronExecutor {
         let userMsg = Message(role: .user, content: triggerMessage)
         context.insert(userMsg)
         session.messages.append(userMsg)
-        try? context.save()
+
+        // Claim this run before any agent work happens — see `claimNextRun`.
+        claimNextRun(for: job, context: context)
 
         keepAliveManager?.onSessionStarted(sessionId: session.id, sessionName: sessionTitle)
 
@@ -163,12 +165,31 @@ final class CronExecutor {
         """
     }
 
+    /// Advances `job.nextRunAt` to the next scheduled fire after now and
+    /// commits, making the job invisible to `fetchDueJobs` for the rest of the
+    /// current period. Called at the start of `executeJob` to prevent any
+    /// concurrent trigger path (foreground `CronScheduler` resuming
+    /// mid-flight, `BGAppRefreshTask`, a second App Intent invocation) from
+    /// double-executing the same job while `runAgentLoop` is awaiting the
+    /// network. Standard cron semantics: a failed run is not auto-retried;
+    /// the next scheduled fire takes over.
+    func claimNextRun(for job: CronJob, context: ModelContext) {
+        if let next = try? CronParser.nextFireDate(after: Date(), for: job.cronExpression) {
+            job.nextRunAt = next
+        }
+        try? context.save()
+    }
+
     private func finalizeJob(_ job: CronJob, session: Session, context: ModelContext) {
         job.lastRunAt = Date()
         job.runCount += 1
         job.lastSessionId = session.id
         job.updatedAt = Date()
 
+        // Re-advance based on completion time. `executeJob` already advanced
+        // nextRunAt at the start to prevent concurrent re-trigger; this second
+        // pass is the authoritative schedule for the next fire and is always
+        // >= the start-time claim, so it never moves nextRunAt backwards.
         if let next = try? CronParser.nextFireDate(after: Date(), for: job.cronExpression) {
             job.nextRunAt = next
         }

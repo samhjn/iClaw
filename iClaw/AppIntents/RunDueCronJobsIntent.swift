@@ -5,10 +5,16 @@ import AppIntents
 /// replacement for the `iclaw://cron/run-due` URL scheme, because the
 /// `Open URL` action requires the device to be unlocked on a locked phone.
 struct RunDueCronJobsIntent: AppIntent {
-    static var title: LocalizedStringResource = "Run Due Cron Jobs"
+    static var title: LocalizedStringResource = LocalizedStringResource(
+        "appIntent.runDue.title",
+        defaultValue: "Run Due Cron Jobs"
+    )
 
     static var description = IntentDescription(
-        "Runs every enabled iClaw cron job whose schedule is currently due. Does not open the app, so automations can fire while the phone is locked."
+        LocalizedStringResource(
+            "appIntent.runDue.description",
+            defaultValue: "Runs every enabled iClaw cron job whose schedule is currently due. Does not open the app, so automations can fire while the phone is locked."
+        )
     )
 
     /// Must remain `false` so the intent executes in the background without

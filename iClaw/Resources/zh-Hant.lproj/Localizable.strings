@@ -294,6 +294,14 @@
 "shortcuts.tip3" = "如果有多個排程任務，可以使用「執行所有到期任務」URL 統一觸發。";
 "shortcuts.tip4" = "首次使用 URL Scheme 時，系統可能會彈出確認對話框，確認後後續呼叫將靜默執行。";
 
+// MARK: - App Intents (cron)
+"appIntent.entity.cronJob" = "排程任務";
+"appIntent.runDue.title" = "執行到期排程任務";
+"appIntent.runDue.description" = "執行所有到期且已啟用的 iClaw 排程任務。不會將 app 拉到前台，因此鎖屏狀態下也能觸發。";
+"appIntent.trigger.title" = "觸發排程任務";
+"appIntent.trigger.description" = "立即執行選取的 iClaw 排程任務。不會將 app 拉到前台，因此鎖屏狀態下也能觸發。";
+"appIntent.parameter.cronJob" = "排程任務";
+
 // MARK: - Sessions
 "sessions.title" = "對話";
 "sessions.noSessions" = "尚無對話";
