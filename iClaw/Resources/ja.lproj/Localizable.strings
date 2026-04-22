@@ -253,7 +253,22 @@
 "shortcuts.headerTitle" = "ショートカットで定期タスクをトリガー";
 "shortcuts.headerSubtitle" = "Cronジョブをバックグラウンドで確実に実行";
 "shortcuts.whyNeeded" = "なぜショートカットが必要？";
-"shortcuts.whyDescription" = "iOSはバックグラウンドタスクに厳しい制限があります。システムがBGAppRefreshTaskを遅延またはスキップすることがあり、定期タスクが時間通りにトリガーされない場合があります。Apple ショートカットの「オートメーション」機能を使えば、指定した時間にiClawのURL Schemeを自動的に開き、タスクが予定通り実行されることを保証できます。";
+"shortcuts.whyDescription" = "iOSはバックグラウンドタスクに厳しい制限があります。システムがBGAppRefreshTaskを遅延またはスキップすることがあり、定期タスクが時間通りにトリガーされない場合があります。ショートカットの「オートメーション」とiClawのApp Intent（またはフォールバックとしてURL Scheme）を組み合わせれば、定期タスクを指定した時刻に確実に実行できます。";
+
+"shortcuts.appIntentSection" = "推奨：App Intent（ロック解除不要）";
+"shortcuts.appIntentDescription" = "iClawのネイティブApp Intentを使うことで、ショートカットのオートメーションがバックグラウンドで定期タスクを実行でき、Appを前面に出しません。端末がロックされていても動作し、Face IDやパスコードも求められません。";
+"shortcuts.appIntentStep1Title" = "個人用オートメーションを作成";
+"shortcuts.appIntentStep1Detail" = "「ショートカット」Appで「オートメーション」→「個人用オートメーションを作成」→「時刻」を選び、トリガー時刻を設定します。";
+"shortcuts.appIntentStep2Title" = "iClawアクションを追加";
+"shortcuts.appIntentStep2Detail" = "「アクションを追加」をタップし、「iClaw」で検索して「Run Due Cron Jobs」（特定のジョブを指名したい場合は「Trigger Cron Job」）を選びます。";
+"shortcuts.appIntentStep3Title" = "「すぐに実行」を有効化";
+"shortcuts.appIntentStep3Detail" = "「すぐに実行」をオンに、「実行時に通知」をオフにします。ロック画面での確認なしに静かに実行されます。";
+"shortcuts.appIntentStep4Title" = "完了";
+"shortcuts.appIntentStep4Detail" = "オートメーションを保存します。以後、端末がロックされていても、定期タスクは指定時刻に実行されます。";
+
+"shortcuts.legacyFallbackSection" = "フォールバック：URL Scheme";
+"shortcuts.legacyFallbackDescription" = "以下のURL Schemeも引き続き使用できますが、「URLを開く」アクションはiClawを前面に出すため、端末のロック解除が必要です。無人実行を重視する場合は、上のApp Intentの方法を優先してください。";
+
 "shortcuts.setupSteps" = "設定手順";
 "shortcuts.step1Title" = "ショートカット Appを開く";
 "shortcuts.step1Detail" = "「ショートカット」Appを開き、下部の「オートメーション」タブを選択します。";
@@ -277,6 +292,14 @@
 "shortcuts.tip2" = "ショートカットのオートメーションはデバイスがロック画面でも実行できますが、ネットワーク接続が必要です。";
 "shortcuts.tip3" = "複数のCronジョブがある場合、「期限到来タスクをすべて実行」URLでまとめてトリガーできます。";
 "shortcuts.tip4" = "URL Schemeの初回使用時にシステムが確認ダイアログを表示する場合があります。確認後、以降の呼び出しは静かに実行されます。";
+
+// MARK: - App Intents (cron)
+"appIntent.entity.cronJob" = "定期タスク";
+"appIntent.runDue.title" = "期限の来た定期タスクを実行";
+"appIntent.runDue.description" = "有効かつスケジュールが期限に達したiClawの定期タスクをすべて実行します。Appを前面に出さないため、ロック中でも自動化が動作します。";
+"appIntent.trigger.title" = "定期タスクを実行";
+"appIntent.trigger.description" = "選択したiClawの定期タスクをすぐに実行します。Appを前面に出さないため、ロック中でも自動化が動作します。";
+"appIntent.parameter.cronJob" = "定期タスク";
 
 // MARK: - Sessions
 "sessions.title" = "セッション";

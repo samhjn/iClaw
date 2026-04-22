@@ -373,6 +373,21 @@ enum L10n {
         static var headerSubtitle: String { tr("shortcuts.headerSubtitle") }
         static var whyNeeded: String { tr("shortcuts.whyNeeded") }
         static var whyDescription: String { tr("shortcuts.whyDescription") }
+
+        static var appIntentSection: String { tr("shortcuts.appIntentSection") }
+        static var appIntentDescription: String { tr("shortcuts.appIntentDescription") }
+        static var appIntentStep1Title: String { tr("shortcuts.appIntentStep1Title") }
+        static var appIntentStep1Detail: String { tr("shortcuts.appIntentStep1Detail") }
+        static var appIntentStep2Title: String { tr("shortcuts.appIntentStep2Title") }
+        static var appIntentStep2Detail: String { tr("shortcuts.appIntentStep2Detail") }
+        static var appIntentStep3Title: String { tr("shortcuts.appIntentStep3Title") }
+        static var appIntentStep3Detail: String { tr("shortcuts.appIntentStep3Detail") }
+        static var appIntentStep4Title: String { tr("shortcuts.appIntentStep4Title") }
+        static var appIntentStep4Detail: String { tr("shortcuts.appIntentStep4Detail") }
+
+        static var legacyFallbackSection: String { tr("shortcuts.legacyFallbackSection") }
+        static var legacyFallbackDescription: String { tr("shortcuts.legacyFallbackDescription") }
+
         static var setupSteps: String { tr("shortcuts.setupSteps") }
         static var step1Title: String { tr("shortcuts.step1Title") }
         static var step1Detail: String { tr("shortcuts.step1Detail") }

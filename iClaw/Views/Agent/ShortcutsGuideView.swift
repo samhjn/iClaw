@@ -23,6 +23,8 @@ struct ShortcutsGuideView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     headerSection
                     whySection
+                    appIntentSection
+                    legacyFallbackHeader
                     setupSteps
                     urlReferenceSection
                     tipsSection
@@ -64,6 +66,50 @@ struct ShortcutsGuideView: View {
                 .font(.headline)
 
             Text(L10n.Shortcuts.whyDescription)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemGray6)))
+    }
+
+    private var appIntentSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label(L10n.Shortcuts.appIntentSection, systemImage: "lock.open.rotation")
+                .font(.headline)
+                .foregroundStyle(.green)
+
+            Text(L10n.Shortcuts.appIntentDescription)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            StepView(number: 1,
+                     title: L10n.Shortcuts.appIntentStep1Title,
+                     detail: L10n.Shortcuts.appIntentStep1Detail)
+            StepView(number: 2,
+                     title: L10n.Shortcuts.appIntentStep2Title,
+                     detail: L10n.Shortcuts.appIntentStep2Detail)
+            StepView(number: 3,
+                     title: L10n.Shortcuts.appIntentStep3Title,
+                     detail: L10n.Shortcuts.appIntentStep3Detail)
+            StepView(number: 4,
+                     title: L10n.Shortcuts.appIntentStep4Title,
+                     detail: L10n.Shortcuts.appIntentStep4Detail)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.green.opacity(0.08))
+        )
+    }
+
+    private var legacyFallbackHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(L10n.Shortcuts.legacyFallbackSection, systemImage: "exclamationmark.triangle")
+                .font(.headline)
+                .foregroundStyle(.orange)
+
+            Text(L10n.Shortcuts.legacyFallbackDescription)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

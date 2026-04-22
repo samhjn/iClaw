@@ -21,33 +21,13 @@ struct iClawApp: App {
             print("[iClawApp] Prior NSException recovered: \(prior.name) @ \(prior.source) — \(prior.reason) (\(prior.timestamp))")
         }
 
-        let schema = Schema([
-            Agent.self,
-            AgentConfig.self,
-            Session.self,
-            Message.self,
-            LLMProvider.self,
-            CodeSnippet.self,
-            CronJob.self,
-            Skill.self,
-            InstalledSkill.self,
-            SessionEmbedding.self,
-        ])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        do {
-            modelContainer = try ModelContainer(for: schema, configurations: [config])
-            _showMigrationResetAlert = State(initialValue: false)
-        } catch {
-            print("[iClawApp] ModelContainer migration failed: \(error). Awaiting user confirmation before reset.")
-            Self.pendingStoreURL = config.url
-            // Use in-memory fallback so the app can launch and show the alert.
-            let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-            do {
-                modelContainer = try ModelContainer(for: schema, configurations: [fallback])
-            } catch {
-                fatalError("Failed to create in-memory ModelContainer: \(error)")
-            }
+        modelContainer = iClawModelContainer.shared
+        if let failedURL = iClawModelContainer.migrationFailedStoreURL {
+            print("[iClawApp] ModelContainer migration failed. Awaiting user confirmation before reset.")
+            Self.pendingStoreURL = failedURL
             _showMigrationResetAlert = State(initialValue: true)
+        } else {
+            _showMigrationResetAlert = State(initialValue: false)
         }
 
         _launchTaskManager = State(initialValue: LaunchTaskManager(container: modelContainer))

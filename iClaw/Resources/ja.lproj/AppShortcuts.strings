@@ -1,0 +1,10 @@
+/* AppShortcuts.strings — phrase and shortTitle localization for AppShortcutsProvider.
+   Keys must EXACTLY match the source strings declared in iClawAppShortcuts.swift. */
+
+"Run due cron jobs in ${applicationName}" = "${applicationName}で期限の来た定期タスクを実行";
+"Run ${applicationName} cron jobs" = "${applicationName}の定期タスクを実行";
+"Trigger cron job in ${applicationName}" = "${applicationName}で定期タスクをトリガー";
+"Run ${applicationName} scheduled task" = "${applicationName}のスケジュールタスクを実行";
+
+"Run Due Cron Jobs" = "期限の来た定期タスクを実行";
+"Trigger Cron Job" = "定期タスクをトリガー";
