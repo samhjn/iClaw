@@ -29,7 +29,7 @@ struct SkillDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(skill.name)
+        .navigationTitle(skill.effectiveDisplayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -64,7 +64,7 @@ struct SkillDetailView: View {
             }
             Button(L10n.Common.cancel, role: .cancel) {}
         } message: {
-            Text(L10n.Skills.deleteSkillMessage(skill.name))
+            Text(L10n.Skills.deleteSkillMessage(skill.effectiveDisplayName))
         }
     }
 
@@ -236,7 +236,7 @@ struct InstallSkillOnAgentSheet: View {
                     }
                 }
             }
-            .navigationTitle(L10n.Skills.install(skill.name))
+            .navigationTitle(L10n.Skills.install(skill.effectiveDisplayName))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

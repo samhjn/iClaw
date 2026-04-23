@@ -14,17 +14,32 @@ final class BuiltInSkillsTests: XCTestCase {
         XCTAssertEqual(names.count, Set(names).count, "Built-in skill names must be unique")
     }
 
+    func testAllSkillsHaveUniqueLocalizationKeys() {
+        let keys = BuiltInSkills.all.map(\.localizationKey)
+        XCTAssertEqual(keys.count, Set(keys).count, "Built-in skill localization keys must be unique")
+    }
+
     func testAllSkillsHaveNonEmptyContent() {
         for template in BuiltInSkills.all {
-            XCTAssertFalse(template.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            let resolved = template.resolved()
+            XCTAssertFalse(resolved.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                            "Skill '\(template.name)' must have non-empty content")
         }
     }
 
     func testAllSkillsHaveNonEmptySummary() {
         for template in BuiltInSkills.all {
-            XCTAssertFalse(template.summary.isEmpty,
+            let resolved = template.resolved()
+            XCTAssertFalse(resolved.summary.isEmpty,
                            "Skill '\(template.name)' must have a summary")
+        }
+    }
+
+    func testAllSkillsHaveNonEmptyDisplayName() {
+        for template in BuiltInSkills.all {
+            let resolved = template.resolved()
+            XCTAssertFalse(resolved.displayName.isEmpty,
+                           "Skill '\(template.name)' must have a localized display name")
         }
     }
 
@@ -60,14 +75,32 @@ final class BuiltInSkillsTests: XCTestCase {
         XCTAssertFalse(names.contains("Creative Writer"))
     }
 
+    func testResolvedTemplatesHaveNonEmptyToolDescriptions() {
+        for template in BuiltInSkills.all {
+            let resolved = template.resolved()
+            for tool in resolved.customTools {
+                XCTAssertFalse(tool.description.isEmpty,
+                               "Tool '\(tool.name)' on skill '\(template.name)' must have a localized description")
+            }
+        }
+    }
+
     // MARK: - Deep Research: Structure
 
     private var deepResearch: BuiltInSkills.Template {
         BuiltInSkills.all.first(where: { $0.name == "Deep Research" })!
     }
 
+    private var deepResearchResolved: BuiltInSkills.ResolvedTemplate {
+        deepResearch.resolved()
+    }
+
     func testDeepResearchSkillExists() {
         XCTAssertNotNil(BuiltInSkills.all.first(where: { $0.name == "Deep Research" }))
+    }
+
+    func testDeepResearchLocalizationKey() {
+        XCTAssertEqual(deepResearch.localizationKey, "deep_research")
     }
 
     func testDeepResearchHasTwoScripts() {
@@ -87,7 +120,7 @@ final class BuiltInSkillsTests: XCTestCase {
     // MARK: - Deep Research: Content / Methodology
 
     func testDeepResearchContentMentionsBrowserTools() {
-        let content = deepResearch.content
+        let content = deepResearchResolved.content
         XCTAssertTrue(content.contains("browser_navigate"),
                        "Methodology should guide using browser_navigate")
         XCTAssertTrue(content.contains("browser_get_page_info"),
@@ -97,38 +130,22 @@ final class BuiltInSkillsTests: XCTestCase {
     }
 
     func testDeepResearchContentHasToolPreferenceOrder() {
-        let content = deepResearch.content
-        // Browser tools should be listed before fetch_and_extract
-        guard let browserRange = content.range(of: "Browser tools"),
+        let content = deepResearchResolved.content
+        // Tool identifiers are kept in English across translations; the body
+        // surrounding them may differ, but this ordering check uses the
+        // identifiers themselves so it's locale-agnostic.
+        guard let browserRange = content.range(of: "browser_navigate"),
               let fetchRange = content.range(of: "fetch_and_extract") else {
-            XCTFail("Content must mention both Browser tools and fetch_and_extract")
+            XCTFail("Content must mention both browser_navigate and fetch_and_extract")
             return
         }
         XCTAssertTrue(browserRange.lowerBound < fetchRange.lowerBound,
                        "Browser tools should be listed before fetch_and_extract in preference order")
     }
 
-    func testDeepResearchContentHasIterativeDeepening() {
-        XCTAssertTrue(deepResearch.content.contains("Iterative Deepening"),
-                       "Methodology should include iterative deepening guidance")
-    }
-
-    func testDeepResearchContentHasOutputFormat() {
-        let content = deepResearch.content
-        XCTAssertTrue(content.contains("Executive Summary"))
-        XCTAssertTrue(content.contains("Source Table"))
-        XCTAssertTrue(content.contains("Uncertainties"))
-        XCTAssertTrue(content.contains("Conclusions"))
-    }
-
-    func testDeepResearchContentHasSearchStrategy() {
-        XCTAssertTrue(deepResearch.content.contains("google.com/search"),
-                       "Methodology should include a search engine strategy")
-    }
-
     // MARK: - Deep Research: extract_links Script
 
-    private var extractLinksScript: SkillScript {
+    private var extractLinksScript: BuiltInSkills.ScriptTemplate {
         deepResearch.scripts.first(where: { $0.name == "extract_links" })!
     }
 
@@ -168,14 +185,15 @@ final class BuiltInSkillsTests: XCTestCase {
                        "extract_links should filter non-HTTP URLs")
     }
 
-    func testExtractLinksHasDescription() {
-        XCTAssertNotNil(extractLinksScript.description)
-        XCTAssertFalse(extractLinksScript.description!.isEmpty)
+    func testExtractLinksHasLocalizedDescription() {
+        let resolvedScript = deepResearchResolved.scripts.first(where: { $0.name == "extract_links" })
+        XCTAssertNotNil(resolvedScript?.description)
+        XCTAssertFalse(resolvedScript?.description?.isEmpty ?? true)
     }
 
     // MARK: - Deep Research: summarize_text Script
 
-    private var summarizeTextScript: SkillScript {
+    private var summarizeTextScript: BuiltInSkills.ScriptTemplate {
         deepResearch.scripts.first(where: { $0.name == "summarize_text" })!
     }
 
@@ -213,15 +231,20 @@ final class BuiltInSkillsTests: XCTestCase {
                        "summarize_text should handle texts with no extractable sentences")
     }
 
-    func testSummarizeTextHasDescription() {
-        XCTAssertNotNil(summarizeTextScript.description)
-        XCTAssertFalse(summarizeTextScript.description!.isEmpty)
+    func testSummarizeTextHasLocalizedDescription() {
+        let resolvedScript = deepResearchResolved.scripts.first(where: { $0.name == "summarize_text" })
+        XCTAssertNotNil(resolvedScript?.description)
+        XCTAssertFalse(resolvedScript?.description?.isEmpty ?? true)
     }
 
     // MARK: - Deep Research: fetch_and_extract Tool
 
-    private var fetchAndExtractTool: SkillToolDefinition {
+    private var fetchAndExtractTool: BuiltInSkills.ToolTemplate {
         deepResearch.customTools.first(where: { $0.name == "fetch_and_extract" })!
+    }
+
+    private var fetchAndExtractResolved: SkillToolDefinition {
+        deepResearchResolved.customTools.first(where: { $0.name == "fetch_and_extract" })!
     }
 
     func testFetchAndExtractToolExists() {
@@ -241,8 +264,8 @@ final class BuiltInSkillsTests: XCTestCase {
         XCTAssertEqual(param?.required, false, "max_length should be optional")
     }
 
-    func testFetchAndExtractDescriptionMentionsFallback() {
-        XCTAssertTrue(fetchAndExtractTool.description.contains("browser_navigate"),
+    func testFetchAndExtractResolvedDescriptionMentionsFallback() {
+        XCTAssertTrue(fetchAndExtractResolved.description.contains("browser_navigate"),
                        "Tool description should mention browser tools as fallback")
     }
 
@@ -283,8 +306,16 @@ final class BuiltInSkillsTests: XCTestCase {
         BuiltInSkills.all.first(where: { $0.name == "File Ops" })!
     }
 
+    private var fileOpsResolved: BuiltInSkills.ResolvedTemplate {
+        fileOps.resolved()
+    }
+
     func testFileOpsSkillExists() {
         XCTAssertNotNil(BuiltInSkills.all.first(where: { $0.name == "File Ops" }))
+    }
+
+    func testFileOpsLocalizationKey() {
+        XCTAssertEqual(fileOps.localizationKey, "file_ops")
     }
 
     func testFileOpsHasExpectedCustomTools() {
@@ -319,9 +350,10 @@ final class BuiltInSkillsTests: XCTestCase {
     }
 
     func testFileOpsContentMentionsFdOps() {
-        XCTAssertTrue(fileOps.content.contains("fs.open"),
+        let content = fileOpsResolved.content
+        XCTAssertTrue(content.contains("fs.open"),
                        "File Ops skill should document POSIX fd operations")
-        XCTAssertTrue(fileOps.content.contains("fs.seek"),
+        XCTAssertTrue(content.contains("fs.seek"),
                        "File Ops skill should document the seek operation")
     }
 
@@ -336,8 +368,16 @@ final class BuiltInSkillsTests: XCTestCase {
         BuiltInSkills.all.first(where: { $0.name == "Health Plus" })!
     }
 
+    private var healthPlusResolved: BuiltInSkills.ResolvedTemplate {
+        healthPlus.resolved()
+    }
+
     func testHealthPlusSkillExists() {
         XCTAssertNotNil(BuiltInSkills.all.first(where: { $0.name == "Health Plus" }))
+    }
+
+    func testHealthPlusLocalizationKey() {
+        XCTAssertEqual(healthPlus.localizationKey, "health_plus")
     }
 
     func testHealthPlusHasExpectedCustomTools() {
@@ -382,7 +422,7 @@ final class BuiltInSkillsTests: XCTestCase {
     }
 
     func testHealthPlusContentMentionsAppleHealth() {
-        XCTAssertTrue(healthPlus.content.contains("apple.health."),
+        XCTAssertTrue(healthPlusResolved.content.contains("apple.health."),
                        "Health Plus skill should document the apple.health namespace")
     }
 

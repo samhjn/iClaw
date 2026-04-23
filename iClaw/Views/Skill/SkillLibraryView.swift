@@ -49,6 +49,7 @@ struct SkillLibraryView: View {
         let q = searchText.lowercased()
         return skills.filter {
             $0.name.lowercased().contains(q) ||
+            $0.effectiveDisplayName.lowercased().contains(q) ||
             $0.summary.lowercased().contains(q) ||
             $0.tags.contains(where: { $0.lowercased().contains(q) })
         }
@@ -103,7 +104,7 @@ struct SkillRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(skill.name)
+                Text(skill.effectiveDisplayName)
                     .font(.headline)
                 Spacer()
                 if skill.isBuiltIn {

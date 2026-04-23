@@ -30,6 +30,13 @@ final class LaunchTaskManager {
         completedCount = 0
         phase = .running(description: L10n.Launch.cleaningUp, progress: nil)
 
+        // Keep built-in skills in sync with the current UI locale before any
+        // view reads from SwiftData. The call is cheap (field-by-field diff;
+        // most launches are a no-op) and running it on the main actor here
+        // avoids racing with SkillLibraryView/AgentSkillsView, which also
+        // trigger `ensureBuiltInSkills` on appear.
+        SkillService(modelContext: ModelContext(container)).ensureBuiltInSkills()
+
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
 

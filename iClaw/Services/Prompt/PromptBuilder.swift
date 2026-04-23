@@ -352,11 +352,14 @@ final class PromptBuilder {
         for installation in activeSkills {
             guard let skill = installation.skill else { continue }
             var skillSection = """
-            ### Skill: \(skill.name)
+            ### Skill: \(skill.effectiveDisplayName)
             \(skill.content)
             """
 
-            // List available scripts
+            // List available scripts. The snippet ID embedded in backticks
+            // must stay in sync with the CodeSnippet name registered in
+            // `SkillService.installSkill` — which uses the English `name` —
+            // so `run_snippet` can resolve it. Do NOT swap in `effectiveDisplayName`.
             if !skill.scripts.isEmpty {
                 skillSection += "\n\n**Available scripts** (use `run_snippet` to execute):"
                 for script in skill.scripts {

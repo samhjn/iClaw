@@ -26,7 +26,7 @@ struct AgentSkillsView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 4) {
-                                        Text(skill.name)
+                                        Text(skill.effectiveDisplayName)
                                             .font(.headline)
                                         if skill.isBuiltIn {
                                             Text(L10n.Skills.builtIn)
@@ -141,7 +141,7 @@ struct SkillPickerSheet: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 4) {
-                                    Text(skill.name).font(.headline)
+                                    Text(skill.effectiveDisplayName).font(.headline)
                                     if skill.isBuiltIn {
                                         Text(L10n.Skills.builtIn)
                                             .font(.caption2)
@@ -178,6 +178,7 @@ struct SkillPickerSheet: View {
         let q = searchText.lowercased()
         return allSkills.filter {
             $0.name.lowercased().contains(q) ||
+            $0.effectiveDisplayName.lowercased().contains(q) ||
             $0.summary.lowercased().contains(q) ||
             $0.tags.contains(where: { $0.lowercased().contains(q) })
         }
