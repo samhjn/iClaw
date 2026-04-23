@@ -422,6 +422,10 @@ final class FunctionCallRouter {
         let n = (arguments["n"] as? Int) ?? 1
         let size = arguments["size"] as? String
         let quality = arguments["quality"] as? String
+        let imageURL = arguments["image_url"] as? String
+
+        let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
+        let imageData: Data? = try await resolveInputImageData(from: imageURL)
 
         let service = ImageGenerationService(provider: provider, modelName: effectiveModel)
         let (images, revisedPrompt) = try await service.generate(
@@ -429,7 +433,8 @@ final class FunctionCallRouter {
             n: min(max(n, 1), 4),
             size: size,
             quality: quality,
-            agentId: AgentFileManager.shared.resolveAgentId(for: agent)
+            imageData: imageData,
+            agentId: agentId
         )
 
         var resultText = "Generated \(images.count) image\(images.count == 1 ? "" : "s") successfully."
@@ -550,6 +555,21 @@ final class FunctionCallRouter {
     private final class MutableBox<T>: @unchecked Sendable {
         var value: T
         init(_ value: T) { self.value = value }
+    }
+
+    /// Resolve an optional `image_url` argument (either an `agentfile://` reference
+    /// or a regular HTTP(S) URL) into raw image bytes. Returns nil when the
+    /// argument is missing or empty.
+    private func resolveInputImageData(from imageURL: String?) async throws -> Data? {
+        guard let imageURL, !imageURL.isEmpty else { return nil }
+        if imageURL.hasPrefix("agentfile://") {
+            return AgentFileManager.shared.loadImageData(from: imageURL)
+        }
+        if let url = URL(string: imageURL) {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return data
+        }
+        return nil
     }
 
     // MARK: - Private

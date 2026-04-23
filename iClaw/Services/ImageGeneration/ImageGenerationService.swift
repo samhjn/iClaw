@@ -71,11 +71,15 @@ final class ImageGenerationService: @unchecked Sendable {
     }
 
     /// Generate images, routing to the correct API based on model capabilities.
+    ///
+    /// - Parameter imageData: Optional input image (raw bytes, typically PNG/JPEG).
+    ///   When provided, the call becomes an edit / image-to-image operation where supported.
     func generate(
         prompt: String,
         n: Int = 1,
         size: String? = nil,
         quality: String? = nil,
+        imageData: Data? = nil,
         agentId: UUID
     ) async throws -> (images: [ImageAttachment], revisedPrompt: String?) {
         let caps = provider.capabilities(for: modelName)
@@ -83,7 +87,8 @@ final class ImageGenerationService: @unchecked Sendable {
         switch caps.imageGenerationMode {
         case .dedicatedAPI:
             return try await callDedicatedAPI(
-                prompt: prompt, n: n, size: size, quality: quality, agentId: agentId
+                prompt: prompt, n: n, size: size, quality: quality,
+                imageData: imageData, agentId: agentId
             )
         case .chatInline:
             let clamped = min(max(n, 1), 4)
@@ -91,7 +96,9 @@ final class ImageGenerationService: @unchecked Sendable {
             var firstRevised: String?
             for _ in 0..<clamped {
                 try Task.checkCancellation()
-                let (imgs, rp) = try await callChatInline(prompt: prompt, agentId: agentId)
+                let (imgs, rp) = try await callChatInline(
+                    prompt: prompt, imageData: imageData, agentId: agentId
+                )
                 all.append(contentsOf: imgs)
                 if firstRevised == nil { firstRevised = rp }
             }
@@ -99,7 +106,8 @@ final class ImageGenerationService: @unchecked Sendable {
             return (all, firstRevised)
         case .dashScope:
             return try await callDashScopeAPI(
-                prompt: prompt, n: n, size: size, agentId: agentId
+                prompt: prompt, n: n, size: size,
+                imageData: imageData, agentId: agentId
             )
         case .none:
             throw ImageGenerationError.noProviderConfigured
@@ -109,26 +117,36 @@ final class ImageGenerationService: @unchecked Sendable {
     // MARK: - Dedicated /images/generations API
 
     private func callDedicatedAPI(
-        prompt: String, n: Int, size: String?, quality: String?, agentId: UUID
+        prompt: String, n: Int, size: String?, quality: String?,
+        imageData: Data?, agentId: UUID
     ) async throws -> (images: [ImageAttachment], revisedPrompt: String?) {
-        let body = ImageGenerationRequest(
-            model: modelName,
-            prompt: prompt,
-            n: n,
-            size: size,
-            quality: quality,
-            responseFormat: "b64_json"
-        )
-
-        let encoder = JSONEncoder()
-        let bodyData = try encoder.encode(body)
-        let request = try APIRequestBuilder.jsonPOST(
-            base: provider.endpoint,
-            path: "/images/generations",
-            apiKey: provider.apiKey,
-            style: provider.apiStyle,
-            body: bodyData
-        )
+        // When an input image is provided, switch to the /images/edits endpoint
+        // (OpenAI gpt-image-1 / dall-e-2, and compatible providers). The edits
+        // endpoint requires multipart/form-data.
+        let request: URLRequest
+        if let imageData {
+            request = try buildImagesEditRequest(
+                prompt: prompt, n: n, size: size, quality: quality, imageData: imageData
+            )
+        } else {
+            let body = ImageGenerationRequest(
+                model: modelName,
+                prompt: prompt,
+                n: n,
+                size: size,
+                quality: quality,
+                responseFormat: "b64_json"
+            )
+            let encoder = JSONEncoder()
+            let bodyData = try encoder.encode(body)
+            request = try APIRequestBuilder.jsonPOST(
+                base: provider.endpoint,
+                path: "/images/generations",
+                apiKey: provider.apiKey,
+                style: provider.apiStyle,
+                body: bodyData
+            )
+        }
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -176,11 +194,22 @@ final class ImageGenerationService: @unchecked Sendable {
     // MARK: - Chat Inline (modalities)
 
     private func callChatInline(
-        prompt: String, agentId: UUID
+        prompt: String, imageData: Data?, agentId: UUID
     ) async throws -> (images: [ImageAttachment], revisedPrompt: String?) {
         let service = LLMService(provider: provider, modelNameOverride: modelName)
-        let messages = [LLMChatMessage.user(prompt)]
-        let response = try await service.chatCompletion(messages: messages, tools: nil)
+        let userMessage: LLMChatMessage
+        if let imageData {
+            let mime = detectMimeType(imageData)
+            let dataURI = "data:\(mime);base64,\(imageData.base64EncodedString())"
+            let parts: [ContentPart] = [
+                .text(prompt),
+                .imageURL(url: dataURI, detail: "auto")
+            ]
+            userMessage = LLMChatMessage(role: .user, content: prompt, contentParts: parts)
+        } else {
+            userMessage = LLMChatMessage.user(prompt)
+        }
+        let response = try await service.chatCompletion(messages: [userMessage], tools: nil)
 
         guard let message = response.choices.first?.message else {
             throw ImageGenerationError.noImageReturned
@@ -239,9 +268,11 @@ final class ImageGenerationService: @unchecked Sendable {
     // MARK: - DashScope Async Task API (wan2.7-image series)
 
     private func callDashScopeAPI(
-        prompt: String, n: Int, size: String?, agentId: UUID
+        prompt: String, n: Int, size: String?, imageData: Data?, agentId: UUID
     ) async throws -> (images: [ImageAttachment], revisedPrompt: String?) {
-        let taskId = try await dashScopeSubmitTask(prompt: prompt, n: n, size: size)
+        let taskId = try await dashScopeSubmitTask(
+            prompt: prompt, n: n, size: size, imageData: imageData
+        )
         let imageURLs = try await dashScopePollUntilDone(taskId: taskId)
 
         var attachments: [ImageAttachment] = []
@@ -262,7 +293,9 @@ final class ImageGenerationService: @unchecked Sendable {
     }
 
     /// Submit an image generation task to DashScope and return the task ID.
-    private func dashScopeSubmitTask(prompt: String, n: Int, size: String?) async throws -> String {
+    private func dashScopeSubmitTask(
+        prompt: String, n: Int, size: String?, imageData: Data?
+    ) async throws -> String {
         let baseURL = provider.endpoint.hasSuffix("/")
             ? String(provider.endpoint.dropLast()) : provider.endpoint
         let urlStr = "\(baseURL)/services/aigc/image-generation/generation"
@@ -278,15 +311,23 @@ final class ImageGenerationService: @unchecked Sendable {
         ]
         if let dsSize { parameters["size"] = dsSize }
 
+        // When a reference image is provided, prepend it to the message content.
+        // DashScope wan image-edit / reference-image models expect:
+        //   content: [{"image": "data:image/png;base64,..."}, {"text": prompt}]
+        var content: [[String: Any]] = []
+        if let imageData {
+            let mime = detectMimeType(imageData)
+            content.append(["image": "data:\(mime);base64,\(imageData.base64EncodedString())"])
+        }
+        content.append(["text": prompt])
+
         let body: [String: Any] = [
             "model": modelName,
             "input": [
                 "messages": [
                     [
                         "role": "user",
-                        "content": [
-                            ["text": prompt]
-                        ]
+                        "content": content
                     ]
                 ]
             ],
@@ -441,5 +482,80 @@ final class ImageGenerationService: @unchecked Sendable {
             throw ImageGenerationError.downloadFailed(urlString)
         }
         return data
+    }
+
+    /// Sniff a common image MIME type from the first few bytes; defaults to `image/png`.
+    private func detectMimeType(_ data: Data) -> String {
+        guard data.count >= 4 else { return "image/png" }
+        let b = [UInt8](data.prefix(4))
+        // JPEG: FF D8 FF
+        if b[0] == 0xFF, b[1] == 0xD8, b[2] == 0xFF { return "image/jpeg" }
+        // PNG: 89 50 4E 47
+        if b[0] == 0x89, b[1] == 0x50, b[2] == 0x4E, b[3] == 0x47 { return "image/png" }
+        // GIF: 47 49 46
+        if b[0] == 0x47, b[1] == 0x49, b[2] == 0x46 { return "image/gif" }
+        // WebP: RIFF....WEBP — first 4 bytes are "RIFF"
+        if b[0] == 0x52, b[1] == 0x49, b[2] == 0x46, b[3] == 0x46 { return "image/webp" }
+        return "image/png"
+    }
+
+    /// Build a multipart/form-data request for OpenAI-compatible `/images/edits`.
+    private func buildImagesEditRequest(
+        prompt: String, n: Int, size: String?, quality: String?, imageData: Data
+    ) throws -> URLRequest {
+        let baseURL = provider.endpoint.hasSuffix("/")
+            ? String(provider.endpoint.dropLast()) : provider.endpoint
+        let urlStr = "\(baseURL)/images/edits"
+        guard let url = URL(string: urlStr) else {
+            throw ImageGenerationError.invalidURL(urlStr)
+        }
+
+        let boundary = "iClawBoundary-\(UUID().uuidString)"
+        let mime = detectMimeType(imageData)
+        let filename: String = {
+            switch mime {
+            case "image/jpeg": return "image.jpg"
+            case "image/gif": return "image.gif"
+            case "image/webp": return "image.webp"
+            default: return "image.png"
+            }
+        }()
+
+        var body = Data()
+        func appendField(_ name: String, _ value: String) {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+
+        // image file part
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append(
+            "Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"
+                .data(using: .utf8)!
+        )
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        appendField("model", modelName)
+        appendField("prompt", prompt)
+        appendField("n", String(min(max(n, 1), 4)))
+        if let size { appendField("size", size) }
+        if let quality { appendField("quality", quality) }
+        appendField("response_format", "b64_json")
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)",
+            forHTTPHeaderField: "Content-Type"
+        )
+        APIRequestBuilder.applyCommonHeaders(to: &request)
+        APIRequestBuilder.applyAuth(to: &request, apiKey: provider.apiKey, style: provider.apiStyle)
+        request.httpBody = body
+        return request
     }
 }

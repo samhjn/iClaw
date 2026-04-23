@@ -924,12 +924,13 @@ enum ToolDefinitions {
 
     static let generateImageTool = ToolDefinitionBuilder.build(
         name: "generate_image",
-        description: "Generate images using AI image generation models. Use this when the user asks you to create, draw, or generate images. Returns the generated image(s) as attachments in the conversation.",
+        description: "Generate images using AI image generation models. Use this when the user asks you to create, draw, generate, edit, or modify images. Pass `image_url` to edit/transform an existing image (image-to-image). Returns the generated image(s) as attachments in the conversation.",
         properties: [
-            "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the image to generate. Be specific about style, composition, colors, and subject matter."),
+            "prompt": ToolDefinitionBuilder.stringParam("Detailed description of the image to generate. Be specific about style, composition, colors, and subject matter. When editing, describe the desired changes."),
             "size": ToolDefinitionBuilder.stringParam("Image size. Common values: 1024x1024, 1792x1024, 1024x1792. Optional, defaults to model default."),
             "quality": ToolDefinitionBuilder.enumParam("Image quality level. Optional.", values: ["standard", "hd"]),
             "n": ToolDefinitionBuilder.intParam("Number of images to generate (1-4). Default: 1."),
+            "image_url": ToolDefinitionBuilder.stringParam("Optional URL or agentfile:// reference of an input image to edit or use as a reference (image-to-image). Only supported by some models (e.g. gpt-image-1/dall-e-2 edits, Gemini image, Flux Kontext, DashScope wan image-edit)."),
             "provider_id": ToolDefinitionBuilder.stringParam("Optional: UUID of a specific provider to use for this request, overriding the agent's default image provider. Use list_models to see available providers."),
             "model_name": ToolDefinitionBuilder.stringParam("Optional: specific model name to use for this request, overriding the default. Must be used together with provider_id.")
         ],
