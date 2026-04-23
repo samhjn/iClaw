@@ -587,6 +587,31 @@ enum L10n {
         static var configure: String { tr("skills.configure") }
         static var skillConfiguration: String { tr("skills.skillConfiguration") }
         static var required: String { tr("skills.required") }
+
+        /// Localization keys for built-in skill content. The `skillKey`
+        /// argument is the template's `localizationKey` (e.g. `"deep_research"`)
+        /// — not the stable English `name`. See `BuiltInSkills.Template` for
+        /// the mapping.
+        enum BuiltIn {
+            static func displayName(_ skillKey: String) -> String {
+                tr("skill.\(skillKey).displayName")
+            }
+            static func summary(_ skillKey: String) -> String {
+                tr("skill.\(skillKey).summary")
+            }
+            static func toolDescription(_ skillKey: String, _ tool: String) -> String {
+                tr("skill.\(skillKey).tool.\(tool).description")
+            }
+            static func toolParamDescription(_ skillKey: String, _ tool: String, _ param: String) -> String {
+                tr("skill.\(skillKey).tool.\(tool).param.\(param).description")
+            }
+            static func scriptDescription(_ skillKey: String, _ script: String) -> String {
+                tr("skill.\(skillKey).script.\(script).description")
+            }
+            static func configLabel(_ skillKey: String, _ field: String) -> String {
+                tr("skill.\(skillKey).config.\(field).label")
+            }
+        }
     }
 
     // MARK: - Cron Parser

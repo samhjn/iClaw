@@ -74,6 +74,11 @@ final class Skill {
     var id: UUID
     var name: String
     var nameLowercase: String = ""
+    /// Localized display name for built-in skills. Empty for custom skills,
+    /// which fall back to `name`. Never used as an identifier — `name` remains
+    /// the stable English key for template matching, tool-name generation, and
+    /// CodeSnippet registration.
+    var displayName: String = ""
     var summary: String
     var content: String
     var tagsRaw: String
@@ -111,6 +116,13 @@ final class Skill {
     }
 
     var installCount: Int { installations.count }
+
+    /// UI-facing name. Prefers `displayName` when populated (built-in skills),
+    /// otherwise falls back to `name` (custom skills, and built-ins before their
+    /// first localization pass).
+    var effectiveDisplayName: String {
+        displayName.isEmpty ? name : displayName
+    }
 
     init(
         name: String,

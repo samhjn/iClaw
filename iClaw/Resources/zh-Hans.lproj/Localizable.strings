@@ -661,3 +661,94 @@
 "export.roleAssistant" = "助手";
 "export.roleTool" = "工具";
 "export.toolCall" = "工具调用";
+
+// MARK: - 内置技能内容
+// 系统 Skill 的展示名、摘要、工具与参数描述；Markdown 正文见 BuiltInSkills/<Name>.md。
+
+// Deep Research
+"skill.deep_research.displayName" = "深度研究";
+"skill.deep_research.summary" = "系统化的研究方法，配合来源评估与综合分析";
+"skill.deep_research.script.extract_links.description" = "从 HTML 内容中提取链接（同时支持单引号与双引号 href 属性）";
+"skill.deep_research.script.summarize_text.description" = "从长文本中提取关键句，按位置与长度重要性排序";
+"skill.deep_research.tool.fetch_and_extract.description" = "抓取 URL 并提取可读文本。可能因沙盒 CORS 限制失败——请用 browser_navigate + browser_get_page_info 作为可靠替代。";
+"skill.deep_research.tool.fetch_and_extract.param.url.description" = "要抓取内容的 URL";
+"skill.deep_research.tool.fetch_and_extract.param.max_length.description" = "返回的最大字符数（默认 5000）";
+
+// File Ops
+"skill.file_ops.displayName" = "文件操作";
+"skill.file_ops.summary" = "高级文件操作：复制、移动、目录管理、富元数据";
+"skill.file_ops.tool.cp.description" = "复制文件或目录。对目录默认递归。";
+"skill.file_ops.tool.cp.param.src.description" = "源路径";
+"skill.file_ops.tool.cp.param.dest.description" = "目标路径";
+"skill.file_ops.tool.cp.param.recursive.description" = "是否递归复制目录（默认 true）";
+"skill.file_ops.tool.mv.description" = "移动或重命名文件或目录。";
+"skill.file_ops.tool.mv.param.src.description" = "源路径";
+"skill.file_ops.tool.mv.param.dest.description" = "目标路径";
+"skill.file_ops.tool.stat.description" = "返回文件或目录的 JSON 元数据（size、mtime_ms、ctime_ms、is_file、is_dir）。";
+"skill.file_ops.tool.stat.param.path.description" = "要查询的路径";
+"skill.file_ops.tool.mkdir.description" = "创建目录（含中间层级）。幂等。";
+"skill.file_ops.tool.mkdir.param.path.description" = "要创建的目录路径";
+"skill.file_ops.tool.tree.description" = "带深度控制的递归目录列表。返回格式化的文本树。";
+"skill.file_ops.tool.tree.param.path.description" = "根路径（默认为 agent 根目录）";
+"skill.file_ops.tool.tree.param.max_depth.description" = "最大递归深度（默认 4）";
+"skill.file_ops.tool.touch.description" = "若文件不存在则创建空文件（已存在则不变）。";
+"skill.file_ops.tool.touch.param.path.description" = "要 touch 的文件路径";
+"skill.file_ops.tool.exists.description" = "检查文件或目录是否存在。返回 'true' 或 'false'。";
+"skill.file_ops.tool.exists.param.path.description" = "要检查的路径";
+
+// Health Plus
+"skill.health_plus.displayName" = "健康 Plus";
+"skill.health_plus.summary" = "进阶 Apple Health 指标:血压、血糖、血氧、体温、宏量营养、锻炼";
+"skill.health_plus.tool.read_blood_pressure.description" = "从 Apple Health 读取血压（收缩/舒张）样本。";
+"skill.health_plus.tool.read_blood_pressure.param.start_date.description" = "起始日期（ISO 8601 或 yyyy-MM-dd HH:mm）。默认 30 天前。";
+"skill.health_plus.tool.read_blood_pressure.param.end_date.description" = "结束日期。默认当前时间。";
+"skill.health_plus.tool.read_blood_glucose.description" = "从 Apple Health 读取血糖样本。";
+"skill.health_plus.tool.read_blood_glucose.param.start_date.description" = "起始日期。默认 30 天前。";
+"skill.health_plus.tool.read_blood_glucose.param.end_date.description" = "结束日期。默认当前时间。";
+"skill.health_plus.tool.read_blood_oxygen.description" = "从 Apple Health 读取血氧饱和度（SpO₂）样本。";
+"skill.health_plus.tool.read_blood_oxygen.param.start_date.description" = "起始日期。默认 7 天前。";
+"skill.health_plus.tool.read_blood_oxygen.param.end_date.description" = "结束日期。默认当前时间。";
+"skill.health_plus.tool.read_body_temperature.description" = "从 Apple Health 读取体温样本。";
+"skill.health_plus.tool.read_body_temperature.param.start_date.description" = "起始日期。默认 30 天前。";
+"skill.health_plus.tool.read_body_temperature.param.end_date.description" = "结束日期。默认当前时间。";
+"skill.health_plus.tool.read_body_temperature.param.unit.description" = "温度单位";
+"skill.health_plus.tool.write_blood_pressure.description" = "向 Apple Health 写入一次血压读数（收缩/舒张 mmHg）。";
+"skill.health_plus.tool.write_blood_pressure.param.systolic.description" = "收缩压 mmHg（如 120）";
+"skill.health_plus.tool.write_blood_pressure.param.diastolic.description" = "舒张压 mmHg（如 80）";
+"skill.health_plus.tool.write_blood_pressure.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_blood_glucose.description" = "向 Apple Health 写入一次血糖读数。";
+"skill.health_plus.tool.write_blood_glucose.param.value.description" = "血糖数值";
+"skill.health_plus.tool.write_blood_glucose.param.unit.description" = "数值单位";
+"skill.health_plus.tool.write_blood_glucose.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_blood_oxygen.description" = "向 Apple Health 写入一次血氧饱和度（SpO₂ %）读数。";
+"skill.health_plus.tool.write_blood_oxygen.param.percentage.description" = "SpO₂ 百分比（如 98）";
+"skill.health_plus.tool.write_blood_oxygen.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_body_temperature.description" = "向 Apple Health 写入一次体温读数。";
+"skill.health_plus.tool.write_body_temperature.param.value.description" = "温度数值";
+"skill.health_plus.tool.write_body_temperature.param.unit.description" = "温度单位";
+"skill.health_plus.tool.write_body_temperature.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_body_fat.description" = "向 Apple Health 写入体脂率。";
+"skill.health_plus.tool.write_body_fat.param.percentage.description" = "体脂百分比（如 22.5）";
+"skill.health_plus.tool.write_body_fat.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_height.description" = "向 Apple Health 写入身高。";
+"skill.health_plus.tool.write_height.param.value.description" = "身高数值";
+"skill.health_plus.tool.write_height.param.unit.description" = "数值单位";
+"skill.health_plus.tool.write_height.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_heart_rate.description" = "向 Apple Health 写入一次心率（bpm）样本。";
+"skill.health_plus.tool.write_heart_rate.param.bpm.description" = "心率（每分钟跳动次数）";
+"skill.health_plus.tool.write_heart_rate.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_dietary_carbohydrates.description" = "向 Apple Health 写入碳水摄入（克）。";
+"skill.health_plus.tool.write_dietary_carbohydrates.param.grams.description" = "碳水克数";
+"skill.health_plus.tool.write_dietary_carbohydrates.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_dietary_protein.description" = "向 Apple Health 写入蛋白质摄入（克）。";
+"skill.health_plus.tool.write_dietary_protein.param.grams.description" = "蛋白质克数";
+"skill.health_plus.tool.write_dietary_protein.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_dietary_fat.description" = "向 Apple Health 写入脂肪摄入（克）。";
+"skill.health_plus.tool.write_dietary_fat.param.grams.description" = "脂肪克数";
+"skill.health_plus.tool.write_dietary_fat.param.date.description" = "记录时间。默认当前时间。";
+"skill.health_plus.tool.write_workout.description" = "向 Apple Health 写入一次锻炼记录。";
+"skill.health_plus.tool.write_workout.param.activity_type.description" = "活动类型，如 running、walking、cycling、swimming、yoga、strength";
+"skill.health_plus.tool.write_workout.param.start_date.description" = "锻炼开始时间（ISO 8601 或 yyyy-MM-dd HH:mm）";
+"skill.health_plus.tool.write_workout.param.end_date.description" = "锻炼结束时间（ISO 8601 或 yyyy-MM-dd HH:mm）";
+"skill.health_plus.tool.write_workout.param.energy_kcal.description" = "主动消耗能量（千卡）";
+"skill.health_plus.tool.write_workout.param.distance_km.description" = "距离（公里）";

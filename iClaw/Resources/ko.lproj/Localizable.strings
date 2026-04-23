@@ -660,3 +660,95 @@
 "export.roleAssistant" = "어시스턴트";
 "export.roleTool" = "도구";
 "export.toolCall" = "도구 호출";
+
+// MARK: - 내장 스킬 콘텐츠
+// 내장 Skill의 표시 이름, 요약, 도구 및 파라미터 설명.
+// Markdown 본문은 BuiltInSkills/<Name>.md를 참조.
+
+// Deep Research
+"skill.deep_research.displayName" = "딥 리서치";
+"skill.deep_research.summary" = "출처 평가와 종합을 포함한 체계적 연구 방법론";
+"skill.deep_research.script.extract_links.description" = "HTML 콘텐츠에서 링크를 추출 (홑/겹 따옴표 href 속성 모두 지원)";
+"skill.deep_research.script.summarize_text.description" = "긴 텍스트에서 위치와 길이 중요도에 따라 주요 문장 추출";
+"skill.deep_research.tool.fetch_and_extract.description" = "URL을 가져와 읽을 수 있는 텍스트를 추출합니다. 샌드박스 CORS 제한으로 실패할 수 있으므로, 대신 browser_navigate + browser_get_page_info를 사용하세요.";
+"skill.deep_research.tool.fetch_and_extract.param.url.description" = "콘텐츠를 가져올 URL";
+"skill.deep_research.tool.fetch_and_extract.param.max_length.description" = "반환할 최대 문자 수 (기본값: 5000)";
+
+// File Ops
+"skill.file_ops.displayName" = "파일 작업";
+"skill.file_ops.summary" = "고급 파일 작업: 복사, 이동, 디렉토리 관리, 풍부한 stat";
+"skill.file_ops.tool.cp.description" = "파일 또는 디렉토리를 복사합니다. 디렉토리는 기본 재귀.";
+"skill.file_ops.tool.cp.param.src.description" = "원본 경로";
+"skill.file_ops.tool.cp.param.dest.description" = "대상 경로";
+"skill.file_ops.tool.cp.param.recursive.description" = "디렉토리를 재귀적으로 복사 (기본값: true)";
+"skill.file_ops.tool.mv.description" = "파일 또는 디렉토리를 이동/이름 변경합니다.";
+"skill.file_ops.tool.mv.param.src.description" = "원본 경로";
+"skill.file_ops.tool.mv.param.dest.description" = "대상 경로";
+"skill.file_ops.tool.stat.description" = "파일 또는 디렉토리의 JSON 메타데이터를 반환합니다 (size, mtime_ms, ctime_ms, is_file, is_dir).";
+"skill.file_ops.tool.stat.param.path.description" = "조회할 경로";
+"skill.file_ops.tool.mkdir.description" = "디렉토리를 생성합니다 (중간 단계 포함). 멱등.";
+"skill.file_ops.tool.mkdir.param.path.description" = "생성할 디렉토리 경로";
+"skill.file_ops.tool.tree.description" = "깊이 제어가 가능한 재귀 디렉토리 목록. 서식이 지정된 텍스트 트리를 반환.";
+"skill.file_ops.tool.tree.param.path.description" = "루트 경로 (기본값: 에이전트 루트)";
+"skill.file_ops.tool.tree.param.max_depth.description" = "최대 재귀 깊이 (기본값: 4)";
+"skill.file_ops.tool.touch.description" = "파일이 없으면 빈 파일을 생성 (이미 있으면 변경 없음).";
+"skill.file_ops.tool.touch.param.path.description" = "touch할 파일 경로";
+"skill.file_ops.tool.exists.description" = "파일 또는 디렉토리가 존재하는지 확인합니다. 'true' 또는 'false' 반환.";
+"skill.file_ops.tool.exists.param.path.description" = "확인할 경로";
+
+// Health Plus
+"skill.health_plus.displayName" = "건강 Plus";
+"skill.health_plus.summary" = "고급 Apple Health 지표: 혈압, 혈당, 산소, 체온, 다량영양소, 운동";
+"skill.health_plus.tool.read_blood_pressure.description" = "Apple Health에서 혈압(수축기/이완기) 샘플을 읽습니다.";
+"skill.health_plus.tool.read_blood_pressure.param.start_date.description" = "시작 날짜 (ISO 8601 또는 yyyy-MM-dd HH:mm). 기본값은 30일 전.";
+"skill.health_plus.tool.read_blood_pressure.param.end_date.description" = "종료 날짜. 기본값은 현재 시각.";
+"skill.health_plus.tool.read_blood_glucose.description" = "Apple Health에서 혈당 샘플을 읽습니다.";
+"skill.health_plus.tool.read_blood_glucose.param.start_date.description" = "시작 날짜. 기본값은 30일 전.";
+"skill.health_plus.tool.read_blood_glucose.param.end_date.description" = "종료 날짜. 기본값은 현재 시각.";
+"skill.health_plus.tool.read_blood_oxygen.description" = "Apple Health에서 혈중 산소 포화도(SpO₂) 샘플을 읽습니다.";
+"skill.health_plus.tool.read_blood_oxygen.param.start_date.description" = "시작 날짜. 기본값은 7일 전.";
+"skill.health_plus.tool.read_blood_oxygen.param.end_date.description" = "종료 날짜. 기본값은 현재 시각.";
+"skill.health_plus.tool.read_body_temperature.description" = "Apple Health에서 체온 샘플을 읽습니다.";
+"skill.health_plus.tool.read_body_temperature.param.start_date.description" = "시작 날짜. 기본값은 30일 전.";
+"skill.health_plus.tool.read_body_temperature.param.end_date.description" = "종료 날짜. 기본값은 현재 시각.";
+"skill.health_plus.tool.read_body_temperature.param.unit.description" = "온도 단위";
+"skill.health_plus.tool.write_blood_pressure.description" = "Apple Health에 혈압(수축기/이완기 mmHg)을 기록합니다.";
+"skill.health_plus.tool.write_blood_pressure.param.systolic.description" = "수축기 압력 mmHg (예: 120)";
+"skill.health_plus.tool.write_blood_pressure.param.diastolic.description" = "이완기 압력 mmHg (예: 80)";
+"skill.health_plus.tool.write_blood_pressure.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_blood_glucose.description" = "Apple Health에 혈당값을 기록합니다.";
+"skill.health_plus.tool.write_blood_glucose.param.value.description" = "혈당 값";
+"skill.health_plus.tool.write_blood_glucose.param.unit.description" = "값의 단위";
+"skill.health_plus.tool.write_blood_glucose.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_blood_oxygen.description" = "Apple Health에 혈중 산소 포화도(SpO₂ %)를 기록합니다.";
+"skill.health_plus.tool.write_blood_oxygen.param.percentage.description" = "SpO₂ 퍼센트 (예: 98)";
+"skill.health_plus.tool.write_blood_oxygen.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_body_temperature.description" = "Apple Health에 체온을 기록합니다.";
+"skill.health_plus.tool.write_body_temperature.param.value.description" = "온도 값";
+"skill.health_plus.tool.write_body_temperature.param.unit.description" = "온도 단위";
+"skill.health_plus.tool.write_body_temperature.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_body_fat.description" = "Apple Health에 체지방률을 기록합니다.";
+"skill.health_plus.tool.write_body_fat.param.percentage.description" = "체지방률 (예: 22.5)";
+"skill.health_plus.tool.write_body_fat.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_height.description" = "Apple Health에 신장을 기록합니다.";
+"skill.health_plus.tool.write_height.param.value.description" = "신장 값";
+"skill.health_plus.tool.write_height.param.unit.description" = "값의 단위";
+"skill.health_plus.tool.write_height.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_heart_rate.description" = "Apple Health에 심박수(bpm) 샘플을 기록합니다.";
+"skill.health_plus.tool.write_heart_rate.param.bpm.description" = "심박수 (분당 박동 수)";
+"skill.health_plus.tool.write_heart_rate.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_dietary_carbohydrates.description" = "Apple Health에 식이 탄수화물(그램)을 기록합니다.";
+"skill.health_plus.tool.write_dietary_carbohydrates.param.grams.description" = "탄수화물 그램";
+"skill.health_plus.tool.write_dietary_carbohydrates.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_dietary_protein.description" = "Apple Health에 식이 단백질(그램)을 기록합니다.";
+"skill.health_plus.tool.write_dietary_protein.param.grams.description" = "단백질 그램";
+"skill.health_plus.tool.write_dietary_protein.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_dietary_fat.description" = "Apple Health에 식이 지방(그램)을 기록합니다.";
+"skill.health_plus.tool.write_dietary_fat.param.grams.description" = "지방 그램";
+"skill.health_plus.tool.write_dietary_fat.param.date.description" = "기록 시각. 기본값은 현재 시각.";
+"skill.health_plus.tool.write_workout.description" = "Apple Health에 운동 세션을 기록합니다.";
+"skill.health_plus.tool.write_workout.param.activity_type.description" = "활동 유형. 예: running, walking, cycling, swimming, yoga, strength";
+"skill.health_plus.tool.write_workout.param.start_date.description" = "운동 시작 시각 (ISO 8601 또는 yyyy-MM-dd HH:mm)";
+"skill.health_plus.tool.write_workout.param.end_date.description" = "운동 종료 시각 (ISO 8601 또는 yyyy-MM-dd HH:mm)";
+"skill.health_plus.tool.write_workout.param.energy_kcal.description" = "활동 에너지 소비량 (kcal)";
+"skill.health_plus.tool.write_workout.param.distance_km.description" = "거리 (킬로미터)";
