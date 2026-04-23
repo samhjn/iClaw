@@ -5,33 +5,21 @@ import Foundation
 /// `Bundle.main` can point to the XCTest runner instead of the app.
 private final class BuiltInSkillResourcesBundleAnchor {}
 
-/// Loads locale-specific Markdown content for built-in skills.
-///
-/// The Markdown files ship as non-localized resources named
-/// `<Skill>.<locale>.md` (e.g. `Deep Research.zh-Hans.md`) in
-/// `iClaw/Resources/BuiltInSkills/`. We deliberately avoid the standard
-/// `.lproj` localization machinery here — Xcode / XcodeGen flatten group
-/// subdirectories and don't treat arbitrary `.md` files inside `.lproj`
-/// as auto-variant resources, so a filename-based convention is more
-/// reliable than `Bundle.url(forResource:withExtension:subdirectory:)`
-/// against a localized subdirectory.
+/// Loads locale-specific Markdown content for built-in skills. The iOS
+/// Bundle system resolves `url(forResource:withExtension:)` against the
+/// user's preferred localization and falls back to the development language
+/// (en) when a translation is missing.
 enum BuiltInSkillResources {
-    /// Returns the Markdown `content` for a built-in skill, walking the
-    /// user's preferred localizations and falling back to the development
-    /// language. Returns a `"# <skillName>"` placeholder as a last resort
-    /// so upstream field-diffing in `upgradeBuiltInSkill` still has a
-    /// non-empty value to compare.
+    /// Returns the Markdown `content` for a built-in skill. The file is
+    /// looked up at `<locale>.lproj/<skillName>.md` in the app bundle.
+    /// Returns the English copy if the localized file is absent, or a raw
+    /// placeholder so upstream field-diffing in `upgradeBuiltInSkill` still
+    /// has a non-empty value to compare.
     static func content(forSkillName skillName: String) -> String {
         let bundle = Bundle(for: BuiltInSkillResourcesBundleAnchor.self)
-        let dev = bundle.developmentLocalization ?? "en"
-        let candidates = bundle.preferredLocalizations + [dev]
-        var seen = Set<String>()
-        for locale in candidates where seen.insert(locale).inserted {
-            let resource = "\(skillName).\(locale)"
-            if let url = bundle.url(forResource: resource, withExtension: "md"),
-               let text = try? String(contentsOf: url, encoding: .utf8) {
-                return text
-            }
+        if let url = bundle.url(forResource: skillName, withExtension: "md"),
+           let text = try? String(contentsOf: url, encoding: .utf8) {
+            return text
         }
         return "# \(skillName)"
     }
