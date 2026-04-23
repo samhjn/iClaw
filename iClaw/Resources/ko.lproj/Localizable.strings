@@ -138,7 +138,7 @@
 
 // MARK: - Apple Permissions
 "applePermissions.title" = "Apple 권한";
-"applePermissions.description" = "이 에이전트가 접근할 수 있는 Apple 시스템 기능을 설정합니다. 읽기는 데이터 조회를 허용하고, 쓰기는 데이터 생성·수정·삭제를 허용합니다.";
+"applePermissions.description" = "이 에이전트가 접근할 수 있는 Apple 시스템 기능을 설정합니다. 읽기는 데이터 조회를 허용하고, 쓰기는 데이터 생성·수정·삭제를 허용합니다. 동일한 수준은 코드 실행에서 사용하는 `apple.*` JavaScript API와 이를 감싸는 설치된 스킬(예: Health Plus)에도 적용됩니다.";
 "applePermissions.readWrite" = "읽기 및 쓰기";
 "applePermissions.readOnly" = "읽기 전용";
 "applePermissions.writeOnly" = "쓰기 전용";
@@ -607,7 +607,7 @@
 
 // MARK: - Tool Permissions
 "toolPermissions.title" = "도구 권한";
-"toolPermissions.description" = "이 에이전트가 사용할 수 있는 도구와 기능을 설정합니다. 읽기는 데이터 조회를 허용하고, 쓰기는 데이터 생성·수정·삭제를 허용합니다.";
+"toolPermissions.description" = "이 에이전트가 사용할 수 있는 도구와 기능을 설정합니다. 읽기는 데이터 조회를 허용하고, 쓰기는 데이터 생성·수정·삭제를 허용합니다. JavaScript 브리지(`apple.*`, `fs.*` 등)를 노출하는 카테고리의 경우 동일한 수준이 `execute_javascript` 호출 및 이를 감싸는 기본 제공 스킬(File Ops, Health Plus)에도 적용됩니다.";
 "toolPermissions.browser" = "브라우저";
 "toolPermissions.codeExecution" = "코드 실행";
 "toolPermissions.subAgents" = "서브 에이전트";

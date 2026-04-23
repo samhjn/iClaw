@@ -176,6 +176,11 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertEqual(ToolCategory.category(for: "file_info"), .files)
         // file_mkdir moved into the File Ops skill; no longer a registered default tool.
         XCTAssertNil(ToolCategory.category(for: "file_mkdir"))
+        // Long-tail health tools moved into the Health Plus skill; no longer registered defaults.
+        XCTAssertNil(ToolCategory.category(for: "health_read_blood_pressure"))
+        XCTAssertNil(ToolCategory.category(for: "health_write_blood_pressure"))
+        XCTAssertNil(ToolCategory.category(for: "health_write_workout"))
+        XCTAssertNil(ToolCategory.category(for: "health_write_dietary_carbohydrates"))
         XCTAssertNil(ToolCategory.category(for: "unknown_tool"))
     }
 
@@ -194,6 +199,9 @@ final class ToolCategoryTests: XCTestCase {
         XCTAssertFalse(ToolCategory.isWriteTool("file_info"))
         // file_mkdir no longer a registered tool after move to File Ops skill.
         XCTAssertFalse(ToolCategory.isWriteTool("file_mkdir"))
+        // Long-tail health writes moved to Health Plus skill; no longer registered default writes.
+        XCTAssertFalse(ToolCategory.isWriteTool("health_write_blood_pressure"))
+        XCTAssertFalse(ToolCategory.isWriteTool("health_write_workout"))
         XCTAssertFalse(ToolCategory.isWriteTool("unknown_tool"))
     }
 

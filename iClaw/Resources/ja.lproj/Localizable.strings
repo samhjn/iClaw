@@ -138,7 +138,7 @@
 
 // MARK: - Apple Permissions
 "applePermissions.title" = "Apple 権限";
-"applePermissions.description" = "このエージェントがアクセスできる Apple システム機能を設定します。読み取りはデータの照会を許可し、書き込みはデータの作成・変更・削除を許可します。";
+"applePermissions.description" = "このエージェントがアクセスできる Apple システム機能を設定します。読み取りはデータの照会を許可し、書き込みはデータの作成・変更・削除を許可します。同じレベルはコード実行で使う `apple.*` JavaScript API、およびそれをラップする導入済みスキル（Health Plus など）にも適用されます。";
 "applePermissions.readWrite" = "読み書き";
 "applePermissions.readOnly" = "読み取りのみ";
 "applePermissions.writeOnly" = "書き込みのみ";
@@ -607,7 +607,7 @@
 
 // MARK: - Tool Permissions
 "toolPermissions.title" = "ツール権限";
-"toolPermissions.description" = "このエージェントが使用できるツールと機能を設定します。読み取りはデータの照会を許可し、書き込みはデータの作成・変更・削除を許可します。";
+"toolPermissions.description" = "このエージェントが使用できるツールと機能を設定します。読み取りはデータの照会を許可し、書き込みはデータの作成・変更・削除を許可します。JavaScript ブリッジ（`apple.*`、`fs.*` など）を公開するカテゴリでは、`execute_javascript` からの呼び出しや、それらをラップする組み込みスキル（File Ops、Health Plus）にも同じレベルが適用されます。";
 "toolPermissions.browser" = "ブラウザ";
 "toolPermissions.codeExecution" = "コード実行";
 "toolPermissions.subAgents" = "サブエージェント";

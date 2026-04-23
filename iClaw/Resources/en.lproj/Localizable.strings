@@ -138,7 +138,7 @@
 
 // MARK: - Apple Permissions
 "applePermissions.title" = "Apple Permissions";
-"applePermissions.description" = "Configure which Apple system features this agent can access. Read allows querying data; Write allows creating, modifying, or deleting data.";
+"applePermissions.description" = "Configure which Apple system features this agent can access. Read allows querying data; Write allows creating, modifying, or deleting data. The same level also gates the matching `apple.*` JavaScript API used by code execution and any installed skills that wrap it (e.g. Health Plus).";
 "applePermissions.readWrite" = "Read & Write";
 "applePermissions.readOnly" = "Read Only";
 "applePermissions.writeOnly" = "Write Only";
@@ -608,7 +608,7 @@
 
 // MARK: - Tool Permissions
 "toolPermissions.title" = "Tool Permissions";
-"toolPermissions.description" = "Configure which tools and capabilities this agent can use. Read allows querying data; Write allows creating, modifying, or deleting data.";
+"toolPermissions.description" = "Configure which tools and capabilities this agent can use. Read allows querying data; Write allows creating, modifying, or deleting data. For categories that also expose a JavaScript bridge (e.g. `apple.*`, `fs.*`), the same level gates those calls from `execute_javascript` and from built-in skills that wrap them (File Ops, Health Plus).";
 "toolPermissions.browser" = "Browser";
 "toolPermissions.codeExecution" = "Code Execution";
 "toolPermissions.subAgents" = "Sub-Agents";

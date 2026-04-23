@@ -218,7 +218,7 @@ final class PromptBuilder {
             (.notifications, "Notifications: `notification_schedule`, `notification_cancel`, `notification_list`"),
             (.location, "Location: `location_get_current`, `location_geocode`, `location_reverse_geocode`"),
             (.map, "Maps: `map_search_places`, `map_get_directions`"),
-            (.health, "Health: read steps/heart rate/sleep/body mass/blood pressure/glucose/oxygen/temperature; write dietary/body/health metrics and workouts"),
+            (.health, "Health: read steps/heart rate/sleep/body mass; write body mass, dietary energy, dietary water. For blood pressure/glucose/oxygen, body temperature/fat/height, heart-rate writes, macronutrient writes (carbs/protein/fat), and workouts, install the built-in **Health Plus** skill which exposes `skill_health_plus_*` wrappers around the `apple.health.*` namespace."),
         ]
         let enabledApple = appleCategories.filter { isEnabled($0.0, for: agent) }
         if !enabledApple.isEmpty {
@@ -249,6 +249,14 @@ final class PromptBuilder {
         }
         if isEnabled(.sessions, for: agent) {
             guidelines.append("When the user seems to reference past conversations or you need prior context, use `search_sessions` and `recall_session` to retrieve relevant history.")
+        }
+        let codeExecEnabled = isEnabled(.codeExecution, for: agent)
+        let hasBridgeCategory = isEnabled(.files, for: agent)
+            || ToolCategory.appleCategories.contains(where: { isEnabled($0, for: agent) })
+        if codeExecEnabled && hasBridgeCategory {
+            guidelines.append("Permission levels cover every route to a capability: function-call tools, the `apple.*` / `fs.*` JavaScript namespaces, and any installed skills that wrap those bridges. Setting a category to Read Only blocks its write bridge actions whether they are reached via a tool, `execute_javascript`, or a skill custom tool — do not try to route around a restriction.")
+        } else if hasBridgeCategory {
+            guidelines.append("Permission levels apply to both function-call tools and any installed skills that wrap the corresponding system bridges. Setting a category to Read Only blocks its write actions whether they are reached via a tool or a skill custom tool — do not try to route around a restriction.")
         }
         parts.append("### Important Guidelines\n" + guidelines.map { "- \($0)" }.joined(separator: "\n"))
 
