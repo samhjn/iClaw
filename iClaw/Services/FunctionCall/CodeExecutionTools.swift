@@ -23,8 +23,26 @@ struct CodeExecutionTools {
         let execId = UUID().uuidString
         let agentId = AgentFileManager.shared.resolveAgentId(for: agent)
 
+        // Snapshot the agent's snippets once at registration time; the snapshot is
+        // captured by the resolver/lister closures so bridge dispatch can run them
+        // on any actor without re-entering SwiftData. Re-invocations of this tool
+        // always re-register with a fresh snapshot, so edits made between runs are
+        // picked up on the next call.
+        let snippetSnapshot: [AppleEcosystemBridge.SnippetInfo] = agent.codeSnippets.map {
+            .init(name: $0.name, language: $0.language, code: $0.code)
+        }
+        let resolver: @Sendable (String) -> AppleEcosystemBridge.SnippetInfo? = { name in
+            snippetSnapshot.first { $0.name == name }
+        }
+        let lister: @Sendable () -> [AppleEcosystemBridge.SnippetInfo] = { snippetSnapshot }
+
         await AppleEcosystemBridge.shared.registerContext(
-            execId: execId, agentId: agentId
+            execId: execId,
+            agentId: agentId,
+            blockedActions: blockedActions,
+            totalBudget: timeout,
+            snippetResolver: resolver,
+            snippetLister: lister
         ) { action in !blockedActions.contains(action) }
 
         defer {

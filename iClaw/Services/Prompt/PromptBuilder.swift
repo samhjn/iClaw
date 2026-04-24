@@ -299,6 +299,16 @@ final class PromptBuilder {
 
         section += """
 
+          - Inter-snippet calling (from inside any running JS snippet):
+            - `await snippets.invoke(name, args?, opts?)` — call another saved snippet and get its return value.
+              The callee body is wrapped in an async IIFE, so it may use a top-level `return value;` to return a result.
+              `args` becomes the callee's `args` object; `opts.stdin` (string) becomes the callee's `stdin` global.
+              By default the callee's stdout/stderr are appended to the caller's output; pass `opts.capture = true` to
+              receive a structured `{result, stdout, stderr}` instead (useful for piping).
+            - `await snippets.pipe([name1, name2, ...], args?)` — run snippets in sequence, feeding stage N's stdout
+              as stage N+1's stdin. Returns the final stage's `{result, stdout, stderr}`.
+            - `await snippets.list()` — returns `[{name, language}, ...]` for all callable snippets (including `skill:*:*`).
+            - Recursion (self or mutual) is allowed; enforced limits are depth ≤ 16 and a shared wall-clock budget inherited from the root call's JS timeout.
           - Ideal for: JSON manipulation, string processing, DOM-less web API prototyping, algorithm implementation, data transformation
         - `save_code`: Save a code snippet for later reuse
         - `load_code`: Load a previously saved code snippet
