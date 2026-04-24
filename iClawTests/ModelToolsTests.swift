@@ -567,7 +567,7 @@ final class ModelToolsTests: XCTestCase {
     @MainActor
     func testListModelsWhitelistFiltersLLMOnly() {
         let llm = makeLLMProvider(name: "LLM1", modelName: "allowed-model")
-        let llm2 = makeLLMProvider(name: "LLM2", modelName: "blocked-model")
+        _ = makeLLMProvider(name: "LLM2", modelName: "blocked-model")
         _ = makeImageProvider(name: "ImgProvider")
 
         let agent = makeAgent()

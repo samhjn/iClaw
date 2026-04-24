@@ -301,6 +301,10 @@
 "appIntent.trigger.description" = "選択したiClawの定期タスクをすぐに実行します。Appを前面に出さないため、ロック中でも自動化が動作します。";
 "appIntent.parameter.cronJob" = "定期タスク";
 
+// AppShortcut shortTitle keys — keep in sync with `shortTitle:` literals in iClawAppShortcuts.swift.
+"Run Due Cron Jobs" = "期限の来た定期タスクを実行";
+"Trigger Cron Job" = "定期タスクをトリガー";
+
 // MARK: - Sessions
 "sessions.title" = "セッション";
 "sessions.noSessions" = "セッションなし";

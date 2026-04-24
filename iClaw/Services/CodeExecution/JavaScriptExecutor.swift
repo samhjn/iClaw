@@ -83,7 +83,84 @@ final class JavaScriptExecutor: CodeExecutor, @unchecked Sendable {
         }
     }
 
+    /// Execute JS as a callable — user code is wrapped in an `async function()` IIFE
+    /// so a top-level `return` statement yields the call's return value. Used by the
+    /// `snippets.invoke` bridge action. The caller is responsible for having
+    /// pre-registered an `ExecutionContext` for `execId` on `AppleEcosystemBridge`.
+    ///
+    /// - Parameters:
+    ///   - code: Snippet body. May include a top-level `return value;`.
+    ///   - args: Injected as the `args` object inside the callee.
+    ///   - stdin: Injected as the `stdin` string global; empty when not piping.
+    func executeCallable(
+        code: String,
+        timeout: TimeInterval,
+        blockedBridgeActions: Set<String>,
+        execId: String,
+        args: [String: Any] = [:],
+        stdin: String = ""
+    ) async throws -> CallableResult {
+        let script = Self.buildCallableScript(
+            code: code,
+            blockedBridgeActions: blockedBridgeActions,
+            execId: execId
+        )
+
+        let jsArguments: [String: Any] = [
+            "args": args,
+            "stdin": stdin
+        ]
+
+        // No retry on runtime crash: the parent's callAsyncJavaScript is also
+        // wiped by the webview reload, so retrying the nested call inside a dead
+        // parent context would produce a useless result. Let the error bubble up
+        // and the outer executor's crash-retry handle a fresh execution.
+        let dict = try await WKWebViewJSRuntime.shared.evaluate(script: script, arguments: jsArguments, timeout: timeout)
+
+        let errorRaw = dict["error"]
+        let errorString: String?
+        if let s = errorRaw as? String, !s.isEmpty {
+            errorString = s
+        } else {
+            errorString = nil
+        }
+
+        let rawValue = dict["result"]
+        // NSNull is WKWebView's bridge for JS null / undefined; collapse to Swift nil.
+        let value: Any? = (rawValue is NSNull) ? nil : rawValue
+
+        return CallableResult(
+            stdout: dict["stdout"] as? String ?? "",
+            stderr: dict["stderr"] as? String ?? "",
+            value: value,
+            error: errorString
+        )
+    }
+
     // MARK: - Script Builder
+
+    private static func buildCallableScript(
+        code: String,
+        blockedBridgeActions: Set<String>,
+        execId: String
+    ) -> String {
+        let preamble = AppleEcosystemBridge.jsPreamble(blockedActions: blockedBridgeActions, execId: execId)
+        return """
+        \(runtimeScript)
+        \(preamble)
+        if (typeof stdin === 'undefined') var stdin = '';
+        try {
+            var __val = await (async function() {
+                \(code)
+            })();
+            if (__val && typeof __val.then === 'function') __val = await __val;
+            return {stdout: __stdout, stderr: __stderr, result: __val, error: null};
+        } catch(__e) {
+            __appendErr(String(__e) + '\\n');
+            return {stdout: __stdout, stderr: __stderr, result: null, error: String(__e)};
+        }
+        """
+    }
 
     private static func buildScript(
         code: String,

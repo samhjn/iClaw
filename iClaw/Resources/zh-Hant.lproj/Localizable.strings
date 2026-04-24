@@ -302,6 +302,10 @@
 "appIntent.trigger.description" = "立即執行選取的 iClaw 排程任務。不會將 app 拉到前台，因此鎖屏狀態下也能觸發。";
 "appIntent.parameter.cronJob" = "排程任務";
 
+// AppShortcut shortTitle keys — keep in sync with `shortTitle:` literals in iClawAppShortcuts.swift.
+"Run Due Cron Jobs" = "執行到期排程任務";
+"Trigger Cron Job" = "觸發排程任務";
+
 // MARK: - Sessions
 "sessions.title" = "對話";
 "sessions.noSessions" = "尚無對話";

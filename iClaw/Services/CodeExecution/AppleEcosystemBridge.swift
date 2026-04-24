@@ -90,17 +90,58 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         }
     }
 
+    /// Resolved snippet payload exposed to the bridge.
+    struct SnippetInfo {
+        let name: String
+        let language: String
+        let code: String
+    }
+
     final class ExecutionContext {
         let permissionChecker: (String) -> Bool
         let agentId: UUID?
         var fdTable: [Int: FDEntry] = [:]
         var nextFdId: Int = 3  // reserve 0-2 for conventional stdio slots
 
-        init(permissionChecker: @escaping (String) -> Bool, agentId: UUID?) {
+        /// Looks up a snippet by name for `snippets.invoke`. Nil when the executor
+        /// was not given agent context (e.g. tests, non-agent callers).
+        let snippetResolver: ((String) -> SnippetInfo?)?
+        /// Enumerates all callable snippets for `snippets.list`.
+        let snippetLister: (() -> [SnippetInfo])?
+        /// Bridge actions blocked for the agent; propagated into nested call contexts
+        /// so restrictions apply transitively.
+        let blockedActions: Set<String>
+        /// Depth in the snippet call tree. 0 at the root execution; +1 per nested invoke.
+        let callDepth: Int
+        /// Wall-clock stamp of the root execution; inherited unchanged by nested contexts.
+        let rootStartedAt: Date
+        /// Total call-tree budget (seconds); inherited unchanged by nested contexts.
+        let totalBudget: TimeInterval
+
+        init(
+            permissionChecker: @escaping (String) -> Bool,
+            agentId: UUID?,
+            snippetResolver: ((String) -> SnippetInfo?)? = nil,
+            snippetLister: (() -> [SnippetInfo])? = nil,
+            blockedActions: Set<String> = [],
+            callDepth: Int = 0,
+            rootStartedAt: Date = Date(),
+            totalBudget: TimeInterval = 60
+        ) {
             self.permissionChecker = permissionChecker
             self.agentId = agentId
+            self.snippetResolver = snippetResolver
+            self.snippetLister = snippetLister
+            self.blockedActions = blockedActions
+            self.callDepth = callDepth
+            self.rootStartedAt = rootStartedAt
+            self.totalBudget = totalBudget
         }
     }
+
+    /// Hard cap on nested `snippets.invoke` levels. Recursive calls are allowed
+    /// below this; beyond it the bridge aborts with a readable error.
+    static let maxSnippetCallDepth = 16
 
     /// Permission checkers keyed by execution ID (legacy accessor).
     private var permissionCheckers: [String: (String) -> Bool] {
@@ -129,6 +170,30 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
     /// Register a full execution context with permissions and agent ID (for file operations).
     func registerContext(execId: String, agentId: UUID?, checker: @escaping (String) -> Bool) {
         executionContexts[execId] = ExecutionContext(permissionChecker: checker, agentId: agentId)
+    }
+
+    /// Register an execution context with snippet-calling capabilities. Used by
+    /// `CodeExecutionTools` to enable `snippets.invoke` / `snippets.list` inside
+    /// the running JS.
+    func registerContext(
+        execId: String,
+        agentId: UUID?,
+        blockedActions: Set<String>,
+        totalBudget: TimeInterval,
+        snippetResolver: @escaping (String) -> SnippetInfo?,
+        snippetLister: @escaping () -> [SnippetInfo],
+        checker: @escaping (String) -> Bool
+    ) {
+        executionContexts[execId] = ExecutionContext(
+            permissionChecker: checker,
+            agentId: agentId,
+            snippetResolver: snippetResolver,
+            snippetLister: snippetLister,
+            blockedActions: blockedActions,
+            callDepth: 0,
+            rootStartedAt: Date(),
+            totalBudget: totalBudget
+        )
     }
 
     /// Unregister the execution context after completion. Force-closes any fds the JS
@@ -389,9 +454,124 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         case "health.writeWorkout":
             return await AppleHealthTools().writeWorkout(arguments: args)
 
+        // --- Inter-snippet calling ---
+        case "snippets.invoke":
+            return await invokeSnippetDispatch(args: args, context: context)
+        case "snippets.list":
+            return listSnippetsDispatch(context: context)
+
         default:
             return "[Error] Unknown bridge action: \(action)"
         }
+    }
+
+    // MARK: - Snippet Dispatch Helpers
+
+    /// Runs another snippet from inside the currently-executing snippet.
+    /// Produces a JSON response `{ok, result, stdout, stderr}` on success or
+    /// `{ok:false, error, stdout, stderr}` on failure — the caller-side JS wrapper
+    /// unpacks this and either appends the output or returns it to the user.
+    private func invokeSnippetDispatch(args: [String: Any], context: ExecutionContext?) async -> String {
+        guard let ctx = context else { return "[Error] No execution context." }
+        guard let resolver = ctx.snippetResolver else {
+            return "[Error] Snippet invocation is unavailable in this context."
+        }
+        guard let name = args["name"] as? String, !name.isEmpty else {
+            return "[Error] Missing 'name' argument."
+        }
+
+        if ctx.callDepth >= Self.maxSnippetCallDepth {
+            return "[Error] Snippet call depth exceeded (\(Self.maxSnippetCallDepth))."
+        }
+
+        let elapsed = Date().timeIntervalSince(ctx.rootStartedAt)
+        let remaining = ctx.totalBudget - elapsed
+        if remaining <= 0 {
+            return "[Error] Snippet call-tree time budget exhausted."
+        }
+
+        guard let info = resolver(name) else {
+            let available = ctx.snippetLister?().map { $0.name }.joined(separator: ", ") ?? ""
+            return "[Error] Snippet '\(name)' not found. Available: \(available.isEmpty ? "(none)" : available)"
+        }
+        guard info.language == "javascript" else {
+            return "[Error] Only JavaScript snippets can be invoked via snippets.invoke. '\(name)' is \(info.language)."
+        }
+
+        guard let jsExecutor = CodeExecutorRegistry.shared.executor(for: "javascript") as? JavaScriptExecutor else {
+            return "[Error] JavaScript executor is not available."
+        }
+
+        let childExecId = UUID().uuidString
+        executionContexts[childExecId] = ExecutionContext(
+            permissionChecker: ctx.permissionChecker,
+            agentId: ctx.agentId,
+            snippetResolver: ctx.snippetResolver,
+            snippetLister: ctx.snippetLister,
+            blockedActions: ctx.blockedActions,
+            callDepth: ctx.callDepth + 1,
+            rootStartedAt: ctx.rootStartedAt,
+            totalBudget: ctx.totalBudget
+        )
+        defer {
+            if let childCtx = executionContexts.removeValue(forKey: childExecId), !childCtx.fdTable.isEmpty {
+                for (_, entry) in childCtx.fdTable { try? entry.handle.close() }
+            }
+        }
+
+        let calleeArgs = (args["args"] as? [String: Any]) ?? [:]
+        let calleeStdin = (args["stdin"] as? String) ?? ""
+        let nestedTimeout = max(1, remaining)
+
+        do {
+            let result = try await jsExecutor.executeCallable(
+                code: info.code,
+                timeout: nestedTimeout,
+                blockedBridgeActions: ctx.blockedActions,
+                execId: childExecId,
+                args: calleeArgs,
+                stdin: calleeStdin
+            )
+            return Self.serializeCallableResponse(result)
+        } catch CodeExecutorError.timeout {
+            return "[Error] Snippet '\(name)' exceeded the call-tree time budget."
+        } catch CodeExecutorError.runtimeCrashed {
+            return "[Error] Snippet '\(name)' crashed the JS runtime (OOM or similar)."
+        } catch is CancellationError {
+            return "[Error] Snippet '\(name)' was cancelled."
+        } catch {
+            return "[Error] Snippet '\(name)' failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func listSnippetsDispatch(context: ExecutionContext?) -> String {
+        guard let lister = context?.snippetLister else { return "[]" }
+        let items: [[String: String]] = lister().map { ["name": $0.name, "language": $0.language] }
+        guard let data = try? JSONSerialization.data(withJSONObject: items, options: []),
+              let s = String(data: data, encoding: .utf8) else {
+            return "[]"
+        }
+        return s
+    }
+
+    /// Serialize a `CallableResult` into the JSON shape consumed by the JS `snippets.invoke` wrapper.
+    nonisolated private static func serializeCallableResponse(_ result: CallableResult) -> String {
+        var dict: [String: Any] = [
+            "stdout": result.stdout,
+            "stderr": result.stderr
+        ]
+        if let err = result.error {
+            dict["ok"] = false
+            dict["error"] = err
+        } else {
+            dict["ok"] = true
+            dict["result"] = result.value ?? NSNull()
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []),
+              let s = String(data: data, encoding: .utf8) else {
+            return "{\"ok\":false,\"error\":\"Failed to serialize snippet response.\",\"stdout\":\"\",\"stderr\":\"\"}"
+        }
+        return s
     }
 
     // MARK: - File Dispatch Helpers
@@ -842,6 +1022,58 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
                 }
             };
         })();
+
+        // --- Inter-snippet calling ---
+        // `snippets.invoke(name, args, opts)` runs another snippet inside the current
+        // execution. The callee body is wrapped in an async IIFE, so a top-level
+        // `return value;` yields the return value. Default opts append the callee's
+        // stdout/stderr to the caller's output; pass `{capture: true}` to receive a
+        // structured `{result, stdout, stderr}` instead. Pass `{stdin: "..."}` to
+        // expose a `stdin` global string to the callee.
+        var snippets = {
+            invoke: async function(name, callArgs, opts) {
+                opts = opts || {};
+                var raw = await __bridgeCall('snippets.invoke', {
+                    name: name,
+                    args: callArgs || {},
+                    stdin: (typeof opts.stdin === 'string') ? opts.stdin : ''
+                });
+                if (typeof raw === 'string' && raw.indexOf('[Error]') === 0) {
+                    throw new Error(raw);
+                }
+                var resp;
+                try { resp = (typeof raw === 'string') ? JSON.parse(raw) : raw; }
+                catch(e) { throw new Error('[Error] Invalid snippet response: ' + e.message); }
+                if (!resp || resp.ok === false) {
+                    if (!opts.capture) {
+                        if (resp && resp.stdout) __appendOut(resp.stdout);
+                        if (resp && resp.stderr) __appendErr(resp.stderr);
+                    }
+                    throw new Error(resp && resp.error ? resp.error : '[Error] snippet failed');
+                }
+                if (opts.capture) {
+                    return { result: resp.result, stdout: resp.stdout || '', stderr: resp.stderr || '' };
+                }
+                if (resp.stdout) __appendOut(resp.stdout);
+                if (resp.stderr) __appendErr(resp.stderr);
+                return resp.result;
+            },
+            pipe: async function(names, pipeArgs) {
+                if (!Array.isArray(names) || names.length === 0) {
+                    throw new Error('[Error] snippets.pipe requires a non-empty array of snippet names');
+                }
+                var carry = { result: undefined, stdout: '', stderr: '' };
+                for (var i = 0; i < names.length; i++) {
+                    carry = await snippets.invoke(names[i], pipeArgs || {}, { stdin: carry.stdout, capture: true });
+                }
+                return carry;
+            },
+            list: async function() {
+                var raw = await __bridgeCall('snippets.list', {});
+                try { return (typeof raw === 'string') ? JSON.parse(raw) : raw; }
+                catch(e) { return []; }
+            }
+        };
         """
     }
 
