@@ -301,6 +301,10 @@
 "appIntent.trigger.description" = "선택한 iClaw 예약 작업을 즉시 실행합니다. 앱을 전면으로 가져오지 않으므로 잠금 상태에서도 자동화가 동작합니다.";
 "appIntent.parameter.cronJob" = "예약 작업";
 
+// AppShortcut shortTitle keys — keep in sync with `shortTitle:` literals in iClawAppShortcuts.swift.
+"Run Due Cron Jobs" = "예정된 예약 작업 실행";
+"Trigger Cron Job" = "예약 작업 트리거";
+
 // MARK: - Sessions
 "sessions.title" = "세션";
 "sessions.noSessions" = "세션 없음";

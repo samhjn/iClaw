@@ -302,6 +302,12 @@
 "appIntent.trigger.description" = "Runs the selected iClaw cron job now. Does not open the app, so automations can fire while the phone is locked.";
 "appIntent.parameter.cronJob" = "Cron Job";
 
+// AppShortcut shortTitle keys — the literal strings match `shortTitle:` in
+// iClawAppShortcuts.swift. AppShortcuts.strings only accepts phrases, so the
+// shortTitle localization has to live here in Localizable.strings.
+"Run Due Cron Jobs" = "Run Due Cron Jobs";
+"Trigger Cron Job" = "Trigger Cron Job";
+
 // MARK: - Sessions
 "sessions.title" = "Sessions";
 "sessions.noSessions" = "No Sessions";

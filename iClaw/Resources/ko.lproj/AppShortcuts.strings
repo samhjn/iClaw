@@ -1,10 +1,7 @@
-/* AppShortcuts.strings — phrase and shortTitle localization for AppShortcutsProvider.
-   Keys must EXACTLY match the source strings declared in iClawAppShortcuts.swift. */
+/* AppShortcuts.strings — phrase localization for AppShortcutsProvider.
+   Only invocation phrases belong here; `shortTitle` is localized via Localizable.strings. */
 
 "Run due cron jobs in ${applicationName}" = "${applicationName}에서 예정된 예약 작업 실행";
 "Run ${applicationName} cron jobs" = "${applicationName} 예약 작업 실행";
 "Trigger cron job in ${applicationName}" = "${applicationName}에서 예약 작업 트리거";
 "Run ${applicationName} scheduled task" = "${applicationName} 예약 작업 실행";
-
-"Run Due Cron Jobs" = "예정된 예약 작업 실행";
-"Trigger Cron Job" = "예약 작업 트리거";
