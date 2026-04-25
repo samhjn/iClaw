@@ -31,8 +31,8 @@ struct ParsedSkillTool: Hashable {
     /// that runs with `args`, `fs`, `apple`, `fetch`, `console` in scope.
     let code: String
     /// JS body with the `const META = { ... };` declaration stripped, suitable
-    /// for use as `SkillToolDefinition.implementation`. Identical to what the
-    /// hand-rolled `BuiltInSkills.Template` payloads carry today.
+    /// for use as `SkillToolDefinition.implementation` — what runs when the
+    /// LLM calls `skill_<slug>_<tool>`.
     let body: String
 }
 

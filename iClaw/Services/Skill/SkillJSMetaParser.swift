@@ -77,9 +77,9 @@ final class SkillJSMetaParser {
     /// with any leading whitespace trimmed. If no META is found, returns the
     /// full source.
     ///
-    /// Used by `SkillPackage.parse` to populate `ParsedSkillTool.body` —
-    /// equivalent to the `implementation` string in `BuiltInSkills.Template`'s
-    /// hand-rolled tool definitions.
+    /// Used by `SkillPackage.parse` to populate `ParsedSkillTool.body` — what
+    /// gets stored in `SkillToolDefinition.implementation` and executed when
+    /// the LLM calls `skill_<slug>_<tool>`.
     static func bodyAfterMeta(_ source: String) -> String {
         guard let region = findMetaRegion(in: source) else { return source }
         var idx = region.upperBound
