@@ -163,18 +163,10 @@ final class FunctionCallRouter {
                     .listCron())
 
         // --- Skills ---
-        case "create_skill":
-            return ToolCallResult(
-                SkillTools(agent: agent, modelContext: modelContext)
-                    .createSkill(arguments: arguments))
-        case "edit_skill":
-            return ToolCallResult(
-                SkillTools(agent: agent, modelContext: modelContext)
-                    .editSkill(arguments: arguments))
-        case "delete_skill":
-            return ToolCallResult(
-                SkillTools(agent: agent, modelContext: modelContext)
-                    .deleteSkill(arguments: arguments))
+        // create_skill / edit_skill / delete_skill / read_skill are removed in
+        // favor of `fs.*` writes against the `/skills/<slug>/` mount. Auto-
+        // reload (SkillService.reload) and validate_skill replace the
+        // round-trip those tools provided.
         case "install_skill":
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
@@ -187,10 +179,10 @@ final class FunctionCallRouter {
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
                     .listSkills(arguments: arguments))
-        case "read_skill":
+        case "validate_skill":
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
-                    .readSkill(arguments: arguments))
+                    .validateSkill(arguments: arguments))
 
         // --- Model ---
         case "set_model":

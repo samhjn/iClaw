@@ -90,13 +90,16 @@ final class ToolDefinitionsTests: XCTestCase {
         XCTAssertTrue(names.contains("read_config"))
         XCTAssertTrue(names.contains("write_config"))
 
-        // Skills
-        XCTAssertTrue(names.contains("create_skill"))
-        XCTAssertTrue(names.contains("edit_skill"))
+        // Skills (Phase 4d: authoring is via fs.*; these are the agent-binding
+        // and validation tools only)
         XCTAssertTrue(names.contains("install_skill"))
         XCTAssertTrue(names.contains("uninstall_skill"))
         XCTAssertTrue(names.contains("list_skills"))
-        XCTAssertTrue(names.contains("read_skill"))
+        XCTAssertTrue(names.contains("validate_skill"))
+        XCTAssertFalse(names.contains("create_skill"), "create_skill is removed; author via fs.writeFile('skills/<slug>/SKILL.md', ...) instead.")
+        XCTAssertFalse(names.contains("edit_skill"), "edit_skill is removed; rewrite via fs.writeFile.")
+        XCTAssertFalse(names.contains("delete_skill"), "delete_skill is removed; rm via fs.delete('skills/<slug>', {recursive:true}).")
+        XCTAssertFalse(names.contains("read_skill"), "read_skill is removed; read via fs.readFile('skills/<slug>/SKILL.md').")
 
         // Model
         XCTAssertTrue(names.contains("set_model"))
