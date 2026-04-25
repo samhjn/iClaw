@@ -13,6 +13,22 @@ struct iClawApp: App {
     private let keepAliveManager = BackgroundKeepAliveManager()
     /// Store URL that needs to be deleted if the user confirms a migration reset.
     private static var pendingStoreURL: URL?
+    /// Process-wide flag: SwiftUI re-creates the `App` struct on every body
+    /// re-evaluation, so heavy/side-effecting launch work must not repeat or
+    /// it cascades through SwiftData observation back into view invalidation.
+    /// Not `private` so unit tests can observe via `@testable import iClaw`.
+    internal static var didRunOneTimeLaunchTasks = false
+    /// Captured once on first init so view body can decide whether to show
+    /// the migration alert without re-reading static state across re-inits.
+    internal static var initialMigrationFailed: Bool?
+    /// Tally of how many times `init()` has executed in this process. SwiftUI
+    /// is allowed to recreate the App struct, but a runaway count points at a
+    /// re-entrancy storm (the launch-crash class). DEBUG-only trip-wire.
+    internal static var initCallCount = 0
+    /// Soft cap before we shout. Real apps see init re-runs in the single
+    /// digits across normal scene-phase changes; anything above this is
+    /// pathological.
+    internal static let initCallCountWarnThreshold = 32
 
     init() {
         Self.installExceptionHandler()
@@ -22,27 +38,79 @@ struct iClawApp: App {
         }
 
         modelContainer = iClawModelContainer.shared
-        if let failedURL = iClawModelContainer.migrationFailedStoreURL {
-            print("[iClawApp] ModelContainer migration failed. Awaiting user confirmation before reset.")
-            Self.pendingStoreURL = failedURL
-            _showMigrationResetAlert = State(initialValue: true)
+
+        let migrationFailed: Bool
+        if let captured = Self.initialMigrationFailed {
+            migrationFailed = captured
         } else {
-            _showMigrationResetAlert = State(initialValue: false)
+            migrationFailed = (iClawModelContainer.migrationFailedStoreURL != nil)
+            Self.initialMigrationFailed = migrationFailed
+            if let failedURL = iClawModelContainer.migrationFailedStoreURL {
+                print("[iClawApp] ModelContainer migration failed. Awaiting user confirmation before reset.")
+                Self.pendingStoreURL = failedURL
+            }
         }
+        _showMigrationResetAlert = State(initialValue: migrationFailed)
 
         _launchTaskManager = State(initialValue: LaunchTaskManager(container: modelContainer))
-
-        Self.resetStaleActiveSessions(in: modelContainer)
 
         let coordinator = CronBGTaskCoordinator()
         coordinator.registerCronTask()
         bgTaskCoordinator = coordinator
 
-        // Publish the root-agent snapshot for the Share Extension and sweep
-        // any abandoned share-staging directories from earlier sessions.
-        Self.refreshAgentSnapshot(in: modelContainer)
-        ShareHandoff.sweepOrphans()
+        // Heavy launch tasks: run exactly once per process. SwiftUI calls
+        // `init()` on every body re-evaluation, and SwiftData writes from
+        // these helpers invalidate observers, which can recurse back into
+        // body evaluation and trip a Swift runtime trap on iOS 17.0.
+        Self.runOneTimeLaunchTasksIfNeeded { [modelContainer] in
+            Self.resetStaleActiveSessions(in: modelContainer)
+            // Publish the root-agent snapshot for the Share Extension and sweep
+            // any abandoned share-staging directories from earlier sessions.
+            Self.refreshAgentSnapshot(in: modelContainer)
+            ShareHandoff.sweepOrphans()
+            // MetricKit catches Swift runtime traps and signal crashes that
+            // bypass the NSException handler. Log any payloads delivered
+            // since the previous launch, then register for future ones.
+            for rec in CrashDiagnostics.consumeMetrics() {
+                print("[iClawApp] Prior MetricKit crash: signal=\(rec.signal ?? -1) "
+                      + "exceptionType=\(rec.exceptionType ?? -1) "
+                      + "termination=\(rec.terminationReason ?? "nil") "
+                      + "build=\(rec.appVersion) os=\(rec.osVersion) at=\(rec.timestamp)")
+            }
+            CrashMetricsSubscriber.shared.start()
+        }
+
+        Self.initCallCount += 1
+        #if DEBUG
+        if Self.initCallCount == Self.initCallCountWarnThreshold {
+            assertionFailure(
+                "iClawApp.init() ran \(Self.initCallCount) times — runaway re-entrancy. "
+                + "Likely cause: a side effect inside init() / View body / Scene modifier "
+                + "is mutating observed state and re-triggering body evaluation. See "
+                + "scripts/lint_app_init_side_effects.sh."
+            )
+        }
+        #endif
     }
+
+    /// Run `work` exactly once per process. Extracted so unit tests can verify
+    /// the latch behaviour without instantiating the App struct.
+    static func runOneTimeLaunchTasksIfNeeded(_ work: () -> Void) {
+        guard !didRunOneTimeLaunchTasks else { return }
+        didRunOneTimeLaunchTasks = true
+        work()
+    }
+
+    #if DEBUG
+    /// Test-only: reset the process-wide flags so a unit test can observe a
+    /// fresh first-launch state. Mirrors the pattern in
+    /// `CronBGTaskCoordinator.resetRegistrationStateForTesting()`.
+    static func resetLaunchStateForTesting() {
+        didRunOneTimeLaunchTasks = false
+        initialMigrationFailed = nil
+        initCallCount = 0
+    }
+    #endif
 
     /// Publish a read-only snapshot of root agents to the App Group so the
     /// Share Extension can list them without touching SwiftData.

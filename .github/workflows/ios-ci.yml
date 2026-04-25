@@ -25,6 +25,9 @@ jobs:
       - name: CollectionView Crash Risk Check
         run: bash scripts/lint_collectionview_risks.sh
 
+      - name: App/View init() Side-Effect Check
+        run: bash scripts/lint_app_init_side_effects.sh
+
   test:
     name: Build & Test
     runs-on: macos-latest
