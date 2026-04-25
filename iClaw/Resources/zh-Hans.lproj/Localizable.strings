@@ -443,6 +443,7 @@
 "skills.importedBody" = "'%@' 已安装。";
 "skills.revealInFiles" = "在「文件」中显示";
 "skills.showInFiles" = "在「文件」中打开 Skills 文件夹";
+"skills.shareSkill" = "分享技能…";
 "skills.customSkills" = "自定义技能";
 "skills.builtInSkills" = "内置技能";
 "skills.builtIn" = "内置";

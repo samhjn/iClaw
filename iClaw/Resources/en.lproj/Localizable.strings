@@ -445,6 +445,7 @@
 "skills.importedBody" = "'%@' is now installed.";
 "skills.revealInFiles" = "Reveal in Files";
 "skills.showInFiles" = "Show Skills folder in Files";
+"skills.shareSkill" = "Share Skill…";
 "skills.customSkills" = "Custom Skills";
 "skills.builtInSkills" = "Built-in Skills";
 "skills.builtIn" = "built-in";

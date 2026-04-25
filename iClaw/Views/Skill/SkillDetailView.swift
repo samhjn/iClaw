@@ -10,6 +10,8 @@ struct SkillDetailView: View {
     @State private var isEditing = false
     @State private var showDeleteConfirm = false
     @State private var showInstallSheet = false
+    @State private var shareItems: [URL] = []
+    @State private var showShareSheet = false
 
     var body: some View {
         ScrollView {
@@ -37,22 +39,35 @@ struct SkillDetailView: View {
                 Button { showInstallSheet = true } label: {
                     Image(systemName: "cpu.fill")
                 }
-                if !skill.isBuiltIn {
-                    Menu {
+                Menu {
+                    if !skill.isBuiltIn {
                         Button { isEditing = true } label: {
                             Label(L10n.Common.edit, systemImage: "pencil")
                         }
-                        if hasOnDiskPackage {
-                            Button { revealInFiles() } label: {
-                                Label(L10n.Skills.revealInFiles, systemImage: "folder")
-                            }
+                    }
+                    // Share / export the on-disk package via the iOS share
+                    // sheet. Available for both built-ins (bundle path → we
+                    // copy to a temp dir so AirDrop / Save to Files / etc.
+                    // can read it) and user skills with a package. Hidden
+                    // only for legacy SwiftData-only rows.
+                    if packageURL != nil {
+                        Button { prepareShare() } label: {
+                            Label(L10n.Skills.shareSkill, systemImage: "square.and.arrow.up")
                         }
+                    }
+                    if !skill.isBuiltIn, hasOnDiskPackage {
+                        Button { revealInFiles() } label: {
+                            Label(L10n.Skills.revealInFiles, systemImage: "folder")
+                        }
+                    }
+                    if !skill.isBuiltIn {
+                        Divider()
                         Button(role: .destructive) { showDeleteConfirm = true } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
@@ -61,6 +76,9 @@ struct SkillDetailView: View {
         }
         .sheet(isPresented: $showInstallSheet) {
             InstallSkillOnAgentSheet(skill: skill)
+        }
+        .sheet(isPresented: $showShareSheet, onDismiss: { shareItems = [] }) {
+            SkillShareSheet(items: shareItems)
         }
         .alert(L10n.Skills.deleteSkill, isPresented: $showDeleteConfirm) {
             Button(L10n.Common.delete, role: .destructive) {
@@ -84,6 +102,19 @@ struct SkillDetailView: View {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
+    /// On-disk URL for the skill's package directory — bundle path for
+    /// built-ins, `<Documents>/Skills/<slug>/` for user skills. Returns nil
+    /// for legacy SwiftData-only rows that have no package on disk yet.
+    /// Drives the ShareLink for export.
+    private var packageURL: URL? {
+        let slug = SkillPackage.derivedSlug(forName: skill.name)
+        if skill.isBuiltIn {
+            return BuiltInSkillsDirectoryLoader.packageURL(forSlug: slug)
+        }
+        let url = AgentFileManager.shared.skillsRoot.appendingPathComponent(slug, isDirectory: true)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     /// Open the iOS Files app at this skill's package directory using the
     /// `shareddocuments://` URL scheme. The app's `UIFileSharingEnabled`
     /// flag in Info.plist makes the path resolvable from outside.
@@ -93,6 +124,33 @@ struct SkillDetailView: View {
             .appendingPathComponent(slug, isDirectory: true).path
         guard let url = URL(string: "shareddocuments://" + path) else { return }
         UIApplication.shared.open(url)
+    }
+
+    /// Copy the package directory into the app's temporary directory before
+    /// presenting the share sheet. The temp copy:
+    ///   - normalizes built-in (bundle) and user (Documents) sources to the
+    ///     same kind of URL, so share extensions read both reliably,
+    ///   - keeps the live `<Documents>/Skills/` tree from being mutated by
+    ///     well-meaning consumers like Quick Look,
+    ///   - is cleaned up by iOS along with the rest of the temporary
+    ///     directory; no manual disposal needed.
+    private func prepareShare() {
+        guard let src = packageURL else { return }
+        let stem = "iclaw-export-\(UUID().uuidString.prefix(8).lowercased())"
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(stem, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            let destination = tempDir.appendingPathComponent(src.lastPathComponent, isDirectory: true)
+            try FileManager.default.copyItem(at: src, to: destination)
+            shareItems = [destination]
+            showShareSheet = true
+        } catch {
+            // Surface failures via the existing alert plumbing if you want;
+            // for now we silently abort — share UX failure isn't worth
+            // blocking the user with an alert.
+            shareItems = []
+        }
     }
 
     private var headerSection: some View {
@@ -214,6 +272,23 @@ struct SkillDetailView: View {
             }
         }
     }
+}
+
+// MARK: - Share sheet wrapper
+
+/// SwiftUI bridge to UIActivityViewController for sharing one or more URLs
+/// (e.g. an exported skill package directory). UIActivityViewController
+/// handles the directory→zip transformation that AirDrop / Mail / etc.
+/// expect, so callers just hand it a directory URL and don't need a zip
+/// helper.
+struct SkillShareSheet: UIViewControllerRepresentable {
+    let items: [URL]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Install on agent sheet

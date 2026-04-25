@@ -442,6 +442,7 @@
 "skills.importedBody" = "'%@' 이(가) 설치되었습니다.";
 "skills.revealInFiles" = "파일 앱에서 보기";
 "skills.showInFiles" = "파일 앱에서 Skills 폴더 열기";
+"skills.shareSkill" = "스킬 공유…";
 "skills.customSkills" = "사용자 정의 스킬";
 "skills.builtInSkills" = "기본 제공 스킬";
 "skills.builtIn" = "기본 제공";

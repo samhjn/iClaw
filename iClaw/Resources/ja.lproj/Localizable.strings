@@ -442,6 +442,7 @@
 "skills.importedBody" = "'%@' をインストールしました。";
 "skills.revealInFiles" = "ファイル App で表示";
 "skills.showInFiles" = "Skills フォルダをファイル App で開く";
+"skills.shareSkill" = "スキルを共有…";
 "skills.customSkills" = "カスタムスキル";
 "skills.builtInSkills" = "組み込みスキル";
 "skills.builtIn" = "組み込み";
