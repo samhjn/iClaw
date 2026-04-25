@@ -154,7 +154,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .cron:
             return ["list_cron"]
         case .skills:
-            return ["list_skills", "read_skill"]
+            return ["list_skills", "validate_skill"]
         case .config:
             return ["read_config"]
         case .model:
@@ -206,7 +206,9 @@ enum ToolCategory: String, CaseIterable, Identifiable {
         case .cron:
             return ["schedule_cron", "unschedule_cron"]
         case .skills:
-            return ["create_skill", "edit_skill", "delete_skill", "install_skill", "uninstall_skill"]
+            // Authoring (create/edit/delete) is via fs.* on the /skills/<slug>/
+            // mount — no dedicated LLM tools. Only the binding ops remain.
+            return ["install_skill", "uninstall_skill"]
         case .config:
             return ["write_config"]
         case .model:

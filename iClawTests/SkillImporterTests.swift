@@ -67,9 +67,13 @@ final class SkillImporterTests: XCTestCase {
             atomically: true, encoding: .utf8
         )
         // Optional: a tool that triggers the toolHasNoOutput warning when
-        // the test wants to exercise the warnings-confirmation path.
+        // the test wants to exercise the warnings-confirmation path. The
+        // validator's heuristic is a literal substring scan for
+        // `console.log` / `return ` — so a body that wants to NOT trigger
+        // the warning must avoid those tokens entirely (including in
+        // comments, since the heuristic is naive on purpose).
         let toolBody = includeWarning
-            ? "// no console.log in here\nconst x = 1;"
+            ? "const x = 1; const y = x + 2;"
             : "console.log('hi');"
         try """
         const META = {

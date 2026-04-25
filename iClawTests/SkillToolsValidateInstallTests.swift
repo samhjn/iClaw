@@ -98,7 +98,7 @@ final class SkillToolsValidateInstallTests: XCTestCase {
     @MainActor
     func testValidate_validPackageReturnsOk() throws {
         try writeValidPackage()
-        let result = tools.validateSkill(arguments: ["slug": scratchSlug])
+        let result = tools.validateSkill(arguments: ["slug": scratchSlug!])
         XCTAssertTrue(result.contains("\"errors\"") && result.contains("\"warnings\""),
                       "Expected JSON ValidationReport, got: \(result)")
         XCTAssertFalse(result.contains("missing_field"))
@@ -120,7 +120,7 @@ final class SkillToolsValidateInstallTests: XCTestCase {
             to: scratchURL.appendingPathComponent("SKILL.md"),
             atomically: true, encoding: .utf8
         )
-        let result = tools.validateSkill(arguments: ["slug": scratchSlug])
+        let result = tools.validateSkill(arguments: ["slug": scratchSlug!])
         XCTAssertTrue(result.contains("frontmatter_malformed") || result.contains("frontmatter_missing"),
                       "Expected frontmatter error, got: \(result)")
     }
@@ -142,7 +142,7 @@ final class SkillToolsValidateInstallTests: XCTestCase {
         try writeValidPackage()
         let canonicalName = humanName(forSlug: scratchSlug)
 
-        let result = tools.installSkill(arguments: ["slug": scratchSlug])
+        let result = tools.installSkill(arguments: ["slug": scratchSlug!])
         XCTAssertFalse(result.hasPrefix("[Error]"),
                        "Install from disk should succeed, got: \(result)")
         XCTAssertTrue(result.contains(canonicalName),
@@ -171,7 +171,7 @@ final class SkillToolsValidateInstallTests: XCTestCase {
             to: scratchURL.appendingPathComponent("SKILL.md"),
             atomically: true, encoding: .utf8
         )
-        let result = tools.installSkill(arguments: ["slug": scratchSlug])
+        let result = tools.installSkill(arguments: ["slug": scratchSlug!])
         XCTAssertTrue(result.hasPrefix("[Error]"),
                       "Install of a broken package should surface validation errors, got: \(result)")
         XCTAssertTrue(result.contains("frontmatter") || result.contains("validate"),
@@ -201,7 +201,7 @@ final class SkillToolsValidateInstallTests: XCTestCase {
     @MainActor
     func testList_omitsAuthoredPackagesAfterInstall() throws {
         try writeValidPackage()
-        _ = tools.installSkill(arguments: ["slug": scratchSlug])
+        _ = tools.installSkill(arguments: ["slug": scratchSlug!])
 
         let result = tools.listSkills(arguments: ["scope": "all"])
         XCTAssertFalse(result.contains("Authored but not installed"),
