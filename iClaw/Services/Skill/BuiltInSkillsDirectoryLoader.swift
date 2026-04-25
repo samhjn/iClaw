@@ -77,8 +77,10 @@ enum BuiltInSkillsDirectoryLoader {
         )
     }
 
-    /// Locate a built-in skill's package directory in the app bundle.
-    private static func packageURL(forSlug slug: String) -> URL? {
+    /// Locate a built-in skill's package directory in the app bundle. Exposed
+    /// (rather than `private`) so the `fs.*` bridge resolver can route
+    /// `/skills/<built-in-slug>/...` reads at the bundle.
+    static func packageURL(forSlug slug: String) -> URL? {
         // We anchor on `SKILL.md` because `Bundle.url(forResource:withExtension:subdirectory:)`
         // only finds files, not directories. The package URL is the parent of
         // that match.

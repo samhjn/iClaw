@@ -23,6 +23,89 @@ final class AgentFileManager {
             .appendingPathComponent("AgentFiles", isDirectory: true)
     }
 
+    /// Root for user-authored skill packages, exposed via the `/skills/` mount
+    /// in the `fs.*` bridge. Sibling of `AgentFiles/`. Visible in the iOS
+    /// Files app via `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace`.
+    var skillsRoot: URL {
+        fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Skills", isDirectory: true)
+    }
+
+    // MARK: - Skills mount
+
+    /// Result of resolving a path under the reserved `skills/` mount. The
+    /// resolver chooses between the read-only built-in bundle and the
+    /// writable user skills directory based on the slug.
+    struct SkillMountResolution: Equatable {
+        let url: URL
+        /// First path component after `skills/` — the skill slug. `nil` when
+        /// resolving the mount root itself (`skills` with no children).
+        let slug: String?
+        /// True when the resolved URL is inside the read-only app bundle.
+        /// Writes to such URLs are rejected by the resolver in Phase 4b.
+        let isBuiltIn: Bool
+    }
+
+    /// Path prefix that triggers the skills-mount resolver. Note: no leading
+    /// slash — JS-side leading slashes are stripped by the bridge before
+    /// reaching here. `isSafeRelativePath` continues to reject leading slashes
+    /// in agent-scoped paths.
+    static let skillsMountComponent = "skills"
+
+    /// True when `path` targets the `skills/` mount (either the mount root or
+    /// any sub-path under it).
+    static func isSkillsMountPath(_ path: String) -> Bool {
+        path == skillsMountComponent || path.hasPrefix(skillsMountComponent + "/")
+    }
+
+    /// Resolve a path under the `skills/` mount. The path is given **without**
+    /// the leading `skills/` component (e.g. `"deep-research/SKILL.md"`,
+    /// `"my-custom"`, or `""` for the mount root).
+    ///
+    /// - Throws: `FileToolError.unsafeFilename` for any traversal attempt.
+    func resolveSkillsPath(_ relative: String) throws -> SkillMountResolution {
+        // Empty → mount root listing.
+        if relative.isEmpty {
+            return SkillMountResolution(url: skillsRoot, slug: nil, isBuiltIn: false)
+        }
+        guard Self.isSafeRelativePath(relative) else {
+            throw FileToolError.unsafeFilename(relative)
+        }
+        // First path component is the slug; everything after is the in-package path.
+        let parts = relative.split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+        let slug = String(parts[0])
+        let remainder = parts.count > 1 ? String(parts[1]) : ""
+
+        if BuiltInSkills.shippedSlugs.contains(slug) {
+            // Built-in: route to the bundle. Read-only by construction.
+            guard let pkg = BuiltInSkillsDirectoryLoader.packageURL(forSlug: slug) else {
+                throw FileToolError.fileNotFound(relative)
+            }
+            let url = remainder.isEmpty
+                ? pkg.standardizedFileURL
+                : pkg.appendingPathComponent(remainder).standardizedFileURL
+            // Containment check against the built-in package root — the
+            // sanitized relative path can't escape, but standardize-and-check
+            // is cheap belt-and-suspenders.
+            let basePath = pkg.standardizedFileURL.path.hasSuffix("/")
+                ? pkg.standardizedFileURL.path
+                : pkg.standardizedFileURL.path + "/"
+            guard url.path == pkg.standardizedFileURL.path || url.path.hasPrefix(basePath) else {
+                throw FileToolError.unsafeFilename(relative)
+            }
+            return SkillMountResolution(url: url, slug: slug, isBuiltIn: true)
+        }
+
+        // User skill: route to <Documents>/Skills/<slug>/...
+        let base = skillsRoot.standardizedFileURL
+        let target = base.appendingPathComponent(relative).standardizedFileURL
+        let basePath = base.path.hasSuffix("/") ? base.path : base.path + "/"
+        guard target.path == base.path || target.path.hasPrefix(basePath) else {
+            throw FileToolError.unsafeFilename(relative)
+        }
+        return SkillMountResolution(url: target, slug: slug, isBuiltIn: false)
+    }
+
     // MARK: - Agent ID Resolution
 
     /// Walk the parentAgent chain to find the top-level (root) agent ID.
@@ -56,7 +139,20 @@ final class AgentFileManager {
     /// Resolve a relative path under the agent's directory. Validates against path
     /// traversal and ensures the final URL stays within the agent's directory
     /// (second line of defense against symlink escapes).
+    ///
+    /// Special case: paths under the reserved `skills/` mount are routed to a
+    /// shared location instead of the per-agent directory — the read-only app
+    /// bundle for built-ins, the writable `<Documents>/Skills/<slug>/` for
+    /// user skills. Built-in writes are blocked at the OS level (read-only
+    /// bundle); Phase 4b adds a resolver-level rejection with a nicer error
+    /// and the `fs_skill_write` per-agent permission gate.
     func resolvedURL(agentId: UUID, path: String) throws -> URL {
+        if Self.isSkillsMountPath(path) {
+            let remainder = path == Self.skillsMountComponent
+                ? ""
+                : String(path.dropFirst(Self.skillsMountComponent.count + 1))
+            return try resolveSkillsPath(remainder).url
+        }
         guard Self.isSafeRelativePath(path) else {
             throw FileToolError.unsafeFilename(path)
         }
