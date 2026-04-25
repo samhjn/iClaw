@@ -37,6 +37,11 @@ final class LaunchTaskManager {
         // trigger `ensureBuiltInSkills` on appear.
         SkillService(modelContext: ModelContext(container)).ensureBuiltInSkills()
 
+        // Wire the auto-reload bridge so writes through `fs.*` to user skills
+        // under the `/skills/` mount refresh the matching `Skill` row's
+        // cached fields on the next agent turn (last-good cache semantics).
+        SkillsAutoReloader.shared.start(container: container)
+
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
 

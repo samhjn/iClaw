@@ -249,4 +249,115 @@ final class SkillService {
             skill.updatedAt = Date()
         }
     }
+
+    // MARK: - Reload (file-system → cache)
+
+    /// Re-parse the on-disk package for `slug` and update the matching `Skill`
+    /// row's cached fields (`content`, `summary`, `displayName`, `scripts`,
+    /// `customTools`). On parse failure the cache is left untouched — the
+    /// last good version of the skill keeps running until the package is
+    /// fixed (the "broken-edit resilience" property documented in the
+    /// proposal). The returned `ValidationReport` always reflects the latest
+    /// parse attempt; callers surface its errors / warnings to the user.
+    ///
+    /// Returns `nil` when the slug is unknown (no matching `Skill` row, no
+    /// built-in package) — there's nothing to reload.
+    @discardableResult
+    func reload(slug: String) -> ValidationReport? {
+        guard let url = Self.packageURL(forSlug: slug) else { return nil }
+        let (parsed, report) = SkillPackage.parse(at: url)
+
+        // Last-good cache: parse failed → leave the existing Skill row as-is.
+        // The report still surfaces every error/warning so callers can show
+        // them.
+        guard report.ok, let pkg = parsed else { return report }
+
+        // Find the installed Skill row whose derived slug matches. For new
+        // packages with no installed row yet, this is a no-op — install_skill
+        // is the entry point that creates the row.
+        guard let skill = skillForSlug(slug) else { return report }
+
+        let oldName = skill.name
+        let newScripts = pkg.toSkillScripts()
+        let newTools = pkg.toCustomTools()
+
+        var changed = false
+        if skill.content != pkg.body { skill.content = pkg.body; changed = true }
+        if skill.summary != pkg.description { skill.summary = pkg.description; changed = true }
+        if !pkg.displayName.isEmpty, skill.displayName != pkg.displayName {
+            skill.displayName = pkg.displayName
+            changed = true
+        }
+        if skill.tags != pkg.frontmatter.iclaw.tags {
+            skill.tags = pkg.frontmatter.iclaw.tags
+            changed = true
+        }
+        if skill.scripts != newScripts {
+            skill.scripts = newScripts
+            changed = true
+        }
+        if skill.customTools != newTools {
+            skill.customTools = newTools
+            changed = true
+        }
+        if changed {
+            skill.updatedAt = Date()
+            save()
+            // Re-sync per-agent CodeSnippet rows so `run_snippet` invocations
+            // pick up renamed / modified scripts on the next turn.
+            resyncSnippetsForReloadedSkill(skill, oldName: oldName)
+        }
+        return report
+    }
+
+    /// Look up the installed `Skill` whose name derives to `slug`. Slow
+    /// (linear scan) but the built-in + user skill count is small.
+    private func skillForSlug(_ slug: String) -> Skill? {
+        let descriptor = FetchDescriptor<Skill>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        return all.first { SkillPackage.derivedSlug(forName: $0.name) == slug }
+    }
+
+    /// Resolve a slug to its on-disk package URL. Built-ins live in the read-
+    /// only app bundle; user skills live under `<Documents>/Skills/<slug>/`.
+    /// Returns `nil` when neither location exists.
+    private static func packageURL(forSlug slug: String) -> URL? {
+        if BuiltInSkills.shippedSlugs.contains(slug) {
+            return BuiltInSkillsDirectoryLoader.packageURL(forSlug: slug)
+        }
+        let url = AgentFileManager.shared.skillsRoot.appendingPathComponent(slug, isDirectory: true)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// Re-register CodeSnippets for every agent that has the reloaded skill
+    /// installed. Mirror of `SkillTools.resyncInstalledSnippets`. Phase 4d
+    /// will fold these two implementations together.
+    private func resyncSnippetsForReloadedSkill(_ skill: Skill, oldName: String) {
+        for installation in skill.installations {
+            guard let agent = installation.agent else { continue }
+            // Purge stale entries (by old name prefix; covers renames and
+            // removed scripts).
+            let oldPrefix = "skill:\(oldName):"
+            let newPrefix = "skill:\(skill.name):"
+            let stale = agent.codeSnippets.filter {
+                $0.name.hasPrefix(oldPrefix) || $0.name.hasPrefix(newPrefix)
+            }
+            for snip in stale {
+                agent.codeSnippets.removeAll { $0.id == snip.id }
+                modelContext.delete(snip)
+            }
+            // Insert fresh entries from the latest scripts.
+            for script in skill.scripts {
+                let snip = CodeSnippet(
+                    name: "\(newPrefix)\(script.name)",
+                    language: script.language,
+                    code: script.code
+                )
+                modelContext.insert(snip)
+                agent.codeSnippets.append(snip)
+            }
+            agent.updatedAt = Date()
+        }
+        save()
+    }
 }

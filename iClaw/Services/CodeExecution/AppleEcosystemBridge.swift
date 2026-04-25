@@ -189,6 +189,39 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         return nil
     }
 
+    /// Extract the user-skill slug from a (possibly leading-slashed) path
+    /// targeting the skills mount. Returns nil when the path is the mount
+    /// root, a built-in slug, or not in the mount at all.
+    private static func userSkillSlug(forPath path: String) -> String? {
+        let p: String
+        if path == "/" + AgentFileManager.skillsMountComponent
+            || path.hasPrefix("/" + AgentFileManager.skillsMountComponent + "/") {
+            p = String(path.dropFirst())
+        } else {
+            p = path
+        }
+        guard AgentFileManager.isSkillsMountPath(p), p != AgentFileManager.skillsMountComponent else {
+            return nil
+        }
+        let remainder = String(p.dropFirst(AgentFileManager.skillsMountComponent.count + 1))
+        let slug = remainder.split(separator: "/", maxSplits: 1).first.map(String.init) ?? remainder
+        if slug.isEmpty || BuiltInSkills.shippedSlugs.contains(slug) { return nil }
+        return slug
+    }
+
+    /// Post `Notification.Name.skillsMountWrite` for `path` if (a) it targets
+    /// a user-skill slug and (b) `result` indicates the write succeeded.
+    /// Idempotent: built-in writes never reach a success result; mount-root
+    /// writes don't fire because there's no slug.
+    static func notifySkillsMountWriteIfSucceeded(path: String, result: String) {
+        guard !result.hasPrefix("[Error]"), let slug = userSkillSlug(forPath: path) else { return }
+        NotificationCenter.default.post(
+            name: .skillsMountWrite,
+            object: nil,
+            userInfo: ["slug": slug]
+        )
+    }
+
     /// Permission checkers keyed by execution ID (legacy accessor).
     private var permissionCheckers: [String: (String) -> Bool] {
         executionContexts.mapValues { $0.permissionChecker }
@@ -325,19 +358,30 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
                let err = Self.enforceSkillWritePermission(path: path, context: context) {
                 return err
             }
-            return writeFileDispatch(args: args, context: context, append: false)
+            let result = writeFileDispatch(args: args, context: context, append: false)
+            if let path = filePathArg(args) {
+                Self.notifySkillsMountWriteIfSucceeded(path: path, result: result)
+            }
+            return result
         case "files.appendFile":
             if let path = filePathArg(args),
                let err = Self.enforceSkillWritePermission(path: path, context: context) {
                 return err
             }
-            return writeFileDispatch(args: args, context: context, append: true)
+            let result = writeFileDispatch(args: args, context: context, append: true)
+            if let path = filePathArg(args) {
+                Self.notifySkillsMountWriteIfSucceeded(path: path, result: result)
+            }
+            return result
         case "files.delete":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             if let err = Self.enforceSkillWritePermission(path: path, context: context) { return err }
-            do { try AgentFileManager.shared.deleteFile(agentId: agentId, name: path); return "OK" }
-            catch { return "[Error] \(error.localizedDescription)" }
+            do {
+                try AgentFileManager.shared.deleteFile(agentId: agentId, name: path)
+                Self.notifySkillsMountWriteIfSucceeded(path: path, result: "OK")
+                return "OK"
+            } catch { return "[Error] \(error.localizedDescription)" }
         case "files.info", "files.stat":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
@@ -356,8 +400,11 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
             if let err = Self.enforceSkillWritePermission(path: path, context: context) { return err }
-            do { try AgentFileManager.shared.makeDirectory(agentId: agentId, path: path); return "OK" }
-            catch { return "[Error] \(error.localizedDescription)" }
+            do {
+                try AgentFileManager.shared.makeDirectory(agentId: agentId, path: path)
+                Self.notifySkillsMountWriteIfSucceeded(path: path, result: "OK")
+                return "OK"
+            } catch { return "[Error] \(error.localizedDescription)" }
         case "files.cp":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let src = args["src"] as? String, !src.isEmpty else { return "[Error] Missing 'src' argument." }
@@ -366,8 +413,11 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             // only the destination is gated by `fs_skill_write`.
             if let err = Self.enforceSkillWritePermission(path: dest, context: context) { return err }
             let recursive = (args["recursive"] as? Bool) ?? true
-            do { try AgentFileManager.shared.copyFile(agentId: agentId, src: src, dest: dest, recursive: recursive); return "OK" }
-            catch { return "[Error] \(error.localizedDescription)" }
+            do {
+                try AgentFileManager.shared.copyFile(agentId: agentId, src: src, dest: dest, recursive: recursive)
+                Self.notifySkillsMountWriteIfSucceeded(path: dest, result: "OK")
+                return "OK"
+            } catch { return "[Error] \(error.localizedDescription)" }
         case "files.mv":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let src = args["src"] as? String, !src.isEmpty else { return "[Error] Missing 'src' argument." }
@@ -375,8 +425,16 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             // Move removes the source, so both sides need write permission.
             if let err = Self.enforceSkillWritePermission(path: src, context: context) { return err }
             if let err = Self.enforceSkillWritePermission(path: dest, context: context) { return err }
-            do { try AgentFileManager.shared.moveFile(agentId: agentId, src: src, dest: dest); return "OK" }
-            catch { return "[Error] \(error.localizedDescription)" }
+            do {
+                try AgentFileManager.shared.moveFile(agentId: agentId, src: src, dest: dest)
+                // Move can affect both the source slug (deletion) and the
+                // destination slug (creation/modification). Fire reload for
+                // each — the SkillService.reload path is idempotent and a
+                // missing source slug (no Skill row) is a no-op.
+                Self.notifySkillsMountWriteIfSucceeded(path: src, result: "OK")
+                Self.notifySkillsMountWriteIfSucceeded(path: dest, result: "OK")
+                return "OK"
+            } catch { return "[Error] \(error.localizedDescription)" }
         case "files.truncate":
             guard let agentId = context?.agentId, let ctx = context else { return "[Error] No agent context for file operations." }
             let length = UInt64(max(intArg(args["length"]) ?? 0, 0))
@@ -391,8 +449,11 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' or 'fd' argument." }
             if let err = Self.enforceSkillWritePermission(path: path, context: context) { return err }
-            do { try AgentFileManager.shared.truncateFile(agentId: agentId, path: path, length: length); return "OK" }
-            catch { return "[Error] \(error.localizedDescription)" }
+            do {
+                try AgentFileManager.shared.truncateFile(agentId: agentId, path: path, length: length)
+                Self.notifySkillsMountWriteIfSucceeded(path: path, result: "OK")
+                return "OK"
+            } catch { return "[Error] \(error.localizedDescription)" }
 
         // --- Files (POSIX fd-based) ---
         case "files.open":

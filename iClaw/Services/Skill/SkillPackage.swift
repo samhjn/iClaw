@@ -44,6 +44,47 @@ struct ParsedSkillScript: Hashable {
     let description: String?
 }
 
+// MARK: - Conversion to model types
+
+extension ParsedSkillPackage {
+    /// Convert parsed scripts to the persistence-layer `SkillScript` shape used
+    /// on `Skill.scripts`. Filename → script name (stripping `.js`).
+    func toSkillScripts() -> [SkillScript] {
+        scripts.map { script in
+            let scriptName = (script.fileName as NSString).deletingPathExtension
+            return SkillScript(
+                name: scriptName,
+                language: "javascript",
+                code: script.code,
+                description: script.description
+            )
+        }
+    }
+
+    /// Convert parsed tools to the persistence-layer `SkillToolDefinition`
+    /// shape used on `Skill.customTools`. Drops the `META` declaration from
+    /// the JS source — `body` is what actually executes.
+    func toCustomTools() -> [SkillToolDefinition] {
+        tools.map { tool in
+            let params = tool.meta.parameters.map { p in
+                SkillToolParam(
+                    name: p.name,
+                    type: p.type,
+                    description: p.description ?? "",
+                    required: p.required,
+                    enumValues: p.enumValues
+                )
+            }
+            return SkillToolDefinition(
+                name: tool.meta.name,
+                description: tool.meta.description,
+                parameters: params,
+                implementation: tool.body
+            )
+        }
+    }
+}
+
 /// Entry point for reading and validating a skill package directory.
 ///
 /// All functions are synchronous and pure — callers are responsible for

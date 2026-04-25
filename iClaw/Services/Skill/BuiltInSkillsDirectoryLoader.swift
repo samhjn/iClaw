@@ -36,43 +36,14 @@ enum BuiltInSkillsDirectoryLoader {
         //     from `tools/<tool>.<locale>.json`.
         //   - `pkg.scripts[i].description` comes from
         //     `scripts/<script>.<locale>.txt`.
-
-        let scripts: [SkillScript] = pkg.scripts.map { script in
-            let scriptName = (script.fileName as NSString).deletingPathExtension
-            return SkillScript(
-                name: scriptName,
-                language: "javascript",
-                code: script.code,
-                description: script.description
-            )
-        }
-
-        let customTools: [SkillToolDefinition] = pkg.tools.map { tool in
-            let params = tool.meta.parameters.map { p in
-                SkillToolParam(
-                    name: p.name,
-                    type: p.type,
-                    description: p.description ?? "",
-                    required: p.required,
-                    enumValues: p.enumValues
-                )
-            }
-            return SkillToolDefinition(
-                name: tool.meta.name,
-                description: tool.meta.description,
-                parameters: params,
-                implementation: tool.body
-            )
-        }
-
         return BuiltInSkills.ResolvedTemplate(
             name: frontmatter.name,
             displayName: pkg.displayName,
             summary: pkg.description,
             content: pkg.body,
             tags: frontmatter.iclaw.tags,
-            scripts: scripts,
-            customTools: customTools,
+            scripts: pkg.toSkillScripts(),
+            customTools: pkg.toCustomTools(),
             configSchema: []
         )
     }
