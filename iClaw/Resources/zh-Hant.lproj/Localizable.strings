@@ -447,6 +447,8 @@
 "skills.validationErrorsTitle" = "驗證錯誤";
 "skills.validationWarningsTitle" = "驗證警告";
 "skills.parameterOptional" = "（可選）";
+"skills.editScriptTitle" = "編輯腳本";
+"skills.editToolTitle" = "編輯工具";
 "skills.customSkills" = "自訂技能";
 "skills.builtInSkills" = "內建技能";
 "skills.builtIn" = "內建";

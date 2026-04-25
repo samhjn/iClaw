@@ -513,6 +513,8 @@ struct SkillEditView: View {
     @State private var newScriptName = ""
     @State private var newScriptDesc = ""
     @State private var newScriptCode = ""
+    /// Non-nil when the script sheet is editing an existing entry.
+    @State private var editingScriptIndex: Int?
 
     // Editing state for new tool
     @State private var showAddTool = false
@@ -520,6 +522,8 @@ struct SkillEditView: View {
     @State private var newToolDesc = ""
     @State private var newToolCode = ""
     @State private var newToolParams: [SkillToolParam] = []
+    /// Non-nil when the tool sheet is editing an existing entry.
+    @State private var editingToolIndex: Int?
 
     init(existingSkill: Skill? = nil, onSave: (() -> Void)? = nil) {
         self.existingSkill = existingSkill
@@ -551,28 +555,44 @@ struct SkillEditView: View {
                 // Scripts section
                 Section {
                     ForEach(Array(scripts.enumerated()), id: \.element.name) { index, script in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
+                        // Whole-row Button → tap opens the edit sheet
+                        // prefilled with the existing script. The previous
+                        // layout used an inline destructive Button which
+                        // List/Form picked up as the row's primary tap
+                        // target — tapping the row deleted the script
+                        // instead of editing it.
+                        Button {
+                            editingScriptIndex = index
+                            newScriptName = script.name
+                            newScriptDesc = script.description ?? ""
+                            newScriptCode = script.code
+                            showAddScript = true
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(script.name).font(.subheadline.bold())
-                                Spacer()
-                                Button(role: .destructive) {
-                                    scripts.remove(at: index)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.caption)
+                                if let desc = script.description, !desc.isEmpty {
+                                    Text(desc).font(.caption).foregroundStyle(.secondary)
                                 }
+                                Text(script.code)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .lineLimit(3)
+                                    .foregroundStyle(.secondary)
                             }
-                            if let desc = script.description, !desc.isEmpty {
-                                Text(desc).font(.caption).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                scripts.remove(at: index)
+                            } label: {
+                                Label(L10n.Common.delete, systemImage: "trash")
                             }
-                            Text(script.code)
-                                .font(.system(.caption2, design: .monospaced))
-                                .lineLimit(3)
-                                .foregroundStyle(.secondary)
                         }
                     }
 
                     Button {
+                        editingScriptIndex = nil
                         newScriptName = ""
                         newScriptDesc = ""
                         newScriptCode = ""
@@ -589,26 +609,40 @@ struct SkillEditView: View {
                 // Custom Tools section
                 Section {
                     ForEach(Array(customTools.enumerated()), id: \.element.name) { index, tool in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
+                        // Whole-row Button → opens the edit sheet prefilled.
+                        // Same fix as scripts above; the inline destructive
+                        // button used to absorb every row tap.
+                        Button {
+                            editingToolIndex = index
+                            newToolName = tool.name
+                            newToolDesc = tool.description
+                            newToolCode = tool.implementation
+                            newToolParams = tool.parameters
+                            showAddTool = true
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(tool.name).font(.subheadline.bold())
-                                Spacer()
-                                Button(role: .destructive) {
-                                    customTools.remove(at: index)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.caption)
+                                Text(tool.description).font(.caption).foregroundStyle(.secondary)
+                                if !tool.parameters.isEmpty {
+                                    Text("Params: \(tool.parameters.map { $0.name }.joined(separator: ", "))")
+                                        .font(.caption2).foregroundStyle(.tertiary)
                                 }
                             }
-                            Text(tool.description).font(.caption).foregroundStyle(.secondary)
-                            if !tool.parameters.isEmpty {
-                                Text("Params: \(tool.parameters.map { $0.name }.joined(separator: ", "))")
-                                    .font(.caption2).foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                customTools.remove(at: index)
+                            } label: {
+                                Label(L10n.Common.delete, systemImage: "trash")
                             }
                         }
                     }
 
                     Button {
+                        editingToolIndex = nil
                         newToolName = ""
                         newToolDesc = ""
                         newToolCode = ""
@@ -656,7 +690,11 @@ struct SkillEditView: View {
         }
     }
 
-    // MARK: - Add Script Sheet
+    // MARK: - Add / Edit Script Sheet
+    //
+    // Dual-mode: appends a new script when `editingScriptIndex == nil`,
+    // replaces the entry at that index otherwise. The row Buttons in the
+    // scripts Section set the index before flipping showAddScript on.
 
     private var addScriptSheet: some View {
         NavigationStack {
@@ -672,20 +710,28 @@ struct SkillEditView: View {
                         .font(.system(.body, design: .monospaced))
                 }
             }
-            .navigationTitle(L10n.Skills.addScript)
+            .navigationTitle(editingScriptIndex == nil ? L10n.Skills.addScript : L10n.Skills.editScriptTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.Common.cancel) { showAddScript = false }
+                    Button(L10n.Common.cancel) {
+                        editingScriptIndex = nil
+                        showAddScript = false
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button(editingScriptIndex == nil ? L10n.Common.add : L10n.Common.save) {
                         let script = SkillScript(
                             name: newScriptName,
                             code: newScriptCode,
                             description: newScriptDesc.isEmpty ? nil : newScriptDesc
                         )
-                        scripts.append(script)
+                        if let idx = editingScriptIndex, scripts.indices.contains(idx) {
+                            scripts[idx] = script
+                        } else {
+                            scripts.append(script)
+                        }
+                        editingScriptIndex = nil
                         showAddScript = false
                     }
                     .disabled(newScriptName.isEmpty || newScriptCode.isEmpty)
@@ -748,14 +794,17 @@ struct SkillEditView: View {
                     Text(L10n.Skills.jsImplementationFooter)
                 }
             }
-            .navigationTitle(L10n.Skills.addTool)
+            .navigationTitle(editingToolIndex == nil ? L10n.Skills.addTool : L10n.Skills.editToolTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.Common.cancel) { showAddTool = false }
+                    Button(L10n.Common.cancel) {
+                        editingToolIndex = nil
+                        showAddTool = false
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button(editingToolIndex == nil ? L10n.Common.add : L10n.Common.save) {
                         let validParams = newToolParams.filter { !$0.name.isEmpty }
                         let tool = SkillToolDefinition(
                             name: newToolName,
@@ -763,7 +812,12 @@ struct SkillEditView: View {
                             parameters: validParams,
                             implementation: newToolCode
                         )
-                        customTools.append(tool)
+                        if let idx = editingToolIndex, customTools.indices.contains(idx) {
+                            customTools[idx] = tool
+                        } else {
+                            customTools.append(tool)
+                        }
+                        editingToolIndex = nil
                         showAddTool = false
                     }
                     .disabled(newToolName.isEmpty || newToolCode.isEmpty)

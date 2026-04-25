@@ -446,6 +446,8 @@
 "skills.validationErrorsTitle" = "검증 오류";
 "skills.validationWarningsTitle" = "검증 경고";
 "skills.parameterOptional" = "(선택)";
+"skills.editScriptTitle" = "스크립트 편집";
+"skills.editToolTitle" = "도구 편집";
 "skills.customSkills" = "사용자 정의 스킬";
 "skills.builtInSkills" = "기본 제공 스킬";
 "skills.builtIn" = "기본 제공";
