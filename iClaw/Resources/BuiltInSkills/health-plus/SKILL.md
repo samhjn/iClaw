@@ -4,7 +4,6 @@ description: "Advanced Apple Health metrics: blood pressure, glucose, oxygen, bo
 iclaw:
   version: "1.0"
   tags: [health, fitness, wellness]
-  localization_key: health_plus
 ---
 # Health Plus Skill
 

@@ -1,0 +1,11 @@
+{
+  "description": "깊이 제어가 가능한 재귀 디렉토리 목록. 서식이 지정된 텍스트 트리를 반환.",
+  "parameters": {
+    "path": {
+      "description": "루트 경로 (기본값: 에이전트 루트)"
+    },
+    "max_depth": {
+      "description": "최대 재귀 깊이 (기본값: 4)"
+    }
+  }
+}

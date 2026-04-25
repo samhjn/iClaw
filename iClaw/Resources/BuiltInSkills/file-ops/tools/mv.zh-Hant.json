@@ -1,0 +1,11 @@
+{
+  "description": "移動或重新命名檔案或目錄。",
+  "parameters": {
+    "src": {
+      "description": "來源路徑"
+    },
+    "dest": {
+      "description": "目標路徑"
+    }
+  }
+}

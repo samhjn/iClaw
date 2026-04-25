@@ -1,0 +1,14 @@
+{
+  "description": "向 Apple Health 寫入一次血壓讀數(收縮/舒張 mmHg)。",
+  "parameters": {
+    "systolic": {
+      "description": "收縮壓 mmHg（如 120）"
+    },
+    "diastolic": {
+      "description": "舒張壓 mmHg（如 80）"
+    },
+    "date": {
+      "description": "記錄時間。預設當前時間。"
+    }
+  }
+}

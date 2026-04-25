@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に食事由来の脂質（グラム）を書き込みます。",
+  "parameters": {
+    "grams": {
+      "description": "脂質のグラム数"
+    },
+    "date": {
+      "description": "記録時刻。既定は現在時刻。"
+    }
+  }
+}

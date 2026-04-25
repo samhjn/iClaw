@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에 혈중 산소 포화도(SpO₂ %)를 기록합니다.",
+  "parameters": {
+    "percentage": {
+      "description": "SpO₂ 퍼센트 (예: 98)"
+    },
+    "date": {
+      "description": "기록 시각. 기본값은 현재 시각."
+    }
+  }
+}

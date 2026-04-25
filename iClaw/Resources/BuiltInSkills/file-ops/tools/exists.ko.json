@@ -1,0 +1,8 @@
+{
+  "description": "파일 또는 디렉토리가 존재하는지 확인합니다. 'true' 또는 'false' 반환.",
+  "parameters": {
+    "path": {
+      "description": "확인할 경로"
+    }
+  }
+}

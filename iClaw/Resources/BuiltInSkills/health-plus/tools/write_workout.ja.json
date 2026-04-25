@@ -1,0 +1,20 @@
+{
+  "description": "Apple Health にワークアウトのセッションを書き込みます。",
+  "parameters": {
+    "activity_type": {
+      "description": "アクティビティ種別（例: running、walking、cycling、swimming、yoga、strength）"
+    },
+    "start_date": {
+      "description": "ワークアウト開始時刻（ISO 8601 または yyyy-MM-dd HH:mm）"
+    },
+    "end_date": {
+      "description": "ワークアウト終了時刻（ISO 8601 または yyyy-MM-dd HH:mm）"
+    },
+    "energy_kcal": {
+      "description": "アクティブエネルギー消費量（kcal）"
+    },
+    "distance_km": {
+      "description": "距離（キロメートル）"
+    }
+  }
+}

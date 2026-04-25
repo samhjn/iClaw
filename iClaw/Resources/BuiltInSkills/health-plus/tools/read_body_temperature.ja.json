@@ -1,0 +1,14 @@
+{
+  "description": "Apple Health から体温サンプルを読み取ります。",
+  "parameters": {
+    "start_date": {
+      "description": "開始日時。既定は 30 日前。"
+    },
+    "end_date": {
+      "description": "終了日時。既定は現在時刻。"
+    },
+    "unit": {
+      "description": "温度単位"
+    }
+  }
+}

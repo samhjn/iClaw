@@ -1,0 +1,8 @@
+{
+  "description": "디렉토리를 생성합니다 (중간 단계 포함). 멱등.",
+  "parameters": {
+    "path": {
+      "description": "생성할 디렉토리 경로"
+    }
+  }
+}

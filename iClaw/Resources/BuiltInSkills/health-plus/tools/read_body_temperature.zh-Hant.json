@@ -1,0 +1,14 @@
+{
+  "description": "從 Apple Health 讀取體溫樣本。",
+  "parameters": {
+    "start_date": {
+      "description": "起始日期。預設 30 天前。"
+    },
+    "end_date": {
+      "description": "結束日期。預設當前時間。"
+    },
+    "unit": {
+      "description": "溫度單位"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "description": "向 Apple Health 寫入一次運動紀錄。",
+  "parameters": {
+    "activity_type": {
+      "description": "活動類型，如 running、walking、cycling、swimming、yoga、strength"
+    },
+    "start_date": {
+      "description": "運動開始時間（ISO 8601 或 yyyy-MM-dd HH:mm）"
+    },
+    "end_date": {
+      "description": "運動結束時間（ISO 8601 或 yyyy-MM-dd HH:mm）"
+    },
+    "energy_kcal": {
+      "description": "主動消耗能量（千卡）"
+    },
+    "distance_km": {
+      "description": "距離（公里）"
+    }
+  }
+}

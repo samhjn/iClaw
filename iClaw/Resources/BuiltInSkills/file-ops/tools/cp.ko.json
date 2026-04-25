@@ -1,0 +1,14 @@
+{
+  "description": "파일 또는 디렉토리를 복사합니다. 디렉토리는 기본 재귀.",
+  "parameters": {
+    "src": {
+      "description": "원본 경로"
+    },
+    "dest": {
+      "description": "대상 경로"
+    },
+    "recursive": {
+      "description": "디렉토리를 재귀적으로 복사 (기본값: true)"
+    }
+  }
+}

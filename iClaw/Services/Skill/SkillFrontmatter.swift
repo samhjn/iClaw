@@ -19,13 +19,6 @@ struct SkillFrontmatter: Hashable {
         var tags: [String] = []
         var slash: String? = nil
         var configRaw: [[String: String]] = []
-        /// Transitional bridge to existing `Localizable.strings` entries for
-        /// built-in skills. When set, the directory loader uses this key to
-        /// resolve `displayName` / `summary` / tool / parameter / script
-        /// descriptions via `L10n.Skills.BuiltIn.*`. Phase 3 will migrate
-        /// those translations into per-locale overlay files and this key
-        /// becomes optional / unused.
-        var localizationKey: String? = nil
     }
 
     /// Overlay-only frontmatter — everything is optional. Used by
@@ -203,8 +196,6 @@ enum SkillFrontmatterParser {
                 block.version = stripQuotes(value)
             case "slash":
                 block.slash = stripQuotes(value)
-            case "localization_key":
-                block.localizationKey = stripQuotes(value)
             case "tags":
                 block.tags = try parseInlineStringList(value, line: lineNum)
             case "config":

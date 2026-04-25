@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に血中酸素飽和度（SpO₂ %）を書き込みます。",
+  "parameters": {
+    "percentage": {
+      "description": "SpO₂ パーセント（例: 98）"
+    },
+    "date": {
+      "description": "記録時刻。既定は現在時刻。"
+    }
+  }
+}

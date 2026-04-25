@@ -1,0 +1,11 @@
+{
+  "description": "带深度控制的递归目录列表。返回格式化的文本树。",
+  "parameters": {
+    "path": {
+      "description": "根路径（默认为 agent 根目录）"
+    },
+    "max_depth": {
+      "description": "最大递归深度（默认 4）"
+    }
+  }
+}

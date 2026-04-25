@@ -1,0 +1,8 @@
+{
+  "description": "ファイルが存在しなければ空ファイルを作成（存在する場合は何もしない）。",
+  "parameters": {
+    "path": {
+      "description": "touch するファイルのパス"
+    }
+  }
+}

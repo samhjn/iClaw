@@ -1,0 +1,8 @@
+{
+  "description": "创建目录（含中间层级）。幂等。",
+  "parameters": {
+    "path": {
+      "description": "要创建的目录路径"
+    }
+  }
+}

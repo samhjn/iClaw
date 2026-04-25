@@ -1,0 +1,11 @@
+{
+  "description": "파일 또는 디렉토리를 이동/이름 변경합니다.",
+  "parameters": {
+    "src": {
+      "description": "원본 경로"
+    },
+    "dest": {
+      "description": "대상 경로"
+    }
+  }
+}

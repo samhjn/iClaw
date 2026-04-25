@@ -1,0 +1,8 @@
+{
+  "description": "回傳檔案或目錄的 JSON 中繼資料（size、mtime_ms、ctime_ms、is_file、is_dir）。",
+  "parameters": {
+    "path": {
+      "description": "要查詢的路徑"
+    }
+  }
+}

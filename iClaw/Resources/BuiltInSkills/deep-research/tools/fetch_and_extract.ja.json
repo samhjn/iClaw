@@ -1,0 +1,11 @@
+{
+  "description": "URL を取得して可読テキストを抽出します。サンドボックスの CORS 制限で失敗することがあります — 代替として browser_navigate + browser_get_page_info を使用してください。",
+  "parameters": {
+    "url": {
+      "description": "取得対象の URL"
+    },
+    "max_length": {
+      "description": "返却する最大文字数（デフォルト: 5000）"
+    }
+  }
+}

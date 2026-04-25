@@ -1,0 +1,8 @@
+{
+  "description": "파일 또는 디렉토리의 JSON 메타데이터를 반환합니다 (size, mtime_ms, ctime_ms, is_file, is_dir).",
+  "parameters": {
+    "path": {
+      "description": "조회할 경로"
+    }
+  }
+}

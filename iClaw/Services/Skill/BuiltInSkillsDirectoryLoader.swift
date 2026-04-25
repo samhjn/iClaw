@@ -4,20 +4,21 @@ import Foundation
 /// app and the unit-test runner.
 private final class BuiltInSkillsDirectoryAnchor {}
 
-/// Phase-2 parallel loader: builds `BuiltInSkills.ResolvedTemplate` values by
-/// reading the on-disk skill packages under `Resources/BuiltInSkills/<slug>/`.
+/// Builds `BuiltInSkills.ResolvedTemplate` values by reading the on-disk skill
+/// packages under `Resources/BuiltInSkills/<slug>/`.
 ///
-/// This runs alongside the existing `BuiltInSkills.all` Swift-string templates
-/// — neither replaces the other yet. A feature flag (see
-/// `BuiltInSkills.loadFromDirectory`) controls which source `SkillService`
-/// uses; default is the existing Swift-string path. The parity tests verify
-/// both paths produce the same `ResolvedTemplate` for every shipped built-in.
+/// Runs alongside the legacy `BuiltInSkills.all` Swift-string templates while
+/// `BuiltInSkills.loadFromDirectory` is `false`; flipping the flag swaps the
+/// active source. The parity tests verify both paths produce the same
+/// `ResolvedTemplate` for every shipped built-in.
 ///
-/// Phase 3 will:
-///   1. Flip the flag's default to `true`.
-///   2. Migrate per-tool / per-script translations from `Localizable.strings`
-///      into per-locale overlay files inside each package directory.
-///   3. Delete the Swift-string `BuiltInSkills.all` payloads.
+/// All i18n is resolved against `Bundle.main.preferredLocalizations` by
+/// `SkillPackage.parse` via per-locale overlay files (`SKILL.<lang>.md`,
+/// `tools/<tool>.<lang>.json`, `scripts/<script>.<lang>.txt`) inside each
+/// package — no `Localizable.strings` consultation.
+///
+/// Next step: flip the flag's default to `true` and delete the Swift-string
+/// `BuiltInSkills.all` payloads.
 enum BuiltInSkillsDirectoryLoader {
 
     /// Bundle holding the `Resources/BuiltInSkills/` directory. Same anchor
@@ -49,52 +50,41 @@ enum BuiltInSkillsDirectoryLoader {
         guard report.ok, let pkg = parsed else { return nil }
 
         let frontmatter = pkg.frontmatter
-        let localizationKey = frontmatter.iclaw.localizationKey ?? slug
 
-        // Display name / summary: fall back to Localizable.strings via the
-        // localization key, matching today's per-locale behavior. Phase 3
-        // replaces this with `SKILL.<lang>.md` overlays and trims the
-        // `Localizable.strings` entries.
-        let displayName = L10n.Skills.BuiltIn.displayName(localizationKey)
-        let summary = L10n.Skills.BuiltIn.summary(localizationKey)
+        // Every i18n-bearing field below is already overlay-resolved by
+        // `SkillPackage.parse` against `Bundle.main.preferredLocalizations`:
+        //   - `pkg.displayName` / `pkg.description` / `pkg.body` come from the
+        //     best-matching `SKILL.<locale>.md` overlay (canonical fallback).
+        //   - `pkg.tools[i].meta.description` and parameter descriptions come
+        //     from `tools/<tool>.<locale>.json`.
+        //   - `pkg.scripts[i].description` comes from
+        //     `scripts/<script>.<locale>.txt`.
+        // No more `Localizable.strings` consultation — the package is the
+        // single source of truth.
 
-        // Body: prefer the per-locale `<lang>.lproj/<name>.md` file (existing
-        // behavior). The directory's `SKILL.md` body is the canonical English
-        // — Phase 3 moves the per-locale `.md` files into `SKILL.<lang>.md`
-        // overlays and the parser's overlay resolution does this work.
-        let content = BuiltInSkillResources.content(forSkillName: frontmatter.name)
-
-        // Scripts: keep order alphabetic by filename (matches `SkillPackage`
-        // sort). Today's Swift-template order can't be reproduced from disk
-        // alone; the parity test sorts both sides by name before comparing.
         let scripts: [SkillScript] = pkg.scripts.map { script in
             let scriptName = (script.fileName as NSString).deletingPathExtension
-            let desc = L10n.Skills.BuiltIn.scriptDescription(localizationKey, scriptName)
             return SkillScript(
                 name: scriptName,
                 language: "javascript",
                 code: script.code,
-                description: desc
+                description: script.description
             )
         }
 
-        // Tools: same treatment. The `body` (post-META JS) replaces the
-        // hand-rolled `implementation` strings with byte-for-byte parity.
         let customTools: [SkillToolDefinition] = pkg.tools.map { tool in
             let params = tool.meta.parameters.map { p in
                 SkillToolParam(
                     name: p.name,
                     type: p.type,
-                    description: L10n.Skills.BuiltIn.toolParamDescription(
-                        localizationKey, tool.meta.name, p.name
-                    ),
+                    description: p.description ?? "",
                     required: p.required,
                     enumValues: p.enumValues
                 )
             }
             return SkillToolDefinition(
                 name: tool.meta.name,
-                description: L10n.Skills.BuiltIn.toolDescription(localizationKey, tool.meta.name),
+                description: tool.meta.description,
                 parameters: params,
                 implementation: tool.body
             )
@@ -106,9 +96,9 @@ enum BuiltInSkillsDirectoryLoader {
 
         return BuiltInSkills.ResolvedTemplate(
             name: frontmatter.name,
-            displayName: displayName,
-            summary: summary,
-            content: content,
+            displayName: pkg.displayName,
+            summary: pkg.description,
+            content: pkg.body,
             tags: frontmatter.iclaw.tags,
             scripts: scripts,
             customTools: customTools,

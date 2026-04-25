@@ -4,7 +4,6 @@ description: "Advanced file operations: copy, move, directory management, rich s
 iclaw:
   version: "1.0"
   tags: [files, filesystem, utilities]
-  localization_key: file_ops
 ---
 # File Ops Skill
 

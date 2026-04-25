@@ -1,0 +1,8 @@
+{
+  "description": "ファイルまたはディレクトリの JSON メタデータ（size、mtime_ms、ctime_ms、is_file、is_dir）を返します。",
+  "parameters": {
+    "path": {
+      "description": "取得対象のパス"
+    }
+  }
+}

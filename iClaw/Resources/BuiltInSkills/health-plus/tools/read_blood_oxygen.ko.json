@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에서 혈중 산소 포화도(SpO₂) 샘플을 읽습니다.",
+  "parameters": {
+    "start_date": {
+      "description": "시작 날짜. 기본값은 7일 전."
+    },
+    "end_date": {
+      "description": "종료 날짜. 기본값은 현재 시각."
+    }
+  }
+}

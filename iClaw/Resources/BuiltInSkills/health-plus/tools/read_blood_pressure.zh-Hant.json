@@ -1,0 +1,11 @@
+{
+  "description": "從 Apple Health 讀取血壓（收縮/舒張）樣本。",
+  "parameters": {
+    "start_date": {
+      "description": "起始日期（ISO 8601 或 yyyy-MM-dd HH:mm）。預設 30 天前。"
+    },
+    "end_date": {
+      "description": "結束日期。預設當前時間。"
+    }
+  }
+}

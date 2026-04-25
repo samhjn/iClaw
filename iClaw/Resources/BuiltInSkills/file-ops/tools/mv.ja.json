@@ -1,0 +1,11 @@
+{
+  "description": "ファイルまたはディレクトリを移動／名前変更します。",
+  "parameters": {
+    "src": {
+      "description": "移動元のパス"
+    },
+    "dest": {
+      "description": "移動先のパス"
+    }
+  }
+}

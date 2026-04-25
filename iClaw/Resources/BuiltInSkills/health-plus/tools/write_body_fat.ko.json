@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에 체지방률을 기록합니다.",
+  "parameters": {
+    "percentage": {
+      "description": "체지방률 (예: 22.5)"
+    },
+    "date": {
+      "description": "기록 시각. 기본값은 현재 시각."
+    }
+  }
+}

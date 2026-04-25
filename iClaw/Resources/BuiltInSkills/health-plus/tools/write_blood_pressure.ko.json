@@ -1,0 +1,14 @@
+{
+  "description": "Apple Health에 혈압(수축기/이완기 mmHg)을 기록합니다.",
+  "parameters": {
+    "systolic": {
+      "description": "수축기 압력 mmHg (예: 120)"
+    },
+    "diastolic": {
+      "description": "이완기 압력 mmHg (예: 80)"
+    },
+    "date": {
+      "description": "기록 시각. 기본값은 현재 시각."
+    }
+  }
+}

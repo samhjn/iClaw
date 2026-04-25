@@ -1,0 +1,8 @@
+{
+  "description": "檢查檔案或目錄是否存在。回傳 'true' 或 'false'。",
+  "parameters": {
+    "path": {
+      "description": "要檢查的路徑"
+    }
+  }
+}

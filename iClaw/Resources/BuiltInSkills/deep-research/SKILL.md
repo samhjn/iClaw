@@ -4,7 +4,6 @@ description: Systematic research methodology with source evaluation and synthesi
 iclaw:
   version: "1.0"
   tags: [research, analysis, methodology]
-  localization_key: deep_research
 ---
 # Deep Research Skill
 

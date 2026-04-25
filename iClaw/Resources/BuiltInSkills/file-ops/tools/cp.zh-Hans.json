@@ -1,0 +1,14 @@
+{
+  "description": "复制文件或目录。对目录默认递归。",
+  "parameters": {
+    "src": {
+      "description": "源路径"
+    },
+    "dest": {
+      "description": "目标路径"
+    },
+    "recursive": {
+      "description": "是否递归复制目录（默认 true）"
+    }
+  }
+}
