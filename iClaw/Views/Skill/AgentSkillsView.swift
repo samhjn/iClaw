@@ -187,6 +187,7 @@ struct SkillPickerSheet: View {
     private func reload() {
         let service = SkillService(modelContext: modelContext)
         service.ensureBuiltInSkills()
+        service.discoverDiskPackages()
         allSkills = service.fetchAllSkills()
     }
 }

@@ -37,6 +37,11 @@ final class LaunchTaskManager {
         // trigger `ensureBuiltInSkills` on appear.
         let skillService = SkillService(modelContext: ModelContext(container))
         skillService.ensureBuiltInSkills()
+        // Pick up any package the user dropped under <Documents>/Skills/
+        // since the last launch (Files.app drag-in, zip extraction, Working
+        // Copy clone). New folders without a matching Skill row become rows
+        // here so they appear in the library without an explicit import.
+        skillService.discoverDiskPackages()
         // Plan the row → on-disk-package migration on the main actor (cheap:
         // SwiftData fetch + slug + snapshot, no disk I/O). The actual disk
         // writes happen off-main below so a user with many legacy skills

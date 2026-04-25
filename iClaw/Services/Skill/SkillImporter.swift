@@ -79,37 +79,70 @@ enum SkillImporter {
             return .notADirectory
         }
 
-        // Pre-existing slugs — feeds the validator's slug_collision rule and
-        // the importer's "replace existing?" prompt.
-        let existingSlugs = collectExistingSlugs(modelContext: modelContext)
-        // Don't pretend the source slug is a collision against itself: drop
-        // it from the validator's known set (the importer's collision prompt
-        // handles that case explicitly).
-        let sourceSlug = sourceURL.lastPathComponent
-        let knownForValidator = existingSlugs.subtracting([sourceSlug])
+        // Resolve the actual skill bundle inside the picked folder. Users
+        // commonly pick the parent folder produced by unzipping (where the
+        // bundle lives one level deeper). When the picked folder doesn't
+        // have SKILL.md at its root, we look for exactly one subdirectory
+        // that does and use that as the source.
+        guard let resolvedURL = resolveSkillBundle(at: sourceURL) else {
+            return .notADirectory
+        }
 
-        let report = SkillPackage.validate(
-            at: sourceURL,
-            knownSlugs: knownForValidator,
-            coreToolNames: coreToolNames()
+        // Validate without the slug-match check: the importer always copies
+        // to `<Documents>/Skills/<derivedSlug>/`, so the source folder name
+        // is irrelevant. Slug-collision detection is handled separately via
+        // `lookupCollision` and the UI's "replace existing?" prompt.
+        let (parsed, report) = SkillPackage.parse(
+            at: resolvedURL,
+            knownSlugs: [],
+            coreToolNames: coreToolNames(),
+            enforceSlugMatch: false
         )
 
-        guard report.ok else {
+        guard report.ok, let pkg = parsed else {
             return .error(report: report)
         }
 
-        let (parsed, _) = SkillPackage.parse(at: sourceURL)
-        guard let pkg = parsed else {
-            // Validate said ok but parse failed — treat as error.
-            return .error(report: report)
-        }
-
-        let collision = lookupCollision(forSlug: sourceSlug, modelContext: modelContext)
+        let derivedSlug = SkillPackage.derivedSlug(
+            forName: pkg.frontmatter.name,
+            override: pkg.frontmatter.iclaw.slash
+        )
+        let collision = lookupCollision(forSlug: derivedSlug, modelContext: modelContext)
 
         if !report.warnings.isEmpty {
             return .warningsRequireConfirmation(package: pkg, report: report, collision: collision)
         }
         return .ready(package: pkg, report: report, collision: collision)
+    }
+
+    /// Walk the picked folder and return the URL of the actual skill bundle
+    /// (the directory containing SKILL.md). Returns the input URL when it is
+    /// itself a bundle, the single matching child when the user picked a
+    /// wrapper folder, or nil when no usable bundle is found.
+    private static func resolveSkillBundle(at url: URL) -> URL? {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: url.appendingPathComponent("SKILL.md").path) {
+            return url
+        }
+        guard let children = try? fm.contentsOfDirectory(
+            at: url, includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+        let candidates = children.filter { child in
+            // Filter zip-leftover sidecars like __MACOSX. The actual content
+            // check is "directory containing SKILL.md".
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: child.path, isDirectory: &isDir), isDir.boolValue else {
+                return false
+            }
+            if child.lastPathComponent == "__MACOSX" { return false }
+            return fm.fileExists(atPath: child.appendingPathComponent("SKILL.md").path)
+        }
+        // Exactly one candidate → use it. Zero or multiple → ambiguous,
+        // surface the original "not a bundle directory" error.
+        return candidates.count == 1 ? candidates.first : nil
     }
 
     /// Copy the validated package into `<Documents>/Skills/<slug>/` and
@@ -208,19 +241,6 @@ enum SkillImporter {
     }
 
     // MARK: - Internals
-
-    /// All slugs currently known to the system: shipped built-ins + every
-    /// installed user Skill row, derived from its name. Used for collision
-    /// detection.
-    private static func collectExistingSlugs(modelContext: ModelContext) -> Set<String> {
-        var set = Set<String>(BuiltInSkills.shippedSlugs)
-        let descriptor = FetchDescriptor<Skill>()
-        let all = (try? modelContext.fetch(descriptor)) ?? []
-        for s in all {
-            set.insert(SkillPackage.derivedSlug(forName: s.name))
-        }
-        return set
-    }
 
     private static func lookupCollision(forSlug slug: String, modelContext: ModelContext) -> ExistingSkill? {
         if BuiltInSkills.shippedSlugs.contains(slug) {

@@ -313,6 +313,10 @@ struct SkillLibraryView: View {
     private func ensureBuiltIns() {
         let service = SkillService(modelContext: modelContext)
         service.ensureBuiltInSkills()
+        // Pick up any package dropped into <Documents>/Skills/ while the app
+        // was foregrounded (Files.app, zip extraction). Cheap when there's
+        // nothing new — a directory listing + per-folder slug lookup.
+        service.discoverDiskPackages()
     }
 
     /// Open the iOS Files app at `<Documents>/Skills/` via the
