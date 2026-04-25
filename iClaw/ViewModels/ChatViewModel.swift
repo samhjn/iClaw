@@ -587,6 +587,53 @@ final class ChatViewModel {
         return nil
     }
 
+    /// One row in the composer's slash-command autocomplete chip strip.
+    struct SlashCommandSuggestion: Identifiable, Equatable {
+        let slug: String
+        let displayName: String
+        var id: String { slug }
+    }
+
+    /// Suggestions for the autocomplete chip strip rendered above the
+    /// composer when the input starts with `/`. Returns `nil` (not empty)
+    /// when the strip should be hidden so SwiftUI can collapse the layout.
+    var slashCommandSuggestions: [SlashCommandSuggestion]? {
+        let trimmed = inputText.drop { $0.isWhitespace }
+        guard trimmed.first == "/" else { return nil }
+        guard let agent = session.agent else { return nil }
+        // Substring after `/` up to the first whitespace — the in-progress
+        // prefix the user is filtering by. Underscores are normalized to
+        // hyphens to match the parser's slug normalization.
+        let afterSlash = trimmed.dropFirst()
+        let prefixEnd = afterSlash.firstIndex(where: { $0.isWhitespace }) ?? afterSlash.endIndex
+        let prefix = String(afterSlash[..<prefixEnd])
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+
+        let matches = agent.activeSkills.compactMap { installation -> SlashCommandSuggestion? in
+            guard let skill = installation.skill else { return nil }
+            let slug = SkillPackage.derivedSlug(forName: skill.name)
+            if !prefix.isEmpty, !slug.hasPrefix(prefix) { return nil }
+            return SlashCommandSuggestion(slug: slug, displayName: skill.effectiveDisplayName)
+        }
+        return matches.isEmpty ? nil : matches.sorted { $0.slug < $1.slug }
+    }
+
+    /// Apply the user's tap on an autocomplete chip. Replaces the in-progress
+    /// `/prefix` with `/slug ` (trailing space so the user can immediately
+    /// type the rest of the message).
+    func applySlashSuggestion(_ slug: String) {
+        let trimmedLeading = inputText.drop { $0.isWhitespace }
+        // Preserve any trailing remainder past the first whitespace — so a
+        // user typing `/dee what is X?` and tapping `deep-research` lands on
+        // `/deep-research what is X?` rather than losing the tail.
+        let afterSlash = trimmedLeading.dropFirst()
+        let prefixEnd = afterSlash.firstIndex(where: { $0.isWhitespace }) ?? afterSlash.endIndex
+        let tail = String(afterSlash[prefixEnd...]).drop { $0.isWhitespace }
+        let suffix = tail.isEmpty ? " " : " " + String(tail)
+        inputText = "/" + slug + suffix
+    }
+
     // MARK: - Send Message
 
     func sendMessage() {

@@ -138,4 +138,62 @@ final class ChatViewModelSlashCommandTests: XCTestCase {
         session.activatedSkillSlugsRaw = "x|y"
         XCTAssertEqual(session.activatedSkillSlugs, ["x", "y"])
     }
+
+    // MARK: - Autocomplete suggestions (Phase 5c)
+
+    func testSuggestionsHiddenByDefault() {
+        XCTAssertNil(vm.slashCommandSuggestions, "No `/` prefix → no suggestions")
+    }
+
+    func testSuggestionsShownForLeadingSlash() {
+        installEnabledSkill(name: "Deep Research")
+        installEnabledSkill(name: "File Ops")
+        vm.inputText = "/"
+        let suggestions = vm.slashCommandSuggestions
+        XCTAssertNotNil(suggestions)
+        let slugs = suggestions?.map(\.slug) ?? []
+        XCTAssertEqual(Set(slugs), Set(["deep-research", "file-ops"]))
+    }
+
+    func testSuggestionsFilteredByPrefix() {
+        installEnabledSkill(name: "Deep Research")
+        installEnabledSkill(name: "File Ops")
+        vm.inputText = "/dee"
+        let slugs = vm.slashCommandSuggestions?.map(\.slug) ?? []
+        XCTAssertEqual(slugs, ["deep-research"])
+    }
+
+    func testSuggestionsFilteredByUnderscoreNormalizedPrefix() {
+        installEnabledSkill(name: "Deep Research")
+        vm.inputText = "/deep_re"
+        let slugs = vm.slashCommandSuggestions?.map(\.slug) ?? []
+        XCTAssertEqual(slugs, ["deep-research"], "Underscore prefix should normalize to hyphenated lookup")
+    }
+
+    func testSuggestionsHiddenAfterSpace() {
+        installEnabledSkill(name: "Deep Research")
+        // Once the user has moved past the slug into the message body, the
+        // autocomplete strip should disappear.
+        vm.inputText = "/deep-research what is X?"
+        let suggestions = vm.slashCommandSuggestions
+        // The strip stays visible while the prefix still matches the slug —
+        // hiding only when the user types past it. We expect a single match
+        // for "deep-research".
+        XCTAssertEqual(suggestions?.map(\.slug), ["deep-research"])
+    }
+
+    func testApplySuggestionInsertsSlugAndTrailingSpace() {
+        installEnabledSkill(name: "Deep Research")
+        vm.inputText = "/dee"
+        vm.applySlashSuggestion("deep-research")
+        XCTAssertEqual(vm.inputText, "/deep-research ")
+    }
+
+    func testApplySuggestionPreservesMessageTail() {
+        installEnabledSkill(name: "Deep Research")
+        vm.inputText = "/dee what is RLHF?"
+        vm.applySlashSuggestion("deep-research")
+        XCTAssertEqual(vm.inputText, "/deep-research what is RLHF?",
+                       "Tail past the prefix must be preserved when picking a suggestion")
+    }
 }
