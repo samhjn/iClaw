@@ -42,6 +42,19 @@ final class LaunchTaskManager {
         // cached fields on the next agent turn (last-good cache semantics).
         SkillsAutoReloader.shared.start(container: container)
 
+        // Create `<Documents>/Skills/` eagerly so it shows up in the iOS
+        // Files app even before the first user skill is authored or
+        // imported. Built-in skills live in the read-only bundle and are
+        // intentionally not visible there — only user-authored / imported
+        // packages live under Documents/Skills.
+        let skillsRoot = AgentFileManager.shared.skillsRoot
+        if !FileManager.default.fileExists(atPath: skillsRoot.path) {
+            try? FileManager.default.createDirectory(
+                at: skillsRoot,
+                withIntermediateDirectories: true
+            )
+        }
+
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
 

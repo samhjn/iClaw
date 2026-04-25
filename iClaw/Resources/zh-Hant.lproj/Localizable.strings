@@ -442,6 +442,7 @@
 "skills.importedTitle" = "已匯入";
 "skills.importedBody" = "'%@' 已安裝。";
 "skills.revealInFiles" = "在「檔案」中顯示";
+"skills.showInFiles" = "在「檔案」中開啟 Skills 資料夾";
 "skills.customSkills" = "自訂技能";
 "skills.builtInSkills" = "內建技能";
 "skills.builtIn" = "內建";

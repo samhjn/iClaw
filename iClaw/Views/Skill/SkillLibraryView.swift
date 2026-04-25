@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 import UniformTypeIdentifiers
 
 struct SkillLibraryView: View {
@@ -58,6 +59,12 @@ struct SkillLibraryView: View {
                             showImportSecurityAlert = true
                         } label: {
                             Label(L10n.Skills.importSkill, systemImage: "tray.and.arrow.down")
+                        }
+                        Divider()
+                        Button {
+                            openSkillsFolderInFiles()
+                        } label: {
+                            Label(L10n.Skills.showInFiles, systemImage: "folder")
                         }
                     } label: {
                         Image(systemName: "plus.circle.fill")
@@ -306,6 +313,16 @@ struct SkillLibraryView: View {
     private func ensureBuiltIns() {
         let service = SkillService(modelContext: modelContext)
         service.ensureBuiltInSkills()
+    }
+
+    /// Open the iOS Files app at `<Documents>/Skills/` via the
+    /// `shareddocuments://` URL scheme. The directory is created eagerly at
+    /// launch (LaunchTaskManager) so this always lands somewhere valid —
+    /// even when the user has no skills yet, the empty folder appears.
+    private func openSkillsFolderInFiles() {
+        let path = AgentFileManager.shared.skillsRoot.path
+        guard let url = URL(string: "shareddocuments://" + path) else { return }
+        UIApplication.shared.open(url)
     }
 }
 

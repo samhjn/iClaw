@@ -560,6 +560,7 @@ enum L10n {
         static var importedTitle: String { tr("skills.importedTitle") }
         static func importedBody(_ name: String) -> String { tr("skills.importedBody", name) }
         static var revealInFiles: String { tr("skills.revealInFiles") }
+        static var showInFiles: String { tr("skills.showInFiles") }
         static var customSkills: String { tr("skills.customSkills") }
         static var builtInSkills: String { tr("skills.builtInSkills") }
         static var builtIn: String { tr("skills.builtIn") }
