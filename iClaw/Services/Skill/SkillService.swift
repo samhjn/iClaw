@@ -334,6 +334,69 @@ final class SkillService {
         }
     }
 
+    // MARK: - Discover orphan disk packages
+
+    /// Walk `<Documents>/Skills/` and create `Skill` rows for any package
+    /// that parses cleanly but has no matching row. Lets users drop a skill
+    /// folder into the Documents/Skills directory (via Files.app, a zip
+    /// extraction, Working Copy, etc.) and have it picked up the next time
+    /// the library view appears or the app launches — no manual import or
+    /// agent-mediated `install_skill` step required.
+    ///
+    /// Existing rows are never touched; the on-disk-write path
+    /// (`SkillsAutoReloader` + `reload(slug:)`) handles those. Packages
+    /// whose name collides with an existing Skill are skipped to avoid
+    /// silently clobbering user data.
+    @discardableResult
+    func discoverDiskPackages() -> [Skill] {
+        let fm = FileManager.default
+        let root = AgentFileManager.shared.skillsRoot
+        guard fm.fileExists(atPath: root.path),
+              let urls = try? fm.contentsOfDirectory(
+                  at: root, includingPropertiesForKeys: [.isDirectoryKey],
+                  options: [.skipsHiddenFiles]
+              ) else {
+            return []
+        }
+
+        let descriptor = FetchDescriptor<Skill>()
+        let allRows = (try? modelContext.fetch(descriptor)) ?? []
+        let knownSlugs = Set(allRows.map { SkillPackage.derivedSlug(forName: $0.name) })
+        let knownNames = Set(allRows.map { $0.name.lowercased() })
+
+        var created: [Skill] = []
+        for dirURL in urls {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: dirURL.path, isDirectory: &isDir), isDir.boolValue else { continue }
+            let slug = dirURL.lastPathComponent
+            if BuiltInSkills.shippedSlugs.contains(slug) { continue }
+            if knownSlugs.contains(slug) { continue }
+
+            let (parsed, report) = SkillPackage.parse(at: dirURL)
+            guard report.ok, let pkg = parsed else { continue }
+
+            // Avoid clobbering: if a row by this name already exists (under a
+            // different slug), skip — the user can resolve via the importer.
+            if knownNames.contains(pkg.frontmatter.name.lowercased()) { continue }
+
+            let skill = createSkill(
+                name: pkg.frontmatter.name,
+                summary: pkg.description,
+                content: pkg.body,
+                tags: pkg.frontmatter.iclaw.tags,
+                author: "imported",
+                scripts: pkg.toSkillScripts(),
+                customTools: pkg.toCustomTools()
+            )
+            if !pkg.displayName.isEmpty {
+                skill.displayName = pkg.displayName
+            }
+            created.append(skill)
+        }
+        if !created.isEmpty { save() }
+        return created
+    }
+
     // MARK: - Reload (file-system → cache)
 
     /// Re-parse the on-disk package for `slug` and update the matching `Skill`

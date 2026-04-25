@@ -335,7 +335,8 @@ enum SkillPackage {
         at url: URL,
         preferredLocales: [String] = [],
         knownSlugs: Set<String> = [],
-        coreToolNames: Set<String> = []
+        coreToolNames: Set<String> = [],
+        enforceSlugMatch: Bool = true
     ) -> ValidationReport {
         let slug = url.lastPathComponent
         var errors: [ValidationIssue] = []
@@ -432,9 +433,12 @@ enum SkillPackage {
             ))
         }
 
-        // Slug derivation + directory-name match
+        // Slug derivation + directory-name match. The mismatch check is
+        // skipped for callers that will rename the destination anyway (the
+        // importer copies to `<Documents>/Skills/<derivedSlug>/` regardless
+        // of what the source folder is called).
         let derivedSlug = derivedSlug(forName: fm.name, override: fm.iclaw.slash)
-        if !derivedSlug.isEmpty, derivedSlug != slug {
+        if enforceSlugMatch, !derivedSlug.isEmpty, derivedSlug != slug {
             errors.append(.init(
                 severity: .error, file: "SKILL.md", line: 0,
                 code: .slugMismatch,
@@ -442,12 +446,15 @@ enum SkillPackage {
             ))
         }
 
-        // Slug collision with another known skill
-        if knownSlugs.contains(slug) {
+        // Slug collision with another known skill. When slug-match is not
+        // enforced (import path), check the derived slug instead — that's
+        // the slug the package will land at on disk.
+        let collisionSlug = enforceSlugMatch ? slug : (derivedSlug.isEmpty ? slug : derivedSlug)
+        if knownSlugs.contains(collisionSlug) {
             errors.append(.init(
                 severity: .error, file: "SKILL.md", line: 0,
                 code: .slugCollision,
-                message: "Slug `\(slug)` is already registered by another skill."
+                message: "Slug `\(collisionSlug)` is already registered by another skill."
             ))
         }
 
@@ -550,9 +557,16 @@ enum SkillPackage {
         at url: URL,
         preferredLocales: [String] = Bundle.main.preferredLocalizations,
         knownSlugs: Set<String> = [],
-        coreToolNames: Set<String> = []
+        coreToolNames: Set<String> = [],
+        enforceSlugMatch: Bool = true
     ) -> (ParsedSkillPackage?, ValidationReport) {
-        let report = validate(at: url, preferredLocales: preferredLocales, knownSlugs: knownSlugs, coreToolNames: coreToolNames)
+        let report = validate(
+            at: url,
+            preferredLocales: preferredLocales,
+            knownSlugs: knownSlugs,
+            coreToolNames: coreToolNames,
+            enforceSlugMatch: enforceSlugMatch
+        )
         guard report.ok else { return (nil, report) }
 
         let slug = url.lastPathComponent
