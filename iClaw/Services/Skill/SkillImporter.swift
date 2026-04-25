@@ -17,7 +17,7 @@ enum SkillImporter {
     /// Possible outcomes of `prepareImport`. The UI dispatches based on the
     /// case: errors abort, warnings/collisions ask for confirmation, ready
     /// is the happy path that flows into `commitImport`.
-    enum Outcome {
+    enum Outcome: Equatable {
         /// Source path doesn't exist or isn't a directory.
         case notADirectory
         /// The package failed validation. Import must abort; report is
