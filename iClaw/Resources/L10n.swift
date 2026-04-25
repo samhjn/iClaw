@@ -543,6 +543,23 @@ enum L10n {
         static var noSkills: String { tr("skills.noSkills") }
         static var noSkillsDescription: String { tr("skills.noSkillsDescription") }
         static var createSkill: String { tr("skills.createSkill") }
+        static var importSkill: String { tr("skills.importSkill") }
+        static var importContinue: String { tr("skills.importContinue") }
+        static var importReplace: String { tr("skills.importReplace") }
+        static var importSecurityTitle: String { tr("skills.importSecurityTitle") }
+        static var importSecurityBody: String { tr("skills.importSecurityBody") }
+        static var importFailedTitle: String { tr("skills.importFailedTitle") }
+        static var importNotADirectory: String { tr("skills.importNotADirectory") }
+        static var importWarningsTitle: String { tr("skills.importWarningsTitle") }
+        static var importCollisionTitle: String { tr("skills.importCollisionTitle") }
+        static func importCollisionBody(_ name: String) -> String { tr("skills.importCollisionBody", name) }
+        static func importCollisionFooter(_ name: String) -> String { tr("skills.importCollisionFooter", name) }
+        static func importBuiltInRefused(_ name: String) -> String { tr("skills.importBuiltInRefused", name) }
+        static func importValidationFailed(_ count: Int) -> String { tr("skills.importValidationFailed", count) }
+        static func importValidationWarnings(_ count: Int) -> String { tr("skills.importValidationWarnings", count) }
+        static var importedTitle: String { tr("skills.importedTitle") }
+        static func importedBody(_ name: String) -> String { tr("skills.importedBody", name) }
+        static var revealInFiles: String { tr("skills.revealInFiles") }
         static var customSkills: String { tr("skills.customSkills") }
         static var builtInSkills: String { tr("skills.builtInSkills") }
         static var builtIn: String { tr("skills.builtIn") }

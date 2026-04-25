@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct SkillDetailView: View {
     @Bindable var skill: Skill
@@ -41,6 +42,11 @@ struct SkillDetailView: View {
                         Button { isEditing = true } label: {
                             Label(L10n.Common.edit, systemImage: "pencil")
                         }
+                        if hasOnDiskPackage {
+                            Button { revealInFiles() } label: {
+                                Label(L10n.Skills.revealInFiles, systemImage: "folder")
+                            }
+                        }
                         Button(role: .destructive) { showDeleteConfirm = true } label: {
                             Label(L10n.Common.delete, systemImage: "trash")
                         }
@@ -66,6 +72,27 @@ struct SkillDetailView: View {
         } message: {
             Text(L10n.Skills.deleteSkillMessage(skill.effectiveDisplayName))
         }
+    }
+
+    /// True for user skills whose package directory exists under
+    /// `<Documents>/Skills/<slug>/`. Built-ins are bundle-backed and not
+    /// reachable through the iOS Files app.
+    private var hasOnDiskPackage: Bool {
+        guard !skill.isBuiltIn else { return false }
+        let slug = SkillPackage.derivedSlug(forName: skill.name)
+        let url = AgentFileManager.shared.skillsRoot.appendingPathComponent(slug, isDirectory: true)
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    /// Open the iOS Files app at this skill's package directory using the
+    /// `shareddocuments://` URL scheme. The app's `UIFileSharingEnabled`
+    /// flag in Info.plist makes the path resolvable from outside.
+    private func revealInFiles() {
+        let slug = SkillPackage.derivedSlug(forName: skill.name)
+        let path = AgentFileManager.shared.skillsRoot
+            .appendingPathComponent(slug, isDirectory: true).path
+        guard let url = URL(string: "shareddocuments://" + path) else { return }
+        UIApplication.shared.open(url)
     }
 
     private var headerSection: some View {
