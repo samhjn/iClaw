@@ -166,7 +166,7 @@ final class SkillService {
         let existing = (try? modelContext.fetch(descriptor)) ?? []
         let existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
 
-        let resolved = BuiltInSkills.all.map { $0.resolved() }
+        let resolved = BuiltInSkills.allResolvedTemplates()
         let templateNames = Set(resolved.map(\.name))
 
         for template in resolved {

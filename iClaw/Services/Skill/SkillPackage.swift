@@ -30,6 +30,10 @@ struct ParsedSkillTool: Hashable {
     /// Full JS source — the declaration including `const META` plus the body
     /// that runs with `args`, `fs`, `apple`, `fetch`, `console` in scope.
     let code: String
+    /// JS body with the `const META = { ... };` declaration stripped, suitable
+    /// for use as `SkillToolDefinition.implementation`. Identical to what the
+    /// hand-rolled `BuiltInSkills.Template` payloads carry today.
+    let body: String
 }
 
 struct ParsedSkillScript: Hashable {
@@ -314,7 +318,8 @@ enum SkillPackage {
                 tools.append(ParsedSkillTool(
                     fileName: f.lastPathComponent,
                     meta: overlaid,
-                    code: src
+                    code: src,
+                    body: SkillJSMetaParser.bodyAfterMeta(src)
                 ))
             }
         }

@@ -73,6 +73,27 @@ final class SkillJSMetaParser {
         return try buildMeta(from: obj, lineRange: lineRange)
     }
 
+    /// Return the JS body text that follows the `META = { ... };` declaration,
+    /// with any leading whitespace trimmed. If no META is found, returns the
+    /// full source.
+    ///
+    /// Used by `SkillPackage.parse` to populate `ParsedSkillTool.body` —
+    /// equivalent to the `implementation` string in `BuiltInSkills.Template`'s
+    /// hand-rolled tool definitions.
+    static func bodyAfterMeta(_ source: String) -> String {
+        guard let region = findMetaRegion(in: source) else { return source }
+        var idx = region.upperBound
+        while idx < source.endIndex {
+            let ch = source[idx]
+            if ch.isWhitespace || ch == ";" {
+                idx = source.index(after: idx)
+            } else {
+                break
+            }
+        }
+        return String(source[idx...])
+    }
+
     // MARK: - Instance state (single-shot parser)
 
     private let source: String

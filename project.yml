@@ -32,6 +32,14 @@ targets:
       - path: iClaw
         excludes:
           - Info.plist
+          # Built-in skill packages are added as a single folder reference
+          # below so the <slug>/SKILL.md tree is preserved in the bundle —
+          # without this exclude, XcodeGen would flatten every nested file
+          # to the bundle root and the three SKILL.md files would collide.
+          - Resources/BuiltInSkills
+      - path: iClaw/Resources/BuiltInSkills
+        type: folder
+        buildPhase: resources
     settings:
       base:
         INFOPLIST_FILE: iClaw/Info.plist
