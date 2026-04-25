@@ -13,6 +13,13 @@ struct iClawApp: App {
     private let keepAliveManager = BackgroundKeepAliveManager()
     /// Store URL that needs to be deleted if the user confirms a migration reset.
     private static var pendingStoreURL: URL?
+    /// Process-wide flag: SwiftUI re-creates the `App` struct on every body
+    /// re-evaluation, so heavy/side-effecting launch work must not repeat or
+    /// it cascades through SwiftData observation back into view invalidation.
+    private static var didRunOneTimeLaunchTasks = false
+    /// Captured once on first init so view body can decide whether to show
+    /// the migration alert without re-reading static state across re-inits.
+    private static var initialMigrationFailed: Bool?
 
     init() {
         Self.installExceptionHandler()
@@ -22,26 +29,38 @@ struct iClawApp: App {
         }
 
         modelContainer = iClawModelContainer.shared
-        if let failedURL = iClawModelContainer.migrationFailedStoreURL {
-            print("[iClawApp] ModelContainer migration failed. Awaiting user confirmation before reset.")
-            Self.pendingStoreURL = failedURL
-            _showMigrationResetAlert = State(initialValue: true)
+
+        let migrationFailed: Bool
+        if let captured = Self.initialMigrationFailed {
+            migrationFailed = captured
         } else {
-            _showMigrationResetAlert = State(initialValue: false)
+            migrationFailed = (iClawModelContainer.migrationFailedStoreURL != nil)
+            Self.initialMigrationFailed = migrationFailed
+            if let failedURL = iClawModelContainer.migrationFailedStoreURL {
+                print("[iClawApp] ModelContainer migration failed. Awaiting user confirmation before reset.")
+                Self.pendingStoreURL = failedURL
+            }
         }
+        _showMigrationResetAlert = State(initialValue: migrationFailed)
 
         _launchTaskManager = State(initialValue: LaunchTaskManager(container: modelContainer))
-
-        Self.resetStaleActiveSessions(in: modelContainer)
 
         let coordinator = CronBGTaskCoordinator()
         coordinator.registerCronTask()
         bgTaskCoordinator = coordinator
 
-        // Publish the root-agent snapshot for the Share Extension and sweep
-        // any abandoned share-staging directories from earlier sessions.
-        Self.refreshAgentSnapshot(in: modelContainer)
-        ShareHandoff.sweepOrphans()
+        // Heavy launch tasks: run exactly once per process. SwiftUI calls
+        // `init()` on every body re-evaluation, and SwiftData writes from
+        // these helpers invalidate observers, which can recurse back into
+        // body evaluation and trip a Swift runtime trap on iOS 17.0.
+        if !Self.didRunOneTimeLaunchTasks {
+            Self.didRunOneTimeLaunchTasks = true
+            Self.resetStaleActiveSessions(in: modelContainer)
+            // Publish the root-agent snapshot for the Share Extension and sweep
+            // any abandoned share-staging directories from earlier sessions.
+            Self.refreshAgentSnapshot(in: modelContainer)
+            ShareHandoff.sweepOrphans()
+        }
     }
 
     /// Publish a read-only snapshot of root agents to the App Group so the
