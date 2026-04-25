@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 写入一次血氧饱和度（SpO₂ %）读数。",
+  "parameters": {
+    "percentage": {
+      "description": "SpO₂ 百分比（如 98）"
+    },
+    "date": {
+      "description": "记录时间。默认当前时间。"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에 식이 지방(그램)을 기록합니다.",
+  "parameters": {
+    "grams": {
+      "description": "지방 그램"
+    },
+    "date": {
+      "description": "기록 시각. 기본값은 현재 시각."
+    }
+  }
+}

@@ -23,6 +23,98 @@ final class AgentFileManager {
             .appendingPathComponent("AgentFiles", isDirectory: true)
     }
 
+    /// Root for user-authored skill packages, exposed via the `/skills/` mount
+    /// in the `fs.*` bridge. Sibling of `AgentFiles/`. Visible in the iOS
+    /// Files app via `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace`.
+    var skillsRoot: URL {
+        fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Skills", isDirectory: true)
+    }
+
+    // MARK: - Skills mount
+
+    /// Result of resolving a path under the reserved `skills/` mount. The
+    /// resolver chooses between the read-only built-in bundle and the
+    /// writable user skills directory based on the slug.
+    struct SkillMountResolution: Equatable {
+        let url: URL
+        /// First path component after `skills/` — the skill slug. `nil` when
+        /// resolving the mount root itself (`skills` with no children).
+        let slug: String?
+        /// True when the resolved URL is inside the read-only app bundle.
+        /// Writes to such URLs are rejected by the resolver in Phase 4b.
+        let isBuiltIn: Bool
+    }
+
+    /// Path prefix that triggers the skills-mount resolver. Note: no leading
+    /// slash — JS-side leading slashes are stripped by the bridge before
+    /// reaching here. `isSafeRelativePath` continues to reject leading slashes
+    /// in agent-scoped paths.
+    static let skillsMountComponent = "skills"
+
+    /// True when `path` targets the `skills/` mount (either the mount root or
+    /// any sub-path under it).
+    static func isSkillsMountPath(_ path: String) -> Bool {
+        path == skillsMountComponent || path.hasPrefix(skillsMountComponent + "/")
+    }
+
+    /// Resolve a path under the `skills/` mount. The path is given **without**
+    /// the leading `skills/` component (e.g. `"deep-research/SKILL.md"`,
+    /// `"my-custom"`, or `""` for the mount root).
+    ///
+    /// When `forWriting` is true, paths under built-in slugs throw
+    /// `FileToolError.readOnlySkill(slug)` — built-ins live in the read-only
+    /// app bundle and writes to them must be rejected with a clean error
+    /// (rather than letting the OS surface a generic permission denial).
+    ///
+    /// - Throws: `FileToolError.unsafeFilename` for any traversal attempt;
+    ///           `FileToolError.readOnlySkill` for writes to built-in slugs.
+    func resolveSkillsPath(_ relative: String, forWriting: Bool = false) throws -> SkillMountResolution {
+        // Empty → mount root listing.
+        if relative.isEmpty {
+            return SkillMountResolution(url: skillsRoot, slug: nil, isBuiltIn: false)
+        }
+        guard Self.isSafeRelativePath(relative) else {
+            throw FileToolError.unsafeFilename(relative)
+        }
+        // First path component is the slug; everything after is the in-package path.
+        let parts = relative.split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+        let slug = String(parts[0])
+        let remainder = parts.count > 1 ? String(parts[1]) : ""
+
+        if BuiltInSkills.shippedSlugs.contains(slug) {
+            if forWriting {
+                throw FileToolError.readOnlySkill(slug)
+            }
+            // Built-in: route to the bundle. Read-only by construction.
+            guard let pkg = BuiltInSkillsDirectoryLoader.packageURL(forSlug: slug) else {
+                throw FileToolError.fileNotFound(relative)
+            }
+            let url = remainder.isEmpty
+                ? pkg.standardizedFileURL
+                : pkg.appendingPathComponent(remainder).standardizedFileURL
+            // Containment check against the built-in package root — the
+            // sanitized relative path can't escape, but standardize-and-check
+            // is cheap belt-and-suspenders.
+            let basePath = pkg.standardizedFileURL.path.hasSuffix("/")
+                ? pkg.standardizedFileURL.path
+                : pkg.standardizedFileURL.path + "/"
+            guard url.path == pkg.standardizedFileURL.path || url.path.hasPrefix(basePath) else {
+                throw FileToolError.unsafeFilename(relative)
+            }
+            return SkillMountResolution(url: url, slug: slug, isBuiltIn: true)
+        }
+
+        // User skill: route to <Documents>/Skills/<slug>/...
+        let base = skillsRoot.standardizedFileURL
+        let target = base.appendingPathComponent(relative).standardizedFileURL
+        let basePath = base.path.hasSuffix("/") ? base.path : base.path + "/"
+        guard target.path == base.path || target.path.hasPrefix(basePath) else {
+            throw FileToolError.unsafeFilename(relative)
+        }
+        return SkillMountResolution(url: target, slug: slug, isBuiltIn: false)
+    }
+
     // MARK: - Agent ID Resolution
 
     /// Walk the parentAgent chain to find the top-level (root) agent ID.
@@ -56,15 +148,38 @@ final class AgentFileManager {
     /// Resolve a relative path under the agent's directory. Validates against path
     /// traversal and ensures the final URL stays within the agent's directory
     /// (second line of defense against symlink escapes).
-    func resolvedURL(agentId: UUID, path: String) throws -> URL {
-        guard Self.isSafeRelativePath(path) else {
-            throw FileToolError.unsafeFilename(path)
+    ///
+    /// Special case: paths under the reserved `skills/` mount are routed to a
+    /// shared location instead of the per-agent directory — the read-only app
+    /// bundle for built-ins, the writable `<Documents>/Skills/<slug>/` for
+    /// user skills. When `forWriting` is true, writes to built-in slugs throw
+    /// `FileToolError.readOnlySkill`. Other absolute-style paths (`/foo`)
+    /// continue to be rejected as today; only the `/skills/` form is
+    /// normalized so JS callers can write `fs.writeFile('/skills/foo/...')`.
+    func resolvedURL(agentId: UUID, path: String, forWriting: Bool = false) throws -> URL {
+        // JS-side leading slash on the skills mount only: `/skills/foo` →
+        // `skills/foo`. All other absolute-style paths stay unsafe.
+        let normalized: String
+        if path == "/" + Self.skillsMountComponent || path.hasPrefix("/" + Self.skillsMountComponent + "/") {
+            normalized = String(path.dropFirst())
+        } else {
+            normalized = path
+        }
+
+        if Self.isSkillsMountPath(normalized) {
+            let remainder = normalized == Self.skillsMountComponent
+                ? ""
+                : String(normalized.dropFirst(Self.skillsMountComponent.count + 1))
+            return try resolveSkillsPath(remainder, forWriting: forWriting).url
+        }
+        guard Self.isSafeRelativePath(normalized) else {
+            throw FileToolError.unsafeFilename(normalized)
         }
         let base = agentDirectory(for: agentId).standardizedFileURL
-        let target = base.appendingPathComponent(path).standardizedFileURL
+        let target = base.appendingPathComponent(normalized).standardizedFileURL
         let basePath = base.path.hasSuffix("/") ? base.path : base.path + "/"
         guard target.path == base.path || target.path.hasPrefix(basePath) else {
-            throw FileToolError.unsafeFilename(path)
+            throw FileToolError.unsafeFilename(normalized)
         }
         return target
     }
@@ -111,7 +226,7 @@ final class AgentFileManager {
     @discardableResult
     func writeFile(agentId: UUID, name: String, data: Data) throws -> URL {
         try ensureDirectory(for: agentId)
-        let url = try resolvedURL(agentId: agentId, path: name)
+        let url = try resolvedURL(agentId: agentId, path: name, forWriting: true)
         let parent = url.deletingLastPathComponent()
         if !fm.fileExists(atPath: parent.path) {
             try fm.createDirectory(at: parent, withIntermediateDirectories: true)
@@ -131,7 +246,7 @@ final class AgentFileManager {
 
     /// Delete a file or directory (recursive for directories) at the given relative path.
     func deleteFile(agentId: UUID, name: String) throws {
-        let url = try resolvedURL(agentId: agentId, path: name)
+        let url = try resolvedURL(agentId: agentId, path: name, forWriting: true)
         guard fm.fileExists(atPath: url.path) else {
             throw FileToolError.fileNotFound(name)
         }
@@ -170,7 +285,7 @@ final class AgentFileManager {
     @discardableResult
     func makeDirectory(agentId: UUID, path: String) throws -> URL {
         try ensureDirectory(for: agentId)
-        let url = try resolvedURL(agentId: agentId, path: path)
+        let url = try resolvedURL(agentId: agentId, path: path, forWriting: true)
         var isDir: ObjCBool = false
         if fm.fileExists(atPath: url.path, isDirectory: &isDir) {
             if isDir.boolValue { return url }
@@ -186,8 +301,11 @@ final class AgentFileManager {
     @discardableResult
     func copyFile(agentId: UUID, src: String, dest: String, recursive: Bool = true) throws -> URL {
         try ensureDirectory(for: agentId)
+        // src is read; dest is written. Reading from a built-in skill (the
+        // fork-then-edit pattern) must be allowed — only `dest` carries the
+        // write-mode constraint.
         let srcURL = try resolvedURL(agentId: agentId, path: src)
-        let destURL = try resolvedURL(agentId: agentId, path: dest)
+        let destURL = try resolvedURL(agentId: agentId, path: dest, forWriting: true)
         var isDir: ObjCBool = false
         guard fm.fileExists(atPath: srcURL.path, isDirectory: &isDir) else {
             throw FileToolError.fileNotFound(src)
@@ -211,8 +329,9 @@ final class AgentFileManager {
     @discardableResult
     func moveFile(agentId: UUID, src: String, dest: String) throws -> URL {
         try ensureDirectory(for: agentId)
-        let srcURL = try resolvedURL(agentId: agentId, path: src)
-        let destURL = try resolvedURL(agentId: agentId, path: dest)
+        // Both src and dest must be writable: a move removes the source.
+        let srcURL = try resolvedURL(agentId: agentId, path: src, forWriting: true)
+        let destURL = try resolvedURL(agentId: agentId, path: dest, forWriting: true)
         guard fm.fileExists(atPath: srcURL.path) else {
             throw FileToolError.fileNotFound(src)
         }
@@ -231,7 +350,7 @@ final class AgentFileManager {
     /// file is shorter than `length`; shrinks if longer. Creates the file if it doesn't exist.
     func truncateFile(agentId: UUID, path: String, length: UInt64) throws {
         try ensureDirectory(for: agentId)
-        let url = try resolvedURL(agentId: agentId, path: path)
+        let url = try resolvedURL(agentId: agentId, path: path, forWriting: true)
         let parent = url.deletingLastPathComponent()
         if !fm.fileExists(atPath: parent.path) {
             try fm.createDirectory(at: parent, withIntermediateDirectories: true)
@@ -258,7 +377,7 @@ final class AgentFileManager {
     @discardableResult
     func appendFile(agentId: UUID, name: String, data: Data) throws -> URL {
         try ensureDirectory(for: agentId)
-        let url = try resolvedURL(agentId: agentId, path: name)
+        let url = try resolvedURL(agentId: agentId, path: name, forWriting: true)
         let parent = url.deletingLastPathComponent()
         if !fm.fileExists(atPath: parent.path) {
             try fm.createDirectory(at: parent, withIntermediateDirectories: true)
@@ -451,6 +570,7 @@ enum FileToolError: LocalizedError {
     case invalidFlag(String)
     case invalidFd(Int)
     case tooManyFds
+    case readOnlySkill(String)
 
     var errorDescription: String? {
         switch self {
@@ -461,6 +581,8 @@ enum FileToolError: LocalizedError {
         case .invalidFlag(let flag): return "Invalid open flag: \(flag)"
         case .invalidFd(let fd): return "Invalid file descriptor: \(fd)"
         case .tooManyFds: return "Too many open descriptors"
+        case .readOnlySkill(let slug):
+            return "Cannot modify built-in skill '\(slug)' (read-only). Fork it first: fs.cp('skills/\(slug)', 'skills/<new-slug>', {recursive: true})."
         }
     }
 }

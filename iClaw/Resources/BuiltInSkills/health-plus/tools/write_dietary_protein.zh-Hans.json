@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 写入蛋白质摄入（克）。",
+  "parameters": {
+    "grams": {
+      "description": "蛋白质克数"
+    },
+    "date": {
+      "description": "记录时间。默认当前时间。"
+    }
+  }
+}

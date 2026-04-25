@@ -1,0 +1,14 @@
+{
+  "description": "ファイルまたはディレクトリをコピーします。ディレクトリは既定で再帰。",
+  "parameters": {
+    "src": {
+      "description": "コピー元のパス"
+    },
+    "dest": {
+      "description": "コピー先のパス"
+    },
+    "recursive": {
+      "description": "ディレクトリを再帰的にコピー（既定: true）"
+    }
+  }
+}

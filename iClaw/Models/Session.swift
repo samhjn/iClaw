@@ -49,6 +49,24 @@ final class Session {
     /// UUID of the parent session that spawned this sub-agent session (for content relay).
     var parentSessionIdRaw: String?
 
+    /// Pipe-separated slugs of skills the user activated for this session via
+    /// the `/skill-slug` slash-command (or that the LLM activated implicitly
+    /// by calling one of the skill's `skill_<slug>_*` tools — Phase 6 will
+    /// wire that branch). Read by `PromptBuilder` to decide whether to expand
+    /// each installed skill's body into the system prompt (progressive
+    /// disclosure) or just surface its name + description.
+    var activatedSkillSlugsRaw: String = ""
+
+    var activatedSkillSlugs: Set<String> {
+        get {
+            guard !activatedSkillSlugsRaw.isEmpty else { return [] }
+            return Set(activatedSkillSlugsRaw.split(separator: "|").map(String.init))
+        }
+        set {
+            activatedSkillSlugsRaw = newValue.isEmpty ? "" : newValue.sorted().joined(separator: "|")
+        }
+    }
+
     var relatedSessionIds: [UUID] {
         get {
             guard let raw = relatedSessionIdsRaw, !raw.isEmpty else { return [] }

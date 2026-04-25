@@ -1,0 +1,17 @@
+{
+  "description": "既存のスキルパッケージに function-call ツールを追加します。tools/<tool_name>.js を生成し、META 宣言を入力どおり埋めて本体は TODO のまま残します。実行後は fs.writeFile で TODO を置き換え、validate_skill で検証してください。",
+  "parameters": {
+    "slug": {
+      "description": "/skills/ 配下の対象スキルパッケージの slug。"
+    },
+    "tool_name": {
+      "description": "ツール名(/[a-zA-Z_][a-zA-Z0-9_]*/ に一致する必要あり)。LLM ツール名 skill_<slug>_<tool_name> の一部になります。"
+    },
+    "description": {
+      "description": "200 文字以下の 1 行説明。モデルがツール選択に用います。"
+    },
+    "parameters": {
+      "description": "{name,type,required?,description?,enum?} の JSON 配列。既定は []。"
+    }
+  }
+}

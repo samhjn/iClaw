@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 寫入一次心率（bpm）樣本。",
+  "parameters": {
+    "bpm": {
+      "description": "心率（每分鐘跳動次數）"
+    },
+    "date": {
+      "description": "記錄時間。預設當前時間。"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "description": "/skills/<slug>/ 配下に最小限の有効なスキルパッケージを生成します。指定の name + description を含む SKILL.md と、空の tools/ ・ scripts/ ディレクトリを一度に書き出します。既存のパッケージは上書きしません — 別の slug を使うか、先に fs.delete してください。",
+  "parameters": {
+    "slug": {
+      "description": "ディレクトリ slug(小文字・ハイフン区切り)。最終的に /skills/<slug>/ になります。"
+    },
+    "name": {
+      "description": "人間向けのスキル名。SKILL.md の frontmatter の name に入ります。"
+    },
+    "description": {
+      "description": "1 行の説明。frontmatter の description に入ります(200 文字以下)。"
+    },
+    "tags": {
+      "description": "検索用のカンマ区切り英語タグ(例: 'utility,demo')。任意。"
+    }
+  }
+}

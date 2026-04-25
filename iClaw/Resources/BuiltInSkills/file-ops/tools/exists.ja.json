@@ -1,0 +1,8 @@
+{
+  "description": "ファイルまたはディレクトリの存在を確認します。'true' または 'false' を返します。",
+  "parameters": {
+    "path": {
+      "description": "確認対象のパス"
+    }
+  }
+}

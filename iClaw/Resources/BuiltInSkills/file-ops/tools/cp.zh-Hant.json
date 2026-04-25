@@ -1,0 +1,14 @@
+{
+  "description": "複製檔案或目錄。對目錄預設遞迴。",
+  "parameters": {
+    "src": {
+      "description": "來源路徑"
+    },
+    "dest": {
+      "description": "目標路徑"
+    },
+    "recursive": {
+      "description": "是否遞迴複製目錄（預設 true）"
+    }
+  }
+}

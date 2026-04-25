@@ -1,0 +1,11 @@
+{
+  "description": "從 Apple Health 讀取血氧飽和度（SpO₂）樣本。",
+  "parameters": {
+    "start_date": {
+      "description": "起始日期。預設 7 天前。"
+    },
+    "end_date": {
+      "description": "結束日期。預設當前時間。"
+    }
+  }
+}

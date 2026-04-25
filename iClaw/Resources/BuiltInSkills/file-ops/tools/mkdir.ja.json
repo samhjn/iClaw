@@ -1,0 +1,8 @@
+{
+  "description": "ディレクトリを作成します（中間階層を含む）。冪等。",
+  "parameters": {
+    "path": {
+      "description": "作成するディレクトリのパス"
+    }
+  }
+}

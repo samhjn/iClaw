@@ -1,0 +1,14 @@
+{
+  "description": "既存のスキルパッケージに run_snippet から呼べるスクリプトを追加します。scripts/<script_name>.js を生成し、与えられた description を先頭行コメントとして書き、本体は TODO で残します。スクリプトには typed パラメータが無く、呼び出し側が渡したものをそのまま受け取ります。",
+  "parameters": {
+    "slug": {
+      "description": "/skills/ 配下の対象スキルパッケージの slug。"
+    },
+    "script_name": {
+      "description": "スクリプト名(/[a-zA-Z_][a-zA-Z0-9_]*/ に一致する必要あり)。run_snippet skill:<skill name>:<script_name> で使われます。"
+    },
+    "description": {
+      "description": "1 行の説明。先頭行コメントとなり、スクリプト一覧に表示されます。"
+    }
+  }
+}

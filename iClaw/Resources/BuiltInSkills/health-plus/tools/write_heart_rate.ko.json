@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에 심박수(bpm) 샘플을 기록합니다.",
+  "parameters": {
+    "bpm": {
+      "description": "심박수 (분당 박동 수)"
+    },
+    "date": {
+      "description": "기록 시각. 기본값은 현재 시각."
+    }
+  }
+}

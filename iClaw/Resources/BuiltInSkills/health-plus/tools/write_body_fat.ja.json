@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に体脂肪率を書き込みます。",
+  "parameters": {
+    "percentage": {
+      "description": "体脂肪率（例: 22.5）"
+    },
+    "date": {
+      "description": "記録時刻。既定は現在時刻。"
+    }
+  }
+}

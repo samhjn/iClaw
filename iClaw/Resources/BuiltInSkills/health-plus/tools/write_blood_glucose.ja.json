@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に血糖値を書き込みます。",
+  "parameters": {
+    "value": {
+      "description": "血糖値"
+    },
+    "unit": {
+      "description": "値の単位"
+    }
+  }
+}

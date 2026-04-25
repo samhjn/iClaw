@@ -1,0 +1,11 @@
+{
+  "description": "抓取 URL 并提取可读文本。可能因沙盒 CORS 限制失败——请用 browser_navigate + browser_get_page_info 作为可靠替代。",
+  "parameters": {
+    "url": {
+      "description": "要抓取内容的 URL"
+    },
+    "max_length": {
+      "description": "返回的最大字符数（默认 5000）"
+    }
+  }
+}

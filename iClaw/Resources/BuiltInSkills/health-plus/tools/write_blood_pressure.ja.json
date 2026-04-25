@@ -1,0 +1,14 @@
+{
+  "description": "Apple Health に血圧（収縮期／拡張期 mmHg）を書き込みます。",
+  "parameters": {
+    "systolic": {
+      "description": "収縮期圧 mmHg（例: 120）"
+    },
+    "diastolic": {
+      "description": "拡張期圧 mmHg（例: 80）"
+    },
+    "date": {
+      "description": "記録時刻。既定は現在時刻。"
+    }
+  }
+}

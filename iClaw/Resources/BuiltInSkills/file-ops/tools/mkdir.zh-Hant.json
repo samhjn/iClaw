@@ -1,0 +1,8 @@
+{
+  "description": "建立目錄（含中間層級）。具冪等性。",
+  "parameters": {
+    "path": {
+      "description": "要建立的目錄路徑"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に身長を書き込みます。",
+  "parameters": {
+    "value": {
+      "description": "身長の値"
+    },
+    "unit": {
+      "description": "値の単位"
+    }
+  }
+}

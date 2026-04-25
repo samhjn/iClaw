@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 寫入體脂率。",
+  "parameters": {
+    "percentage": {
+      "description": "體脂百分比（如 22.5）"
+    },
+    "date": {
+      "description": "記錄時間。預設當前時間。"
+    }
+  }
+}

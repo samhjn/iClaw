@@ -1,0 +1,8 @@
+{
+  "description": "检查文件或目录是否存在。返回 'true' 或 'false'。",
+  "parameters": {
+    "path": {
+      "description": "要检查的路径"
+    }
+  }
+}

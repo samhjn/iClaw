@@ -1,0 +1,11 @@
+{
+  "description": "具深度控制的遞迴目錄清單。回傳格式化文字樹。",
+  "parameters": {
+    "path": {
+      "description": "根路徑（預設為 agent 根目錄）"
+    },
+    "max_depth": {
+      "description": "最大遞迴深度（預設 4）"
+    }
+  }
+}

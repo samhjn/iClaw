@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에 체온을 기록합니다.",
+  "parameters": {
+    "value": {
+      "description": "온도 값"
+    },
+    "unit": {
+      "description": "온도 단위"
+    }
+  }
+}

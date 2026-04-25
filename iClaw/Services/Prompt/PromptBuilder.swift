@@ -2,11 +2,35 @@ import Foundation
 
 final class PromptBuilder {
 
+    /// Per-app setting toggling progressive disclosure of installed-skill
+    /// bodies. When true (default) the skills section renders dormant skills
+    /// as a one-line bullet (`name (/slug) — description`) and only expands a
+    /// skill's full body once it's been activated for the session (via a
+    /// `/<slug>` slash-command, a `skill_<slug>_*` tool call, or a
+    /// `run_snippet skill:<name>:*` invocation). When false, every installed
+    /// skill's full body joins the prompt every turn — the pre-Phase-6
+    /// behavior.
+    ///
+    /// Read via `object(forKey:)` so the missing-default case can be
+    /// distinguished from an explicit `false`.
+    static let progressiveDisclosureKey = "iclaw.skill.progressive_disclosure"
+
+    static var progressiveDisclosureEnabled: Bool {
+        get {
+            if let v = UserDefaults.standard.object(forKey: progressiveDisclosureKey) as? Bool {
+                return v
+            }
+            return true
+        }
+        set { UserDefaults.standard.set(newValue, forKey: progressiveDisclosureKey) }
+    }
+
     func buildSystemPrompt(
         for agent: Agent,
         isSubAgent: Bool = false,
         relatedSessions: [(id: UUID, title: String, updatedAt: Date)] = [],
-        rootAgentId: UUID? = nil
+        rootAgentId: UUID? = nil,
+        activatedSkillSlugs: Set<String>? = nil
     ) -> String {
         var sections: [String] = []
 
@@ -24,7 +48,7 @@ final class PromptBuilder {
 
         let activeSkills = agent.activeSkills
         if !activeSkills.isEmpty {
-            sections.append(buildInstalledSkillsSection(activeSkills))
+            sections.append(buildInstalledSkillsSection(activeSkills, activatedSlugs: activatedSkillSlugs))
         }
 
         if !agent.customConfigs.isEmpty {
@@ -41,9 +65,14 @@ final class PromptBuilder {
     func buildSystemPromptWithCompressedContext(
         for agent: Agent,
         compressedContext: String?,
-        isSubAgent: Bool = false
+        isSubAgent: Bool = false,
+        activatedSkillSlugs: Set<String>? = nil
     ) -> String {
-        var prompt = buildSystemPrompt(for: agent, isSubAgent: isSubAgent)
+        var prompt = buildSystemPrompt(
+            for: agent,
+            isSubAgent: isSubAgent,
+            activatedSkillSlugs: activatedSkillSlugs
+        )
 
         if let compressed = compressedContext, !compressed.isEmpty {
             prompt += "\n\n---\n\n"
@@ -356,39 +385,79 @@ final class PromptBuilder {
         """
     }
 
-    private func buildInstalledSkillsSection(_ activeSkills: [InstalledSkill]) -> String {
-        var parts: [String] = ["## Installed Skills\n\nThe following skills are active and provide specialized instructions:"]
+    private func buildInstalledSkillsSection(
+        _ activeSkills: [InstalledSkill],
+        activatedSlugs: Set<String>?
+    ) -> String {
+        // Progressive disclosure applies only when (a) the global setting is
+        // on AND (b) the caller threaded a non-nil activated set. Cron and
+        // sub-agent flows pass nil to keep the legacy "render every body
+        // every turn" behavior — they have no chat session to derive an
+        // activation set from.
+        let useProgressive = Self.progressiveDisclosureEnabled && activatedSlugs != nil
+        let activated = activatedSlugs ?? []
 
+        var dormant: [InstalledSkill] = []
+        var expanded: [InstalledSkill] = []
         for installation in activeSkills {
             guard let skill = installation.skill else { continue }
-            var skillSection = """
-            ### Skill: \(skill.effectiveDisplayName)
-            \(skill.content)
+            let slug = SkillPackage.derivedSlug(forName: skill.name)
+            if useProgressive && !activated.contains(slug) {
+                dormant.append(installation)
+            } else {
+                expanded.append(installation)
+            }
+        }
+
+        var parts: [String] = []
+
+        if !dormant.isEmpty {
+            var section = """
+            ## Installed Skills (dormant)
+
+            Each skill below ships methodology that is not yet loaded into your context. Activate one (so its full body joins the prompt) by typing `/<slug>` from the user, calling one of its `skill_<slug>_*` custom tools, or running its scripts via `run_snippet skill:<name>:*`. Each skill's `skill_<slug>_*` tool definitions remain callable even while dormant — only the prose body is hidden.
             """
+            for installation in dormant {
+                guard let skill = installation.skill else { continue }
+                let slug = SkillPackage.derivedSlug(forName: skill.name)
+                section += "\n\n- **\(skill.effectiveDisplayName)** (`/\(slug)`) — \(skill.summary)"
+            }
+            parts.append(section)
+        }
 
-            // List available scripts. The snippet ID embedded in backticks
-            // must stay in sync with the CodeSnippet name registered in
-            // `SkillService.installSkill` — which uses the English `name` —
-            // so `run_snippet` can resolve it. Do NOT swap in `effectiveDisplayName`.
-            if !skill.scripts.isEmpty {
-                skillSection += "\n\n**Available scripts** (use `run_snippet` to execute):"
-                for script in skill.scripts {
-                    let desc = script.description ?? script.name
-                    skillSection += "\n- `skill:\(skill.name):\(script.name)` — \(desc)"
+        if !expanded.isEmpty {
+            let header: String
+            if dormant.isEmpty {
+                header = "## Installed Skills\n\nThe following skills are active and provide specialized instructions:"
+            } else {
+                header = "## Active Skills\n\nThe following installed skills have been activated for this session — follow their methodology:"
+            }
+            var section = header
+            for installation in expanded {
+                guard let skill = installation.skill else { continue }
+                section += "\n\n### Skill: \(skill.effectiveDisplayName)\n\(skill.content)"
+
+                // List available scripts. The snippet ID embedded in backticks
+                // must stay in sync with the CodeSnippet name registered in
+                // `SkillService.installSkill` — which uses the English `name` —
+                // so `run_snippet` can resolve it. Do NOT swap in `effectiveDisplayName`.
+                if !skill.scripts.isEmpty {
+                    section += "\n\n**Available scripts** (use `run_snippet` to execute):"
+                    for script in skill.scripts {
+                        let desc = script.description ?? script.name
+                        section += "\n- `skill:\(skill.name):\(script.name)` — \(desc)"
+                    }
+                }
+                if !skill.customTools.isEmpty {
+                    section += "\n\n**Custom tools** provided by this skill:"
+                    for tool in skill.customTools {
+                        let toolName = Self.skillToolName(skillName: skill.name, toolName: tool.name)
+                        let params = tool.parameters.map { "\($0.name): \($0.type)" }.joined(separator: ", ")
+                        section += "\n- `\(toolName)(\(params))` — \(tool.description)"
+                    }
                 }
             }
-
-            // List custom tools
-            if !skill.customTools.isEmpty {
-                skillSection += "\n\n**Custom tools** provided by this skill:"
-                for tool in skill.customTools {
-                    let toolName = Self.skillToolName(skillName: skill.name, toolName: tool.name)
-                    let params = tool.parameters.map { "\($0.name): \($0.type)" }.joined(separator: ", ")
-                    skillSection += "\n- `\(toolName)(\(params))` — \(tool.description)"
-                }
-            }
-
-            parts.append(skillSection)
+            parts.append(section)
         }
 
         return parts.joined(separator: "\n\n")

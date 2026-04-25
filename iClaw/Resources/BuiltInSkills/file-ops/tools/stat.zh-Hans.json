@@ -1,0 +1,8 @@
+{
+  "description": "返回文件或目录的 JSON 元数据（size、mtime_ms、ctime_ms、is_file、is_dir）。",
+  "parameters": {
+    "path": {
+      "description": "要查询的路径"
+    }
+  }
+}

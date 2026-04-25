@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 寫入身高。",
+  "parameters": {
+    "value": {
+      "description": "身高數值"
+    },
+    "unit": {
+      "description": "數值單位"
+    }
+  }
+}

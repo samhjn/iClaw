@@ -1,0 +1,17 @@
+{
+  "description": "기존 스킬 패키지에 function-call 도구를 추가합니다. 입력값으로 META를 채운 tools/<tool_name>.js를 생성하고 본문은 TODO로 남깁니다. 실행 후 fs.writeFile로 TODO를 교체하고 validate_skill로 검증하세요.",
+  "parameters": {
+    "slug": {
+      "description": "/skills/ 아래 대상 스킬 패키지의 slug."
+    },
+    "tool_name": {
+      "description": "도구 이름(/[a-zA-Z_][a-zA-Z0-9_]*/ 일치 필요). LLM 도구 이름 skill_<slug>_<tool_name>의 일부가 됩니다."
+    },
+    "description": {
+      "description": "200자 이하 한 줄 설명. 모델이 도구 선택에 사용합니다."
+    },
+    "parameters": {
+      "description": "{name,type,required?,description?,enum?} 형태의 JSON 배열. 기본값은 []."
+    }
+  }
+}

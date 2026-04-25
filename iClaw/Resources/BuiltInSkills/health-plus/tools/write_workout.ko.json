@@ -1,0 +1,20 @@
+{
+  "description": "Apple Health에 운동 세션을 기록합니다.",
+  "parameters": {
+    "activity_type": {
+      "description": "활동 유형. 예: running, walking, cycling, swimming, yoga, strength"
+    },
+    "start_date": {
+      "description": "운동 시작 시각 (ISO 8601 또는 yyyy-MM-dd HH:mm)"
+    },
+    "end_date": {
+      "description": "운동 종료 시각 (ISO 8601 또는 yyyy-MM-dd HH:mm)"
+    },
+    "energy_kcal": {
+      "description": "활동 에너지 소비량 (kcal)"
+    },
+    "distance_km": {
+      "description": "거리 (킬로미터)"
+    }
+  }
+}

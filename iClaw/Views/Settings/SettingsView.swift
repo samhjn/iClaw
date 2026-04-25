@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showAddProvider = false
     @State private var showDeleteConfirmation = false
     @AppStorage(BackgroundKeepAliveManager.enabledKey) private var keepAliveEnabled = false
+    @AppStorage(PromptBuilder.progressiveDisclosureKey) private var progressiveSkillDisclosure = true
 
     var body: some View {
         NavigationStack {
@@ -63,6 +64,14 @@ struct SettingsView: View {
                 Text(L10n.Settings.backgroundExecution)
             } footer: {
                 Text(L10n.Settings.backgroundKeepAliveFooter)
+            }
+
+            Section {
+                Toggle(L10n.Settings.progressiveSkillDisclosure, isOn: $progressiveSkillDisclosure)
+            } header: {
+                Text(L10n.Settings.skills)
+            } footer: {
+                Text(L10n.Settings.progressiveSkillDisclosureFooter)
             }
 
             Section(L10n.Settings.about) {

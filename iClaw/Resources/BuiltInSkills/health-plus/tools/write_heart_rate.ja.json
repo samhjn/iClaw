@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に心拍数（bpm）サンプルを書き込みます。",
+  "parameters": {
+    "bpm": {
+      "description": "心拍数（1分あたりの拍動）"
+    },
+    "date": {
+      "description": "記録時刻。既定は現在時刻。"
+    }
+  }
+}

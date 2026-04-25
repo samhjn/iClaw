@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 寫入一次體溫讀數。",
+  "parameters": {
+    "value": {
+      "description": "溫度數值"
+    },
+    "unit": {
+      "description": "溫度單位"
+    }
+  }
+}

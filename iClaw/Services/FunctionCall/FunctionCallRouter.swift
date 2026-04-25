@@ -139,6 +139,17 @@ final class FunctionCallRouter {
                 CodeExecutionTools(agent: agent, modelContext: modelContext)
                     .listCode())
         case "run_snippet":
+            // Phase 6: a skill-owned snippet (`skill:<name>:<script>`) counts
+            // as an activation — same rationale as a `skill_<slug>_*` tool
+            // call. Hand-rolled snippets aren't tied to a skill so they
+            // don't activate anything.
+            if let snippetName = arguments["name"] as? String,
+               snippetName.hasPrefix("skill:") {
+                let parts = snippetName.split(separator: ":", maxSplits: 2).map(String.init)
+                if parts.count >= 2 {
+                    activateSkillForSession(skillName: parts[1])
+                }
+            }
             return try await runAsyncThrowing {
                 try await CodeExecutionTools(agent: self.agent, modelContext: self.modelContext)
                     .runSnippet(arguments: arguments)
@@ -163,18 +174,10 @@ final class FunctionCallRouter {
                     .listCron())
 
         // --- Skills ---
-        case "create_skill":
-            return ToolCallResult(
-                SkillTools(agent: agent, modelContext: modelContext)
-                    .createSkill(arguments: arguments))
-        case "edit_skill":
-            return ToolCallResult(
-                SkillTools(agent: agent, modelContext: modelContext)
-                    .editSkill(arguments: arguments))
-        case "delete_skill":
-            return ToolCallResult(
-                SkillTools(agent: agent, modelContext: modelContext)
-                    .deleteSkill(arguments: arguments))
+        // create_skill / edit_skill / delete_skill / read_skill are removed in
+        // favor of `fs.*` writes against the `/skills/<slug>/` mount. Auto-
+        // reload (SkillService.reload) and validate_skill replace the
+        // round-trip those tools provided.
         case "install_skill":
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
@@ -187,10 +190,10 @@ final class FunctionCallRouter {
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
                     .listSkills(arguments: arguments))
-        case "read_skill":
+        case "validate_skill":
             return ToolCallResult(
                 SkillTools(agent: agent, modelContext: modelContext)
-                    .readSkill(arguments: arguments))
+                    .validateSkill(arguments: arguments))
 
         // --- Model ---
         case "set_model":
@@ -354,6 +357,11 @@ final class FunctionCallRouter {
             let funcName = String(name.dropFirst(prefix.count))
             guard let toolDef = skill.customTools.first(where: { $0.name == funcName }) else { continue }
 
+            // Phase 6: invoking a skill tool counts as an activation — the
+            // skill's body joins the system prompt on the next turn so the
+            // model has the methodology that wraps this tool call.
+            activateSkillForSession(skillName: skill.name)
+
             // Merge tool arguments with installation config
             var jsArgs: [String: Any] = arguments
             if !installation.config.isEmpty {
@@ -370,6 +378,25 @@ final class FunctionCallRouter {
             return ToolCallResult(result)
         }
         return ToolCallResult("[Error] Skill tool '\(name)' not found or skill is not active")
+    }
+
+    /// Mark a skill as activated for the current session so progressive
+    /// disclosure (Phase 6) expands its body into the system prompt on the
+    /// next turn. No-op for cron / sub-agent flows that lack a session id.
+    /// Internal (rather than `private`) so tests can exercise the helper
+    /// without spinning up a full WKWebView JS execution.
+    func activateSkillForSession(skillName: String) {
+        guard let sessionId else { return }
+        let slug = SkillPackage.derivedSlug(forName: skillName)
+        var descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.id == sessionId }
+        )
+        descriptor.fetchLimit = 1
+        guard let session = try? modelContext.fetch(descriptor).first else { return }
+        if !session.activatedSkillSlugs.contains(slug) {
+            session.activatedSkillSlugs.insert(slug)
+            try? modelContext.save()
+        }
     }
 
     // MARK: - Cancellation Helpers

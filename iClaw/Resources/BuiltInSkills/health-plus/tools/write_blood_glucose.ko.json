@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health에 혈당값을 기록합니다.",
+  "parameters": {
+    "value": {
+      "description": "혈당 값"
+    },
+    "unit": {
+      "description": "값의 단위"
+    }
+  }
+}

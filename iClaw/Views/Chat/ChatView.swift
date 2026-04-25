@@ -504,6 +504,55 @@ private struct ChatContentView: View {
                     .padding(.vertical, 2)
             }
 
+            // Slash-command autocomplete chip strip. Shows installed-and-
+            // enabled skills that match the in-progress `/<prefix>` and
+            // dismisses itself when the input no longer starts with `/`.
+            if let suggestions = vm.slashCommandSuggestions {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(suggestions) { suggestion in
+                            Button {
+                                vm.applySlashSuggestion(suggestion.slug)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("/\(suggestion.slug)")
+                                        .font(.caption.monospaced())
+                                    Text("·")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                    Text(suggestion.displayName)
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.accentColor.opacity(0.12))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
+                }
+            }
+
+            // Slash-command activation notice (positive feedback after a
+            // bare `/skill-slug` that doesn't trigger a generation).
+            if let notice = vm.slashCommandNotice {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                    Text(notice)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.green.opacity(0.08))
+            }
+
             InputBarView(
                 text: $vm.inputText,
                 isLoading: vm.isLoading,

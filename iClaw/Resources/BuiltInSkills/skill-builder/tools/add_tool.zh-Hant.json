@@ -1,0 +1,17 @@
+{
+  "description": "向既有的技能套件追加一個 function-call 工具。產生 tools/<tool_name>.js,META 依據輸入填好,函式主體留作 TODO。執行後請用 fs.writeFile 取代 TODO,再用 validate_skill 驗證。",
+  "parameters": {
+    "slug": {
+      "description": "目標技能套件在 /skills/ 下的 slug。"
+    },
+    "tool_name": {
+      "description": "工具名稱(必須符合 /[a-zA-Z_][a-zA-Z0-9_]*/)。將成為 LLM 工具名 skill_<slug>_<tool_name> 的一部分。"
+    },
+    "description": {
+      "description": "≤200 字元的一行描述,模型依此判斷何時呼叫此工具。"
+    },
+    "parameters": {
+      "description": "JSON 陣列,每項形如 {name,type,required?,description?,enum?}。預設為 []。"
+    }
+  }
+}

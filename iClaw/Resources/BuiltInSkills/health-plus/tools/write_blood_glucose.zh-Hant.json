@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 寫入一次血糖讀數。",
+  "parameters": {
+    "value": {
+      "description": "血糖數值"
+    },
+    "unit": {
+      "description": "數值單位"
+    }
+  }
+}

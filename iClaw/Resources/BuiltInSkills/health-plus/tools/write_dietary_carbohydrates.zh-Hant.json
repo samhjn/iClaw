@@ -1,0 +1,11 @@
+{
+  "description": "向 Apple Health 寫入碳水攝取量（克）。",
+  "parameters": {
+    "grams": {
+      "description": "碳水克數"
+    },
+    "date": {
+      "description": "記錄時間。預設當前時間。"
+    }
+  }
+}

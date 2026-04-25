@@ -71,6 +71,9 @@ enum L10n {
     enum Chat {
         static var messagePlaceholder: String { tr("chat.messagePlaceholder") }
         static var cancelling: String { tr("chat.cancelling") }
+        static func skillActivated(_ name: String) -> String {
+            tr("chat.skillActivated", name)
+        }
         static var thinking: String { tr("chat.thinking") }
         static var compressingContext: String { tr("chat.compressingContext") }
         static var renameSession: String { tr("chat.renameSession") }
@@ -451,6 +454,9 @@ enum L10n {
         static var backgroundExecution: String { tr("settings.backgroundExecution") }
         static var backgroundKeepAlive: String { tr("settings.backgroundKeepAlive") }
         static var backgroundKeepAliveFooter: String { tr("settings.backgroundKeepAliveFooter") }
+        static var skills: String { tr("settings.skills") }
+        static var progressiveSkillDisclosure: String { tr("settings.progressiveSkillDisclosure") }
+        static var progressiveSkillDisclosureFooter: String { tr("settings.progressiveSkillDisclosureFooter") }
     }
 
     // MARK: - Live Activity
@@ -537,6 +543,30 @@ enum L10n {
         static var noSkills: String { tr("skills.noSkills") }
         static var noSkillsDescription: String { tr("skills.noSkillsDescription") }
         static var createSkill: String { tr("skills.createSkill") }
+        static var importSkill: String { tr("skills.importSkill") }
+        static var importContinue: String { tr("skills.importContinue") }
+        static var importReplace: String { tr("skills.importReplace") }
+        static var importSecurityTitle: String { tr("skills.importSecurityTitle") }
+        static var importSecurityBody: String { tr("skills.importSecurityBody") }
+        static var importFailedTitle: String { tr("skills.importFailedTitle") }
+        static var importNotADirectory: String { tr("skills.importNotADirectory") }
+        static var importWarningsTitle: String { tr("skills.importWarningsTitle") }
+        static var importCollisionTitle: String { tr("skills.importCollisionTitle") }
+        static func importCollisionBody(_ name: String) -> String { tr("skills.importCollisionBody", name) }
+        static func importCollisionFooter(_ name: String) -> String { tr("skills.importCollisionFooter", name) }
+        static func importBuiltInRefused(_ name: String) -> String { tr("skills.importBuiltInRefused", name) }
+        static func importValidationFailed(_ count: Int) -> String { tr("skills.importValidationFailed", count) }
+        static func importValidationWarnings(_ count: Int) -> String { tr("skills.importValidationWarnings", count) }
+        static var importedTitle: String { tr("skills.importedTitle") }
+        static func importedBody(_ name: String) -> String { tr("skills.importedBody", name) }
+        static var revealInFiles: String { tr("skills.revealInFiles") }
+        static var showInFiles: String { tr("skills.showInFiles") }
+        static var shareSkill: String { tr("skills.shareSkill") }
+        static var validationErrorsTitle: String { tr("skills.validationErrorsTitle") }
+        static var validationWarningsTitle: String { tr("skills.validationWarningsTitle") }
+        static var parameterOptional: String { tr("skills.parameterOptional") }
+        static var editScriptTitle: String { tr("skills.editScriptTitle") }
+        static var editToolTitle: String { tr("skills.editToolTitle") }
         static var customSkills: String { tr("skills.customSkills") }
         static var builtInSkills: String { tr("skills.builtInSkills") }
         static var builtIn: String { tr("skills.builtIn") }
@@ -587,31 +617,6 @@ enum L10n {
         static var configure: String { tr("skills.configure") }
         static var skillConfiguration: String { tr("skills.skillConfiguration") }
         static var required: String { tr("skills.required") }
-
-        /// Localization keys for built-in skill content. The `skillKey`
-        /// argument is the template's `localizationKey` (e.g. `"deep_research"`)
-        /// — not the stable English `name`. See `BuiltInSkills.Template` for
-        /// the mapping.
-        enum BuiltIn {
-            static func displayName(_ skillKey: String) -> String {
-                tr("skill.\(skillKey).displayName")
-            }
-            static func summary(_ skillKey: String) -> String {
-                tr("skill.\(skillKey).summary")
-            }
-            static func toolDescription(_ skillKey: String, _ tool: String) -> String {
-                tr("skill.\(skillKey).tool.\(tool).description")
-            }
-            static func toolParamDescription(_ skillKey: String, _ tool: String, _ param: String) -> String {
-                tr("skill.\(skillKey).tool.\(tool).param.\(param).description")
-            }
-            static func scriptDescription(_ skillKey: String, _ script: String) -> String {
-                tr("skill.\(skillKey).script.\(script).description")
-            }
-            static func configLabel(_ skillKey: String, _ field: String) -> String {
-                tr("skill.\(skillKey).config.\(field).label")
-            }
-        }
     }
 
     // MARK: - Cron Parser

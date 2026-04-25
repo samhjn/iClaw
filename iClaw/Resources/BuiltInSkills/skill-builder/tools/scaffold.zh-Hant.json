@@ -1,0 +1,17 @@
+{
+  "description": "在 /skills/<slug>/ 下產生最小可用的技能骨架。寫入 SKILL.md(含指定 name + description)以及空的 tools/ 和 scripts/ 資料夾。若該目錄已存在則拒絕覆寫——請改 slug,或先用 fs.delete 清掉。",
+  "parameters": {
+    "slug": {
+      "description": "目錄 slug(小寫、連字號)。最後會產生 /skills/<slug>/。"
+    },
+    "name": {
+      "description": "人類可讀的技能名稱,寫入 SKILL.md frontmatter 的 name。"
+    },
+    "description": {
+      "description": "一行描述,寫入 frontmatter 的 description(≤200 字元)。"
+    },
+    "tags": {
+      "description": "以逗號分隔的英文標籤(如 'utility,demo'),用於搜尋。可選。"
+    }
+  }
+}

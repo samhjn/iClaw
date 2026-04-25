@@ -57,6 +57,16 @@ final class SkillService {
 
     func deleteSkill(_ skill: Skill) {
         guard !skill.isBuiltIn else { return }
+        // Remove the on-disk package mirror first so a deleted skill leaves
+        // no orphan directory under <Documents>/Skills/. Best-effort: a
+        // missing package (e.g. legacy row that hadn't been migrated yet)
+        // is fine — try? swallows the error.
+        let slug = SkillPackage.derivedSlug(forName: skill.name)
+        if !slug.isEmpty, !BuiltInSkills.shippedSlugs.contains(slug) {
+            let url = AgentFileManager.shared.skillsRoot
+                .appendingPathComponent(slug, isDirectory: true)
+            try? FileManager.default.removeItem(at: url)
+        }
         modelContext.delete(skill)
         save()
     }
@@ -157,6 +167,80 @@ final class SkillService {
         agent.installedSkills.sorted { ($0.skill?.name ?? "") < ($1.skill?.name ?? "") }
     }
 
+    // MARK: - One-time migration: row → on-disk package
+
+    /// Plan a row → on-disk migration without touching disk. Walks every
+    /// non-built-in `Skill` row and snapshots the ones whose backing
+    /// directory is missing. The returned `[Pending]` is plain Sendable
+    /// values, safe to hand to a `Task.detached` for off-main commit —
+    /// keeping the launch thread free of disk I/O even when the user has
+    /// many legacy skills to migrate.
+    ///
+    /// Must be called on the actor that owns `modelContext` (typically
+    /// @MainActor). Idempotent: skills whose package directory already
+    /// exists are skipped.
+    func planMigrationToOnDiskPackages() -> [PendingMigration] {
+        let descriptor = FetchDescriptor<Skill>(
+            predicate: #Predicate { $0.isBuiltIn == false }
+        )
+        let userSkills = (try? modelContext.fetch(descriptor)) ?? []
+        let fm = FileManager.default
+        let root = AgentFileManager.shared.skillsRoot
+        var pending: [PendingMigration] = []
+        for skill in userSkills {
+            let slug = SkillPackage.derivedSlug(forName: skill.name)
+            guard !slug.isEmpty else { continue }
+            // Slug collision with a built-in: never clobber the bundle
+            // path. Legacy row keeps working through SwiftData; the user
+            // can rename it later if they want a backing directory.
+            if BuiltInSkills.shippedSlugs.contains(slug) { continue }
+
+            let dest = root.appendingPathComponent(slug, isDirectory: true)
+            if fm.fileExists(atPath: dest.path) { continue }
+
+            pending.append(PendingMigration(
+                destination: dest,
+                snapshot: SkillPackage.snapshot(of: skill)
+            ))
+        }
+        return pending
+    }
+
+    /// Synchronous one-shot migration kept for tests and any caller that
+    /// doesn't care about main-thread cost. The launch path uses
+    /// `planMigrationToOnDiskPackages` + a detached task to keep the
+    /// launch thread free of disk I/O.
+    func migrateRowsToOnDiskPackages() {
+        let pending = planMigrationToOnDiskPackages()
+        Self.commitPendingMigrations(pending)
+    }
+
+    /// Commit a previously-planned migration to disk. Pure I/O — safe to
+    /// invoke from any actor. Failures are logged but don't block
+    /// subsequent commits.
+    static func commitPendingMigrations(_ pending: [PendingMigration]) {
+        guard !pending.isEmpty else { return }
+        let root = AgentFileManager.shared.skillsRoot
+        if !FileManager.default.fileExists(atPath: root.path) {
+            try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        }
+        for item in pending {
+            do {
+                try SkillPackage.commit(item.snapshot, to: item.destination)
+            } catch {
+                print("[SkillService] migration failed for '\(item.snapshot.name)': \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// One pending row → directory write captured by
+    /// `planMigrationToOnDiskPackages`. All-Sendable so it can travel
+    /// across actors.
+    struct PendingMigration: Sendable, Hashable {
+        let destination: URL
+        let snapshot: SkillPackage.WriteSnapshot
+    }
+
     // MARK: - Built-in Skills
 
     func ensureBuiltInSkills() {
@@ -166,7 +250,7 @@ final class SkillService {
         let existing = (try? modelContext.fetch(descriptor)) ?? []
         let existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
 
-        let resolved = BuiltInSkills.all.map { $0.resolved() }
+        let resolved = BuiltInSkills.allResolvedTemplates()
         let templateNames = Set(resolved.map(\.name))
 
         for template in resolved {
@@ -249,520 +333,115 @@ final class SkillService {
             skill.updatedAt = Date()
         }
     }
-}
 
-// MARK: - Built-in skill templates
+    // MARK: - Reload (file-system → cache)
 
-enum BuiltInSkills {
-    /// Stable-identifier template for a built-in skill. User-visible strings
-    /// (display name, summary, content, tool/script/param/config descriptions)
-    /// are looked up per UI locale by `resolved()` — keeping this struct free
-    /// of inline English prose.
-    struct Template {
-        /// Stable English identifier. Used as the matching key in
-        /// `ensureBuiltInSkills`, as the skill-prefix for generated tool names
-        /// (`skill_<name>_<tool>`), and as the CodeSnippet registration prefix.
-        /// Never translated.
-        let name: String
-        /// Short lowercase key composed into Localizable.strings lookups,
-        /// e.g. `"deep_research"` → `"skill.deep_research.summary"`.
-        let localizationKey: String
-        /// Tags are kept in English for search stability across locales.
-        let tags: [String]
-        var scripts: [ScriptTemplate] = []
-        var customTools: [ToolTemplate] = []
-        var configSchema: [ConfigFieldTemplate] = []
-    }
+    /// Re-parse the on-disk package for `slug` and update the matching `Skill`
+    /// row's cached fields (`content`, `summary`, `displayName`, `scripts`,
+    /// `customTools`). On parse failure the cache is left untouched — the
+    /// last good version of the skill keeps running until the package is
+    /// fixed (the "broken-edit resilience" property documented in the
+    /// proposal). The returned `ValidationReport` always reflects the latest
+    /// parse attempt; callers surface its errors / warnings to the user.
+    ///
+    /// Returns `nil` when the slug is unknown (no matching `Skill` row, no
+    /// built-in package) — there's nothing to reload.
+    @discardableResult
+    func reload(slug: String) -> ValidationReport? {
+        guard let url = Self.packageURL(forSlug: slug) else { return nil }
+        let (parsed, report) = SkillPackage.parse(at: url)
 
-    struct ScriptTemplate {
-        let name: String
-        let language: String
-        let code: String
-    }
+        // Last-good cache: parse failed → leave the existing Skill row as-is.
+        // The report still surfaces every error/warning so callers can show
+        // them.
+        guard report.ok, let pkg = parsed else { return report }
 
-    struct ToolTemplate {
-        let name: String
-        let parameters: [ToolParamTemplate]
-        let implementation: String
-    }
+        // Find the installed Skill row whose derived slug matches. For new
+        // packages with no installed row yet, this is a no-op — install_skill
+        // is the entry point that creates the row.
+        guard let skill = skillForSlug(slug) else { return report }
 
-    struct ToolParamTemplate {
-        let name: String
-        let type: String
-        let required: Bool
-        let enumValues: [String]?
+        let oldName = skill.name
+        let newScripts = pkg.toSkillScripts()
+        let newTools = pkg.toCustomTools()
 
-        init(name: String, type: String = "string", required: Bool = true, enumValues: [String]? = nil) {
-            self.name = name
-            self.type = type
-            self.required = required
-            self.enumValues = enumValues
+        var changed = false
+        if skill.content != pkg.body { skill.content = pkg.body; changed = true }
+        if skill.summary != pkg.description { skill.summary = pkg.description; changed = true }
+        if !pkg.displayName.isEmpty, skill.displayName != pkg.displayName {
+            skill.displayName = pkg.displayName
+            changed = true
         }
-    }
-
-    struct ConfigFieldTemplate {
-        let key: String
-        let type: String
-        let required: Bool
-        let defaultValue: String?
-
-        init(key: String, type: String = "string", required: Bool = false, defaultValue: String? = nil) {
-            self.key = key
-            self.type = type
-            self.required = required
-            self.defaultValue = defaultValue
+        if skill.tags != pkg.frontmatter.iclaw.tags {
+            skill.tags = pkg.frontmatter.iclaw.tags
+            changed = true
         }
+        if skill.scripts != newScripts {
+            skill.scripts = newScripts
+            changed = true
+        }
+        if skill.customTools != newTools {
+            skill.customTools = newTools
+            changed = true
+        }
+        if changed {
+            skill.updatedAt = Date()
+            save()
+            // Re-sync per-agent CodeSnippet rows so `run_snippet` invocations
+            // pick up renamed / modified scripts on the next turn.
+            resyncSnippetsForReloadedSkill(skill, oldName: oldName)
+        }
+        return report
     }
 
-    /// Fully resolved template with locale-specific strings. Consumed by
-    /// `SkillService.ensureBuiltInSkills` to insert/upgrade DB rows.
-    struct ResolvedTemplate {
-        let name: String
-        let displayName: String
-        let summary: String
-        let content: String
-        let tags: [String]
-        let scripts: [SkillScript]
-        let customTools: [SkillToolDefinition]
-        let configSchema: [SkillConfigField]
+    /// Look up the installed `Skill` whose name derives to `slug`. Slow
+    /// (linear scan) but the built-in + user skill count is small.
+    private func skillForSlug(_ slug: String) -> Skill? {
+        let descriptor = FetchDescriptor<Skill>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        return all.first { SkillPackage.derivedSlug(forName: $0.name) == slug }
     }
 
-    // Note: "Code Review", "Daily Planner", and "Creative Writer" were previously
-    // registered as built-in templates. They have been removed — their content was
-    // pure prose with no executable scripts or custom tools, so they add cognitive
-    // load without providing capabilities the model couldn't improvise on its own.
-    // `ensureBuiltInSkills()` demotes any pre-existing copies to user-owned skills
-    // so installed users can edit or delete them.
-    static let all: [Template] = [
-        Template(
-            name: "Deep Research",
-            localizationKey: "deep_research",
-            tags: ["research", "analysis", "methodology"],
-            scripts: [
-                ScriptTemplate(
-                    name: "extract_links",
-                    language: "javascript",
-                    code: """
-                    const html = args.html || '';
-                    const matches = [...html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\\/a>/gi)];
-                    const links = matches
-                        .map(m => ({ url: m[1], text: m[2].trim() }))
-                        .filter(l => l.url.startsWith('http') && l.text.length > 0);
-                    const unique = links.filter((l, i, arr) => arr.findIndex(x => x.url === l.url) === i);
-                    console.log(JSON.stringify(unique.slice(0, 30), null, 2));
-                    """
-                ),
-                ScriptTemplate(
-                    name: "summarize_text",
-                    language: "javascript",
-                    code: """
-                    const text = args.text || '';
-                    const maxLen = args.max_length || 2000;
-                    const sentences = text.split(/(?<=[.!?])\\s+/).filter(s => s.trim().length > 20);
-                    if (sentences.length === 0) { console.log(text.substring(0, maxLen)); }
-                    else {
-                        const scored = sentences.map((s, i) => ({
-                            text: s.trim(),
-                            score: (1 / (i + 1)) + Math.min(s.length / 200, 1)
-                        }));
-                        scored.sort((a, b) => b.score - a.score);
-                        const top = scored.slice(0, 15);
-                        top.sort((a, b) => {
-                            const ai = sentences.findIndex(x => x.includes(a.text));
-                            const bi = sentences.findIndex(x => x.includes(b.text));
-                            return ai - bi;
-                        });
-                        console.log(top.map(s => s.text).join(' ').substring(0, maxLen));
-                    }
-                    """
+    /// Resolve a slug to its on-disk package URL. Built-ins live in the read-
+    /// only app bundle; user skills live under `<Documents>/Skills/<slug>/`.
+    /// Returns `nil` when neither location exists.
+    private static func packageURL(forSlug slug: String) -> URL? {
+        if BuiltInSkills.shippedSlugs.contains(slug) {
+            return BuiltInSkillsDirectoryLoader.packageURL(forSlug: slug)
+        }
+        let url = AgentFileManager.shared.skillsRoot.appendingPathComponent(slug, isDirectory: true)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// Re-register CodeSnippets for every agent that has the reloaded skill
+    /// installed. Mirror of `SkillTools.resyncInstalledSnippets`. Phase 4d
+    /// will fold these two implementations together.
+    private func resyncSnippetsForReloadedSkill(_ skill: Skill, oldName: String) {
+        for installation in skill.installations {
+            guard let agent = installation.agent else { continue }
+            // Purge stale entries (by old name prefix; covers renames and
+            // removed scripts).
+            let oldPrefix = "skill:\(oldName):"
+            let newPrefix = "skill:\(skill.name):"
+            let stale = agent.codeSnippets.filter {
+                $0.name.hasPrefix(oldPrefix) || $0.name.hasPrefix(newPrefix)
+            }
+            for snip in stale {
+                agent.codeSnippets.removeAll { $0.id == snip.id }
+                modelContext.delete(snip)
+            }
+            // Insert fresh entries from the latest scripts.
+            for script in skill.scripts {
+                let snip = CodeSnippet(
+                    name: "\(newPrefix)\(script.name)",
+                    language: script.language,
+                    code: script.code
                 )
-            ],
-            customTools: [
-                ToolTemplate(
-                    name: "fetch_and_extract",
-                    parameters: [
-                        ToolParamTemplate(name: "url", type: "string"),
-                        ToolParamTemplate(name: "max_length", type: "number", required: false)
-                    ],
-                    implementation: """
-                    const url = args.url;
-                    const maxLen = args.max_length || 5000;
-                    try {
-                        const resp = fetch(url);
-                        if (!resp.ok) {
-                            console.log(`[Error] HTTP ${resp.status}: ${resp.statusText}. Tip: use browser_navigate("${url}") + browser_get_page_info(include_content: true) instead.`);
-                        } else {
-                            const html = resp.text;
-                            const text = html
-                                .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')
-                                .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')
-                                .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, '')
-                                .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, '')
-                                .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, '')
-                                .replace(/<[^>]+>/g, ' ')
-                                .replace(/&nbsp;/g, ' ')
-                                .replace(/&amp;/g, '&')
-                                .replace(/&lt;/g, '<')
-                                .replace(/&gt;/g, '>')
-                                .replace(/&quot;/g, '"')
-                                .replace(/&#39;/g, "'")
-                                .replace(/\\s+/g, ' ')
-                                .trim();
-                            console.log(text.substring(0, maxLen));
-                        }
-                    } catch (e) {
-                        console.log(`[Error] Failed to fetch: ${e.message}. Tip: use browser_navigate("${url}") + browser_get_page_info(include_content: true) instead.`);
-                    }
-                    """
-                )
-            ]
-        ),
-        Template(
-            name: "File Ops",
-            localizationKey: "file_ops",
-            tags: ["files", "filesystem", "utilities"],
-            customTools: [
-                ToolTemplate(
-                    name: "cp",
-                    parameters: [
-                        ToolParamTemplate(name: "src", type: "string"),
-                        ToolParamTemplate(name: "dest", type: "string"),
-                        ToolParamTemplate(name: "recursive", type: "boolean", required: false)
-                    ],
-                    implementation: """
-                    const recursive = args.recursive !== false;
-                    const res = await fs.cp(args.src, args.dest, {recursive: recursive});
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "mv",
-                    parameters: [
-                        ToolParamTemplate(name: "src", type: "string"),
-                        ToolParamTemplate(name: "dest", type: "string")
-                    ],
-                    implementation: """
-                    const res = await fs.mv(args.src, args.dest);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "stat",
-                    parameters: [
-                        ToolParamTemplate(name: "path", type: "string")
-                    ],
-                    implementation: """
-                    const res = await fs.stat(args.path);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "mkdir",
-                    parameters: [
-                        ToolParamTemplate(name: "path", type: "string")
-                    ],
-                    implementation: """
-                    const res = await fs.mkdir(args.path);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "tree",
-                    parameters: [
-                        ToolParamTemplate(name: "path", type: "string", required: false),
-                        ToolParamTemplate(name: "max_depth", type: "number", required: false)
-                    ],
-                    implementation: """
-                    const maxDepth = args.max_depth || 4;
-                    async function walk(path, depth, lines) {
-                        if (depth > maxDepth) return;
-                        const raw = await fs.list(path);
-                        const entries = JSON.parse(raw);
-                        for (const entry of entries) {
-                            const rel = path ? path + '/' + entry.name : entry.name;
-                            const indent = '  '.repeat(depth);
-                            const tag = entry.is_dir ? '/' : '';
-                            lines.push(indent + entry.name + tag);
-                            if (entry.is_dir) await walk(rel, depth + 1, lines);
-                        }
-                    }
-                    const root = args.path || '';
-                    const lines = [root ? root + '/' : '.'];
-                    await walk(root, 1, lines);
-                    console.log(lines.join('\\n'));
-                    """
-                ),
-                ToolTemplate(
-                    name: "touch",
-                    parameters: [
-                        ToolParamTemplate(name: "path", type: "string")
-                    ],
-                    implementation: """
-                    const present = await fs.exists(args.path);
-                    if (present) { console.log('OK (already exists)'); }
-                    else {
-                        const res = await fs.writeFile(args.path, '');
-                        console.log(res);
-                    }
-                    """
-                ),
-                ToolTemplate(
-                    name: "exists",
-                    parameters: [
-                        ToolParamTemplate(name: "path", type: "string")
-                    ],
-                    implementation: """
-                    const present = await fs.exists(args.path);
-                    console.log(present ? 'true' : 'false');
-                    """
-                )
-            ]
-        ),
-        Template(
-            name: "Health Plus",
-            localizationKey: "health_plus",
-            tags: ["health", "fitness", "wellness"],
-            customTools: [
-                ToolTemplate(
-                    name: "read_blood_pressure",
-                    parameters: [
-                        ToolParamTemplate(name: "start_date", type: "string", required: false),
-                        ToolParamTemplate(name: "end_date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.readBloodPressure(args);
-                    console.log(JSON.stringify(res));
-                    """
-                ),
-                ToolTemplate(
-                    name: "read_blood_glucose",
-                    parameters: [
-                        ToolParamTemplate(name: "start_date", type: "string", required: false),
-                        ToolParamTemplate(name: "end_date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.readBloodGlucose(args);
-                    console.log(JSON.stringify(res));
-                    """
-                ),
-                ToolTemplate(
-                    name: "read_blood_oxygen",
-                    parameters: [
-                        ToolParamTemplate(name: "start_date", type: "string", required: false),
-                        ToolParamTemplate(name: "end_date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.readBloodOxygen(args);
-                    console.log(JSON.stringify(res));
-                    """
-                ),
-                ToolTemplate(
-                    name: "read_body_temperature",
-                    parameters: [
-                        ToolParamTemplate(name: "start_date", type: "string", required: false),
-                        ToolParamTemplate(name: "end_date", type: "string", required: false),
-                        ToolParamTemplate(name: "unit", type: "string", required: false, enumValues: ["c", "f"])
-                    ],
-                    implementation: """
-                    const res = await apple.health.readBodyTemperature(args);
-                    console.log(JSON.stringify(res));
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_blood_pressure",
-                    parameters: [
-                        ToolParamTemplate(name: "systolic", type: "number"),
-                        ToolParamTemplate(name: "diastolic", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeBloodPressure(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_blood_glucose",
-                    parameters: [
-                        ToolParamTemplate(name: "value", type: "number"),
-                        ToolParamTemplate(name: "unit", type: "string", required: false, enumValues: ["mmol/l", "mg/dl"]),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeBloodGlucose(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_blood_oxygen",
-                    parameters: [
-                        ToolParamTemplate(name: "percentage", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeBloodOxygen(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_body_temperature",
-                    parameters: [
-                        ToolParamTemplate(name: "value", type: "number"),
-                        ToolParamTemplate(name: "unit", type: "string", required: false, enumValues: ["c", "f"]),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeBodyTemperature(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_body_fat",
-                    parameters: [
-                        ToolParamTemplate(name: "percentage", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeBodyFat(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_height",
-                    parameters: [
-                        ToolParamTemplate(name: "value", type: "number"),
-                        ToolParamTemplate(name: "unit", type: "string", required: false, enumValues: ["cm", "m", "in", "ft"]),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeHeight(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_heart_rate",
-                    parameters: [
-                        ToolParamTemplate(name: "bpm", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeHeartRate(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_dietary_carbohydrates",
-                    parameters: [
-                        ToolParamTemplate(name: "grams", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeDietaryCarbohydrates(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_dietary_protein",
-                    parameters: [
-                        ToolParamTemplate(name: "grams", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeDietaryProtein(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_dietary_fat",
-                    parameters: [
-                        ToolParamTemplate(name: "grams", type: "number"),
-                        ToolParamTemplate(name: "date", type: "string", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeDietaryFat(args);
-                    console.log(res);
-                    """
-                ),
-                ToolTemplate(
-                    name: "write_workout",
-                    parameters: [
-                        ToolParamTemplate(name: "activity_type", type: "string", required: false),
-                        ToolParamTemplate(name: "start_date", type: "string"),
-                        ToolParamTemplate(name: "end_date", type: "string"),
-                        ToolParamTemplate(name: "energy_kcal", type: "number", required: false),
-                        ToolParamTemplate(name: "distance_km", type: "number", required: false)
-                    ],
-                    implementation: """
-                    const res = await apple.health.writeWorkout(args);
-                    console.log(res);
-                    """
-                )
-            ]
-        ),
-    ]
-}
-
-// MARK: - Template resolution (locale-aware)
-
-extension BuiltInSkills.Template {
-    /// Resolve this template against the current UI locale — pulling display
-    /// name, summary, content, and every description from `Localizable.strings`
-    /// and the per-locale `BuiltInSkills/<name>.md` file.
-    func resolved() -> BuiltInSkills.ResolvedTemplate {
-        BuiltInSkills.ResolvedTemplate(
-            name: name,
-            displayName: L10n.Skills.BuiltIn.displayName(localizationKey),
-            summary: L10n.Skills.BuiltIn.summary(localizationKey),
-            content: BuiltInSkillResources.content(forSkillName: name),
-            tags: tags,
-            scripts: scripts.map { $0.resolved(skillKey: localizationKey) },
-            customTools: customTools.map { $0.resolved(skillKey: localizationKey) },
-            configSchema: configSchema.map { $0.resolved(skillKey: localizationKey) }
-        )
-    }
-}
-
-extension BuiltInSkills.ScriptTemplate {
-    func resolved(skillKey: String) -> SkillScript {
-        SkillScript(
-            name: name,
-            language: language,
-            code: code,
-            description: L10n.Skills.BuiltIn.scriptDescription(skillKey, name)
-        )
-    }
-}
-
-extension BuiltInSkills.ToolTemplate {
-    func resolved(skillKey: String) -> SkillToolDefinition {
-        SkillToolDefinition(
-            name: name,
-            description: L10n.Skills.BuiltIn.toolDescription(skillKey, name),
-            parameters: parameters.map { $0.resolved(skillKey: skillKey, toolName: name) },
-            implementation: implementation
-        )
-    }
-}
-
-extension BuiltInSkills.ToolParamTemplate {
-    func resolved(skillKey: String, toolName: String) -> SkillToolParam {
-        SkillToolParam(
-            name: name,
-            type: type,
-            description: L10n.Skills.BuiltIn.toolParamDescription(skillKey, toolName, name),
-            required: required,
-            enumValues: enumValues
-        )
-    }
-}
-
-extension BuiltInSkills.ConfigFieldTemplate {
-    func resolved(skillKey: String) -> SkillConfigField {
-        SkillConfigField(
-            key: key,
-            label: L10n.Skills.BuiltIn.configLabel(skillKey, key),
-            type: type,
-            required: required,
-            defaultValue: defaultValue
-        )
+                modelContext.insert(snip)
+                agent.codeSnippets.append(snip)
+            }
+            agent.updatedAt = Date()
+        }
+        save()
     }
 }

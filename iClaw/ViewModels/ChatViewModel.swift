@@ -13,6 +13,11 @@ final class ChatViewModel {
             // Persist eagerly so draft survives app kill.
             let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
             session.draftText = trimmed.isEmpty ? nil : inputText
+            // Any keystroke after a slash-command activation clears the
+            // transient notice — it's a one-shot hint.
+            if slashCommandNotice != nil, oldValue != inputText {
+                slashCommandNotice = nil
+            }
         }
     }
     var isLoading: Bool = false
@@ -52,6 +57,13 @@ final class ChatViewModel {
 
     /// Shown when the primary model does not support tool use (function calling).
     var toolUseWarning: String?
+
+    /// Transient notice surfaced after a `/skill-slug` slash-command (e.g.
+    /// "Deep Research activated — ask your question.") that doesn't itself
+    /// produce an LLM round-trip. The composer reads + clears this on the
+    /// next user input. Set by `sendMessage`'s slash-command preprocessor;
+    /// consumed by `ChatView` in Phase 5c.
+    var slashCommandNotice: String?
 
     /// Display mode: verbose (show CoT & tool calls) or silent (hide them). Synced to Agent.
     var isVerbose: Bool = true {
@@ -547,10 +559,109 @@ final class ChatViewModel {
         }
     }
 
+    // MARK: - Slash-command preprocessing
+
+    /// Run the `/skill-slug` parser against the (already trimmed) input,
+    /// resolved against the current agent's installed-and-enabled skills.
+    /// Wrapped here so `sendMessage` stays focused on send mechanics.
+    private func processSlashCommand(_ text: String) -> SlashCommandResult {
+        guard let agent = session.agent else { return .none }
+        let installed = Set(
+            agent.activeSkills.compactMap { $0.skill }
+                .map { SkillPackage.derivedSlug(forName: $0.name) }
+        )
+        return SlashCommandParser.parse(text) { installed.contains($0) }
+    }
+
+    /// Reverse-lookup the user-facing display name for an active skill by its
+    /// derived slug. Used to render the `/skill-slug` activation hint with
+    /// the same name the user sees in the library, not the slug itself.
+    private func activeSkillDisplayName(forSlug slug: String) -> String? {
+        guard let agent = session.agent else { return nil }
+        for installation in agent.activeSkills {
+            guard let skill = installation.skill else { continue }
+            if SkillPackage.derivedSlug(forName: skill.name) == slug {
+                return skill.effectiveDisplayName
+            }
+        }
+        return nil
+    }
+
+    /// One row in the composer's slash-command autocomplete chip strip.
+    struct SlashCommandSuggestion: Identifiable, Equatable {
+        let slug: String
+        let displayName: String
+        var id: String { slug }
+    }
+
+    /// Suggestions for the autocomplete chip strip rendered above the
+    /// composer when the input starts with `/`. Returns `nil` (not empty)
+    /// when the strip should be hidden so SwiftUI can collapse the layout.
+    var slashCommandSuggestions: [SlashCommandSuggestion]? {
+        let trimmed = inputText.drop { $0.isWhitespace }
+        guard trimmed.first == "/" else { return nil }
+        guard let agent = session.agent else { return nil }
+        // Substring after `/` up to the first whitespace — the in-progress
+        // prefix the user is filtering by. Underscores are normalized to
+        // hyphens to match the parser's slug normalization.
+        let afterSlash = trimmed.dropFirst()
+        let prefixEnd = afterSlash.firstIndex(where: { $0.isWhitespace }) ?? afterSlash.endIndex
+        let prefix = String(afterSlash[..<prefixEnd])
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+
+        let matches = agent.activeSkills.compactMap { installation -> SlashCommandSuggestion? in
+            guard let skill = installation.skill else { return nil }
+            let slug = SkillPackage.derivedSlug(forName: skill.name)
+            if !prefix.isEmpty, !slug.hasPrefix(prefix) { return nil }
+            return SlashCommandSuggestion(slug: slug, displayName: skill.effectiveDisplayName)
+        }
+        return matches.isEmpty ? nil : matches.sorted { $0.slug < $1.slug }
+    }
+
+    /// Apply the user's tap on an autocomplete chip. Replaces the in-progress
+    /// `/prefix` with `/slug ` (trailing space so the user can immediately
+    /// type the rest of the message).
+    func applySlashSuggestion(_ slug: String) {
+        let trimmedLeading = inputText.drop { $0.isWhitespace }
+        // Preserve any trailing remainder past the first whitespace — so a
+        // user typing `/dee what is X?` and tapping `deep-research` lands on
+        // `/deep-research what is X?` rather than losing the tail.
+        let afterSlash = trimmedLeading.dropFirst()
+        let prefixEnd = afterSlash.firstIndex(where: { $0.isWhitespace }) ?? afterSlash.endIndex
+        let tail = String(afterSlash[prefixEnd...]).drop { $0.isWhitespace }
+        let suffix = tail.isEmpty ? " " : " " + String(tail)
+        inputText = "/" + slug + suffix
+    }
+
     // MARK: - Send Message
 
     func sendMessage() {
-        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Slash-command preprocessing — `/skill-slug ...` activates a skill
+        // for this session and (when there's a tail) sends only the tail to
+        // the LLM. Run before the empty-text guard so a bare `/skill-slug`
+        // can still mark the slug active without sending an empty message.
+        switch processSlashCommand(text) {
+        case .none:
+            break
+        case .activate(let slug, let remaining):
+            session.activatedSkillSlugs.insert(slug)
+            text = remaining
+        case .activateOnly(let slug):
+            session.activatedSkillSlugs.insert(slug)
+            // Clear input BEFORE setting the notice — the inputText didSet
+            // clears any pending notice on every keystroke, and assigning ""
+            // counts. Reordering keeps the notice visible.
+            inputText = ""
+            session.draftText = nil
+            let displayName = activeSkillDisplayName(forSlug: slug) ?? slug
+            slashCommandNotice = L10n.Chat.skillActivated(displayName)
+            try? modelContext.save()
+            return
+        }
+
         guard !text.isEmpty || !pendingImages.isEmpty || !pendingVideos.isEmpty || !pendingFiles.isEmpty else { return }
         guard !isLoading, Self.activeGenerations[session.id] == nil else { return }
 
@@ -725,7 +836,8 @@ final class ChatViewModel {
             let systemPrompt = promptBuilder.buildSystemPrompt(
                 for: agent,
                 isSubAgent: agent.parentAgent != nil,
-                relatedSessions: relatedSessions
+                relatedSessions: relatedSessions,
+                activatedSkillSlugs: session.activatedSkillSlugs
             )
             var contextMessages = contextManager.buildContextWindow(
                 session: session,

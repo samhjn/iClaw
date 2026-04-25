@@ -1,0 +1,8 @@
+{
+  "description": "若文件不存在则创建空文件（已存在则不变）。",
+  "parameters": {
+    "path": {
+      "description": "要 touch 的文件路径"
+    }
+  }
+}

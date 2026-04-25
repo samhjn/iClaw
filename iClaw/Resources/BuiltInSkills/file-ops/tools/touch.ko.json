@@ -1,0 +1,8 @@
+{
+  "description": "파일이 없으면 빈 파일을 생성 (이미 있으면 변경 없음).",
+  "parameters": {
+    "path": {
+      "description": "touch할 파일 경로"
+    }
+  }
+}

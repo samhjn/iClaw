@@ -35,10 +35,39 @@ final class LaunchTaskManager {
         // most launches are a no-op) and running it on the main actor here
         // avoids racing with SkillLibraryView/AgentSkillsView, which also
         // trigger `ensureBuiltInSkills` on appear.
-        SkillService(modelContext: ModelContext(container)).ensureBuiltInSkills()
+        let skillService = SkillService(modelContext: ModelContext(container))
+        skillService.ensureBuiltInSkills()
+        // Plan the row → on-disk-package migration on the main actor (cheap:
+        // SwiftData fetch + slug + snapshot, no disk I/O). The actual disk
+        // writes happen off-main below so a user with many legacy skills
+        // doesn't see a launch stall.
+        let pendingSkillMigrations = skillService.planMigrationToOnDiskPackages()
+
+        // Wire the auto-reload bridge so writes through `fs.*` to user skills
+        // under the `/skills/` mount refresh the matching `Skill` row's
+        // cached fields on the next agent turn (last-good cache semantics).
+        SkillsAutoReloader.shared.start(container: container)
+
+        // Create `<Documents>/Skills/` eagerly so it shows up in the iOS
+        // Files app even before the first user skill is authored or
+        // imported. Built-in skills live in the read-only bundle and are
+        // intentionally not visible there — only user-authored / imported
+        // packages live under Documents/Skills.
+        let skillsRoot = AgentFileManager.shared.skillsRoot
+        if !FileManager.default.fileExists(atPath: skillsRoot.path) {
+            try? FileManager.default.createDirectory(
+                at: skillsRoot,
+                withIntermediateDirectories: true
+            )
+        }
 
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
+
+            // Disk writes for the planned row → on-disk-package migration.
+            // No SwiftData access here; the snapshots already captured every
+            // field we need. Failures log + continue.
+            SkillService.commitPendingMigrations(pendingSkillMigrations)
 
             await self.cleanupOrphanAgentFiles()
             await MainActor.run {

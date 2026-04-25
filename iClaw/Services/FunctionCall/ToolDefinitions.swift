@@ -44,13 +44,10 @@ enum ToolDefinitions {
             scheduleCronTool,
             unscheduleCronTool,
             listCronTool,
-            createSkillTool,
-            editSkillTool,
-            deleteSkillTool,
             installSkillTool,
             uninstallSkillTool,
             listSkillsTool,
-            readSkillTool,
+            validateSkillTool,
             setModelTool,
             getModelTool,
             listModelsTool,
@@ -324,60 +321,30 @@ enum ToolDefinitions {
     )
 
     // MARK: - Skill Tools
-
-    static let createSkillTool = ToolDefinitionBuilder.build(
-        name: "create_skill",
-        description: "Create a new reusable skill in the skill library. A skill can include: markdown instructions (injected into system prompt), JavaScript scripts (registered as code snippets), and custom tools (callable functions backed by JS). Once created, it can be installed on any agent. Use `edit_skill` to modify metadata, scripts, or custom tools after creation.",
-        properties: [
-            "name": ToolDefinitionBuilder.stringParam("A unique name for the skill"),
-            "summary": ToolDefinitionBuilder.stringParam("A brief one-line description of what the skill does"),
-            "content": ToolDefinitionBuilder.stringParam("The full markdown content with instructions, methodology, or knowledge"),
-            "tags": ToolDefinitionBuilder.stringParam("Comma-separated tags for categorization (e.g. 'coding,review,quality')"),
-            "scripts": ToolDefinitionBuilder.stringParam("JSON array of scripts: [{\"name\": \"...\", \"code\": \"...\", \"description\": \"...\"}]. Each script is registered as a code snippet when the skill is installed."),
-            "tools": ToolDefinitionBuilder.stringParam("JSON array of custom tools: [{\"name\": \"...\", \"description\": \"...\", \"parameters\": [{\"name\": \"...\", \"type\": \"string\", \"description\": \"...\", \"required\": true}], \"implementation\": \"...(JS code)...\"}]. Each tool becomes a callable function for the agent.")
-        ],
-        required: ["name", "content"]
-    )
-
-    static let editSkillTool = ToolDefinitionBuilder.build(
-        name: "edit_skill",
-        description: "Update an existing skill in the library. Identify the skill by `name` or `skill_id`. All other parameters are optional; only provided fields are modified. `scripts` and `tools` use the same JSON shape as `create_skill` and REPLACE the entire array when provided — call `read_skill` first if you want to preserve existing entries. Cannot edit built-in skills.",
-        properties: [
-            "skill_id": ToolDefinitionBuilder.stringParam("UUID of the skill to edit"),
-            "name": ToolDefinitionBuilder.stringParam("Current name of the skill (alternative to skill_id)"),
-            "new_name": ToolDefinitionBuilder.stringParam("Optional: rename the skill to this new name"),
-            "summary": ToolDefinitionBuilder.stringParam("Optional: new one-line summary"),
-            "content": ToolDefinitionBuilder.stringParam("Optional: new markdown content"),
-            "tags": ToolDefinitionBuilder.stringParam("Optional: comma-separated tags (replaces the existing tag list)"),
-            "scripts": ToolDefinitionBuilder.stringParam("Optional JSON array of scripts (same shape as create_skill). Replaces the entire scripts array. Provide `[]` to clear all scripts."),
-            "tools": ToolDefinitionBuilder.stringParam("Optional JSON array of custom tools (same shape as create_skill). Replaces the entire custom tools array. Provide `[]` to clear all custom tools.")
-        ],
-        required: []
-    )
-
-    static let deleteSkillTool = ToolDefinitionBuilder.build(
-        name: "delete_skill",
-        description: "Permanently delete a skill from the library. Built-in skills cannot be deleted. Identify the skill by name or ID.",
-        properties: [
-            "name": ToolDefinitionBuilder.stringParam("The name of the skill to delete"),
-            "skill_id": ToolDefinitionBuilder.stringParam("The UUID of the skill to delete (alternative to name)")
-        ],
-        required: []
-    )
+    //
+    // Skills are authored as directory-based packages under `/skills/<slug>/`
+    // via the `fs.*` bridge — no dedicated create/edit/delete/read tools. The
+    // canonical authoring flow is:
+    //   1. fs.mkdir('skills/<slug>')
+    //   2. fs.writeFile('skills/<slug>/SKILL.md', ...)         // frontmatter + body
+    //   3. fs.writeFile('skills/<slug>/tools/<tool>.js', ...)  // optional tool
+    //   4. validate_skill(slug=<slug>)                          // sanity check
+    //   5. install_skill(name=<frontmatter name>)               // bind to agent
 
     static let installSkillTool = ToolDefinitionBuilder.build(
         name: "install_skill",
-        description: "Install a skill from the library onto the current agent. Once installed, the skill's content is included in the agent's system prompt.",
+        description: "Install a skill on the current agent. Looks up the skill by `skill_id`, then by `name` against the installed library, and finally as a `/skills/<slug>/` package on disk — authoring a package via `fs.writeFile` and then calling install_skill is the canonical end-to-end flow.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The name of the skill to install"),
-            "skill_id": ToolDefinitionBuilder.stringParam("The UUID of the skill to install (alternative to name)")
+            "name": ToolDefinitionBuilder.stringParam("The skill's display name (matches frontmatter `name` for on-disk packages)"),
+            "slug": ToolDefinitionBuilder.stringParam("Optional: directory slug under `/skills/`. Useful when you authored a package and haven't decided on the human name."),
+            "skill_id": ToolDefinitionBuilder.stringParam("Optional: UUID of an existing installed skill")
         ],
         required: []
     )
 
     static let uninstallSkillTool = ToolDefinitionBuilder.build(
         name: "uninstall_skill",
-        description: "Uninstall a skill from the current agent. The skill remains in the library for future use.",
+        description: "Uninstall a skill from the current agent. The on-disk package and Skill row both remain — only the per-agent binding is removed.",
         properties: [
             "name": ToolDefinitionBuilder.stringParam("The name of the skill to uninstall"),
             "skill_id": ToolDefinitionBuilder.stringParam("The UUID of the skill to uninstall (alternative to name)")
@@ -387,20 +354,20 @@ enum ToolDefinitions {
 
     static let listSkillsTool = ToolDefinitionBuilder.build(
         name: "list_skills",
-        description: "List skills. Use scope='installed' to see only skills installed on this agent, or scope='library' to browse all available skills. Optionally filter by query.",
+        description: "List skills. Includes on-disk `/skills/<slug>/` packages that haven't been installed yet so you can discover what you authored. Use scope='installed' to see only skills active on this agent.",
         properties: [
             "scope": ToolDefinitionBuilder.enumParam("Which skills to list", values: ["installed", "library", "all"]),
-            "query": ToolDefinitionBuilder.stringParam("Optional search query to filter skills by name, summary, or tags")
+            "query": ToolDefinitionBuilder.stringParam("Optional search query to filter by name, summary, or tags")
         ],
         required: []
     )
 
-    static let readSkillTool = ToolDefinitionBuilder.build(
-        name: "read_skill",
-        description: "Read the full content of a skill, including its instructions and metadata.",
+    static let validateSkillTool = ToolDefinitionBuilder.build(
+        name: "validate_skill",
+        description: "Validate the on-disk skill package at `/skills/<slug>/` and return a JSON ValidationReport with `errors` + `warnings`. Run this after every fs.writeFile under /skills/ to confirm the package still parses before calling install_skill. Errors block usage; warnings don't.",
         properties: [
-            "name": ToolDefinitionBuilder.stringParam("The name of the skill to read"),
-            "skill_id": ToolDefinitionBuilder.stringParam("The UUID of the skill to read (alternative to name)")
+            "slug": ToolDefinitionBuilder.stringParam("Directory slug under `/skills/` (e.g. `my-greeter`)"),
+            "name": ToolDefinitionBuilder.stringParam("Alternative: the human-readable skill name; the slug is derived from it")
         ],
         required: []
     )

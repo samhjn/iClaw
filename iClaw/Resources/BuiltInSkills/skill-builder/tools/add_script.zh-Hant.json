@@ -1,0 +1,14 @@
+{
+  "description": "向既有的技能套件追加一個可由 run_snippet 呼叫的腳本。產生 scripts/<script_name>.js,首行註解為你提供的描述,函式主體留作 TODO。腳本沒有 typed 參數——呼叫方傳什麼就是什麼。",
+  "parameters": {
+    "slug": {
+      "description": "目標技能套件在 /skills/ 下的 slug。"
+    },
+    "script_name": {
+      "description": "腳本名稱(必須符合 /[a-zA-Z_][a-zA-Z0-9_]*/)。會用於 run_snippet skill:<skill name>:<script_name>。"
+    },
+    "description": {
+      "description": "單行描述,會寫成首行註解,並出現在該技能的腳本清單中。"
+    }
+  }
+}

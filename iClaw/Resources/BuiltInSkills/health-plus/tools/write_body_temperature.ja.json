@@ -1,0 +1,11 @@
+{
+  "description": "Apple Health に体温を書き込みます。",
+  "parameters": {
+    "value": {
+      "description": "温度の値"
+    },
+    "unit": {
+      "description": "温度単位"
+    }
+  }
+}
