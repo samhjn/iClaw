@@ -125,7 +125,7 @@ final class SkillJSMetaParser {
         case bool(Bool, line: Int)
         case null(line: Int)
         case array([Value], line: Int)
-        case object([(key: String, keyLine: Int, value: Value)], line: Int)
+        case object([ObjectEntry], line: Int)
 
         var line: Int {
             switch self {
@@ -134,6 +134,15 @@ final class SkillJSMetaParser {
                 return l
             }
         }
+    }
+
+    /// One key/value pair inside an object literal. Modeled as a named
+    /// struct rather than a tuple so the enclosing `Value` enum can
+    /// synthesize `Hashable` (Swift tuples don't conform).
+    struct ObjectEntry: Hashable {
+        let key: String
+        let keyLine: Int
+        let value: Value
     }
 
     private func parseValue() throws -> Value {
@@ -160,7 +169,7 @@ final class SkillJSMetaParser {
             throw JSMetaError.unexpected(line: startLine, reason: "Expected `{`")
         }
         advance()
-        var entries: [(key: String, keyLine: Int, value: Value)] = []
+        var entries: [ObjectEntry] = []
         while true {
             try skipTrivia()
             if peek() == "}" {
@@ -175,7 +184,7 @@ final class SkillJSMetaParser {
             }
             advance()
             let value = try parseValue()
-            entries.append((key: key, keyLine: keyLine, value: value))
+            entries.append(ObjectEntry(key: key, keyLine: keyLine, value: value))
             try skipTrivia()
             if peek() == "," {
                 advance()
@@ -463,7 +472,7 @@ final class SkillJSMetaParser {
         }
         // Last-write-wins on duplicate keys — matches JS semantics and avoids
         // the crash that `Dictionary(uniqueKeysWithValues:)` would cause.
-        var dict: [String: (key: String, keyLine: Int, value: Value)] = [:]
+        var dict: [String: ObjectEntry] = [:]
         for entry in entries { dict[entry.key] = entry }
 
         guard let nameEntry = dict["name"] else {
@@ -496,7 +505,7 @@ final class SkillJSMetaParser {
         guard case .object(let entries, let objLine) = value else {
             throw JSMetaError.wrongType(line: value.line, field: "parameter", expected: "object")
         }
-        var dict: [String: (key: String, keyLine: Int, value: Value)] = [:]
+        var dict: [String: ObjectEntry] = [:]
         for entry in entries { dict[entry.key] = entry }
 
         guard let nameEntry = dict["name"] else {
