@@ -562,6 +562,9 @@ enum L10n {
         static var revealInFiles: String { tr("skills.revealInFiles") }
         static var showInFiles: String { tr("skills.showInFiles") }
         static var shareSkill: String { tr("skills.shareSkill") }
+        static var validationErrorsTitle: String { tr("skills.validationErrorsTitle") }
+        static var validationWarningsTitle: String { tr("skills.validationWarningsTitle") }
+        static var parameterOptional: String { tr("skills.parameterOptional") }
         static var customSkills: String { tr("skills.customSkills") }
         static var builtInSkills: String { tr("skills.builtInSkills") }
         static var builtIn: String { tr("skills.builtIn") }

@@ -12,6 +12,7 @@ struct SkillDetailView: View {
     @State private var showInstallSheet = false
     @State private var shareItems: [URL] = []
     @State private var showShareSheet = false
+    @State private var validationReport: ValidationReport?
 
     var body: some View {
         ScrollView {
@@ -19,6 +20,9 @@ struct SkillDetailView: View {
                 headerSection
                 Divider()
                 metadataSection
+                if let report = validationReport, !report.errors.isEmpty || !report.warnings.isEmpty {
+                    validationSection(report)
+                }
                 Divider()
                 contentSection
                 if !skill.scripts.isEmpty {
@@ -34,6 +38,7 @@ struct SkillDetailView: View {
         }
         .navigationTitle(skill.effectiveDisplayName)
         .navigationBarTitleDisplayMode(.inline)
+        .task { await computeValidationReport() }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { showInstallSheet = true } label: {
@@ -134,22 +139,34 @@ struct SkillDetailView: View {
     ///     well-meaning consumers like Quick Look,
     ///   - is cleaned up by iOS along with the rest of the temporary
     ///     directory; no manual disposal needed.
+    ///
+    /// The copy runs off the main actor — for a Health Plus-shape skill
+    /// (15 tools + 4 locale overlays per tool ≈ 60+ files) `copyItem` is
+    /// noticeable on main. We hop back to main only to assign the share
+    /// state and present the sheet.
     private func prepareShare() {
         guard let src = packageURL else { return }
         let stem = "iclaw-export-\(UUID().uuidString.prefix(8).lowercased())"
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(stem, isDirectory: true)
-        do {
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            let destination = tempDir.appendingPathComponent(src.lastPathComponent, isDirectory: true)
-            try FileManager.default.copyItem(at: src, to: destination)
-            shareItems = [destination]
-            showShareSheet = true
-        } catch {
-            // Surface failures via the existing alert plumbing if you want;
-            // for now we silently abort — share UX failure isn't worth
-            // blocking the user with an alert.
-            shareItems = []
+        let destination = tempDir.appendingPathComponent(src.lastPathComponent, isDirectory: true)
+
+        Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            do {
+                try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                try fm.copyItem(at: src, to: destination)
+            } catch {
+                // Best-effort: drop the partial temp dir + bail without a
+                // share sheet. The user retried (which is the typical
+                // recovery on iOS).
+                try? fm.removeItem(at: tempDir)
+                return
+            }
+            await MainActor.run {
+                shareItems = [destination]
+                showShareSheet = true
+            }
         }
     }
 
@@ -187,10 +204,99 @@ struct SkillDetailView: View {
             Text(L10n.Skills.content)
                 .font(.headline)
 
-            Text(skill.content)
-                .font(.body)
+            // Markdown render — headings, bullet lists, and fenced code
+            // blocks (with syntax highlighting via CodeBlockView).
+            // Replaces the old plain-Text render that left ``code``,
+            // **bold**, and # headings as raw text.
+            MarkdownContentView(skill.content)
                 .textSelection(.enabled)
         }
+    }
+
+    /// Show validator output inline so the agent / user can see exactly
+    /// what's wrong with the package — not just an amber/red badge in the
+    /// row. Computed lazily off-main on appear.
+    @ViewBuilder
+    private func validationSection(_ report: ValidationReport) -> some View {
+        let isError = !report.errors.isEmpty
+        let title = isError ? L10n.Skills.validationErrorsTitle : L10n.Skills.validationWarningsTitle
+        let symbol = isError ? "xmark.octagon.fill" : "exclamationmark.triangle.fill"
+        let tint: Color = isError ? .red : .orange
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: symbol)
+                .font(.subheadline.bold())
+                .foregroundStyle(tint)
+            ForEach(report.errors + report.warnings, id: \.self) { issue in
+                HStack(alignment: .top, spacing: 6) {
+                    Text(issue.severity == .error ? "✕" : "⚠")
+                        .foregroundStyle(issue.severity == .error ? .red : .orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(issue.message)
+                            .font(.caption)
+                        Text(issueLocationString(issue))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(tint.opacity(0.08)))
+    }
+
+    /// Format the issue's location footer: `path:line • code` (or just
+    /// `path • code` for whole-file issues with line == 0).
+    private func issueLocationString(_ issue: ValidationIssue) -> String {
+        if issue.line > 0 {
+            return "\(issue.file):\(issue.line) • \(issue.code.rawValue)"
+        }
+        return "\(issue.file) • \(issue.code.rawValue)"
+    }
+
+    /// One parameter row. Renders as: `name: type` (mono) + optional
+    /// (optional) badge + dash + description. The HStack lets the
+    /// description wrap to the next visual line via Text's natural
+    /// wrapping; nothing competes for width with the leading metadata.
+    @ViewBuilder
+    private func parameterRow(_ param: SkillToolParam) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            (Text(param.name).foregroundStyle(.primary)
+             + Text(":").foregroundStyle(.secondary)
+             + Text(param.type).foregroundStyle(.orange))
+                .font(.system(.caption2, design: .monospaced))
+            if !param.required {
+                Text(L10n.Skills.parameterOptional)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            if !param.description.isEmpty {
+                Text("— \(param.description)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Run the validator off the main thread on view appear. Built-ins
+    /// always validate cleanly (shipped-tested) so we shortcut without
+    /// touching disk; user skills with no on-disk package leave the report
+    /// nil and the section stays hidden.
+    private func computeValidationReport() async {
+        if skill.isBuiltIn {
+            // Built-ins are bundle-backed and always clean — no badge ever
+            // appears for them, no need to spend cycles validating.
+            return
+        }
+        let slug = SkillPackage.derivedSlug(forName: skill.name)
+        let url = AgentFileManager.shared.skillsRoot.appendingPathComponent(slug, isDirectory: true)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let report = await Task.detached(priority: .userInitiated) {
+            SkillPackage.validate(at: url)
+        }.value
+        await MainActor.run { self.validationReport = report }
     }
 
     @ViewBuilder
@@ -246,18 +352,19 @@ struct SkillDetailView: View {
                             .foregroundStyle(.secondary)
 
                         if !tool.parameters.isEmpty {
-                            HStack(spacing: 4) {
+                            // One row per parameter rather than a wrapping
+                            // chip strip — chip rows broke badly when a
+                            // tool had 4+ params (the chip text wrapped
+                            // mid-word inside each capsule, see Phase 9d).
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text("\(L10n.Skills.parameters):")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                 ForEach(tool.parameters, id: \.name) { param in
-                                    Text("\(param.name):\(param.type)")
-                                        .font(.system(.caption2, design: .monospaced))
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(Capsule().fill(Color.orange.opacity(0.15)))
+                                    parameterRow(param)
                                 }
                             }
+                            .padding(.top, 2)
                         }
 
                         Text(tool.implementation)

@@ -446,6 +446,9 @@
 "skills.revealInFiles" = "Reveal in Files";
 "skills.showInFiles" = "Show Skills folder in Files";
 "skills.shareSkill" = "Share Skill…";
+"skills.validationErrorsTitle" = "Validation errors";
+"skills.validationWarningsTitle" = "Validation warnings";
+"skills.parameterOptional" = "(optional)";
 "skills.customSkills" = "Custom Skills";
 "skills.builtInSkills" = "Built-in Skills";
 "skills.builtIn" = "built-in";
