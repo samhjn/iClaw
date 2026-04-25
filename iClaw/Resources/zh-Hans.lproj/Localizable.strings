@@ -340,6 +340,9 @@
 "settings.backgroundExecution" = "后台执行";
 "settings.backgroundKeepAlive" = "实时活动";
 "settings.backgroundKeepAliveFooter" = "后台任务运行时在灵动岛上固定一个实时活动，保持应用可见且方便返回。默认关闭。";
+"settings.skills" = "技能";
+"settings.progressiveSkillDisclosure" = "渐进式披露";
+"settings.progressiveSkillDisclosureFooter" = "开启后，每个已安装的技能在系统提示中均为休眠状态——仅加载名称与描述，直到激活（输入 /<slug>、调用其工具或运行脚本）。安装较多技能时显著节省 prompt 配额。默认开启。";
 "liveActivity.running" = "任务运行中…";
 "liveActivity.done" = "所有任务已完成";
 "liveActivity.error" = "任务出错";

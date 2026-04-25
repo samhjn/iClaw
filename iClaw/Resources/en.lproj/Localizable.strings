@@ -342,6 +342,9 @@
 "settings.backgroundExecution" = "Background Execution";
 "settings.backgroundKeepAlive" = "Live Activity";
 "settings.backgroundKeepAliveFooter" = "Pin a Live Activity to the Dynamic Island while background tasks are running, keeping the app visible and easy to return to. Disabled by default.";
+"settings.skills" = "Skills";
+"settings.progressiveSkillDisclosure" = "Progressive disclosure";
+"settings.progressiveSkillDisclosureFooter" = "When on, each installed skill is dormant in your system prompt — only its name and description load until you activate it (type /<slug>, call one of its tools, or run one of its scripts). Saves significant prompt budget when many skills are installed. Default on.";
 "liveActivity.running" = "Tasks running…";
 "liveActivity.done" = "All tasks completed";
 "liveActivity.error" = "Task failed";

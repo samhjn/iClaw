@@ -340,6 +340,9 @@
 "settings.backgroundExecution" = "背景執行";
 "settings.backgroundKeepAlive" = "即時動態";
 "settings.backgroundKeepAliveFooter" = "後台任務執行時在動態島上釘選即時動態，保持應用程式可見且方便返回。預設為關閉。";
+"settings.skills" = "技能";
+"settings.progressiveSkillDisclosure" = "漸進式揭露";
+"settings.progressiveSkillDisclosureFooter" = "啟用後，每個已安裝的技能在系統提示中皆為休眠狀態——僅載入名稱與描述，直到啟用（輸入 /<slug>、呼叫其工具或執行其腳本）。安裝多個技能時可顯著節省 prompt 配額。預設開啟。";
 "liveActivity.running" = "任務執行中…";
 "liveActivity.done" = "所有任務已完成";
 "liveActivity.error" = "任務出錯";

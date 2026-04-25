@@ -339,6 +339,9 @@
 "settings.backgroundExecution" = "バックグラウンド実行";
 "settings.backgroundKeepAlive" = "ライブアクティビティ";
 "settings.backgroundKeepAliveFooter" = "バックグラウンドタスクの実行中にDynamic Islandにライブアクティビティを固定し、アプリの可視性を維持します。デフォルトでは無効です。";
+"settings.skills" = "スキル";
+"settings.progressiveSkillDisclosure" = "段階的開示";
+"settings.progressiveSkillDisclosureFooter" = "有効時、インストール済みの各スキルはシステムプロンプト内で休止状態になります — 名前と説明のみが読み込まれ、有効化（/<slug> を入力、ツール呼び出し、スクリプト実行）するとフルロードされます。多数のスキルがある場合にプロンプト予算を大きく節約。既定はオン。";
 "liveActivity.running" = "タスク実行中…";
 "liveActivity.done" = "すべてのタスクが完了";
 "liveActivity.error" = "タスクが失敗";

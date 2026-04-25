@@ -454,6 +454,9 @@ enum L10n {
         static var backgroundExecution: String { tr("settings.backgroundExecution") }
         static var backgroundKeepAlive: String { tr("settings.backgroundKeepAlive") }
         static var backgroundKeepAliveFooter: String { tr("settings.backgroundKeepAliveFooter") }
+        static var skills: String { tr("settings.skills") }
+        static var progressiveSkillDisclosure: String { tr("settings.progressiveSkillDisclosure") }
+        static var progressiveSkillDisclosureFooter: String { tr("settings.progressiveSkillDisclosureFooter") }
     }
 
     // MARK: - Live Activity

@@ -339,6 +339,9 @@
 "settings.backgroundExecution" = "백그라운드 실행";
 "settings.backgroundKeepAlive" = "라이브 활동";
 "settings.backgroundKeepAliveFooter" = "백그라운드 작업 실행 중 Dynamic Island에 라이브 활동을 고정하여 앱의 가시성을 유지합니다. 기본적으로 비활성화되어 있습니다.";
+"settings.skills" = "스킬";
+"settings.progressiveSkillDisclosure" = "점진적 공개";
+"settings.progressiveSkillDisclosureFooter" = "켜면 설치된 각 스킬이 시스템 프롬프트에서 휴면 상태가 됩니다 — 이름과 설명만 로드되며, 활성화(/<slug> 입력, 도구 호출, 스크립트 실행)할 때 전체 본문이 로드됩니다. 많은 스킬을 설치한 경우 프롬프트 예산을 크게 절약합니다. 기본 켜짐.";
 "liveActivity.running" = "작업 실행 중…";
 "liveActivity.done" = "모든 작업 완료";
 "liveActivity.error" = "작업 실패";

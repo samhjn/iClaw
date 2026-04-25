@@ -836,7 +836,8 @@ final class ChatViewModel {
             let systemPrompt = promptBuilder.buildSystemPrompt(
                 for: agent,
                 isSubAgent: agent.parentAgent != nil,
-                relatedSessions: relatedSessions
+                relatedSessions: relatedSessions,
+                activatedSkillSlugs: session.activatedSkillSlugs
             )
             var contextMessages = contextManager.buildContextWindow(
                 session: session,
