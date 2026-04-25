@@ -1,0 +1,14 @@
+{
+  "description": "기존 스킬 패키지에 run_snippet으로 호출할 수 있는 스크립트를 추가합니다. scripts/<script_name>.js를 생성하고, 입력한 description을 첫 줄 주석으로 작성하며 본문은 TODO로 둡니다. 스크립트는 typed 파라미터가 없으며, 호출자가 넘긴 args를 그대로 받습니다.",
+  "parameters": {
+    "slug": {
+      "description": "/skills/ 아래 대상 스킬 패키지의 slug."
+    },
+    "script_name": {
+      "description": "스크립트 이름(/[a-zA-Z_][a-zA-Z0-9_]*/ 일치 필요). run_snippet skill:<skill name>:<script_name>에서 사용됩니다."
+    },
+    "description": {
+      "description": "한 줄 설명. 첫 줄 주석으로 기록되어 스크립트 목록에 표시됩니다."
+    }
+  }
+}

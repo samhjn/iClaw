@@ -1,6 +1,6 @@
 ---
 name: Skill Builder
-description: Author and edit iClaw skills directly via the fs.* bridge. Includes scaffolding, validation, and reference examples.
+description: Author and edit iClaw skills directly via the fs.* bridge. Includes scaffolding, tool/script generators, validation, and reference examples.
 iclaw:
   version: "1.0"
   tags: [meta, authoring, scaffolding]
@@ -17,20 +17,23 @@ The canonical structure is documented in `references/example-tooled.md`.
 1. **Pick a slug.** Lowercase, hyphenated, unique. Check existing slugs with
    `fs.list('skills')` and `list_skills`. Slugs are stable identifiers —
    renaming a slug breaks any agent that has the skill installed.
-2. **Scaffold** — fastest path:
-   `skill_skill_builder_scaffold(slug, name, description)` writes a minimal
-   valid `SKILL.md` plus an empty `tools/` and `scripts/` directory in one
-   shot.
-3. **Add a tool** — write `tools/<tool>.js` with a top-level `const META`
-   declaration. See `references/example-tooled.md` for the canonical shape.
-4. **Add a script** (optional) — write `scripts/<script>.js`. The first-line
-   comment is the description. Scripts run via `run_snippet skill:<name>:<script>`.
-5. **Validate** — `validate_skill(slug)` runs the same Swift-side parser the
-   auto-reload path uses. Fix every error before installing; warnings are
-   advisory.
-6. **Install** — `install_skill(name=<frontmatter name>)`. iClaw materializes
-   a `Skill` row from the on-disk package and binds it to the current agent.
-   Custom tools immediately become available as `skill_<slug>_<tool>`.
+2. **Scaffold the package.** Call
+   `skill_skill_builder_scaffold(slug, name, description, tags?)` —
+   writes a minimal valid `SKILL.md` plus empty `tools/` and `scripts/`
+   directories in one shot.
+3. **Add tools.** For each function-call tool, call
+   `skill_skill_builder_add_tool(slug, tool_name, description, parameters?)`.
+   It writes `tools/<tool_name>.js` with the META declaration prefilled and
+   a `TODO` body. Replace the body with `fs.writeFile`.
+4. **Add scripts** (optional). For each `run_snippet`-callable helper, call
+   `skill_skill_builder_add_script(slug, script_name, description)`. Same
+   pattern: writes a skeleton you replace via `fs.writeFile`.
+5. **Validate.** `validate_skill(slug=...)` runs the same Swift-side
+   parser the auto-reload path uses. Fix every error before installing;
+   warnings are advisory.
+6. **Install.** `install_skill(name=<frontmatter name>)`. iClaw materializes
+   a `Skill` row from the on-disk package and binds it to the current
+   agent. Custom tools immediately become available as `skill_<slug>_<tool>`.
 
 ## Editing an existing skill
 
@@ -39,9 +42,9 @@ The canonical structure is documented in `references/example-tooled.md`.
 2. **Write** — `fs.writeFile('skills/<slug>/...')`. Auto-reload runs against
    the modified package on success; if the rewrite breaks parsing, the last
    good version of the skill keeps running until you fix the package.
-3. **Re-validate** — `validate_skill(slug)` after every batch of edits.
-4. **No re-install needed** — the cached Skill row updates automatically. Only
-   slug renames require uninstall + reinstall.
+3. **Re-validate** — `validate_skill(slug=...)` after every batch of edits.
+4. **No re-install needed** — the cached Skill row updates automatically.
+   Only slug renames require uninstall + reinstall.
 
 ## Forking a built-in
 

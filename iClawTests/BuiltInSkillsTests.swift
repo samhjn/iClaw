@@ -410,16 +410,31 @@ final class BuiltInSkillsTests: XCTestCase {
         XCTAssertNotNil(allTemplates.first(where: { $0.name == "Skill Builder" }))
     }
 
-    func testSkillBuilderShipsScaffoldTool() {
+    func testSkillBuilderShipsAuthoringTools() {
         let names = Set(skillBuilder.customTools.map(\.name))
-        XCTAssertTrue(names.contains("scaffold"),
-                      "skill-builder must ship the scaffold tool — that's its primary entry point")
+        XCTAssertEqual(names, Set(["scaffold", "add_tool", "add_script"]),
+                       "skill-builder ships exactly the three fs.* authoring helpers")
     }
 
     func testSkillBuilderScaffoldHasRequiredParams() {
         let scaffold = skillBuilder.customTools.first(where: { $0.name == "scaffold" })!
         let required = Set(scaffold.parameters.filter { $0.required }.map(\.name))
         XCTAssertEqual(required, Set(["slug", "name", "description"]))
+    }
+
+    func testSkillBuilderAddToolHasRequiredParams() {
+        let addTool = skillBuilder.customTools.first(where: { $0.name == "add_tool" })!
+        let required = Set(addTool.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["slug", "tool_name", "description"]))
+        // `parameters` is optional — the JSON array can be absent for a
+        // zero-arg tool.
+        XCTAssertNotNil(addTool.parameters.first(where: { $0.name == "parameters" && !$0.required }))
+    }
+
+    func testSkillBuilderAddScriptHasRequiredParams() {
+        let addScript = skillBuilder.customTools.first(where: { $0.name == "add_script" })!
+        let required = Set(addScript.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["slug", "script_name", "description"]))
     }
 
     func testSkillBuilderHasNoValidateTool() {
@@ -437,6 +452,11 @@ final class BuiltInSkillsTests: XCTestCase {
         XCTAssertTrue(content.contains("install_skill"))
         XCTAssertTrue(content.contains("fs.writeFile") || content.contains("fs."))
         XCTAssertTrue(content.contains("/skills/"))
+        // The body should reference all three authoring helpers — they're
+        // the documented entry points for steps 2, 3, and 4 of the flow.
+        XCTAssertTrue(content.contains("scaffold"))
+        XCTAssertTrue(content.contains("add_tool"))
+        XCTAssertTrue(content.contains("add_script"))
     }
 
     func testSkillBuilderTags() {

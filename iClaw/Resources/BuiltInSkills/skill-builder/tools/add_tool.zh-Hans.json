@@ -1,0 +1,17 @@
+{
+  "description": "向已有的技能包追加一个 function-call 工具。生成 tools/<tool_name>.js,META 已根据输入填好,函数体留作 TODO。运行后请用 fs.writeFile 替换 TODO,再用 validate_skill 校验。",
+  "parameters": {
+    "slug": {
+      "description": "目标技能包在 /skills/ 下的 slug。"
+    },
+    "tool_name": {
+      "description": "工具名(必须匹配 /[a-zA-Z_][a-zA-Z0-9_]*/)。会成为 LLM 工具名 skill_<slug>_<tool_name> 的一部分。"
+    },
+    "description": {
+      "description": "≤200 字符的一行描述,模型据此判断何时调用此工具。"
+    },
+    "parameters": {
+      "description": "JSON 数组,每项形如 {name,type,required?,description?,enum?}。默认为 []。"
+    }
+  }
+}

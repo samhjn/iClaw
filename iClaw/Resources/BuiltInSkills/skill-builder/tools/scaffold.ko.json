@@ -1,0 +1,17 @@
+{
+  "description": "/skills/<slug>/ 아래에 최소한의 유효한 스킬 패키지를 생성합니다. 지정한 name + description이 포함된 SKILL.md와 빈 tools/, scripts/ 디렉터리를 한 번에 작성합니다. 이미 존재하는 패키지는 덮어쓰지 않습니다 — 다른 slug를 쓰거나 먼저 fs.delete 하세요.",
+  "parameters": {
+    "slug": {
+      "description": "디렉터리 slug(소문자, 하이픈 연결). 최종 경로는 /skills/<slug>/가 됩니다."
+    },
+    "name": {
+      "description": "사람이 읽을 스킬 이름. SKILL.md frontmatter의 name이 됩니다."
+    },
+    "description": {
+      "description": "한 줄 설명. frontmatter의 description으로 들어갑니다(200자 이하)."
+    },
+    "tags": {
+      "description": "검색용 영어 태그(쉼표로 구분, 예: 'utility,demo'). 선택."
+    }
+  }
+}

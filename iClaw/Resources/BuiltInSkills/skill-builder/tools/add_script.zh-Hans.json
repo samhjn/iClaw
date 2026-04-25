@@ -1,0 +1,14 @@
+{
+  "description": "向已有的技能包追加一个可由 run_snippet 调用的脚本。生成 scripts/<script_name>.js,首行注释为你给的描述,函数体留作 TODO。脚本没有 typed 参数——调用方传什么就是什么。",
+  "parameters": {
+    "slug": {
+      "description": "目标技能包在 /skills/ 下的 slug。"
+    },
+    "script_name": {
+      "description": "脚本名(必须匹配 /[a-zA-Z_][a-zA-Z0-9_]*/)。在 run_snippet skill:<skill name>:<script_name> 中使用。"
+    },
+    "description": {
+      "description": "单行描述,会作为首行注释写入,出现在该技能的脚本列表中。"
+    }
+  }
+}
