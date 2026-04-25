@@ -85,11 +85,215 @@ extension ParsedSkillPackage {
     }
 }
 
-/// Entry point for reading and validating a skill package directory.
+/// Entry point for reading, writing, and validating a skill package
+/// directory.
 ///
 /// All functions are synchronous and pure — callers are responsible for
-/// threading. They are also side-effect-free outside of filesystem reads.
+/// threading. They are also side-effect-free outside of filesystem reads
+/// and the explicit writes invoked by `write(_:to:)`.
 enum SkillPackage {
+
+    // MARK: - Write
+
+    /// Errors thrown by `write(_:to:)` when serializing a Skill row to
+    /// disk. Misshapen tools / scripts on the DB side surface as these
+    /// rather than producing a malformed package.
+    enum WriteError: LocalizedError {
+        case invalidToolName(String)
+        case invalidScriptName(String)
+        case ioFailure(underlying: Error)
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidToolName(let n):
+                return "Tool name '\(n)' is not a valid identifier — skipping write."
+            case .invalidScriptName(let n):
+                return "Script name '\(n)' is not a valid identifier — skipping write."
+            case .ioFailure(let err):
+                return "Failed to write package: \(err.localizedDescription)"
+            }
+        }
+    }
+
+    /// Serialize a `Skill` SwiftData row into a self-contained package at
+    /// `destination`. The destination directory is created (and its existing
+    /// contents removed) so the write is atomic-ish: callers can re-invoke
+    /// to rewrite without dealing with stale files left over from a
+    /// previous version with more tools/scripts.
+    ///
+    /// Generated layout:
+    ///   destination/
+    ///   ├── SKILL.md            (frontmatter from name/summary/tags + body)
+    ///   ├── tools/<tool>.js     (one per Skill.customTools entry; META prefilled)
+    ///   └── scripts/<script>.js (one per Skill.scripts entry; first-line comment)
+    ///
+    /// Per-locale overlays (`SKILL.<lang>.md`, `tools/<tool>.<lang>.json`,
+    /// `scripts/<script>.<lang>.txt`) are NOT written — the SwiftData row
+    /// only carries resolved-for-current-locale strings, not a full per-
+    /// locale matrix. Migration of legacy rows uses the locale-resolved
+    /// strings as the canonical English content; users who want richer i18n
+    /// drop overlay files manually after migration.
+    static func write(_ skill: Skill, to destination: URL) throws {
+        let fm = FileManager.default
+        do {
+            if fm.fileExists(atPath: destination.path) {
+                try fm.removeItem(at: destination)
+            }
+            try fm.createDirectory(at: destination, withIntermediateDirectories: true)
+
+            try serializeSkillMd(skill).write(
+                to: destination.appendingPathComponent("SKILL.md"),
+                atomically: true, encoding: .utf8
+            )
+
+            if !skill.customTools.isEmpty {
+                let toolsDir = destination.appendingPathComponent("tools", isDirectory: true)
+                try fm.createDirectory(at: toolsDir, withIntermediateDirectories: true)
+                for tool in skill.customTools {
+                    guard isValidIdent(tool.name) else {
+                        throw WriteError.invalidToolName(tool.name)
+                    }
+                    let body = serializeTool(tool)
+                    try body.write(
+                        to: toolsDir.appendingPathComponent("\(tool.name).js"),
+                        atomically: true, encoding: .utf8
+                    )
+                }
+            }
+
+            if !skill.scripts.isEmpty {
+                let scriptsDir = destination.appendingPathComponent("scripts", isDirectory: true)
+                try fm.createDirectory(at: scriptsDir, withIntermediateDirectories: true)
+                for script in skill.scripts {
+                    guard isValidIdent(script.name) else {
+                        throw WriteError.invalidScriptName(script.name)
+                    }
+                    let body = serializeScript(script)
+                    try body.write(
+                        to: scriptsDir.appendingPathComponent("\(script.name).js"),
+                        atomically: true, encoding: .utf8
+                    )
+                }
+            }
+        } catch let e as WriteError {
+            throw e
+        } catch {
+            throw WriteError.ioFailure(underlying: error)
+        }
+    }
+
+    private static func serializeSkillMd(_ skill: Skill) -> String {
+        var out: [String] = ["---"]
+        out.append("name: \(yamlScalar(skill.name))")
+        out.append("description: \(yamlScalar(skill.summary))")
+        if !skill.tags.isEmpty {
+            out.append("iclaw:")
+            let inline = skill.tags.map { yamlScalar($0) }.joined(separator: ", ")
+            out.append("  tags: [\(inline)]")
+        }
+        out.append("---")
+        out.append("")
+        let body = skill.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if body.isEmpty {
+            // Minimal body: a heading so SkillPackage.parse's body
+            // resolution returns something non-empty.
+            out.append("# \(skill.effectiveDisplayName)")
+        } else {
+            out.append(body)
+        }
+        out.append("") // trailing newline
+        return out.joined(separator: "\n")
+    }
+
+    private static func serializeTool(_ tool: SkillToolDefinition) -> String {
+        let paramsJSON = renderParameters(tool.parameters)
+        let descLiteral = jsStringLiteral(tool.description)
+        let nameLiteral = jsStringLiteral(tool.name)
+        let body = tool.implementation.trimmingCharacters(in: .whitespacesAndNewlines)
+        return """
+        const META = {
+          name: \(nameLiteral),
+          description: \(descLiteral),
+          parameters: \(paramsJSON)
+        };
+
+        \(body.isEmpty ? "// TODO: implement\nconsole.log(\"TODO\");" : body)
+
+        """
+    }
+
+    private static func serializeScript(_ script: SkillScript) -> String {
+        let head = (script.description?.trimmingCharacters(in: .whitespacesAndNewlines)).map {
+            "// \($0)\n\n"
+        } ?? ""
+        let body = script.code.trimmingCharacters(in: .whitespacesAndNewlines)
+        return head + (body.isEmpty ? "console.log(\"TODO\");" : body) + "\n"
+    }
+
+    private static func renderParameters(_ params: [SkillToolParam]) -> String {
+        if params.isEmpty { return "[]" }
+        let lines = params.map { p -> String in
+            var fields: [String] = [
+                "name: \(jsStringLiteral(p.name))",
+                "type: \(jsStringLiteral(p.type))",
+                "required: \(p.required ? "true" : "false")",
+            ]
+            if !p.description.isEmpty {
+                fields.append("description: \(jsStringLiteral(p.description))")
+            }
+            if let enumValues = p.enumValues, !enumValues.isEmpty {
+                let inner = enumValues.map { jsStringLiteral($0) }.joined(separator: ", ")
+                fields.append("enum: [\(inner)]")
+            }
+            return "    { \(fields.joined(separator: ", ")) }"
+        }
+        return "[\n\(lines.joined(separator: ",\n"))\n  ]"
+    }
+
+    private static func isValidIdent(_ s: String) -> Bool {
+        guard let first = s.unicodeScalars.first else { return false }
+        let startSet = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
+        let bodySet = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+        guard startSet.contains(first) else { return false }
+        for u in s.unicodeScalars.dropFirst() where !bodySet.contains(u) { return false }
+        return true
+    }
+
+    /// Produce a YAML scalar safe for the SKILL.md frontmatter parser.
+    /// Quotes the value when it contains characters the parser splits on
+    /// (`:`, `#`, leading/trailing whitespace) or that look like list/map
+    /// delimiters.
+    private static func yamlScalar(_ s: String) -> String {
+        let trimmed = s
+        let needsQuote = trimmed != s
+            || trimmed.contains(":") || trimmed.contains("#")
+            || trimmed.contains("\n") || trimmed.contains("\r")
+            || ["-", "[", "{", "&", "*", "!", "|", ">", "'", "\"", "%", "@", "`"].contains { trimmed.hasPrefix($0) }
+        guard needsQuote else { return trimmed }
+        let escaped = trimmed
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escaped)\""
+    }
+
+    /// Encode a Swift string as a JS double-quoted literal — used for META
+    /// declaration fields. JSON encoding is the safe shortcut: it produces
+    /// a string that's both valid JS and valid JSON.
+    private static func jsStringLiteral(_ s: String) -> String {
+        if let data = try? JSONSerialization.data(withJSONObject: [s], options: []),
+           let str = String(data: data, encoding: .utf8) {
+            // Strip the surrounding `[` and `]`.
+            let inner = str.dropFirst().dropLast()
+            return String(inner)
+        }
+        // Last-resort fallback: naive escape.
+        let escaped = s
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+        return "\"\(escaped)\""
+    }
 
     // MARK: - Validation
 

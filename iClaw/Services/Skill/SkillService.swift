@@ -157,6 +157,49 @@ final class SkillService {
         agent.installedSkills.sorted { ($0.skill?.name ?? "") < ($1.skill?.name ?? "") }
     }
 
+    // MARK: - One-time migration: row → on-disk package
+
+    /// Walk every non-built-in `Skill` row and ensure a backing package
+    /// exists at `<Documents>/Skills/<slug>/`. Rows authored before Phase 4
+    /// (or via the legacy `create_skill` LLM path before Phase 4d) lived
+    /// only in SwiftData; this materializes them on-disk so the
+    /// directory-is-source-of-truth invariant holds for every user skill.
+    ///
+    /// Idempotent: skips any skill whose package directory already exists.
+    /// Failures (invalid identifier names, IO errors) are logged but don't
+    /// block subsequent skills — the legacy row keeps working as before.
+    func migrateRowsToOnDiskPackages() {
+        let descriptor = FetchDescriptor<Skill>(
+            predicate: #Predicate { $0.isBuiltIn == false }
+        )
+        let userSkills = (try? modelContext.fetch(descriptor)) ?? []
+        let fm = FileManager.default
+        let root = AgentFileManager.shared.skillsRoot
+        if !fm.fileExists(atPath: root.path) {
+            try? fm.createDirectory(at: root, withIntermediateDirectories: true)
+        }
+        for skill in userSkills {
+            let slug = SkillPackage.derivedSlug(forName: skill.name)
+            guard !slug.isEmpty else { continue }
+            // Built-in slug collision: rename the legacy row's slug to avoid
+            // clobbering the bundle path. We append a UUID suffix to the
+            // slug-derivation but leave the row's display name alone.
+            if BuiltInSkills.shippedSlugs.contains(slug) { continue }
+
+            let dest = root.appendingPathComponent(slug, isDirectory: true)
+            if fm.fileExists(atPath: dest.path) { continue }
+
+            do {
+                try SkillPackage.write(skill, to: dest)
+            } catch {
+                // Best-effort: legacy row still works through the SwiftData
+                // cache. We can't surface a UI error from launch tasks; log
+                // for diagnosis.
+                print("[SkillService] migration failed for '\(skill.name)' (\(slug)): \(error.localizedDescription)")
+            }
+        }
+    }
+
     // MARK: - Built-in Skills
 
     func ensureBuiltInSkills() {

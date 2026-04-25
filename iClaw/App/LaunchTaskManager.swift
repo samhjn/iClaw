@@ -35,7 +35,12 @@ final class LaunchTaskManager {
         // most launches are a no-op) and running it on the main actor here
         // avoids racing with SkillLibraryView/AgentSkillsView, which also
         // trigger `ensureBuiltInSkills` on appear.
-        SkillService(modelContext: ModelContext(container)).ensureBuiltInSkills()
+        let skillService = SkillService(modelContext: ModelContext(container))
+        skillService.ensureBuiltInSkills()
+        // Materialize on-disk packages for any pre-Phase-4 user skills that
+        // never got a backing directory. Idempotent on subsequent launches —
+        // skips slugs whose directory already exists.
+        skillService.migrateRowsToOnDiskPackages()
 
         // Wire the auto-reload bridge so writes through `fs.*` to user skills
         // under the `/skills/` mount refresh the matching `Skill` row's
