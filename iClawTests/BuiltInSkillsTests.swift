@@ -68,7 +68,7 @@ final class BuiltInSkillsTests: XCTestCase {
 
     func testExpectedBuiltInSkillsRegistered() {
         let names = Set(allTemplates.map(\.name))
-        XCTAssertEqual(names, Set(["Deep Research", "File Ops", "Health Plus"]),
+        XCTAssertEqual(names, Set(["Deep Research", "File Ops", "Health Plus", "Skill Builder"]),
                        "Unexpected set of built-in skills; update this test intentionally when the list changes")
     }
 
@@ -398,5 +398,48 @@ final class BuiltInSkillsTests: XCTestCase {
     func testHealthPlusTags() {
         let tags = Set(healthPlus.tags)
         XCTAssertTrue(tags.contains("health"))
+    }
+
+    // MARK: - Skill Builder
+
+    private var skillBuilder: BuiltInSkills.ResolvedTemplate {
+        allTemplates.first(where: { $0.name == "Skill Builder" })!
+    }
+
+    func testSkillBuilderSkillExists() {
+        XCTAssertNotNil(allTemplates.first(where: { $0.name == "Skill Builder" }))
+    }
+
+    func testSkillBuilderShipsScaffoldTool() {
+        let names = Set(skillBuilder.customTools.map(\.name))
+        XCTAssertTrue(names.contains("scaffold"),
+                      "skill-builder must ship the scaffold tool — that's its primary entry point")
+    }
+
+    func testSkillBuilderScaffoldHasRequiredParams() {
+        let scaffold = skillBuilder.customTools.first(where: { $0.name == "scaffold" })!
+        let required = Set(scaffold.parameters.filter { $0.required }.map(\.name))
+        XCTAssertEqual(required, Set(["slug", "name", "description"]))
+    }
+
+    func testSkillBuilderHasNoValidateTool() {
+        // The proposal intentionally drops `validate.js` from skill-builder —
+        // a JS mirror of the Swift validator would drift. The skill body
+        // documents `validate_skill` (the top-level LLM tool) instead.
+        let names = skillBuilder.customTools.map(\.name)
+        XCTAssertFalse(names.contains("validate"),
+                       "skill-builder.tools/validate.js was dropped — agents call the top-level validate_skill tool instead.")
+    }
+
+    func testSkillBuilderContentDocumentsAuthoringFlow() {
+        let content = skillBuilder.content
+        XCTAssertTrue(content.contains("validate_skill"))
+        XCTAssertTrue(content.contains("install_skill"))
+        XCTAssertTrue(content.contains("fs.writeFile") || content.contains("fs."))
+        XCTAssertTrue(content.contains("/skills/"))
+    }
+
+    func testSkillBuilderTags() {
+        XCTAssertTrue(Set(skillBuilder.tags).contains("authoring"))
     }
 }

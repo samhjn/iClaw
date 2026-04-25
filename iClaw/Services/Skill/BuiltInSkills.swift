@@ -21,6 +21,7 @@ enum BuiltInSkills {
         "deep-research",
         "file-ops",
         "health-plus",
+        "skill-builder",
     ]
 
     /// In-memory representation of a built-in skill after parsing the package
