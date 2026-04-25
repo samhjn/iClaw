@@ -42,6 +42,7 @@
 // MARK: - Chat
 "chat.messagePlaceholder" = "メッセージ…";
 "chat.cancelling" = "中止中…";
+"chat.skillActivated" = "%@ を有効化しました — 質問をどうぞ。";
 "chat.thinking" = "考え中…";
 "chat.compressingContext" = "コンテキストを圧縮中…";
 "chat.renameSession" = "セッション名を変更";

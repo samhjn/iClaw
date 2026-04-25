@@ -42,6 +42,7 @@
 // MARK: - Chat
 "chat.messagePlaceholder" = "Message...";
 "chat.cancelling" = "Cancelling…";
+"chat.skillActivated" = "%@ activated — ask your question.";
 "chat.thinking" = "Thinking…";
 "chat.compressingContext" = "Compressing context…";
 "chat.renameSession" = "Rename Session";

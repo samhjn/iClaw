@@ -71,6 +71,9 @@ enum L10n {
     enum Chat {
         static var messagePlaceholder: String { tr("chat.messagePlaceholder") }
         static var cancelling: String { tr("chat.cancelling") }
+        static func skillActivated(_ name: String) -> String {
+            tr("chat.skillActivated", name)
+        }
         static var thinking: String { tr("chat.thinking") }
         static var compressingContext: String { tr("chat.compressingContext") }
         static var renameSession: String { tr("chat.renameSession") }

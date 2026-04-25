@@ -42,6 +42,7 @@
 // MARK: - Chat
 "chat.messagePlaceholder" = "输入消息…";
 "chat.cancelling" = "正在中止…";
+"chat.skillActivated" = "%@ 已激活——请提问。";
 "chat.thinking" = "思考中…";
 "chat.compressingContext" = "正在压缩上下文…";
 "chat.renameSession" = "重命名会话";
