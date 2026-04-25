@@ -642,20 +642,55 @@ struct SkillEditView: View {
 
     private func save() {
         let tags = tagsText.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let service = SkillService(modelContext: modelContext)
 
+        // Track the old slug so a rename can clean up the previous on-disk
+        // package directory after writing the new one.
+        let oldSlug: String? = existingSkill.map { SkillPackage.derivedSlug(forName: $0.name) }
+
+        let skill: Skill
         if let s = existingSkill {
-            let service = SkillService(modelContext: modelContext)
             service.updateSkill(s, name: name, summary: summary, content: content, tags: tags)
             s.scripts = scripts
             s.customTools = customTools
             try? modelContext.save()
+            skill = s
         } else {
-            let service = SkillService(modelContext: modelContext)
-            _ = service.createSkill(
+            skill = service.createSkill(
                 name: name, summary: summary, content: content, tags: tags,
                 scripts: scripts, customTools: customTools
             )
         }
+
+        // Phase 8b: mirror the row to <Documents>/Skills/<slug>/ so the
+        // directory remains the source of truth that fs.* writes and the
+        // auto-reload pipeline expect. Built-in slugs are excluded — the
+        // UI never lets the user edit built-ins, but defensive in case.
+        let newSlug = SkillPackage.derivedSlug(forName: skill.name)
+        if !newSlug.isEmpty, !BuiltInSkills.shippedSlugs.contains(newSlug) {
+            let root = AgentFileManager.shared.skillsRoot
+            let dest = root.appendingPathComponent(newSlug, isDirectory: true)
+
+            // Rename: remove the previous slug's directory before writing
+            // the new one. Skip if the renamed slug collides with a built-in
+            // (shouldn't happen; defensive).
+            if let old = oldSlug, !old.isEmpty, old != newSlug,
+               !BuiltInSkills.shippedSlugs.contains(old) {
+                let oldDest = root.appendingPathComponent(old, isDirectory: true)
+                try? FileManager.default.removeItem(at: oldDest)
+            }
+
+            do {
+                try SkillPackage.write(skill, to: dest)
+            } catch {
+                // Best-effort mirroring: if serialization fails (e.g. a tool
+                // name with hyphens that the writer rejects), the row still
+                // persists in SwiftData, so the skill works through the
+                // legacy cache path. Log for diagnosis.
+                print("[SkillEditView] failed to mirror '\(skill.name)' to disk: \(error.localizedDescription)")
+            }
+        }
+
         onSave?()
     }
 }

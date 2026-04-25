@@ -57,6 +57,16 @@ final class SkillService {
 
     func deleteSkill(_ skill: Skill) {
         guard !skill.isBuiltIn else { return }
+        // Remove the on-disk package mirror first so a deleted skill leaves
+        // no orphan directory under <Documents>/Skills/. Best-effort: a
+        // missing package (e.g. legacy row that hadn't been migrated yet)
+        // is fine — try? swallows the error.
+        let slug = SkillPackage.derivedSlug(forName: skill.name)
+        if !slug.isEmpty, !BuiltInSkills.shippedSlugs.contains(slug) {
+            let url = AgentFileManager.shared.skillsRoot
+                .appendingPathComponent(slug, isDirectory: true)
+            try? FileManager.default.removeItem(at: url)
+        }
         modelContext.delete(skill)
         save()
     }
