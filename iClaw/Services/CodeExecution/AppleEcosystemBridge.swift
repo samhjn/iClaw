@@ -143,6 +143,52 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
     /// below this; beyond it the bridge aborts with a readable error.
     static let maxSnippetCallDepth = 16
 
+    /// Per-agent permission name controlling writes to **user** slugs under
+    /// the `skills/` mount. Built-in slugs are always read-only — this flag
+    /// only opt-in/out an agent's ability to author or modify user skills.
+    /// Independent of the broader `files.writeFile`/etc. permissions so an
+    /// agent can have general file write access but no skill authoring.
+    static let fsSkillWriteAction = "fs_skill_write"
+
+    /// True when `path` (as accepted by the JS API — either `skills/...` or
+    /// `/skills/...`) targets a user (non-built-in) slug. The mount root
+    /// (`skills` / `/skills` with no slug) returns false — listing the mount
+    /// root is always allowed.
+    static func touchesUserSkillsMount(_ path: String) -> Bool {
+        // Normalize a single leading slash on the skills prefix only.
+        let p: String
+        if path == "/" + AgentFileManager.skillsMountComponent
+            || path.hasPrefix("/" + AgentFileManager.skillsMountComponent + "/") {
+            p = String(path.dropFirst())
+        } else {
+            p = path
+        }
+        guard AgentFileManager.isSkillsMountPath(p), p != AgentFileManager.skillsMountComponent else {
+            return false
+        }
+        let remainder = String(p.dropFirst(AgentFileManager.skillsMountComponent.count + 1))
+        let slug = remainder.split(separator: "/", maxSplits: 1).first.map(String.init) ?? remainder
+        return !BuiltInSkills.shippedSlugs.contains(slug)
+    }
+
+    /// Returns nil when the write may proceed, or an error string to return
+    /// to JS. Combines:
+    ///   - the per-agent `fs_skill_write` permission (only when `path` is in
+    ///     the user skills mount)
+    /// Built-in writes are NOT checked here — they're rejected at the
+    /// resolver via `FileToolError.readOnlySkill`.
+    private static func enforceSkillWritePermission(
+        path: String,
+        context: ExecutionContext?
+    ) -> String? {
+        guard let ctx = context else { return nil }
+        guard touchesUserSkillsMount(path) else { return nil }
+        if !ctx.permissionChecker(fsSkillWriteAction) {
+            return "[Error] Action '\(fsSkillWriteAction)' is not permitted for this agent."
+        }
+        return nil
+    }
+
     /// Permission checkers keyed by execution ID (legacy accessor).
     private var permissionCheckers: [String: (String) -> Bool] {
         executionContexts.mapValues { $0.permissionChecker }
@@ -275,12 +321,21 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         case "files.readFile":
             return readFileDispatch(args: args, context: context)
         case "files.writeFile":
+            if let path = filePathArg(args),
+               let err = Self.enforceSkillWritePermission(path: path, context: context) {
+                return err
+            }
             return writeFileDispatch(args: args, context: context, append: false)
         case "files.appendFile":
+            if let path = filePathArg(args),
+               let err = Self.enforceSkillWritePermission(path: path, context: context) {
+                return err
+            }
             return writeFileDispatch(args: args, context: context, append: true)
         case "files.delete":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+            if let err = Self.enforceSkillWritePermission(path: path, context: context) { return err }
             do { try AgentFileManager.shared.deleteFile(agentId: agentId, name: path); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
         case "files.info", "files.stat":
@@ -300,12 +355,16 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
         case "files.mkdir":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' argument." }
+            if let err = Self.enforceSkillWritePermission(path: path, context: context) { return err }
             do { try AgentFileManager.shared.makeDirectory(agentId: agentId, path: path); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
         case "files.cp":
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let src = args["src"] as? String, !src.isEmpty else { return "[Error] Missing 'src' argument." }
             guard let dest = args["dest"] as? String, !dest.isEmpty else { return "[Error] Missing 'dest' argument." }
+            // Reading from a built-in (the fork-then-edit pattern) is allowed —
+            // only the destination is gated by `fs_skill_write`.
+            if let err = Self.enforceSkillWritePermission(path: dest, context: context) { return err }
             let recursive = (args["recursive"] as? Bool) ?? true
             do { try AgentFileManager.shared.copyFile(agentId: agentId, src: src, dest: dest, recursive: recursive); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
@@ -313,6 +372,9 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             guard let agentId = context?.agentId else { return "[Error] No agent context for file operations." }
             guard let src = args["src"] as? String, !src.isEmpty else { return "[Error] Missing 'src' argument." }
             guard let dest = args["dest"] as? String, !dest.isEmpty else { return "[Error] Missing 'dest' argument." }
+            // Move removes the source, so both sides need write permission.
+            if let err = Self.enforceSkillWritePermission(path: src, context: context) { return err }
+            if let err = Self.enforceSkillWritePermission(path: dest, context: context) { return err }
             do { try AgentFileManager.shared.moveFile(agentId: agentId, src: src, dest: dest); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
         case "files.truncate":
@@ -328,6 +390,7 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
                 } catch { return "[Error] \(error.localizedDescription)" }
             }
             guard let path = filePathArg(args) else { return "[Error] Missing 'path' or 'fd' argument." }
+            if let err = Self.enforceSkillWritePermission(path: path, context: context) { return err }
             do { try AgentFileManager.shared.truncateFile(agentId: agentId, path: path, length: length); return "OK" }
             catch { return "[Error] \(error.localizedDescription)" }
 
@@ -636,9 +699,25 @@ final class AppleEcosystemBridge: NSObject, WKScriptMessageHandlerWithReply {
             return "[Error] \(FileToolError.tooManyFds.localizedDescription)"
         }
 
+        // The fd open mode determines whether this is a write op — built-in
+        // skills under `skills/<slug>/` reject writes at the resolver.
         let url: URL
-        do { url = try AgentFileManager.shared.resolvedURL(agentId: agentId, path: path) }
-        catch { return "[Error] \(error.localizedDescription)" }
+        do {
+            url = try AgentFileManager.shared.resolvedURL(
+                agentId: agentId,
+                path: path,
+                forWriting: mode.canWrite
+            )
+        } catch { return "[Error] \(error.localizedDescription)" }
+
+        // Per-agent permission gate for writes to user skills under the
+        // `skills/` mount. Independent of the broader files.* permission so
+        // an agent can be granted general file writes but denied skill
+        // authoring.
+        if mode.canWrite, !ctx.permissionChecker(Self.fsSkillWriteAction),
+           Self.touchesUserSkillsMount(path) {
+            return "[Error] Action '\(Self.fsSkillWriteAction)' is not permitted for this agent."
+        }
 
         let fm = FileManager.default
         var isDir: ObjCBool = false

@@ -117,4 +117,77 @@ final class AgentFileManagerSkillsMountTests: XCTestCase {
         XCTAssertTrue(url.path.contains("AgentFiles/\(agentId.uuidString)/notes/foo.md"),
                       "Expected per-agent routing, got \(url.path)")
     }
+
+    // MARK: - Phase 4b: read-only built-in enforcement
+
+    func testResolveSkillsPath_builtInWriteThrowsReadOnlySkill() {
+        XCTAssertThrowsError(try mgr.resolveSkillsPath("deep-research/SKILL.md", forWriting: true)) { err in
+            guard case FileToolError.readOnlySkill(let slug) = err else {
+                return XCTFail("Expected readOnlySkill, got \(err)")
+            }
+            XCTAssertEqual(slug, "deep-research")
+        }
+    }
+
+    func testResolveSkillsPath_userWriteAllowed() throws {
+        let res = try mgr.resolveSkillsPath("my-custom/SKILL.md", forWriting: true)
+        XCTAssertFalse(res.isBuiltIn)
+        XCTAssertEqual(res.slug, "my-custom")
+    }
+
+    func testResolveSkillsPath_builtInReadStillAllowed() throws {
+        // forWriting: false (the default) must still permit reads from built-ins.
+        let res = try mgr.resolveSkillsPath("deep-research/SKILL.md")
+        XCTAssertTrue(res.isBuiltIn)
+    }
+
+    func testResolvedURL_writeToBuiltInPathRejected() {
+        let agentId = UUID()
+        XCTAssertThrowsError(
+            try mgr.resolvedURL(agentId: agentId, path: "skills/deep-research/SKILL.md", forWriting: true)
+        ) { err in
+            guard case FileToolError.readOnlySkill = err else {
+                return XCTFail("Expected readOnlySkill, got \(err)")
+            }
+        }
+    }
+
+    func testWriteFile_toBuiltInSurfaceReadOnlyError() {
+        // The actual write operation should bubble up the resolver error.
+        let agentId = UUID()
+        XCTAssertThrowsError(
+            try mgr.writeFile(agentId: agentId, name: "skills/deep-research/SKILL.md", data: Data("hijack".utf8))
+        ) { err in
+            guard case FileToolError.readOnlySkill = err else {
+                return XCTFail("Expected readOnlySkill, got \(err)")
+            }
+        }
+    }
+
+    func testDeleteFile_onBuiltInRejected() {
+        let agentId = UUID()
+        XCTAssertThrowsError(
+            try mgr.deleteFile(agentId: agentId, name: "skills/deep-research/SKILL.md")
+        ) { err in
+            guard case FileToolError.readOnlySkill = err else {
+                return XCTFail("Expected readOnlySkill, got \(err)")
+            }
+        }
+    }
+
+    // MARK: - Phase 4b: leading-slash normalization for /skills/
+
+    func testResolvedURL_acceptsLeadingSlashOnSkillsMount() throws {
+        let agentId = UUID()
+        let url = try mgr.resolvedURL(agentId: agentId, path: "/skills/deep-research/SKILL.md")
+        XCTAssertTrue(url.path.contains("BuiltInSkills/deep-research"))
+    }
+
+    func testResolvedURL_leadingSlashOnNonSkillsPathStillRejected() {
+        let agentId = UUID()
+        // Non-skills absolute-style paths must continue to be rejected so the
+        // existing safety contract is preserved.
+        XCTAssertThrowsError(try mgr.resolvedURL(agentId: agentId, path: "/etc/passwd"))
+        XCTAssertThrowsError(try mgr.resolvedURL(agentId: agentId, path: "/notes/foo.md"))
+    }
 }
