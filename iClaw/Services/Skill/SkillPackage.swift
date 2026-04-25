@@ -115,25 +115,45 @@ enum SkillPackage {
         }
     }
 
-    /// Serialize a `Skill` SwiftData row into a self-contained package at
-    /// `destination`. The destination directory is created (and its existing
-    /// contents removed) so the write is atomic-ish: callers can re-invoke
-    /// to rewrite without dealing with stale files left over from a
-    /// previous version with more tools/scripts.
+    /// Sendable plain-Swift snapshot of a `Skill` row, captured on the
+    /// actor that owns the row. The disk-writing helpers operate on a
+    /// `WriteSnapshot` so the I/O can happen off-main without any SwiftData
+    /// access — see `snapshot(of:)` + `commit(_:to:)` below.
+    struct WriteSnapshot: Sendable, Hashable {
+        let name: String
+        let displayName: String
+        let summary: String
+        let body: String
+        let tags: [String]
+        let scripts: [SkillScript]
+        let customTools: [SkillToolDefinition]
+    }
+
+    /// Capture a Skill row's fields into a Sendable snapshot. Must be
+    /// called on the actor that owns the Skill (typically @MainActor).
+    /// Returns a value type that's safe to hand to a Task.detached for
+    /// off-main disk writes.
+    static func snapshot(of skill: Skill) -> WriteSnapshot {
+        WriteSnapshot(
+            name: skill.name,
+            displayName: skill.effectiveDisplayName,
+            summary: skill.summary,
+            body: skill.content,
+            tags: skill.tags,
+            scripts: skill.scripts,
+            customTools: skill.customTools
+        )
+    }
+
+    /// Write a previously-captured `WriteSnapshot` to disk. Pure I/O — no
+    /// SwiftData access — so this is safe from any actor.
     ///
     /// Generated layout:
     ///   destination/
     ///   ├── SKILL.md            (frontmatter from name/summary/tags + body)
-    ///   ├── tools/<tool>.js     (one per Skill.customTools entry; META prefilled)
-    ///   └── scripts/<script>.js (one per Skill.scripts entry; first-line comment)
-    ///
-    /// Per-locale overlays (`SKILL.<lang>.md`, `tools/<tool>.<lang>.json`,
-    /// `scripts/<script>.<lang>.txt`) are NOT written — the SwiftData row
-    /// only carries resolved-for-current-locale strings, not a full per-
-    /// locale matrix. Migration of legacy rows uses the locale-resolved
-    /// strings as the canonical English content; users who want richer i18n
-    /// drop overlay files manually after migration.
-    static func write(_ skill: Skill, to destination: URL) throws {
+    ///   ├── tools/<tool>.js     (one per snapshot.customTools; META prefilled)
+    ///   └── scripts/<script>.js (one per snapshot.scripts; first-line comment)
+    static func commit(_ snapshot: WriteSnapshot, to destination: URL) throws {
         let fm = FileManager.default
         do {
             if fm.fileExists(atPath: destination.path) {
@@ -141,15 +161,15 @@ enum SkillPackage {
             }
             try fm.createDirectory(at: destination, withIntermediateDirectories: true)
 
-            try serializeSkillMd(skill).write(
+            try serializeSkillMd(snapshot).write(
                 to: destination.appendingPathComponent("SKILL.md"),
                 atomically: true, encoding: .utf8
             )
 
-            if !skill.customTools.isEmpty {
+            if !snapshot.customTools.isEmpty {
                 let toolsDir = destination.appendingPathComponent("tools", isDirectory: true)
                 try fm.createDirectory(at: toolsDir, withIntermediateDirectories: true)
-                for tool in skill.customTools {
+                for tool in snapshot.customTools {
                     guard isValidIdent(tool.name) else {
                         throw WriteError.invalidToolName(tool.name)
                     }
@@ -161,10 +181,10 @@ enum SkillPackage {
                 }
             }
 
-            if !skill.scripts.isEmpty {
+            if !snapshot.scripts.isEmpty {
                 let scriptsDir = destination.appendingPathComponent("scripts", isDirectory: true)
                 try fm.createDirectory(at: scriptsDir, withIntermediateDirectories: true)
-                for script in skill.scripts {
+                for script in snapshot.scripts {
                     guard isValidIdent(script.name) else {
                         throw WriteError.invalidScriptName(script.name)
                     }
@@ -182,22 +202,30 @@ enum SkillPackage {
         }
     }
 
-    private static func serializeSkillMd(_ skill: Skill) -> String {
+    /// Convenience: snapshot the row and commit in one call. Synchronous,
+    /// runs on whatever actor invokes it. Use the snapshot/commit split
+    /// directly when you want the disk work off-main (e.g. launch
+    /// migration).
+    static func write(_ skill: Skill, to destination: URL) throws {
+        try commit(snapshot(of: skill), to: destination)
+    }
+
+    private static func serializeSkillMd(_ snapshot: WriteSnapshot) -> String {
         var out: [String] = ["---"]
-        out.append("name: \(yamlScalar(skill.name))")
-        out.append("description: \(yamlScalar(skill.summary))")
-        if !skill.tags.isEmpty {
+        out.append("name: \(yamlScalar(snapshot.name))")
+        out.append("description: \(yamlScalar(snapshot.summary))")
+        if !snapshot.tags.isEmpty {
             out.append("iclaw:")
-            let inline = skill.tags.map { yamlScalar($0) }.joined(separator: ", ")
+            let inline = snapshot.tags.map { yamlScalar($0) }.joined(separator: ", ")
             out.append("  tags: [\(inline)]")
         }
         out.append("---")
         out.append("")
-        let body = skill.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = snapshot.body.trimmingCharacters(in: .whitespacesAndNewlines)
         if body.isEmpty {
             // Minimal body: a heading so SkillPackage.parse's body
             // resolution returns something non-empty.
-            out.append("# \(skill.effectiveDisplayName)")
+            out.append("# \(snapshot.displayName)")
         } else {
             out.append(body)
         }

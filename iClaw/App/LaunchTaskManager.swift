@@ -37,10 +37,11 @@ final class LaunchTaskManager {
         // trigger `ensureBuiltInSkills` on appear.
         let skillService = SkillService(modelContext: ModelContext(container))
         skillService.ensureBuiltInSkills()
-        // Materialize on-disk packages for any pre-Phase-4 user skills that
-        // never got a backing directory. Idempotent on subsequent launches —
-        // skips slugs whose directory already exists.
-        skillService.migrateRowsToOnDiskPackages()
+        // Plan the row → on-disk-package migration on the main actor (cheap:
+        // SwiftData fetch + slug + snapshot, no disk I/O). The actual disk
+        // writes happen off-main below so a user with many legacy skills
+        // doesn't see a launch stall.
+        let pendingSkillMigrations = skillService.planMigrationToOnDiskPackages()
 
         // Wire the auto-reload bridge so writes through `fs.*` to user skills
         // under the `/skills/` mount refresh the matching `Skill` row's
@@ -62,6 +63,11 @@ final class LaunchTaskManager {
 
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
+
+            // Disk writes for the planned row → on-disk-package migration.
+            // No SwiftData access here; the snapshots already captured every
+            // field we need. Failures log + continue.
+            SkillService.commitPendingMigrations(pendingSkillMigrations)
 
             await self.cleanupOrphanAgentFiles()
             await MainActor.run {

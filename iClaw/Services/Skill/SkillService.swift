@@ -169,45 +169,76 @@ final class SkillService {
 
     // MARK: - One-time migration: row → on-disk package
 
-    /// Walk every non-built-in `Skill` row and ensure a backing package
-    /// exists at `<Documents>/Skills/<slug>/`. Rows authored before Phase 4
-    /// (or via the legacy `create_skill` LLM path before Phase 4d) lived
-    /// only in SwiftData; this materializes them on-disk so the
-    /// directory-is-source-of-truth invariant holds for every user skill.
+    /// Plan a row → on-disk migration without touching disk. Walks every
+    /// non-built-in `Skill` row and snapshots the ones whose backing
+    /// directory is missing. The returned `[Pending]` is plain Sendable
+    /// values, safe to hand to a `Task.detached` for off-main commit —
+    /// keeping the launch thread free of disk I/O even when the user has
+    /// many legacy skills to migrate.
     ///
-    /// Idempotent: skips any skill whose package directory already exists.
-    /// Failures (invalid identifier names, IO errors) are logged but don't
-    /// block subsequent skills — the legacy row keeps working as before.
-    func migrateRowsToOnDiskPackages() {
+    /// Must be called on the actor that owns `modelContext` (typically
+    /// @MainActor). Idempotent: skills whose package directory already
+    /// exists are skipped.
+    func planMigrationToOnDiskPackages() -> [PendingMigration] {
         let descriptor = FetchDescriptor<Skill>(
             predicate: #Predicate { $0.isBuiltIn == false }
         )
         let userSkills = (try? modelContext.fetch(descriptor)) ?? []
         let fm = FileManager.default
         let root = AgentFileManager.shared.skillsRoot
-        if !fm.fileExists(atPath: root.path) {
-            try? fm.createDirectory(at: root, withIntermediateDirectories: true)
-        }
+        var pending: [PendingMigration] = []
         for skill in userSkills {
             let slug = SkillPackage.derivedSlug(forName: skill.name)
             guard !slug.isEmpty else { continue }
-            // Built-in slug collision: rename the legacy row's slug to avoid
-            // clobbering the bundle path. We append a UUID suffix to the
-            // slug-derivation but leave the row's display name alone.
+            // Slug collision with a built-in: never clobber the bundle
+            // path. Legacy row keeps working through SwiftData; the user
+            // can rename it later if they want a backing directory.
             if BuiltInSkills.shippedSlugs.contains(slug) { continue }
 
             let dest = root.appendingPathComponent(slug, isDirectory: true)
             if fm.fileExists(atPath: dest.path) { continue }
 
+            pending.append(PendingMigration(
+                destination: dest,
+                snapshot: SkillPackage.snapshot(of: skill)
+            ))
+        }
+        return pending
+    }
+
+    /// Synchronous one-shot migration kept for tests and any caller that
+    /// doesn't care about main-thread cost. The launch path uses
+    /// `planMigrationToOnDiskPackages` + a detached task to keep the
+    /// launch thread free of disk I/O.
+    func migrateRowsToOnDiskPackages() {
+        let pending = planMigrationToOnDiskPackages()
+        Self.commitPendingMigrations(pending)
+    }
+
+    /// Commit a previously-planned migration to disk. Pure I/O — safe to
+    /// invoke from any actor. Failures are logged but don't block
+    /// subsequent commits.
+    static func commitPendingMigrations(_ pending: [PendingMigration]) {
+        guard !pending.isEmpty else { return }
+        let root = AgentFileManager.shared.skillsRoot
+        if !FileManager.default.fileExists(atPath: root.path) {
+            try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        }
+        for item in pending {
             do {
-                try SkillPackage.write(skill, to: dest)
+                try SkillPackage.commit(item.snapshot, to: item.destination)
             } catch {
-                // Best-effort: legacy row still works through the SwiftData
-                // cache. We can't surface a UI error from launch tasks; log
-                // for diagnosis.
-                print("[SkillService] migration failed for '\(skill.name)' (\(slug)): \(error.localizedDescription)")
+                print("[SkillService] migration failed for '\(item.snapshot.name)': \(error.localizedDescription)")
             }
         }
+    }
+
+    /// One pending row → directory write captured by
+    /// `planMigrationToOnDiskPackages`. All-Sendable so it can travel
+    /// across actors.
+    struct PendingMigration: Sendable, Hashable {
+        let destination: URL
+        let snapshot: SkillPackage.WriteSnapshot
     }
 
     // MARK: - Built-in Skills
