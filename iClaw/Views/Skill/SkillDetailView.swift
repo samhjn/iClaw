@@ -10,9 +10,17 @@ struct SkillDetailView: View {
     @State private var isEditing = false
     @State private var showDeleteConfirm = false
     @State private var showInstallSheet = false
-    @State private var shareItems: [URL] = []
-    @State private var showShareSheet = false
+    @State private var sharePayload: SharePayload?
     @State private var validationReport: ValidationReport?
+
+    /// Wrapper carrying a prepared zip URL for the iOS share sheet. We use
+    /// `.sheet(item:)` rather than a `Bool`+`[URL]` pair so SwiftUI presents
+    /// the sheet atomically with its content, avoiding the "first share
+    /// shows an empty sheet" race that the bool/items split exhibited.
+    private struct SharePayload: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
 
     var body: some View {
         ScrollView {
@@ -82,8 +90,8 @@ struct SkillDetailView: View {
         .sheet(isPresented: $showInstallSheet) {
             InstallSkillOnAgentSheet(skill: skill)
         }
-        .sheet(isPresented: $showShareSheet, onDismiss: { shareItems = [] }) {
-            SkillShareSheet(items: shareItems)
+        .sheet(item: $sharePayload) { payload in
+            SkillShareSheet(items: [payload.url])
         }
         .alert(L10n.Skills.deleteSkill, isPresented: $showDeleteConfirm) {
             Button(L10n.Common.delete, role: .destructive) {
@@ -131,43 +139,62 @@ struct SkillDetailView: View {
         UIApplication.shared.open(url)
     }
 
-    /// Copy the package directory into the app's temporary directory before
-    /// presenting the share sheet. The temp copy:
-    ///   - normalizes built-in (bundle) and user (Documents) sources to the
-    ///     same kind of URL, so share extensions read both reliably,
-    ///   - keeps the live `<Documents>/Skills/` tree from being mutated by
-    ///     well-meaning consumers like Quick Look,
-    ///   - is cleaned up by iOS along with the rest of the temporary
-    ///     directory; no manual disposal needed.
+    /// Prepare a single .zip of the package directory and present the share
+    /// sheet against it.
     ///
-    /// The copy runs off the main actor — for a Health Plus-shape skill
-    /// (15 tools + 4 locale overlays per tool ≈ 60+ files) `copyItem` is
-    /// noticeable on main. We hop back to main only to assign the share
-    /// state and present the sheet.
+    /// Why a zip rather than the raw directory: `UIActivityViewController`'s
+    /// directory-URL handling is uneven across share targets — some
+    /// extensions enumerate items themselves, others don't. The "empty
+    /// share sheet" symptom on first share traced back to this, plus a
+    /// `Bool`+`[URL]` binding race. A single zip is the most universally
+    /// accepted format, and `NSFileCoordinator(.forUploading)` is the
+    /// iOS-blessed way to get one.
+    ///
+    /// Runs off the main actor — for a 60-file Health Plus-shape package
+    /// the zip is non-trivial sync work. State assignment hops back to
+    /// MainActor and uses `.sheet(item:)` (assigned in this commit) so the
+    /// sheet sees the URL atomically.
     private func prepareShare() {
         guard let src = packageURL else { return }
-        let stem = "iclaw-export-\(UUID().uuidString.prefix(8).lowercased())"
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(stem, isDirectory: true)
-        let destination = tempDir.appendingPathComponent(src.lastPathComponent, isDirectory: true)
-
         Task.detached(priority: .userInitiated) {
-            let fm = FileManager.default
-            do {
-                try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                try fm.copyItem(at: src, to: destination)
-            } catch {
-                // Best-effort: drop the partial temp dir + bail without a
-                // share sheet. The user retried (which is the typical
-                // recovery on iOS).
-                try? fm.removeItem(at: tempDir)
-                return
-            }
+            guard let zipped = Self.prepareShareableArchive(of: src) else { return }
             await MainActor.run {
-                shareItems = [destination]
-                showShareSheet = true
+                sharePayload = SharePayload(url: zipped)
             }
         }
+    }
+
+    /// Use NSFileCoordinator's `.forUploading` reading option — the same
+    /// mechanism share extensions and AirDrop use under the hood — to
+    /// produce a zip representation of `dir`. The coordinated URL is
+    /// auto-cleaned when the closure returns, so we copy it to a stable
+    /// temp file before letting the closure exit.
+    static func prepareShareableArchive(of dir: URL) -> URL? {
+        let stem = "\(dir.lastPathComponent)-\(UUID().uuidString.prefix(8).lowercased()).zip"
+        let stable = FileManager.default.temporaryDirectory.appendingPathComponent(stem)
+
+        var coordinatorError: NSError?
+        var copyError: Error?
+        NSFileCoordinator().coordinate(
+            readingItemAt: dir,
+            options: [.forUploading],
+            error: &coordinatorError
+        ) { zipURL in
+            do {
+                try FileManager.default.copyItem(at: zipURL, to: stable)
+            } catch {
+                copyError = error
+            }
+        }
+        if let e = coordinatorError {
+            print("[SkillDetailView] share coordinator failed: \(e.localizedDescription)")
+            return nil
+        }
+        if let e = copyError {
+            print("[SkillDetailView] share copy failed: \(e.localizedDescription)")
+            return nil
+        }
+        return FileManager.default.fileExists(atPath: stable.path) ? stable : nil
     }
 
     private var headerSection: some View {
