@@ -45,6 +45,10 @@ struct CronJobEntityQuery: EntityQuery, EnumerableEntityQuery {
 
     @MainActor
     private static func fetchEnabled() -> [CronJobEntity] {
+        // Skip the SwiftData fetch when files are still encrypted, otherwise
+        // Shortcuts polling this query before first unlock can deadlock the
+        // process on the WAL `pread`.
+        guard ProtectedDataAvailability.isAvailable else { return [] }
         let ctx = ModelContext(iClawModelContainer.shared)
         let descriptor = FetchDescriptor<CronJob>(
             predicate: #Predicate<CronJob> { $0.isEnabled == true },

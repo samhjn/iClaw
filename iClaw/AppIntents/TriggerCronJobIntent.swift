@@ -29,6 +29,12 @@ struct TriggerCronJobIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        // Bail before touching SwiftData if files are still encrypted — see
+        // `RunDueCronJobsIntent.perform()` for the `0xdead10cc` rationale.
+        guard ProtectedDataAvailability.isAvailable else {
+            print("[TriggerCronJobIntent] Protected data unavailable; skipping run.")
+            return .result()
+        }
         _ = await CronJobRunner.runOne(jobId: job.id, container: iClawModelContainer.shared)
         return .result()
     }
