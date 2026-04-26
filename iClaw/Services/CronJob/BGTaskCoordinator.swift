@@ -61,6 +61,16 @@ final class CronBGTaskCoordinator: @unchecked Sendable {
                 return
             }
             Task { @MainActor in
+                // The system can fire BGAppRefreshTask before the user has
+                // unlocked post-boot. Touching SwiftData under that condition
+                // blocks `pread` on the encrypted WAL and gets us SIGKILL'd
+                // by RunningBoard with `0xdead10cc`. Decline gracefully —
+                // iOS will reschedule.
+                guard ProtectedDataAvailability.isAvailable else {
+                    print("[BGTaskCoordinator] Protected data unavailable; deferring task.")
+                    task.setTaskCompleted(success: false)
+                    return
+                }
                 guard let scheduler = self?.scheduler else {
                     task.setTaskCompleted(success: false)
                     return

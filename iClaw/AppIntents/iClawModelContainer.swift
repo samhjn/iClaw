@@ -29,10 +29,32 @@ enum iClawModelContainer {
     /// offer the user a reset-and-restart. `nil` on success.
     private(set) static var migrationFailedStoreURL: URL?
 
+    /// Data-protection class applied to the SQLite store + WAL + SHM. We use
+    /// `.completeUntilFirstUserAuthentication` instead of the iOS default so
+    /// that a Shortcuts automation triggered on a locked device (after the
+    /// user has already unlocked once since boot — the common case) can read
+    /// the store without blocking on encrypted IO.
+    ///
+    /// Without this, iOS-18 background launches via App Intents block in
+    /// `pread()` on the WAL header, the launch watchdog fires, and
+    /// RunningBoard kills the process with `0xdead10cc`.
+    static let storeProtectionLevel: FileProtectionType = .completeUntilFirstUserAuthentication
+
     static let shared: ModelContainer = {
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        // Lower protection on the store directory before opening, so any
+        // sidecar files SwiftData creates (.sqlite-wal, .sqlite-shm) inherit
+        // the relaxed level.
+        applyStoreProtection(at: config.url)
+
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            let container = try ModelContainer(for: schema, configurations: [config])
+            // Re-apply after open: if the store / WAL / SHM were created
+            // during `ModelContainer.init`, they took the directory's level
+            // at that instant — set it explicitly per-file to be sure.
+            applyStoreProtection(at: config.url)
+            return container
         } catch {
             print("[iClawModelContainer] Primary container construction failed: \(error). Falling back to in-memory.")
             migrationFailedStoreURL = config.url
@@ -44,4 +66,34 @@ enum iClawModelContainer {
             }
         }
     }()
+
+    /// Apply the chosen protection class to the store directory and to the
+    /// `.sqlite` / `.sqlite-wal` / `.sqlite-shm` files if they exist. Missing
+    /// files are skipped silently — this runs both before and after opening
+    /// the container, and which files exist depends on whether SwiftData has
+    /// already initialized the WAL.
+    ///
+    /// Uses `FileManager.setAttributes(_:ofItemAtPath:)` because
+    /// `URLResourceValues.fileProtection` is read-only — there is no URL-based
+    /// setter for the protection class.
+    static func applyStoreProtection(at storeURL: URL) {
+        let level = storeProtectionLevel
+        let candidates: [URL] = [
+            storeURL.deletingLastPathComponent(),
+            storeURL,
+            URL(fileURLWithPath: storeURL.path + "-wal"),
+            URL(fileURLWithPath: storeURL.path + "-shm"),
+        ]
+        for url in candidates {
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            do {
+                try FileManager.default.setAttributes(
+                    [.protectionKey: level],
+                    ofItemAtPath: url.path
+                )
+            } catch {
+                print("[iClawModelContainer] Failed to set protection on \(url.lastPathComponent): \(error)")
+            }
+        }
+    }
 }

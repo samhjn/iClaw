@@ -24,6 +24,15 @@ struct RunDueCronJobsIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Int> {
+        // Bail before touching SwiftData if files are still encrypted —
+        // happens when this intent fires before the user has unlocked the
+        // device for the first time post-boot. Opening the store under that
+        // condition deadlocks `pread` on the WAL and gets us SIGKILL'd by
+        // RunningBoard with `0xdead10cc`.
+        guard ProtectedDataAvailability.isAvailable else {
+            print("[RunDueCronJobsIntent] Protected data unavailable; skipping run.")
+            return .result(value: 0)
+        }
         let count = await CronJobRunner.runAllDue(container: iClawModelContainer.shared)
         return .result(value: count)
     }
