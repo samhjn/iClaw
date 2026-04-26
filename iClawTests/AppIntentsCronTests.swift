@@ -283,6 +283,112 @@ final class AppIntentsCronTests: XCTestCase {
         XCTAssertEqual(allJobs.first?.runCount, 1)
     }
 
+    // MARK: - Regression: cron-created session must keep its agent reference
+    //
+    // Bug: cron-task–produced sessions sometimes had `session.agent == nil`
+    // when re-fetched from a fresh `ModelContext`. Cause was that
+    // `CronExecutor.executeJob` deferred the only `context.save()` until
+    // `claimNextRun`, after also mutating `isActive`, inserting the trigger
+    // message, and appending it to `session.messages`. Any failure inside that
+    // single bundled transaction (`try?`-swallowed) could land the session in
+    // the store *without* its agent. Fix: persist the session→agent edge in
+    // its own save *before* any other mutations, matching the proven
+    // `SessionService.createSession` pattern.
+
+    @MainActor
+    func test_executeJob_persistsSessionAgentEdge_inFreshContext() async {
+        let job = makeJob(name: "AgentEdge", cron: "*/5 * * * *",
+                          nextRunAt: Date().addingTimeInterval(-60))
+        let agent = job.agent!
+        let agentId = agent.id
+
+        let executor = CronExecutor(modelContainer: container)
+        await executor.executeJob(job, agent: agent, context: context)
+
+        // Re-fetch in a brand-new context — only persisted edges are visible.
+        let fresh = ModelContext(container)
+        let sessions = (try? fresh.fetch(FetchDescriptor<Session>())) ?? []
+        let cronSession = sessions.first { $0.title.contains("AgentEdge") }
+        XCTAssertNotNil(cronSession,
+                        "Cron run must persist a session with the job's name in its title")
+        XCTAssertNotNil(cronSession?.agent,
+                        "Persisted cron session must keep its agent association")
+        XCTAssertEqual(cronSession?.agent?.id, agentId,
+                       "Persisted cron session's agent must match the job's agent")
+    }
+
+    @MainActor
+    func test_executeJob_persistsAgentBeforeMessageInsertion() async {
+        // Stronger invariant: after executeJob runs, predicate-based queries
+        // that depend on `session.agent?.id` (used by `SessionService` and
+        // `SessionRAGTools`) must return the cron session. Without the
+        // up-front save, an intermittent failure of the bundled save would
+        // leave the session orphaned and invisible to these queries.
+        let job = makeJob(name: "QueryByAgent", cron: "* * * * *",
+                          nextRunAt: Date().addingTimeInterval(-60))
+        let agent = job.agent!
+        let agentId = agent.id
+
+        let executor = CronExecutor(modelContainer: container)
+        await executor.executeJob(job, agent: agent, context: context)
+
+        let fresh = ModelContext(container)
+        var descriptor = FetchDescriptor<Session>()
+        descriptor.predicate = #Predicate<Session> { $0.agent?.id == agentId }
+        let sessionsForAgent = (try? fresh.fetch(descriptor)) ?? []
+
+        XCTAssertFalse(sessionsForAgent.isEmpty,
+                       "Predicate query on session.agent.id must find the cron session")
+        XCTAssertTrue(sessionsForAgent.contains { $0.title.contains("QueryByAgent") },
+                      "Cron session must be discoverable via the agent-id predicate")
+    }
+
+    @MainActor
+    func test_executeJob_inverseRelationshipPopulatedOnAgent() async {
+        // The inverse side `agent.sessions` (declared with `@Relationship` on
+        // Agent) must include the freshly-created cron session in a fresh
+        // context. This catches regressions where the session→agent edge is
+        // saved late or lost mid-transaction.
+        let job = makeJob(name: "InverseEdge", cron: "* * * * *",
+                          nextRunAt: Date().addingTimeInterval(-60))
+        let agent = job.agent!
+        let agentId = agent.id
+
+        let executor = CronExecutor(modelContainer: container)
+        await executor.executeJob(job, agent: agent, context: context)
+
+        let fresh = ModelContext(container)
+        let descriptor = FetchDescriptor<Agent>(
+            predicate: #Predicate<Agent> { $0.id == agentId }
+        )
+        let freshAgent = (try? fresh.fetch(descriptor))?.first
+        XCTAssertNotNil(freshAgent)
+        XCTAssertTrue(freshAgent?.sessions.contains { $0.title.contains("InverseEdge") } ?? false,
+                      "Agent.sessions inverse relationship must include the cron session")
+    }
+
+    @MainActor
+    func test_runOne_persistsSessionAgentEdge() async {
+        let job = makeJob(name: "RunOneEdge", nextRunAt: Date().addingTimeInterval(3600))
+        let agentId = job.agent!.id
+
+        let ok = await CronJobRunner.runOne(jobId: job.id, container: container)
+        XCTAssertTrue(ok)
+
+        let fresh = ModelContext(container)
+        let after = (try? fresh.fetch(FetchDescriptor<CronJob>()))?.first { $0.id == job.id }
+        guard let lastSessionId = after?.lastSessionId else {
+            return XCTFail("runOne must record lastSessionId after finalization")
+        }
+
+        var descriptor = FetchDescriptor<Session>()
+        descriptor.predicate = #Predicate<Session> { $0.id == lastSessionId }
+        let session = (try? fresh.fetch(descriptor))?.first
+        XCTAssertNotNil(session)
+        XCTAssertEqual(session?.agent?.id, agentId,
+                       "Session referenced by job.lastSessionId must be linked to the original agent")
+    }
+
     // MARK: - Regression: openAppWhenRun must stay false
 
     func test_intents_doNotOpenAppWhenRun() {
