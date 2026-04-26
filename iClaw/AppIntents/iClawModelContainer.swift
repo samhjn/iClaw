@@ -38,7 +38,7 @@ enum iClawModelContainer {
     /// Without this, iOS-18 background launches via App Intents block in
     /// `pread()` on the WAL header, the launch watchdog fires, and
     /// RunningBoard kills the process with `0xdead10cc`.
-    static let storeProtectionLevel: URLFileProtection = .completeUntilFirstUserAuthentication
+    static let storeProtectionLevel: FileProtectionType = .completeUntilFirstUserAuthentication
 
     static let shared: ModelContainer = {
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
@@ -72,6 +72,10 @@ enum iClawModelContainer {
     /// files are skipped silently — this runs both before and after opening
     /// the container, and which files exist depends on whether SwiftData has
     /// already initialized the WAL.
+    ///
+    /// Uses `FileManager.setAttributes(_:ofItemAtPath:)` because
+    /// `URLResourceValues.fileProtection` is read-only — there is no URL-based
+    /// setter for the protection class.
     static func applyStoreProtection(at storeURL: URL) {
         let level = storeProtectionLevel
         let candidates: [URL] = [
@@ -82,11 +86,11 @@ enum iClawModelContainer {
         ]
         for url in candidates {
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
-            var values = URLResourceValues()
-            values.fileProtection = level
-            var mutable = url
             do {
-                try mutable.setResourceValues(values)
+                try FileManager.default.setAttributes(
+                    [.protectionKey: level],
+                    ofItemAtPath: url.path
+                )
             } catch {
                 print("[iClawModelContainer] Failed to set protection on \(url.lastPathComponent): \(error)")
             }

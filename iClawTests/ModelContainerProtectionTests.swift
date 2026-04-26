@@ -29,8 +29,10 @@ final class ModelContainerProtectionTests: XCTestCase {
     }
 
     /// Files present at call time must end up at the configured protection
-    /// level. Simulator may not enforce protection at the filesystem layer,
-    /// but the resource value still round-trips, so we read it back to verify.
+    /// level. The simulator does not enforce file protection at the
+    /// filesystem layer, so `attributesOfItem` may return `nil` for the
+    /// protection key — in that case we skip the assertion rather than fail
+    /// for a host-environment quirk.
     func testApplyStoreProtectionTagsAllStoreFiles() throws {
         let storeURL = tempDir.appendingPathComponent("store.sqlite")
         let walURL = URL(fileURLWithPath: storeURL.path + "-wal")
@@ -42,11 +44,8 @@ final class ModelContainerProtectionTests: XCTestCase {
         iClawModelContainer.applyStoreProtection(at: storeURL)
 
         for url in [storeURL, walURL, shmURL] {
-            let values = try url.resourceValues(forKeys: [.fileProtectionKey])
-            // `nil` means the platform doesn't expose file protection (rare
-            // on the simulator); skip the assertion in that case rather than
-            // failing for a host-environment quirk.
-            if let protection = values.fileProtection {
+            let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
+            if let protection = attrs[.protectionKey] as? FileProtectionType {
                 XCTAssertEqual(
                     protection,
                     iClawModelContainer.storeProtectionLevel,
@@ -76,8 +75,8 @@ final class ModelContainerProtectionTests: XCTestCase {
         XCTAssertTrue(
             level == .completeUntilFirstUserAuthentication
             || level == .completeUnlessOpen
-            || level == .none,
-            "Protection level \(level) is not safe for background launches "
+            || level == FileProtectionType.none,
+            "Protection level \(level.rawValue) is not safe for background launches "
             + "after first unlock — would re-introduce 0xdead10cc."
         )
     }
