@@ -18,11 +18,21 @@ final class CronExecutor {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
 
+        // Persist the session→agent association in its own transaction *before*
+        // any other mutations. Bundling insert+agent+isActive+messages into a
+        // single later save (via `claimNextRun`) was racy: if anything in that
+        // larger transaction failed, the session could land in the store
+        // without its agent reference, and downstream UI/RAG code would treat
+        // it as orphaned ("cron-created session has no agent"). Mirrors the
+        // pattern used in `SessionService.createSession` and
+        // `SubAgentManager.createSubAgent`.
         let sessionTitle = "⏰ \(job.name) — \(formatter.string(from: Date()))"
         let session = Session(title: sessionTitle)
-        session.isActive = true
         context.insert(session)
         session.agent = agent
+        try? context.save()
+
+        session.isActive = true
 
         let triggerMessage = buildTriggerMessage(job: job)
         let userMsg = Message(role: .user, content: triggerMessage)
