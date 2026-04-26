@@ -166,9 +166,11 @@ final class ContextManager {
                         suffix += "\n[\(deleted) image(s) were deleted by the user.]"
                     }
                     let hinted = (text ?? "") + suffix
-                    result.append(.assistant(hinted, toolCalls: toolCalls))
+                    result.append(.assistant(hinted, toolCalls: toolCalls,
+                                             reasoningContent: msg.thinkingContent))
                 } else {
-                    result.append(.assistant(text, toolCalls: toolCalls))
+                    result.append(.assistant(text, toolCalls: toolCalls,
+                                             reasoningContent: msg.thinkingContent))
                 }
 
                 if let vidData = msg.videoAttachmentsData,
@@ -336,7 +338,8 @@ final class ContextManager {
                 toolCalls = try? JSONDecoder().decode([LLMToolCall].self, from: data)
             }
             let text = message.content.map { Self.stripImageRefsForContext($0) }
-            return .assistant(text, toolCalls: toolCalls)
+            return .assistant(text, toolCalls: toolCalls,
+                              reasoningContent: message.thinkingContent)
         case .tool:
             return .tool(
                 content: message.content ?? "",

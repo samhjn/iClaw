@@ -63,11 +63,16 @@ struct LLMChatMessage: Codable {
     var toolCalls: [LLMToolCall]?
     var toolCallId: String?
     var name: String?
+    /// DeepSeek thinking-mode reasoning trace. Must be echoed back on
+    /// subsequent requests for `deepseek-reasoner` / thinking-enabled
+    /// `deepseek-chat`; ignored by other OpenAI-compatible providers.
+    var reasoningContent: String?
 
     enum CodingKeys: String, CodingKey {
         case role, content, name, images
         case toolCalls = "tool_calls"
         case toolCallId = "tool_call_id"
+        case reasoningContent = "reasoning_content"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -91,6 +96,9 @@ struct LLMChatMessage: Codable {
         if let name = name {
             try container.encode(name, forKey: .name)
         }
+        if let reasoningContent = reasoningContent, !reasoningContent.isEmpty {
+            try container.encode(reasoningContent, forKey: .reasoningContent)
+        }
     }
 
     init(from decoder: Decoder) throws {
@@ -105,6 +113,7 @@ struct LLMChatMessage: Codable {
         toolCalls = try container.decodeIfPresent([LLMToolCall].self, forKey: .toolCalls)
         toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
         name = try container.decodeIfPresent(String.self, forKey: .name)
+        reasoningContent = try container.decodeIfPresent(String.self, forKey: .reasoningContent)
 
         var contentStr: String?
         if let str = try? container.decodeIfPresent(String.self, forKey: .content) {
@@ -139,13 +148,15 @@ struct LLMChatMessage: Codable {
     }
 
     init(role: MessageRole, content: String? = nil, contentParts: [ContentPart]? = nil,
-         toolCalls: [LLMToolCall]? = nil, toolCallId: String? = nil, name: String? = nil) {
+         toolCalls: [LLMToolCall]? = nil, toolCallId: String? = nil, name: String? = nil,
+         reasoningContent: String? = nil) {
         self.role = role
         self.content = content
         self.contentParts = contentParts
         self.toolCalls = toolCalls
         self.toolCallId = toolCallId
         self.name = name
+        self.reasoningContent = reasoningContent
     }
 
     static func system(_ content: String) -> LLMChatMessage {
@@ -178,8 +189,10 @@ struct LLMChatMessage: Codable {
         return LLMChatMessage(role: .user, content: text, contentParts: parts)
     }
 
-    static func assistant(_ content: String?, toolCalls: [LLMToolCall]? = nil) -> LLMChatMessage {
-        LLMChatMessage(role: .assistant, content: content, toolCalls: toolCalls)
+    static func assistant(_ content: String?, toolCalls: [LLMToolCall]? = nil,
+                          reasoningContent: String? = nil) -> LLMChatMessage {
+        LLMChatMessage(role: .assistant, content: content, toolCalls: toolCalls,
+                       reasoningContent: reasoningContent)
     }
 
     static func tool(content: String, toolCallId: String, name: String? = nil) -> LLMChatMessage {
