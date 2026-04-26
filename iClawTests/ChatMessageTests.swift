@@ -179,6 +179,27 @@ final class ChatMessageTests: XCTestCase {
 
     // MARK: - LLMDelta Decoding
 
+    func testAssistantMessageEncodesReasoningContent() throws {
+        let msg = LLMChatMessage.assistant("answer", reasoningContent: "thought process")
+        let data = try JSONEncoder().encode(msg)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["reasoning_content"] as? String, "thought process")
+        XCTAssertEqual(json["content"] as? String, "answer")
+        XCTAssertEqual(json["role"] as? String, "assistant")
+    }
+
+    func testAssistantMessageOmitsEmptyReasoningContent() throws {
+        let nilMsg = LLMChatMessage.assistant("answer", reasoningContent: nil)
+        let nilData = try JSONEncoder().encode(nilMsg)
+        let nilJson = try XCTUnwrap(JSONSerialization.jsonObject(with: nilData) as? [String: Any])
+        XCTAssertNil(nilJson["reasoning_content"])
+
+        let emptyMsg = LLMChatMessage.assistant("answer", reasoningContent: "")
+        let emptyData = try JSONEncoder().encode(emptyMsg)
+        let emptyJson = try XCTUnwrap(JSONSerialization.jsonObject(with: emptyData) as? [String: Any])
+        XCTAssertNil(emptyJson["reasoning_content"])
+    }
+
     func testDecodeDeltaWithReasoningContent() throws {
         let json = """
         {
