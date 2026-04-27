@@ -18,6 +18,11 @@ final class Message {
     var toolCallId: String?
     var name: String?
     var thinkingContent: String?
+    /// Anthropic-style thinking signature paired with `thinkingContent`. Must
+    /// be replayed in the assistant's `thinking` content block on subsequent
+    /// requests for thinking-mode tool-use turns (Anthropic native and
+    /// DeepSeek's Anthropic-compat mode both require it).
+    var thinkingSignature: String?
     var imageAttachmentsData: Data?
     var videoAttachmentsData: Data?
     var fileAttachmentsData: Data?

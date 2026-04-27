@@ -67,6 +67,12 @@ struct LLMChatMessage: Codable {
     /// subsequent requests for `deepseek-reasoner` / thinking-enabled
     /// `deepseek-chat`; ignored by other OpenAI-compatible providers.
     var reasoningContent: String?
+    /// Anthropic-style thinking signature paired with `reasoningContent`.
+    /// Captured from `signature` / `signature_delta` events; replayed inside
+    /// the assistant's `thinking` content block so the API can verify the
+    /// trace on tool-use multi-turn requests. Not part of the OpenAI wire
+    /// format — purely an in-memory carrier.
+    var thinkingSignature: String?
 
     enum CodingKeys: String, CodingKey {
         case role, content, name, images
@@ -114,6 +120,7 @@ struct LLMChatMessage: Codable {
         toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
         name = try container.decodeIfPresent(String.self, forKey: .name)
         reasoningContent = try container.decodeIfPresent(String.self, forKey: .reasoningContent)
+        thinkingSignature = nil
 
         var contentStr: String?
         if let str = try? container.decodeIfPresent(String.self, forKey: .content) {
@@ -149,7 +156,7 @@ struct LLMChatMessage: Codable {
 
     init(role: MessageRole, content: String? = nil, contentParts: [ContentPart]? = nil,
          toolCalls: [LLMToolCall]? = nil, toolCallId: String? = nil, name: String? = nil,
-         reasoningContent: String? = nil) {
+         reasoningContent: String? = nil, thinkingSignature: String? = nil) {
         self.role = role
         self.content = content
         self.contentParts = contentParts
@@ -157,6 +164,7 @@ struct LLMChatMessage: Codable {
         self.toolCallId = toolCallId
         self.name = name
         self.reasoningContent = reasoningContent
+        self.thinkingSignature = thinkingSignature
     }
 
     static func system(_ content: String) -> LLMChatMessage {
@@ -190,9 +198,11 @@ struct LLMChatMessage: Codable {
     }
 
     static func assistant(_ content: String?, toolCalls: [LLMToolCall]? = nil,
-                          reasoningContent: String? = nil) -> LLMChatMessage {
+                          reasoningContent: String? = nil,
+                          thinkingSignature: String? = nil) -> LLMChatMessage {
         LLMChatMessage(role: .assistant, content: content, toolCalls: toolCalls,
-                       reasoningContent: reasoningContent)
+                       reasoningContent: reasoningContent,
+                       thinkingSignature: thinkingSignature)
     }
 
     static func tool(content: String, toolCallId: String, name: String? = nil) -> LLMChatMessage {
@@ -620,6 +630,7 @@ struct AnthropicMessage: Encodable {
 enum AnthropicContentBlock: Encodable {
     case text(String)
     case image(mediaType: String, data: String)
+    case thinking(text: String, signature: String?)
     case toolUse(id: String, name: String, input: String)
     case toolResult(toolUseId: String, content: String)
     case toolResultRich(toolUseId: String, blocks: [AnthropicToolResultBlock])
@@ -636,6 +647,12 @@ enum AnthropicContentBlock: Encodable {
                 ImageSource(type: "base64", mediaType: mediaType, data: data),
                 forKey: .source
             )
+        case .thinking(let text, let signature):
+            try container.encode("thinking", forKey: .type)
+            try container.encode(text, forKey: .thinking)
+            if let signature, !signature.isEmpty {
+                try container.encode(signature, forKey: .signature)
+            }
         case .toolUse(let id, let name, let input):
             try container.encode("tool_use", forKey: .type)
             try container.encode(id, forKey: .id)
@@ -658,7 +675,7 @@ enum AnthropicContentBlock: Encodable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, text, source, id, name, input, content
+        case type, text, source, id, name, input, content, thinking, signature
         case toolUseId = "tool_use_id"
     }
 
@@ -777,11 +794,12 @@ struct AnthropicStreamDelta: Decodable {
     let type: String
     var text: String?
     var thinking: String?
+    var signature: String?
     var partialJson: String?
     var stopReason: String?
 
     enum CodingKeys: String, CodingKey {
-        case type, text, thinking
+        case type, text, thinking, signature
         case partialJson = "partial_json"
         case stopReason = "stop_reason"
     }
@@ -821,6 +839,7 @@ struct AnthropicResponseBlock: Decodable {
     let type: String
     var text: String?
     var thinking: String?
+    var signature: String?
     var id: String?
     var name: String?
     var input: AnyCodableDecoder?

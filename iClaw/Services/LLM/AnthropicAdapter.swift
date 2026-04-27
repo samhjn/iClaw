@@ -5,17 +5,6 @@ import Foundation
 /// Handles the Anthropic-specific message format, extended thinking,
 /// and streaming protocol differences.
 final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
-    /// Encoder with `.sortedKeys` so request bodies are byte-identical across
-    /// runs. Required for prompt-caching: Swift `Dictionary` iteration order
-    /// is non-deterministic, so dict-backed fields like `tool_use.input` and
-    /// `JSONSchema.properties` would otherwise scramble between requests and
-    /// break cache hits.
-    private static let stableEncoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .sortedKeys
-        return encoder
-    }()
-
     let context: LLMAdapterContext
     /// Accumulator for streaming tool calls. Reset per stream session.
     private var toolAccum = ToolCallAccumulator()
@@ -153,6 +142,10 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                     }
                 case "thinking_delta":
                     if let text = delta.thinking { chunks.append(.thinking(text)) }
+                case "signature_delta":
+                    if let sig = delta.signature, !sig.isEmpty {
+                        chunks.append(.thinkingSignature(sig))
+                    }
                 case "input_json_delta":
                     if let json = delta.partialJson {
                         toolAccum.accumulate(index: idx, id: nil, name: nil, arguments: json)
@@ -243,6 +236,13 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 }
             case .assistant:
                 var blocks: [AnthropicContentBlock] = []
+                // Thinking must precede text/tool_use per Anthropic spec, and
+                // DeepSeek's Anthropic-compat mode rejects requests that omit
+                // it (`content[].thinking ... must be passed back`).
+                if thinkingLevel.isEnabled,
+                   let reasoning = msg.reasoningContent, !reasoning.isEmpty {
+                    blocks.append(.thinking(text: reasoning, signature: msg.thinkingSignature))
+                }
                 if let content = msg.content, !content.isEmpty {
                     blocks.append(.text(content))
                 }
@@ -367,11 +367,18 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
     private func convertAnthropicResponse(_ resp: AnthropicResponse) -> LLMChatResponse {
         var content = ""
         var toolCalls: [LLMToolCall] = []
+        var thinkingText = ""
+        var thinkingSignature: String?
 
         for block in resp.content {
             switch block.type {
             case "text":
                 content += block.text ?? ""
+            case "thinking":
+                thinkingText += block.thinking ?? ""
+                if let sig = block.signature, !sig.isEmpty {
+                    thinkingSignature = sig
+                }
             case "tool_use":
                 let args = block.input?.jsonString ?? "{}"
                 toolCalls.append(LLMToolCall(
@@ -387,7 +394,9 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
         let message = LLMChatMessage(
             role: .assistant,
             content: content.isEmpty ? nil : content,
-            toolCalls: toolCalls.isEmpty ? nil : toolCalls
+            toolCalls: toolCalls.isEmpty ? nil : toolCalls,
+            reasoningContent: thinkingText.isEmpty ? nil : thinkingText,
+            thinkingSignature: thinkingSignature
         )
         let choice = LLMChoice(index: 0, message: message, delta: nil, finishReason: resp.stopReason)
         let usage = LLMUsage(
@@ -412,7 +421,7 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
     }
 
     private func buildAnthropicURLRequest<T: Encodable>(body: T) throws -> URLRequest {
-        let bodyData = try Self.stableEncoder.encode(body)
+        let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(body)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/messages",

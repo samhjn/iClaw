@@ -5,17 +5,6 @@ import Foundation
 /// Handles request/response formatting for OpenAI, OpenRouter,
 /// and other OpenAI-compatible endpoints.
 final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
-    /// Encoder with `.sortedKeys` so request bodies are byte-identical across
-    /// runs. Required for prompt-caching providers (DeepSeek, etc.) — Swift
-    /// `Dictionary` iteration order is non-deterministic, so without this,
-    /// `JSONSchema.properties` and similar dict-backed fields scramble between
-    /// requests and defeat the cache.
-    private static let stableEncoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .sortedKeys
-        return encoder
-    }()
-
     let context: LLMAdapterContext
     /// Accumulator for streaming tool calls. Reset per stream session.
     private var toolAccum = ToolCallAccumulator()
@@ -48,7 +37,7 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
-        let bodyData = try Self.stableEncoder.encode(request)
+        let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(request)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/chat/completions",
@@ -87,7 +76,7 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
-        let bodyData = try Self.stableEncoder.encode(request)
+        let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(request)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/chat/completions",

@@ -3,6 +3,10 @@ import Foundation
 enum StreamChunk {
     case content(String)
     case thinking(String)
+    /// Anthropic-style thinking signature delivered after the thinking trace.
+    /// Carried separately so the consumer can persist it alongside the text
+    /// and replay both on the next request.
+    case thinkingSignature(String)
     case toolCall(LLMToolCall)
     case usage(LLMUsage)
     case done
@@ -246,7 +250,9 @@ final class LLMService: @unchecked Sendable {
                 contentParts: adaptedParts.isEmpty ? nil : adaptedParts,
                 toolCalls: msg.toolCalls,
                 toolCallId: msg.toolCallId,
-                name: msg.name
+                name: msg.name,
+                reasoningContent: msg.reasoningContent,
+                thinkingSignature: msg.thinkingSignature
             )
         }
     }

@@ -3,6 +3,18 @@ import Foundation
 /// Shared utilities for building API requests across all services.
 enum APIRequestBuilder {
 
+    /// JSONEncoder configured with `.sortedKeys` so request bodies are
+    /// byte-identical across runs. Required for prompt-caching providers
+    /// (Anthropic, DeepSeek, etc.): Swift `Dictionary` iteration order is
+    /// non-deterministic, so dict-backed fields like `JSONSchema.properties`
+    /// and Anthropic `tool_use.input` would otherwise scramble between
+    /// requests and defeat the cache.
+    static let stableJSONEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return encoder
+    }()
+
     // MARK: - URL Construction
 
     /// Join a base URL with a path, normalizing trailing slashes.
