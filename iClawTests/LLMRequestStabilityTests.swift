@@ -226,7 +226,7 @@ final class AnthropicThinkingBlockTests: XCTestCase {
         )
     }
 
-    private func encodedAssistant(messages: [LLMChatMessage], thinkingLevel: ThinkingLevel = .off) throws -> [[String: Any]] {
+    private func encodedBody(messages: [LLMChatMessage], thinkingLevel: ThinkingLevel = .off) throws -> [String: Any] {
         let request = try makeAdapter().buildChatRequest(
             model: "deepseek-chat",
             messages: messages,
@@ -237,17 +237,54 @@ final class AnthropicThinkingBlockTests: XCTestCase {
             thinkingLevel: thinkingLevel
         )
         let body = try XCTUnwrap(request.httpBody)
-        let dict = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+    }
+
+    private func encodedAssistant(messages: [LLMChatMessage], thinkingLevel: ThinkingLevel = .off) throws -> [[String: Any]] {
+        let dict = try encodedBody(messages: messages, thinkingLevel: thinkingLevel)
         let msgs = try XCTUnwrap(dict["messages"] as? [[String: Any]])
         let assistantMsg = try XCTUnwrap(msgs.first(where: { $0["role"] as? String == "assistant" }))
         return try XCTUnwrap(assistantMsg["content"] as? [[String: Any]])
     }
 
-    /// Regression for the DeepSeek 400: assistant turns that produced
-    /// `tool_use` must replay their thinking block on the next request,
-    /// even when the *current* request's thinking level is `.off` (DeepSeek
-    /// reasoner models think regardless of our local config).
-    func testThinkingReplayedOnToolUseTurnEvenWithThinkingOff() throws {
+    // MARK: thinking parameter is always present
+
+    /// Root-cause fix: omitting the `thinking` parameter lets DeepSeek's
+    /// Anthropic-compat default to enabled, which causes the model to emit
+    /// thinking content even when our local config has it `.off` and then
+    /// trips the "thinking must be passed back" check on subsequent turns.
+    /// Always emit `{"type":"disabled"}` when off so providers stay in sync.
+    func testThinkingParameterAlwaysEmittedWhenOff() throws {
+        let dict = try encodedBody(messages: [.user("Hi")], thinkingLevel: .off)
+        let thinking = try XCTUnwrap(dict["thinking"] as? [String: Any],
+                                     "`thinking` field must be present even when off")
+        XCTAssertEqual(thinking["type"] as? String, "disabled")
+        XCTAssertNil(thinking["budget_tokens"], "disabled variant must omit budget_tokens")
+    }
+
+    func testThinkingParameterEmitsEnabledWithBudget() throws {
+        let dict = try encodedBody(messages: [.user("Hi")], thinkingLevel: .high)
+        let thinking = try XCTUnwrap(dict["thinking"] as? [String: Any])
+        XCTAssertEqual(thinking["type"] as? String, "enabled")
+        XCTAssertEqual(thinking["budget_tokens"] as? Int,
+                       ThinkingLevel.high.anthropicBudgetTokens)
+    }
+
+    func testTemperatureNotForcedWhenThinkingDisabled() throws {
+        let dict = try encodedBody(messages: [.user("Hi")], thinkingLevel: .off)
+        // Forcing 1.0 only applies when thinking is *actually* enabled — with
+        // disabled we must pass through the caller's temperature.
+        XCTAssertEqual(dict["temperature"] as? Double, 0.7)
+    }
+
+    // MARK: thinking-block replay
+
+    /// Replay happens broadly: any prior assistant turn that carries
+    /// `reasoningContent` echoes a thinking block, regardless of the current
+    /// thinkingLevel or whether tool_calls are present. Cheap insurance for
+    /// providers that demand it; Anthropic & DeepSeek both tolerate the
+    /// extra context on turns where it isn't strictly required.
+    func testThinkingReplayedOnToolUseTurn() throws {
         let toolCall = LLMToolCall(id: "toolu_1", name: "search", arguments: "{\"q\":\"x\"}")
         let assistant = LLMChatMessage.assistant(
             nil,
@@ -263,20 +300,14 @@ final class AnthropicThinkingBlockTests: XCTestCase {
             ],
             thinkingLevel: .off
         )
-
-        // Per spec, the thinking block must lead the assistant content.
         XCTAssertEqual(blocks.first?["type"] as? String, "thinking",
-                       "Tool-use assistant turn must replay thinking regardless of current thinkingLevel")
+                       "Tool-use turn must replay thinking even when thinkingLevel is .off")
         XCTAssertEqual(blocks.first?["thinking"] as? String, "Considered the options.")
         XCTAssertEqual(blocks.first?["signature"] as? String, "sig_replay")
         XCTAssertTrue(blocks.contains(where: { $0["type"] as? String == "tool_use" }))
     }
 
-    /// Inverse: a plain text assistant turn with thinking content but no
-    /// tool calls should NOT echo the thinking block. Neither provider
-    /// requires it on completed (text-only) turns, and Anthropic native
-    /// rejects unsolicited thinking blocks when thinking is disabled.
-    func testThinkingNotReplayedOnPlainTextAssistantTurn() throws {
+    func testThinkingReplayedOnPlainTextAssistantTurn() throws {
         let assistant = LLMChatMessage.assistant(
             "Here's the answer.",
             reasoningContent: "Some prior reasoning.",
@@ -286,13 +317,12 @@ final class AnthropicThinkingBlockTests: XCTestCase {
             messages: [.user("Hi"), assistant, .user("Continue")],
             thinkingLevel: .off
         )
-        XCTAssertFalse(blocks.contains(where: { $0["type"] as? String == "thinking" }),
-                       "Text-only assistant turn must not echo thinking — DeepSeek doesn't require it and Anthropic native rejects it when thinking is off")
-        XCTAssertEqual(blocks.first?["type"] as? String, "text")
+        XCTAssertEqual(blocks.first?["type"] as? String, "thinking",
+                       "Replay broadly — text-only turns also echo thinking when present")
+        XCTAssertEqual(blocks.first?["thinking"] as? String, "Some prior reasoning.")
     }
 
-    /// Companion: when reasoningContent is absent, no thinking block is
-    /// added even on tool-use turns.
+    /// When reasoningContent is absent, no thinking block is added.
     func testNoThinkingBlockEmittedWhenReasoningEmpty() throws {
         let toolCall = LLMToolCall(id: "toolu_2", name: "search", arguments: "{}")
         let assistant = LLMChatMessage.assistant(nil, toolCalls: [toolCall])
@@ -303,5 +333,25 @@ final class AnthropicThinkingBlockTests: XCTestCase {
         XCTAssertFalse(blocks.contains(where: { $0["type"] as? String == "thinking" }),
                        "No thinking block when reasoningContent is absent")
         XCTAssertEqual(blocks.first?["type"] as? String, "tool_use")
+    }
+}
+
+// MARK: - AnthropicThinking encoding
+
+final class AnthropicThinkingDisabledTests: XCTestCase {
+
+    func testDisabledEncodesWithoutBudget() throws {
+        let data = try JSONEncoder().encode(AnthropicThinking.disabled)
+        let dict = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(dict["type"] as? String, "disabled")
+        XCTAssertNil(dict["budget_tokens"],
+                     "disabled variant must not include budget_tokens (would be invalid)")
+    }
+
+    func testEnabledStillEncodesBudget() throws {
+        let data = try JSONEncoder().encode(AnthropicThinking.enabled(budget: 8192))
+        let dict = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(dict["type"] as? String, "enabled")
+        XCTAssertEqual(dict["budget_tokens"] as? Int, 8192)
     }
 }

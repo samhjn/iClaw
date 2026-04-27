@@ -236,24 +236,12 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 }
             case .assistant:
                 var blocks: [AnthropicContentBlock] = []
-                // Replay the thinking block only on assistant turns that
-                // include tool_use. That's the contract both providers
-                // actually enforce:
-                //   - DeepSeek (Anthropic-compat): thinking must be passed
-                //     back during an in-flight tool-call chain — i.e.
-                //     assistant turns that produced tool_use, before the
-                //     chain "completes" with a final text answer.
-                //     Omitting it triggers `content[].thinking ... must be
-                //     passed back`.
-                //   - Anthropic native: thinking_blocks (with signature)
-                //     must be preserved across tool_use turns; not required
-                //     for plain text turns.
-                // Echoing on text-only turns is unnecessary and risks Anthropic
-                // native rejecting requests when current thinking is disabled,
-                // so we narrow the gate to the tool-use case. Per spec, the
-                // thinking block must precede text/tool_use in the array.
-                let hasToolCalls = !(msg.toolCalls?.isEmpty ?? true)
-                if hasToolCalls, let reasoning = msg.reasoningContent, !reasoning.isEmpty {
+                // Echo any prior thinking trace back. Sending it broadly is
+                // harmless (Anthropic & DeepSeek both tolerate it on non-tool
+                // turns) and matches the OpenAI-compat path's behavior for
+                // `reasoning_content` (cb1ec24). Per spec the thinking block
+                // must precede text/tool_use.
+                if let reasoning = msg.reasoningContent, !reasoning.isEmpty {
                     blocks.append(.thinking(text: reasoning, signature: msg.thinkingSignature))
                 }
                 if let content = msg.content, !content.isEmpty {
@@ -318,15 +306,23 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
             }
         }
 
-        var thinking: AnthropicThinking? = nil
+        // Always emit the `thinking` parameter so providers can't silently
+        // default to enabled. DeepSeek's Anthropic-compat does exactly that
+        // when the field is omitted, which causes the model to emit thinking
+        // content even though our local config has it `.off` — and then
+        // subsequent requests trip its "thinking must be passed back" check.
+        let thinking: AnthropicThinking
         var effectiveMaxTokens = maxTokens
+        let effectiveTemperature: Double
         if thinkingLevel.isEnabled {
             let budgetTokens = thinkingLevel.anthropicBudgetTokens
             thinking = .enabled(budget: budgetTokens)
             effectiveMaxTokens = max(effectiveMaxTokens, budgetTokens + 1)
+            effectiveTemperature = 1.0
+        } else {
+            thinking = .disabled
+            effectiveTemperature = temperature
         }
-
-        let effectiveTemperature = thinking != nil ? 1.0 : temperature
 
         // -- Apply prompt-caching breakpoints --
         // Breakpoint 1: last system block (caches the full system prompt)

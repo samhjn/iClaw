@@ -708,9 +708,14 @@ struct LLMProviderEditView: View {
         presetChip("DeepSeek") {
             name = name.isEmpty ? "DeepSeek" : name
             endpoint = "https://api.deepseek.com/v1"
-            modelName = "deepseek-chat"
+            modelName = "deepseek-v4-pro"
             apiStyle = .openAI
-            enableModel("deepseek-chat")
+            enableModel("deepseek-v4-flash")
+            enableModel("deepseek-v4-pro")
+            for model in ["deepseek-v4-flash", "deepseek-v4-pro"] {
+                modelCapabilities[model]?.thinkingLevel = .high
+                modelCapabilities[model]?.supportsReasoning = true
+            }
         }
         presetChip("OpenRouter") {
             name = name.isEmpty ? "OpenRouter" : name

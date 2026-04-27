@@ -570,16 +570,31 @@ struct AnthropicSystemBlock: Encodable {
 
 struct AnthropicThinking: Encodable {
     let type: String
-    let budgetTokens: Int
+    let budgetTokens: Int?
 
     enum CodingKeys: String, CodingKey {
         case type
         case budgetTokens = "budget_tokens"
     }
 
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(type, forKey: .type)
+        // `budget_tokens` is only valid (and required) on the `enabled` variant.
+        if let budgetTokens, type == "enabled" {
+            try c.encode(budgetTokens, forKey: .budgetTokens)
+        }
+    }
+
     static func enabled(budget: Int) -> AnthropicThinking {
         AnthropicThinking(type: "enabled", budgetTokens: budget)
     }
+
+    /// Explicit "thinking off" — sent on every request so providers can't
+    /// silently default to enabled. DeepSeek's Anthropic-compat mode does
+    /// exactly that when the field is omitted, which causes the model to
+    /// emit thinking content even when our local config has it `.off`.
+    static let disabled = AnthropicThinking(type: "disabled", budgetTokens: nil)
 }
 
 struct AnthropicMessage: Encodable {
