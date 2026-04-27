@@ -5,6 +5,17 @@ import Foundation
 /// Handles the Anthropic-specific message format, extended thinking,
 /// and streaming protocol differences.
 final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
+    /// Encoder with `.sortedKeys` so request bodies are byte-identical across
+    /// runs. Required for prompt-caching: Swift `Dictionary` iteration order
+    /// is non-deterministic, so dict-backed fields like `tool_use.input` and
+    /// `JSONSchema.properties` would otherwise scramble between requests and
+    /// break cache hits.
+    private static let stableEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return encoder
+    }()
+
     let context: LLMAdapterContext
     /// Accumulator for streaming tool calls. Reset per stream session.
     private var toolAccum = ToolCallAccumulator()
@@ -401,7 +412,7 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
     }
 
     private func buildAnthropicURLRequest<T: Encodable>(body: T) throws -> URLRequest {
-        let bodyData = try JSONEncoder().encode(body)
+        let bodyData = try Self.stableEncoder.encode(body)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/messages",
