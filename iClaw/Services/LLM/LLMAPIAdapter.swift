@@ -51,4 +51,11 @@ struct LLMAdapterContext: Sendable {
         self.baseURL = provider.endpoint
         self.apiKey = provider.apiKey
     }
+
+    /// Memberwise init — usable from tests without spinning up a SwiftData
+    /// `LLMProvider` instance.
+    init(baseURL: String, apiKey: String) {
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+    }
 }

@@ -236,11 +236,15 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 }
             case .assistant:
                 var blocks: [AnthropicContentBlock] = []
-                // Thinking must precede text/tool_use per Anthropic spec, and
-                // DeepSeek's Anthropic-compat mode rejects requests that omit
-                // it (`content[].thinking ... must be passed back`).
-                if thinkingLevel.isEnabled,
-                   let reasoning = msg.reasoningContent, !reasoning.isEmpty {
+                // Mirror the OpenAI-compat path (cb1ec24): always echo thinking
+                // back when the prior assistant turn produced any. DeepSeek's
+                // Anthropic-compat mode rejects requests that omit it
+                // (`content[].thinking ... must be passed back`), and the gate
+                // must not depend on the *current* request's thinking level —
+                // models can emit thinking even when our config has it `.off`,
+                // and that historical content still has to be replayed. Per
+                // Anthropic spec, the thinking block must precede text/tool_use.
+                if let reasoning = msg.reasoningContent, !reasoning.isEmpty {
                     blocks.append(.thinking(text: reasoning, signature: msg.thinkingSignature))
                 }
                 if let content = msg.content, !content.isEmpty {
