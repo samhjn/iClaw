@@ -236,15 +236,24 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 }
             case .assistant:
                 var blocks: [AnthropicContentBlock] = []
-                // Mirror the OpenAI-compat path (cb1ec24): always echo thinking
-                // back when the prior assistant turn produced any. DeepSeek's
-                // Anthropic-compat mode rejects requests that omit it
-                // (`content[].thinking ... must be passed back`), and the gate
-                // must not depend on the *current* request's thinking level —
-                // models can emit thinking even when our config has it `.off`,
-                // and that historical content still has to be replayed. Per
-                // Anthropic spec, the thinking block must precede text/tool_use.
-                if let reasoning = msg.reasoningContent, !reasoning.isEmpty {
+                // Replay the thinking block only on assistant turns that
+                // include tool_use. That's the contract both providers
+                // actually enforce:
+                //   - DeepSeek (Anthropic-compat): thinking must be passed
+                //     back during an in-flight tool-call chain — i.e.
+                //     assistant turns that produced tool_use, before the
+                //     chain "completes" with a final text answer.
+                //     Omitting it triggers `content[].thinking ... must be
+                //     passed back`.
+                //   - Anthropic native: thinking_blocks (with signature)
+                //     must be preserved across tool_use turns; not required
+                //     for plain text turns.
+                // Echoing on text-only turns is unnecessary and risks Anthropic
+                // native rejecting requests when current thinking is disabled,
+                // so we narrow the gate to the tool-use case. Per spec, the
+                // thinking block must precede text/tool_use in the array.
+                let hasToolCalls = !(msg.toolCalls?.isEmpty ?? true)
+                if hasToolCalls, let reasoning = msg.reasoningContent, !reasoning.isEmpty {
                     blocks.append(.thinking(text: reasoning, signature: msg.thinkingSignature))
                 }
                 if let content = msg.content, !content.isEmpty {
