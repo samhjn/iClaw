@@ -167,10 +167,12 @@ final class ContextManager {
                     }
                     let hinted = (text ?? "") + suffix
                     result.append(.assistant(hinted, toolCalls: toolCalls,
-                                             reasoningContent: msg.thinkingContent))
+                                             reasoningContent: msg.thinkingContent,
+                                             thinkingSignature: msg.thinkingSignature))
                 } else {
                     result.append(.assistant(text, toolCalls: toolCalls,
-                                             reasoningContent: msg.thinkingContent))
+                                             reasoningContent: msg.thinkingContent,
+                                             thinkingSignature: msg.thinkingSignature))
                 }
 
                 if let vidData = msg.videoAttachmentsData,
@@ -339,7 +341,8 @@ final class ContextManager {
             }
             let text = message.content.map { Self.stripImageRefsForContext($0) }
             return .assistant(text, toolCalls: toolCalls,
-                              reasoningContent: message.thinkingContent)
+                              reasoningContent: message.thinkingContent,
+                              thinkingSignature: message.thinkingSignature)
         case .tool:
             return .tool(
                 content: message.content ?? "",

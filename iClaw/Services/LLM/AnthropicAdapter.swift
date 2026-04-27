@@ -142,6 +142,10 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                     }
                 case "thinking_delta":
                     if let text = delta.thinking { chunks.append(.thinking(text)) }
+                case "signature_delta":
+                    if let sig = delta.signature, !sig.isEmpty {
+                        chunks.append(.thinkingSignature(sig))
+                    }
                 case "input_json_delta":
                     if let json = delta.partialJson {
                         toolAccum.accumulate(index: idx, id: nil, name: nil, arguments: json)
@@ -232,6 +236,14 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 }
             case .assistant:
                 var blocks: [AnthropicContentBlock] = []
+                // Echo any prior thinking trace back. Sending it broadly is
+                // harmless (Anthropic & DeepSeek both tolerate it on non-tool
+                // turns) and matches the OpenAI-compat path's behavior for
+                // `reasoning_content` (cb1ec24). Per spec the thinking block
+                // must precede text/tool_use.
+                if let reasoning = msg.reasoningContent, !reasoning.isEmpty {
+                    blocks.append(.thinking(text: reasoning, signature: msg.thinkingSignature))
+                }
                 if let content = msg.content, !content.isEmpty {
                     blocks.append(.text(content))
                 }
@@ -294,15 +306,23 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
             }
         }
 
-        var thinking: AnthropicThinking? = nil
+        // Always emit the `thinking` parameter so providers can't silently
+        // default to enabled. DeepSeek's Anthropic-compat does exactly that
+        // when the field is omitted, which causes the model to emit thinking
+        // content even though our local config has it `.off` — and then
+        // subsequent requests trip its "thinking must be passed back" check.
+        let thinking: AnthropicThinking
         var effectiveMaxTokens = maxTokens
+        let effectiveTemperature: Double
         if thinkingLevel.isEnabled {
             let budgetTokens = thinkingLevel.anthropicBudgetTokens
             thinking = .enabled(budget: budgetTokens)
             effectiveMaxTokens = max(effectiveMaxTokens, budgetTokens + 1)
+            effectiveTemperature = 1.0
+        } else {
+            thinking = .disabled
+            effectiveTemperature = temperature
         }
-
-        let effectiveTemperature = thinking != nil ? 1.0 : temperature
 
         // -- Apply prompt-caching breakpoints --
         // Breakpoint 1: last system block (caches the full system prompt)
@@ -356,11 +376,18 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
     private func convertAnthropicResponse(_ resp: AnthropicResponse) -> LLMChatResponse {
         var content = ""
         var toolCalls: [LLMToolCall] = []
+        var thinkingText = ""
+        var thinkingSignature: String?
 
         for block in resp.content {
             switch block.type {
             case "text":
                 content += block.text ?? ""
+            case "thinking":
+                thinkingText += block.thinking ?? ""
+                if let sig = block.signature, !sig.isEmpty {
+                    thinkingSignature = sig
+                }
             case "tool_use":
                 let args = block.input?.jsonString ?? "{}"
                 toolCalls.append(LLMToolCall(
@@ -376,7 +403,9 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
         let message = LLMChatMessage(
             role: .assistant,
             content: content.isEmpty ? nil : content,
-            toolCalls: toolCalls.isEmpty ? nil : toolCalls
+            toolCalls: toolCalls.isEmpty ? nil : toolCalls,
+            reasoningContent: thinkingText.isEmpty ? nil : thinkingText,
+            thinkingSignature: thinkingSignature
         )
         let choice = LLMChoice(index: 0, message: message, delta: nil, finishReason: resp.stopReason)
         let usage = LLMUsage(
@@ -401,7 +430,7 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
     }
 
     private func buildAnthropicURLRequest<T: Encodable>(body: T) throws -> URLRequest {
-        let bodyData = try JSONEncoder().encode(body)
+        let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(body)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/messages",

@@ -37,7 +37,7 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
-        let bodyData = try JSONEncoder().encode(request)
+        let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(request)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/chat/completions",
@@ -76,7 +76,7 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             reasoningEffort: thinkingLevel.openAIReasoningEffort
         )
 
-        let bodyData = try JSONEncoder().encode(request)
+        let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(request)
         return try APIRequestBuilder.jsonPOST(
             base: context.baseURL,
             path: "/chat/completions",

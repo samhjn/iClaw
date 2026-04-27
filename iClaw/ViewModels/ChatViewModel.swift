@@ -871,6 +871,7 @@ final class ChatViewModel {
 
             var fullContent = ""
             var fullThinking = ""
+            var thinkingSignature: String?
             var pendingToolCalls: [LLMToolCall] = []
             var lastUsage: LLMUsage?
 
@@ -909,6 +910,8 @@ final class ChatViewModel {
                 case .thinking(let text):
                     fullThinking += text
                     streamingThinking = fullThinking
+                case .thinkingSignature(let sig):
+                    thinkingSignature = sig
                 case .content(let text):
                     fullContent += text
                     streamingContent = fullContent
@@ -972,6 +975,7 @@ final class ChatViewModel {
                     toolCallsData: try? JSONEncoder().encode(pendingToolCalls)
                 )
                 assistantMsg.thinkingContent = combinedThinking
+                assistantMsg.thinkingSignature = thinkingSignature
                 assistantMsg.extractAndStoreInlineImages(agentId: agentId)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
                 modelContext.insert(assistantMsg)
@@ -983,6 +987,7 @@ final class ChatViewModel {
             } else if !finalContent.isEmpty || combinedThinking != nil {
                 let assistantMsg = Message(role: .assistant, content: finalContent.isEmpty ? nil : finalContent)
                 assistantMsg.thinkingContent = combinedThinking
+                assistantMsg.thinkingSignature = thinkingSignature
                 assistantMsg.extractAndStoreInlineImages(agentId: agentId)
                 attachPendingToolMedia(to: assistantMsg)
                 Self.applyAPIUsage(lastUsage, to: assistantMsg)
@@ -1818,7 +1823,9 @@ final class ChatViewModel {
                         contentParts: messages[i].contentParts,
                         toolCalls: messages[i].toolCalls,
                         toolCallId: messages[i].toolCallId,
-                        name: messages[i].name
+                        name: messages[i].name,
+                        reasoningContent: messages[i].reasoningContent,
+                        thinkingSignature: messages[i].thinkingSignature
                     )
                     didModify = true
                 }
@@ -1853,7 +1860,9 @@ final class ChatViewModel {
                     contentParts: hasRemainingParts ? filteredParts : nil,
                     toolCalls: messages[i].toolCalls,
                     toolCallId: messages[i].toolCallId,
-                    name: messages[i].name
+                    name: messages[i].name,
+                    reasoningContent: messages[i].reasoningContent,
+                    thinkingSignature: messages[i].thinkingSignature
                 )
             }
             _ = didModify
