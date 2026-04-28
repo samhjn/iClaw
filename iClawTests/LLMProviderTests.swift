@@ -436,12 +436,29 @@ final class LLMProviderTests: XCTestCase {
     }
 
     func testInferredCapabilities_UnknownModels() {
-        let unknowns = ["llama3", "deepseek-chat", "mistral-large"]
+        // `deepseek-chat` is no longer "unknown" — it aliases DeepSeek v4
+        // and gets handled in `testInferredCapabilities_DeepSeekFamily`.
+        let unknowns = ["llama3", "mistral-large"]
         for model in unknowns {
             let caps = ModelCapabilities.inferred(from: model)
             XCTAssertEqual(caps, .default,
                            "\(model): unknown model should return default capabilities")
         }
+    }
+
+    func testInferredCapabilities_DeepSeekFamily() {
+        // DeepSeek v4 (any spelling) defaults to .high thinking — DeepSeek
+        // ships with thinking enabled in its own server defaults.
+        let v4Models = ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro", "deepseek-v4-flash"]
+        for model in v4Models {
+            let caps = ModelCapabilities.inferred(from: model)
+            XCTAssertEqual(caps.thinkingLevel, .high, "\(model): expected thinking=high")
+            XCTAssertTrue(caps.supportsReasoning, "\(model): expected supportsReasoning=true")
+        }
+
+        // v3 stays at default (no thinking).
+        let v3 = ModelCapabilities.inferred(from: "deepseek-v3-chat")
+        XCTAssertEqual(v3.thinkingLevel, .off, "v3 should not infer thinking")
     }
 
     func testInferredCapabilities_DedicatedVideoGenModels() {
