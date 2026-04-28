@@ -198,7 +198,7 @@
 "modelConfig.whitelistMissingSubAgent" = "Sub-agent default model is not in the whitelist";
 "modelConfig.thinkingLevel" = "Thinking Level";
 "modelConfig.thinkingLevelUseModelDefault" = "Use Model Default";
-"modelConfig.thinkingLevelFooter" = "Override the model's default thinking level for this agent. Higher levels use more tokens but produce deeper reasoning.";
+"modelConfig.thinkingLevelFooter" = "Overrides the model's default. Extra High requires Opus 4.7 or DeepSeek v4. Max requires Opus 4.5+, Sonnet 4.6+, or DeepSeek v4. Unsupported levels are clamped at request time.";
 "modelConfig.imageProvider" = "Image Generation Model";
 "modelConfig.imageProviderNone" = "Disabled";
 "modelConfig.imageGenerationHeader" = "Image Generation";
@@ -401,7 +401,11 @@
 "provider.supportsReasoning" = "Supports Reasoning";
 "provider.supportsReasoningFooter" = "Enable for models with extended thinking / reasoning (e.g. Claude with extended thinking, DeepSeek R1, o1/o3). Thinking output will be captured and displayed.";
 "provider.thinkingLevel" = "Thinking Level";
-"provider.thinkingLevelFooter" = "Thinking level controls the depth of reasoning. Mapped to budget_tokens (Anthropic) or reasoning_effort (OpenAI). Can be overridden per agent.";
+"provider.thinkingLevelFooter" = "Higher levels spend more reasoning tokens. On Claude Opus 4.5+, Sonnet 4.6+, and DeepSeek v4 this maps to effort; on legacy Claude it maps to budget tokens. On plain OpenAI o-series, Extra High and Max behave as High.";
+"provider.thinkingLevelXHighSuffix" = "Opus 4.7 / DeepSeek v4";
+"provider.thinkingLevelMaxSuffix" = "Opus 4.5+ / Sonnet 4.6+ / DeepSeek v4";
+"provider.thinkingLevelXHighSuffixOpenAI" = "DeepSeek v4 (else High)";
+"provider.thinkingLevelMaxSuffixOpenAI" = "DeepSeek v4 (else High)";
 "provider.perModelMaxTokens" = "Override Max Tokens";
 "provider.temperature" = "Temperature: %.2f";
 "provider.perModelTemperature" = "Override Temperature";

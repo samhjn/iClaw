@@ -197,7 +197,7 @@
 "modelConfig.whitelistMissingSubAgent" = "서브 에이전트 기본 모델이 화이트리스트에 없습니다";
 "modelConfig.thinkingLevel" = "사고 레벨";
 "modelConfig.thinkingLevelUseModelDefault" = "모델 기본값 사용";
-"modelConfig.thinkingLevelFooter" = "이 에이전트의 모델 기본 사고 레벨을 재정의합니다. 높은 레벨은 더 많은 토큰을 소비하지만 더 깊은 추론을 생성합니다.";
+"modelConfig.thinkingLevelFooter" = "이 에이전트의 모델 기본 사고 레벨을 재정의합니다. Extra High는 Opus 4.7 또는 DeepSeek v4에서만 지원됩니다. Max는 Opus 4.5+, Sonnet 4.6+ 또는 DeepSeek v4가 필요합니다. 지원되지 않는 레벨은 요청 시 자동으로 조정됩니다.";
 "modelConfig.imageProvider" = "이미지 생성 모델";
 "modelConfig.imageProviderNone" = "비활성화";
 "modelConfig.imageGenerationHeader" = "이미지 생성";
@@ -398,7 +398,11 @@
 "provider.supportsReasoning" = "추론 지원";
 "provider.supportsReasoningFooter" = "확장 사고/추론을 지원하는 모델에 활성화하세요 (예: Claude 확장 사고, DeepSeek R1, o1/o3). 사고 과정이 캡처되어 표시됩니다.";
 "provider.thinkingLevel" = "사고 레벨";
-"provider.thinkingLevelFooter" = "사고 레벨은 추론의 깊이를 제어합니다. budget_tokens(Anthropic) 또는 reasoning_effort(OpenAI)에 매핑됩니다. 에이전트별로 재정의할 수 있습니다.";
+"provider.thinkingLevelFooter" = "레벨이 높을수록 더 많은 추론 토큰을 사용합니다. Claude Opus 4.5+, Sonnet 4.6+, DeepSeek v4에서는 effort로, 구형 Claude에서는 budget_tokens로 매핑됩니다. OpenAI o 시리즈에서 Extra High와 Max는 High와 동일하게 처리됩니다.";
+"provider.thinkingLevelXHighSuffix" = "Opus 4.7 / DeepSeek v4";
+"provider.thinkingLevelMaxSuffix" = "Opus 4.5+ / Sonnet 4.6+ / DeepSeek v4";
+"provider.thinkingLevelXHighSuffixOpenAI" = "DeepSeek v4 (그 외는 High)";
+"provider.thinkingLevelMaxSuffixOpenAI" = "DeepSeek v4 (그 외는 High)";
 "provider.perModelMaxTokens" = "최대 토큰 수 재정의";
 "provider.temperature" = "온도: %.2f";
 "provider.perModelTemperature" = "온도 재정의";

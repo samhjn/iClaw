@@ -197,7 +197,7 @@
 "modelConfig.whitelistMissingSubAgent" = "サブエージェントのデフォルトモデルがホワイトリストにありません";
 "modelConfig.thinkingLevel" = "思考レベル";
 "modelConfig.thinkingLevelUseModelDefault" = "モデルのデフォルトを使用";
-"modelConfig.thinkingLevelFooter" = "このエージェントのモデルデフォルト思考レベルを上書きします。高いレベルはより多くのトークンを消費しますが、より深い推論を生成します。";
+"modelConfig.thinkingLevelFooter" = "このエージェントのモデルデフォルト思考レベルを上書きします。Extra High は Opus 4.7 または DeepSeek v4 のみ。Max は Opus 4.5+、Sonnet 4.6+ または DeepSeek v4 が必要です。サポート外のレベルはリクエスト時に自動的に丸められます。";
 "modelConfig.imageProvider" = "画像生成モデル";
 "modelConfig.imageProviderNone" = "無効";
 "modelConfig.imageGenerationHeader" = "画像生成";
@@ -398,7 +398,11 @@
 "provider.supportsReasoning" = "推論対応";
 "provider.supportsReasoningFooter" = "拡張思考/推論に対応するモデルで有効にしてください（例：Claude拡張思考、DeepSeek R1、o1/o3）。思考過程がキャプチャされ表示されます。";
 "provider.thinkingLevel" = "思考レベル";
-"provider.thinkingLevelFooter" = "思考レベルは推論の深さを制御します。budget_tokens（Anthropic）またはreasoning_effort（OpenAI）にマッピングされます。エージェントごとに上書き可能です。";
+"provider.thinkingLevelFooter" = "レベルが高いほど推論トークンを多く消費します。Claude Opus 4.5+ / Sonnet 4.6+ / DeepSeek v4 では effort に、旧 Claude では budget_tokens にマッピングされます。OpenAI o シリーズでは Extra High / Max は High と同等になります。";
+"provider.thinkingLevelXHighSuffix" = "Opus 4.7 / DeepSeek v4";
+"provider.thinkingLevelMaxSuffix" = "Opus 4.5+ / Sonnet 4.6+ / DeepSeek v4";
+"provider.thinkingLevelXHighSuffixOpenAI" = "DeepSeek v4（他は High）";
+"provider.thinkingLevelMaxSuffixOpenAI" = "DeepSeek v4（他は High）";
 "provider.perModelMaxTokens" = "最大トークン数を上書き";
 "provider.temperature" = "温度：%.2f";
 "provider.perModelTemperature" = "温度を上書き";

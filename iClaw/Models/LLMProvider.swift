@@ -49,13 +49,20 @@ enum APIStyle: String, Codable, CaseIterable {
 /// Thinking / reasoning intensity level.
 ///
 /// Maps to provider-specific parameters:
-/// - Anthropic: `thinking.budget_tokens`
+/// - Anthropic effort-aware models (Opus 4.5+, Sonnet 4.6+, Mythos): `output_config.effort`
+/// - Anthropic legacy models with manual extended thinking: `thinking.budget_tokens`
 /// - OpenAI: `reasoning_effort`
+///
+/// `.xhigh` is only meaningful on Claude Opus 4.7. `.max` is only meaningful on
+/// Claude Opus 4.5+, Sonnet 4.6+, and Mythos. On older endpoints these levels
+/// are downgraded to `.high` by the adapter.
 enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
     case off = "off"
     case low = "low"
     case medium = "medium"
     case high = "high"
+    case xhigh = "xhigh"
+    case max = "max"
 
     var displayName: String {
         switch self {
@@ -63,30 +70,110 @@ enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
         case .low: return "Low"
         case .medium: return "Medium"
         case .high: return "High"
+        case .xhigh: return "Extra High"
+        case .max: return "Max"
         }
     }
 
-    /// Anthropic `budget_tokens` for this level.
+    /// Anthropic `budget_tokens` for legacy manual extended thinking.
+    /// Newer models prefer `effort` via `output_config`; see `anthropicEffort`.
     var anthropicBudgetTokens: Int {
         switch self {
         case .off: return 0
         case .low: return 2048
         case .medium: return 10240
         case .high: return 32768
+        case .xhigh: return 49152
+        case .max: return 65536
         }
     }
 
-    /// OpenAI `reasoning_effort` value, or nil when thinking is off.
-    var openAIReasoningEffort: String? {
+    /// Anthropic `output_config.effort` value, or nil when thinking is off.
+    /// `.xhigh` and `.max` may be unsupported on some models — the adapter
+    /// clamps them via `EffortLevelSupport` before sending.
+    var anthropicEffort: String? {
         switch self {
         case .off: return nil
         case .low: return "low"
         case .medium: return "medium"
         case .high: return "high"
+        case .xhigh: return "xhigh"
+        case .max: return "max"
+        }
+    }
+
+    /// OpenAI `reasoning_effort` value, or nil when thinking is off.
+    /// OpenAI does not define `xhigh`/`max`; both collapse to `"high"`.
+    var openAIReasoningEffort: String? {
+        switch self {
+        case .off: return nil
+        case .low: return "low"
+        case .medium: return "medium"
+        case .high, .xhigh, .max: return "high"
         }
     }
 
     var isEnabled: Bool { self != .off }
+
+    /// Two-character abbreviation used by capability badges. Must stay short
+    /// because the badge has tight horizontal padding.
+    var shortLabel: String {
+        switch self {
+        case .off: return ""
+        case .low: return "L"
+        case .medium: return "Me"
+        case .high: return "H"
+        case .xhigh: return "XH"
+        case .max: return "Mx"
+        }
+    }
+
+    /// Human-readable suffix shown next to `xhigh` / `max` rows in the
+    /// picker, telling the user which models honour the level. Phrasing
+    /// differs per dialect: Anthropic talks about Claude tiers, OpenAI
+    /// dialect calls out DeepSeek v4.
+    func modelRequirement(for apiStyle: APIStyle) -> String? {
+        switch self {
+        case .xhigh: return apiStyle == .anthropic
+            ? L10n.Provider.thinkingLevelXHighSuffix
+            : L10n.Provider.thinkingLevelXHighSuffixOpenAI
+        case .max: return apiStyle == .anthropic
+            ? L10n.Provider.thinkingLevelMaxSuffix
+            : L10n.Provider.thinkingLevelMaxSuffixOpenAI
+        default: return nil
+        }
+    }
+
+    /// The picker contents for a (model, apiStyle) pair. Encodes the
+    /// per-model capability rules — see the plan in
+    /// `~/.claude/plans/ui-case-wondrous-blum.md`.
+    static func cases(for model: String, apiStyle: APIStyle) -> [ThinkingLevel] {
+        let isDeepSeekV4 = DeepSeekModelInfo.classify(model) == .v4OrLater
+
+        if apiStyle == .anthropic {
+            if isDeepSeekV4 {
+                return [.off, .low, .medium, .high, .xhigh, .max]
+            }
+            switch ClaudeModelInfo.classify(model) {
+            case .opus47OrLater:
+                // Opus 4.7 is adaptive-only for *enabling* thinking — the
+                // manual `enabled` form is rejected — but `thinking:
+                // disabled` is still accepted. Only future Mythos Preview
+                // (which we don't classify yet) explicitly rejects
+                // `disabled`; expose `Off` for now.
+                return [.off, .low, .medium, .high, .xhigh, .max]
+            case .opus46, .sonnet46, .opus45:
+                return [.off, .low, .medium, .high, .max]
+            case .other:
+                return [.off, .low, .medium, .high]
+            }
+        }
+        // OpenAI dialect.
+        if isDeepSeekV4 {
+            return [.off, .low, .medium, .high, .xhigh, .max]
+        }
+        return [.off, .low, .medium, .high]
+    }
 
     // MARK: Comparable
 
@@ -96,11 +183,186 @@ enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
         case .low: return 1
         case .medium: return 2
         case .high: return 3
+        case .xhigh: return 4
+        case .max: return 5
         }
     }
 
     static func < (lhs: ThinkingLevel, rhs: ThinkingLevel) -> Bool {
         lhs.sortOrder < rhs.sortOrder
+    }
+}
+
+/// How a model accepts thinking-related parameters in Anthropic-compat dialect.
+///
+/// - `manual`: legacy Claude that only understands `thinking.budget_tokens`.
+///   `output_config.effort` is not sent.
+/// - `manualWithEffort`: Claude Opus 4.5, which keeps manual extended thinking
+///   but additionally honours `output_config.effort` for overall token spend.
+/// - `adaptive`: Claude Opus 4.6+, Sonnet 4.6+, Opus 4.7+. Uses
+///   `thinking: {type: "adaptive"}` + `output_config.effort`. Manual
+///   `budget_tokens` is no longer the recommended path (and is forbidden on
+///   Opus 4.7), so the adapter never sets it for this strategy.
+/// - `effortSwitch`: DeepSeek v4 in Anthropic-compat. Emits an explicit
+///   `thinking: {type: "enabled"|"disabled"}` switch (no adaptive form, no
+///   `budget_tokens`) plus `output_config.effort`.
+enum AnthropicThinkingStrategy {
+    case manual
+    case manualWithEffort
+    case adaptive
+    case effortSwitch
+
+    /// Resolve the right strategy for any (model, Anthropic-dialect) pair.
+    /// DeepSeek v4 wins over Claude classification because the `deepseek-`
+    /// prefix never overlaps with `claude-`, but the explicit precedence
+    /// keeps the intent obvious.
+    static func resolve(for model: String) -> AnthropicThinkingStrategy {
+        if DeepSeekModelInfo.classify(model) == .v4OrLater {
+            return .effortSwitch
+        }
+        return ClaudeModelInfo.classify(model).thinkingStrategy
+    }
+}
+
+/// Per-model effort support across both Anthropic and OpenAI dialects.
+/// Used by the adapter to clamp `xhigh`/`max` and decide whether to emit the
+/// explicit `thinking` switch (a DeepSeek extension on the OpenAI dialect).
+struct EffortLevelSupport {
+    let supportsEffort: Bool
+    let supportsXHigh: Bool
+    let supportsMax: Bool
+    /// Whether the endpoint accepts `{"thinking": {"type": "enabled"|"disabled"}}`.
+    /// True for Claude on Anthropic and DeepSeek v4 on either dialect; false
+    /// for plain OpenAI o-series, OpenRouter, Ollama, and other passthroughs.
+    let supportsExplicitThinkingSwitch: Bool
+
+    static let none = EffortLevelSupport(
+        supportsEffort: false, supportsXHigh: false,
+        supportsMax: false, supportsExplicitThinkingSwitch: false
+    )
+
+    static func forModel(_ model: String, apiStyle: APIStyle) -> EffortLevelSupport {
+        // DeepSeek v4 — full effort + explicit switch on both dialects.
+        // The wire accepts `xhigh`/`max` even though DeepSeek collapses
+        // `low`/`medium` → `high` and `xhigh` → `max` server-side.
+        if DeepSeekModelInfo.classify(model) == .v4OrLater {
+            return EffortLevelSupport(
+                supportsEffort: true,
+                supportsXHigh: true,
+                supportsMax: true,
+                supportsExplicitThinkingSwitch: true
+            )
+        }
+        if apiStyle == .anthropic {
+            switch ClaudeModelInfo.classify(model) {
+            case .opus47OrLater:
+                return EffortLevelSupport(
+                    supportsEffort: true, supportsXHigh: true,
+                    supportsMax: true, supportsExplicitThinkingSwitch: true
+                )
+            case .opus46, .sonnet46, .opus45:
+                return EffortLevelSupport(
+                    supportsEffort: true, supportsXHigh: false,
+                    supportsMax: true, supportsExplicitThinkingSwitch: true
+                )
+            case .other:
+                // Legacy / unknown Anthropic-compat. We still need the
+                // explicit thinking switch so DeepSeek's Anthropic-compat
+                // (and any other shim) can't silently default to enabled.
+                return EffortLevelSupport(
+                    supportsEffort: false, supportsXHigh: false,
+                    supportsMax: false, supportsExplicitThinkingSwitch: true
+                )
+            }
+        }
+        // OpenAI dialect, non-DeepSeek. Standard `reasoning_effort` only;
+        // `xhigh`/`max` collapse to `"high"` client-side.
+        return EffortLevelSupport(
+            supportsEffort: true, supportsXHigh: false,
+            supportsMax: false, supportsExplicitThinkingSwitch: false
+        )
+    }
+}
+
+/// Coarse classification of a DeepSeek model name. Mirrors
+/// `ClaudeModelInfo` and is used to decide whether to emit DeepSeek's
+/// non-standard effort/thinking extensions.
+enum DeepSeekModelInfo {
+    case v4OrLater
+    case v3
+    case other
+
+    static func classify(_ model: String) -> DeepSeekModelInfo {
+        let name = model.split(separator: "/").last.map { String($0).lowercased() } ?? model.lowercased()
+        guard name.hasPrefix("deepseek") else { return .other }
+
+        // `deepseek-chat` and `deepseek-reasoner` are aliases that DeepSeek
+        // routes to whichever model is current — at the time of writing, v4.
+        if name == "deepseek-chat" || name == "deepseek-reasoner" {
+            return .v4OrLater
+        }
+
+        // Versioned names: `deepseek-v4-...`, `deepseek-v4.1`, etc.
+        guard name.hasPrefix("deepseek-v") else { return .other }
+        let rest = name.dropFirst("deepseek-v".count)
+        guard let major = rest.first?.wholeNumberValue else { return .other }
+        switch major {
+        case 4...: return .v4OrLater
+        case 3: return .v3
+        default: return .other
+        }
+    }
+}
+
+/// Coarse classification of a Claude model name. The adapter cares about
+/// thinking-parameter capabilities, not the model family per se.
+enum ClaudeModelInfo {
+    case opus47OrLater
+    case opus46
+    case sonnet46
+    case opus45
+    case other
+
+    static func classify(_ model: String) -> ClaudeModelInfo {
+        let name = model.split(separator: "/").last.map { String($0).lowercased() } ?? model.lowercased()
+        guard name.hasPrefix("claude") else { return .other }
+
+        // New naming: claude-{variant}-{major}-{minor}, e.g. claude-opus-4-7
+        for variant in ["opus", "sonnet", "haiku"] {
+            let prefix = "claude-\(variant)-"
+            guard name.hasPrefix(prefix) else { continue }
+            let rest = name.dropFirst(prefix.count)
+            // Parse leading "<major>-<minor>" or "<major>.<minor>" or just "<major>".
+            guard let major = rest.first?.wholeNumberValue, major >= 4 else { return .other }
+            // Find the minor digit (skip the major + separator).
+            let afterMajor = rest.dropFirst()
+            let minor: Int?
+            if let sep = afterMajor.first, sep == "-" || sep == "." {
+                minor = afterMajor.dropFirst().first?.wholeNumberValue
+            } else {
+                minor = 0
+            }
+            switch (variant, major, minor ?? 0) {
+            case ("opus", 4, let m) where m >= 7: return .opus47OrLater
+            case ("opus", let M, _) where M >= 5: return .opus47OrLater
+            case ("opus", 4, 6): return .opus46
+            case ("opus", 4, 5): return .opus45
+            case ("sonnet", 4, let m) where m >= 6: return .sonnet46
+            default: return .other
+            }
+        }
+        return .other
+    }
+
+    var thinkingStrategy: AnthropicThinkingStrategy {
+        switch self {
+        case .opus47OrLater, .opus46, .sonnet46:
+            return .adaptive
+        case .opus45:
+            return .manualWithEffort
+        case .other:
+            return .manual
+        }
     }
 }
 
@@ -260,7 +522,25 @@ struct ModelCapabilities: Codable, Equatable {
     /// Video: Gemini 1.5+, Qwen-VL/Omni, InternVL, Pixtral, LLaVA-Video
     /// Image generation (chatInline): gemini-*-image-* models
     /// Image generation (dedicatedAPI): dall-e-*, gpt-image-*, flux-*, sd3-*, sdxl-*
+    /// Thinking level: Claude (new naming) → `.medium`; DeepSeek v4 → `.high`.
+    /// All other reasoning capabilities default to `.off` so the user opts in.
     static func inferred(from modelName: String) -> ModelCapabilities {
+        var caps = inferredBase(from: modelName)
+        // Layer thinking-level inference on top, but only for non-image,
+        // non-video-generation models (image/video models don't reason).
+        if caps.imageGenerationMode == .none && !caps.supportsVideoGeneration {
+            if ClaudeModelInfo.classify(modelName) != .other {
+                caps.thinkingLevel = .medium
+                caps.supportsReasoning = true
+            } else if DeepSeekModelInfo.classify(modelName) == .v4OrLater {
+                caps.thinkingLevel = .high
+                caps.supportsReasoning = true
+            }
+        }
+        return caps
+    }
+
+    private static func inferredBase(from modelName: String) -> ModelCapabilities {
         let base = modelName.split(separator: "/").last.map { String($0).lowercased() }
             ?? modelName.lowercased()
 
