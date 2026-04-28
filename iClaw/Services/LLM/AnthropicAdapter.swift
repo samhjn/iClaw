@@ -306,21 +306,43 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
             }
         }
 
-        // Always emit the `thinking` parameter so providers can't silently
-        // default to enabled. DeepSeek's Anthropic-compat does exactly that
-        // when the field is omitted, which causes the model to emit thinking
-        // content even though our local config has it `.off` — and then
-        // subsequent requests trip its "thinking must be passed back" check.
-        let thinking: AnthropicThinking
+        // Pick the correct thinking-parameter shape for this model. Newer
+        // Claude variants prefer `output_config.effort` (Opus 4.7 mandates it
+        // — manual `thinking.enabled` is rejected), while Opus 4.5 still
+        // takes `budget_tokens` but layers `effort` on top, and older models
+        // only know about manual extended thinking.
+        //
+        // DeepSeek's Anthropic-compat silently enables thinking when the
+        // field is omitted, so we keep emitting an explicit `thinking`
+        // payload on every request. For Mythos Preview (which rejects
+        // `type:"disabled"`) the resolution lives in the strategy table.
+        let strategy = ClaudeModelInfo.classify(model).thinkingStrategy
+        let effortSupport = AnthropicEffortSupport.forModel(model)
+        let resolvedThinking = resolveThinkingPayload(
+            level: thinkingLevel,
+            strategy: strategy,
+            effortSupport: effortSupport
+        )
+        let thinking = resolvedThinking.thinking
+        let outputConfig = resolvedThinking.outputConfig
+
         var effectiveMaxTokens = maxTokens
         let effectiveTemperature: Double
         if thinkingLevel.isEnabled {
-            let budgetTokens = thinkingLevel.anthropicBudgetTokens
-            thinking = .enabled(budget: budgetTokens)
-            effectiveMaxTokens = max(effectiveMaxTokens, budgetTokens + 1)
+            // Anthropic requires temperature == 1.0 whenever extended
+            // thinking (manual or adaptive) is on.
             effectiveTemperature = 1.0
+            // Manual thinking still needs `max_tokens > budget_tokens`.
+            // Adaptive thinking has no explicit budget — we leave the
+            // user-provided cap alone, with one nudge on `xhigh`/`max` so
+            // the model actually has room to reason. Anthropic's guidance
+            // for Opus 4.7 at `xhigh`/`max` is "start at 64k".
+            if let budget = resolvedThinking.budgetTokens {
+                effectiveMaxTokens = max(effectiveMaxTokens, budget + 1)
+            } else if thinkingLevel == .xhigh || thinkingLevel == .max {
+                effectiveMaxTokens = max(effectiveMaxTokens, 64_000)
+            }
         } else {
-            thinking = .disabled
             effectiveTemperature = temperature
         }
 
@@ -353,8 +375,95 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
             tools: anthropicTools,
             stream: stream,
             temperature: effectiveTemperature,
-            thinking: thinking
+            thinking: thinking,
+            outputConfig: outputConfig
         )
+    }
+
+    // MARK: - Thinking payload resolution
+
+    /// Outcome of resolving a `ThinkingLevel` against a model's thinking
+    /// strategy. `budgetTokens` is non-nil only for manual extended thinking
+    /// and informs the `max_tokens` floor.
+    private struct ResolvedThinking {
+        let thinking: AnthropicThinking?
+        let outputConfig: AnthropicOutputConfig?
+        let budgetTokens: Int?
+    }
+
+    private func resolveThinkingPayload(
+        level: ThinkingLevel,
+        strategy: AnthropicThinkingStrategy,
+        effortSupport: AnthropicEffortSupport
+    ) -> ResolvedThinking {
+        let effortValue: String? = effortSupport.supportsEffort
+            ? clampEffort(level: level, effortSupport: effortSupport)
+            : nil
+        let outputConfig = effortValue.map(AnthropicOutputConfig.init(effort:))
+
+        switch strategy {
+        case .manual:
+            // Legacy Claude: budget_tokens only. No effort param.
+            if level.isEnabled {
+                let budget = level.anthropicBudgetTokens
+                return ResolvedThinking(
+                    thinking: .enabled(budget: budget),
+                    outputConfig: nil,
+                    budgetTokens: budget
+                )
+            }
+            return ResolvedThinking(thinking: .disabled, outputConfig: nil, budgetTokens: nil)
+
+        case .manualWithEffort:
+            // Opus 4.5: manual extended thinking + effort.
+            if level.isEnabled {
+                let budget = level.anthropicBudgetTokens
+                return ResolvedThinking(
+                    thinking: .enabled(budget: budget),
+                    outputConfig: outputConfig,
+                    budgetTokens: budget
+                )
+            }
+            // Off: keep effort low so this model still respects the
+            // user's intent to minimise spend, but disable thinking.
+            return ResolvedThinking(
+                thinking: .disabled,
+                outputConfig: AnthropicOutputConfig(effort: "low"),
+                budgetTokens: nil
+            )
+
+        case .adaptive:
+            // Opus 4.6 / Sonnet 4.6 / Opus 4.7+: adaptive thinking + effort.
+            // Manual `enabled` would be rejected on Opus 4.7, so we never
+            // emit it for this strategy.
+            if level.isEnabled {
+                return ResolvedThinking(
+                    thinking: .adaptive,
+                    outputConfig: outputConfig,
+                    budgetTokens: nil
+                )
+            }
+            return ResolvedThinking(
+                thinking: .disabled,
+                outputConfig: AnthropicOutputConfig(effort: "low"),
+                budgetTokens: nil
+            )
+        }
+    }
+
+    /// Map a `ThinkingLevel` to the literal `effort` string accepted by the
+    /// model, downgrading `xhigh`/`max` when the model does not advertise
+    /// support. Returns nil for `.off`.
+    private func clampEffort(level: ThinkingLevel, effortSupport: AnthropicEffortSupport) -> String? {
+        guard let raw = level.anthropicEffort else { return nil }
+        switch level {
+        case .xhigh:
+            return effortSupport.supportsXHigh ? raw : "high"
+        case .max:
+            return effortSupport.supportsMax ? raw : "high"
+        default:
+            return raw
+        }
     }
 
     // MARK: - Helpers

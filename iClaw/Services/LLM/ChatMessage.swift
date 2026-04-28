@@ -550,10 +550,26 @@ struct AnthropicRequest: Encodable {
     var stream: Bool?
     var temperature: Double?
     var thinking: AnthropicThinking?
+    var outputConfig: AnthropicOutputConfig?
 
     enum CodingKeys: String, CodingKey {
         case model, system, messages, tools, stream, temperature, thinking
         case maxTokens = "max_tokens"
+        case outputConfig = "output_config"
+    }
+}
+
+/// Anthropic `output_config` — controls overall token effort across text,
+/// tool calls, and (when adaptive thinking is on) thinking depth.
+///
+/// Supported on Claude Opus 4.5+, Opus 4.6+, Opus 4.7+, Sonnet 4.6+, and
+/// Mythos Preview. Sending it to older models would cause `400 unknown field`
+/// errors, so the adapter only emits it for those endpoints.
+struct AnthropicOutputConfig: Encodable {
+    let effort: String
+
+    enum CodingKeys: String, CodingKey {
+        case effort
     }
 }
 
@@ -589,6 +605,12 @@ struct AnthropicThinking: Encodable {
     static func enabled(budget: Int) -> AnthropicThinking {
         AnthropicThinking(type: "enabled", budgetTokens: budget)
     }
+
+    /// Adaptive extended thinking — Claude decides how much to think based on
+    /// the request and the `output_config.effort` signal. Required on Claude
+    /// Opus 4.7 (manual `enabled` is rejected) and recommended on Opus 4.6 /
+    /// Sonnet 4.6.
+    static let adaptive = AnthropicThinking(type: "adaptive", budgetTokens: nil)
 
     /// Explicit "thinking off" — sent on every request so providers can't
     /// silently default to enabled. DeepSeek's Anthropic-compat mode does

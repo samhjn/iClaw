@@ -49,13 +49,20 @@ enum APIStyle: String, Codable, CaseIterable {
 /// Thinking / reasoning intensity level.
 ///
 /// Maps to provider-specific parameters:
-/// - Anthropic: `thinking.budget_tokens`
+/// - Anthropic effort-aware models (Opus 4.5+, Sonnet 4.6+, Mythos): `output_config.effort`
+/// - Anthropic legacy models with manual extended thinking: `thinking.budget_tokens`
 /// - OpenAI: `reasoning_effort`
+///
+/// `.xhigh` is only meaningful on Claude Opus 4.7. `.max` is only meaningful on
+/// Claude Opus 4.5+, Sonnet 4.6+, and Mythos. On older endpoints these levels
+/// are downgraded to `.high` by the adapter.
 enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
     case off = "off"
     case low = "low"
     case medium = "medium"
     case high = "high"
+    case xhigh = "xhigh"
+    case max = "max"
 
     var displayName: String {
         switch self {
@@ -63,26 +70,46 @@ enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
         case .low: return "Low"
         case .medium: return "Medium"
         case .high: return "High"
+        case .xhigh: return "Extra High"
+        case .max: return "Max"
         }
     }
 
-    /// Anthropic `budget_tokens` for this level.
+    /// Anthropic `budget_tokens` for legacy manual extended thinking.
+    /// Newer models prefer `effort` via `output_config`; see `anthropicEffort`.
     var anthropicBudgetTokens: Int {
         switch self {
         case .off: return 0
         case .low: return 2048
         case .medium: return 10240
         case .high: return 32768
+        case .xhigh: return 49152
+        case .max: return 65536
         }
     }
 
-    /// OpenAI `reasoning_effort` value, or nil when thinking is off.
-    var openAIReasoningEffort: String? {
+    /// Anthropic `output_config.effort` value, or nil when thinking is off.
+    /// `.xhigh` and `.max` may be unsupported on some models — the adapter
+    /// clamps them via `AnthropicEffortSupport` before sending.
+    var anthropicEffort: String? {
         switch self {
         case .off: return nil
         case .low: return "low"
         case .medium: return "medium"
         case .high: return "high"
+        case .xhigh: return "xhigh"
+        case .max: return "max"
+        }
+    }
+
+    /// OpenAI `reasoning_effort` value, or nil when thinking is off.
+    /// OpenAI does not define `xhigh`/`max`; both collapse to `"high"`.
+    var openAIReasoningEffort: String? {
+        switch self {
+        case .off: return nil
+        case .low: return "low"
+        case .medium: return "medium"
+        case .high, .xhigh, .max: return "high"
         }
     }
 
@@ -96,11 +123,102 @@ enum ThinkingLevel: String, Codable, CaseIterable, Comparable {
         case .low: return 1
         case .medium: return 2
         case .high: return 3
+        case .xhigh: return 4
+        case .max: return 5
         }
     }
 
     static func < (lhs: ThinkingLevel, rhs: ThinkingLevel) -> Bool {
         lhs.sortOrder < rhs.sortOrder
+    }
+}
+
+/// How a Claude model accepts thinking-related parameters.
+///
+/// - `manual`: legacy models that only understand `thinking.budget_tokens`.
+///   `output_config.effort` is not sent.
+/// - `manualWithEffort`: Claude Opus 4.5, which keeps manual extended thinking
+///   but additionally honours `output_config.effort` for overall token spend.
+/// - `adaptive`: Claude Opus 4.6+, Sonnet 4.6+, Opus 4.7+, Mythos Preview.
+///   Uses `thinking: {type: "adaptive"}` + `output_config.effort`. Manual
+///   `budget_tokens` is no longer the recommended path (and is forbidden on
+///   Opus 4.7), so the adapter never sets it for this strategy.
+enum AnthropicThinkingStrategy {
+    case manual
+    case manualWithEffort
+    case adaptive
+}
+
+/// Per-model effort support — used to clamp `xhigh`/`max` to what the
+/// endpoint actually accepts.
+struct AnthropicEffortSupport {
+    let supportsEffort: Bool
+    let supportsXHigh: Bool
+    let supportsMax: Bool
+
+    static let none = AnthropicEffortSupport(supportsEffort: false, supportsXHigh: false, supportsMax: false)
+
+    static func forModel(_ model: String) -> AnthropicEffortSupport {
+        switch ClaudeModelInfo.classify(model) {
+        case .opus47OrLater:
+            return AnthropicEffortSupport(supportsEffort: true, supportsXHigh: true, supportsMax: true)
+        case .opus46, .sonnet46, .opus45:
+            return AnthropicEffortSupport(supportsEffort: true, supportsXHigh: false, supportsMax: true)
+        case .other:
+            return .none
+        }
+    }
+}
+
+/// Coarse classification of a Claude model name. The adapter cares about
+/// thinking-parameter capabilities, not the model family per se.
+enum ClaudeModelInfo {
+    case opus47OrLater
+    case opus46
+    case sonnet46
+    case opus45
+    case other
+
+    static func classify(_ model: String) -> ClaudeModelInfo {
+        let name = model.split(separator: "/").last.map { String($0).lowercased() } ?? model.lowercased()
+        guard name.hasPrefix("claude") else { return .other }
+
+        // New naming: claude-{variant}-{major}-{minor}, e.g. claude-opus-4-7
+        for variant in ["opus", "sonnet", "haiku"] {
+            let prefix = "claude-\(variant)-"
+            guard name.hasPrefix(prefix) else { continue }
+            let rest = name.dropFirst(prefix.count)
+            // Parse leading "<major>-<minor>" or "<major>.<minor>" or just "<major>".
+            guard let major = rest.first?.wholeNumberValue, major >= 4 else { return .other }
+            // Find the minor digit (skip the major + separator).
+            let afterMajor = rest.dropFirst()
+            let minor: Int?
+            if let sep = afterMajor.first, sep == "-" || sep == "." {
+                minor = afterMajor.dropFirst().first?.wholeNumberValue
+            } else {
+                minor = 0
+            }
+            switch (variant, major, minor ?? 0) {
+            case ("opus", 4, let m) where m >= 7: return .opus47OrLater
+            case ("opus", let M, _) where M >= 5: return .opus47OrLater
+            case ("opus", 4, 6): return .opus46
+            case ("opus", 4, 5): return .opus45
+            case ("sonnet", 4, let m) where m >= 6: return .sonnet46
+            default: return .other
+            }
+        }
+        return .other
+    }
+
+    var thinkingStrategy: AnthropicThinkingStrategy {
+        switch self {
+        case .opus47OrLater, .opus46, .sonnet46:
+            return .adaptive
+        case .opus45:
+            return .manualWithEffort
+        case .other:
+            return .manual
+        }
     }
 }
 
