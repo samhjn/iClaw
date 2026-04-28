@@ -736,14 +736,9 @@ struct LLMProviderEditView: View {
             enableModel("claude-sonnet-4-6")
             modelCapabilities["claude-sonnet-4-6"]?.thinkingLevel = .medium
             modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
-        }
-        presetChip("Claude Opus 4.7") {
-            name = name.isEmpty ? "Anthropic" : name
-            endpoint = "https://api.anthropic.com/v1"
-            modelName = "claude-opus-4-7"
-            apiStyle = .anthropic
+            // Also enable Opus 4.7 — adaptive thinking, .high default
+            // (xhigh would be a deliberate cost opt-in by the user).
             enableModel("claude-opus-4-7")
-            // .high (not .xhigh) — xhigh is a deliberate cost opt-in.
             modelCapabilities["claude-opus-4-7"]?.thinkingLevel = .high
             modelCapabilities["claude-opus-4-7"]?.supportsReasoning = true
         }
