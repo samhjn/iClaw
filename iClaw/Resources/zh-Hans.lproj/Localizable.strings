@@ -198,7 +198,7 @@
 "modelConfig.whitelistMissingSubAgent" = "子智能体默认模型不在白名单中";
 "modelConfig.thinkingLevel" = "思考等级";
 "modelConfig.thinkingLevelUseModelDefault" = "使用模型默认";
-"modelConfig.thinkingLevelFooter" = "覆盖此智能体的模型默认思考等级。更高等级消耗更多 Token，但能产生更深入的推理。";
+"modelConfig.thinkingLevelFooter" = "覆盖此智能体的模型默认思考等级。Extra High 仅 Opus 4.7 或 DeepSeek v4 支持；Max 需要 Opus 4.5+、Sonnet 4.6+ 或 DeepSeek v4。请求时会自动钳制不支持的等级。";
 "modelConfig.imageProvider" = "图片生成模型";
 "modelConfig.imageProviderNone" = "未启用";
 "modelConfig.imageGenerationHeader" = "图片生成";
@@ -399,7 +399,11 @@
 "provider.supportsReasoning" = "支持推理";
 "provider.supportsReasoningFooter" = "为支持扩展思考/推理的模型启用（如 Claude 扩展思考、DeepSeek R1、o1/o3）。思考过程将被捕获并显示。";
 "provider.thinkingLevel" = "思考等级";
-"provider.thinkingLevelFooter" = "思考等级控制推理深度。映射为 budget_tokens（Anthropic）或 reasoning_effort（OpenAI）。可在智能体级别覆盖。";
+"provider.thinkingLevelFooter" = "等级越高消耗的推理 Token 越多。Claude Opus 4.5+/Sonnet 4.6+ 与 DeepSeek v4 映射为 effort，旧版 Claude 映射为 budget_tokens。OpenAI o 系列上 Extra High 与 Max 等同于 High。";
+"provider.thinkingLevelXHighSuffix" = "Opus 4.7 / DeepSeek v4";
+"provider.thinkingLevelMaxSuffix" = "Opus 4.5+ / Sonnet 4.6+ / DeepSeek v4";
+"provider.thinkingLevelXHighSuffixOpenAI" = "DeepSeek v4（其他模型按 High）";
+"provider.thinkingLevelMaxSuffixOpenAI" = "DeepSeek v4（其他模型按 High）";
 "provider.perModelMaxTokens" = "覆盖最大 Token 数";
 "provider.temperature" = "温度：%.2f";
 "provider.perModelTemperature" = "覆盖温度";

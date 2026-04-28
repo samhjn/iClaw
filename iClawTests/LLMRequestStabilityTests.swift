@@ -262,12 +262,17 @@ final class AnthropicThinkingBlockTests: XCTestCase {
         XCTAssertNil(thinking["budget_tokens"], "disabled variant must omit budget_tokens")
     }
 
-    func testThinkingParameterEmitsEnabledWithBudget() throws {
+    /// DeepSeek v4 (Anthropic-compat) uses the `effortSwitch` strategy:
+    /// enabled thinking, no `budget_tokens`, plus `output_config.effort`.
+    /// (Pre-effort code paths emitted `budget_tokens`; that wire shape is
+    /// rejected by DeepSeek v4 and not used anywhere.)
+    func testThinkingParameterEmitsEnabledWithEffort() throws {
         let dict = try encodedBody(messages: [.user("Hi")], thinkingLevel: .high)
         let thinking = try XCTUnwrap(dict["thinking"] as? [String: Any])
         XCTAssertEqual(thinking["type"] as? String, "enabled")
-        XCTAssertEqual(thinking["budget_tokens"] as? Int,
-                       ThinkingLevel.high.anthropicBudgetTokens)
+        XCTAssertNil(thinking["budget_tokens"], "DeepSeek v4 rejects budget_tokens")
+        let cfg = try XCTUnwrap(dict["output_config"] as? [String: Any])
+        XCTAssertEqual(cfg["effort"] as? String, "high")
     }
 
     func testTemperatureNotForcedWhenThinkingDisabled() throws {

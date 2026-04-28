@@ -174,11 +174,28 @@ struct AgentModelConfigView: View {
 
     @ViewBuilder
     private var thinkingLevelSection: some View {
+        // Agent overrides are model-agnostic (the model is chosen at chat
+        // time and may even fall back). We always show all six levels and
+        // rely on the runtime adapters to clamp `xhigh`/`max` when the
+        // resolved primary model can't honour them. The xhigh/max rows
+        // carry a localized suffix so the user understands when they may
+        // clamp.
+        let primaryStyle: APIStyle = primaryProviderForOverride()?.apiStyle ?? .anthropic
         Section {
             Picker(L10n.ModelConfig.thinkingLevel, selection: thinkingLevelBinding) {
                 Text(L10n.ModelConfig.thinkingLevelUseModelDefault).tag("" as String)
                 ForEach(ThinkingLevel.allCases, id: \.self) { level in
-                    Text(level.displayName).tag(level.rawValue)
+                    if let req = level.modelRequirement(for: primaryStyle) {
+                        HStack(spacing: 4) {
+                            Text(level.displayName)
+                            Text(req)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .tag(level.rawValue)
+                    } else {
+                        Text(level.displayName).tag(level.rawValue)
+                    }
                 }
             }
         } header: {
@@ -186,6 +203,16 @@ struct AgentModelConfigView: View {
         } footer: {
             Text(L10n.ModelConfig.thinkingLevelFooter)
         }
+    }
+
+    /// The provider whose dialect is used to phrase the requirement
+    /// suffixes ("Opus 4.7 / DeepSeek v4" vs "DeepSeek v4 (else High)").
+    private func primaryProviderForOverride() -> LLMProvider? {
+        if let pid = agent.primaryProviderId,
+           let provider = allProviders.first(where: { $0.id == pid }) {
+            return provider
+        }
+        return allProviders.first(where: { $0.isDefault }) ?? allProviders.first
     }
 
     private var thinkingLevelBinding: Binding<String> {
@@ -860,6 +887,13 @@ struct AgentModelConfigView: View {
                             }
                             let resolvedLevel = agent.thinkingLevelOverride ?? caps.thinkingLevel
                             if resolvedLevel.isEnabled {
+                                let support = EffortLevelSupport.forModel(
+                                    effectiveModel,
+                                    apiStyle: entry.provider.apiStyle
+                                )
+                                let wouldClamp =
+                                    (resolvedLevel == .xhigh && !support.supportsXHigh) ||
+                                    (resolvedLevel == .max && !support.supportsMax)
                                 HStack(spacing: 2) {
                                     Image(systemName: "brain")
                                         .font(.system(size: 9))
@@ -868,6 +902,12 @@ struct AgentModelConfigView: View {
                                     if agent.thinkingLevelOverride != nil {
                                         Text("(\(L10n.ModelConfig.override))")
                                             .font(.caption2)
+                                    }
+                                    if wouldClamp {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 9))
+                                            .foregroundStyle(.orange)
+                                            .help("Clamps to high on this model.")
                                     }
                                 }
                                 .foregroundStyle(.purple)

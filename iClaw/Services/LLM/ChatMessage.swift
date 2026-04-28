@@ -248,14 +248,29 @@ struct LLMChatRequest: Codable {
     var modalities: [String]?
     /// OpenAI reasoning_effort parameter for o-series / reasoning models.
     var reasoningEffort: String?
+    /// DeepSeek extension on the OpenAI dialect: explicit
+    /// `{"thinking": {"type": "enabled"|"disabled"}}` switch. We never send
+    /// this to plain OpenAI / OpenRouter / Ollama (they 400 on unknown
+    /// fields); only DeepSeek v4 routes through here.
+    var thinking: OpenAIThinkingSwitch?
 
     enum CodingKeys: String, CodingKey {
-        case model, messages, tools, stream, temperature, modalities
+        case model, messages, tools, stream, temperature, modalities, thinking
         case toolChoice = "tool_choice"
         case streamOptions = "stream_options"
         case maxTokens = "max_tokens"
         case reasoningEffort = "reasoning_effort"
     }
+}
+
+/// DeepSeek extension on the OpenAI dialect — JSON shape matches Anthropic's
+/// `thinking` parameter (just `{"type": "enabled"|"disabled"}`, no
+/// `budget_tokens`).
+struct OpenAIThinkingSwitch: Codable {
+    let type: String
+
+    static let enabled = OpenAIThinkingSwitch(type: "enabled")
+    static let disabled = OpenAIThinkingSwitch(type: "disabled")
 }
 
 enum LLMToolChoice: Codable {

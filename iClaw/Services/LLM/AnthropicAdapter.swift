@@ -308,16 +308,17 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
 
         // Pick the correct thinking-parameter shape for this model. Newer
         // Claude variants prefer `output_config.effort` (Opus 4.7 mandates it
-        // — manual `thinking.enabled` is rejected), while Opus 4.5 still
-        // takes `budget_tokens` but layers `effort` on top, and older models
+        // — manual `thinking.enabled` is rejected), Opus 4.5 still takes
+        // `budget_tokens` but layers `effort` on top, DeepSeek v4 uses an
+        // effort-plus-switch shape with no `budget_tokens`, and older models
         // only know about manual extended thinking.
         //
         // DeepSeek's Anthropic-compat silently enables thinking when the
         // field is omitted, so we keep emitting an explicit `thinking`
         // payload on every request. For Mythos Preview (which rejects
         // `type:"disabled"`) the resolution lives in the strategy table.
-        let strategy = ClaudeModelInfo.classify(model).thinkingStrategy
-        let effortSupport = AnthropicEffortSupport.forModel(model)
+        let strategy = AnthropicThinkingStrategy.resolve(for: model)
+        let effortSupport = EffortLevelSupport.forModel(model, apiStyle: .anthropic)
         let resolvedThinking = resolveThinkingPayload(
             level: thinkingLevel,
             strategy: strategy,
@@ -394,7 +395,7 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
     private func resolveThinkingPayload(
         level: ThinkingLevel,
         strategy: AnthropicThinkingStrategy,
-        effortSupport: AnthropicEffortSupport
+        effortSupport: EffortLevelSupport
     ) -> ResolvedThinking {
         let effortValue: String? = effortSupport.supportsEffort
             ? clampEffort(level: level, effortSupport: effortSupport)
@@ -448,13 +449,29 @@ final class AnthropicAdapter: LLMAPIAdapter, @unchecked Sendable {
                 outputConfig: AnthropicOutputConfig(effort: "low"),
                 budgetTokens: nil
             )
+
+        case .effortSwitch:
+            // DeepSeek v4 in Anthropic-compat: explicit thinking switch +
+            // effort. Crucially: no `budget_tokens` (DeepSeek rejects it).
+            if level.isEnabled {
+                return ResolvedThinking(
+                    thinking: AnthropicThinking(type: "enabled", budgetTokens: nil),
+                    outputConfig: outputConfig,
+                    budgetTokens: nil
+                )
+            }
+            return ResolvedThinking(
+                thinking: .disabled,
+                outputConfig: AnthropicOutputConfig(effort: "low"),
+                budgetTokens: nil
+            )
         }
     }
 
     /// Map a `ThinkingLevel` to the literal `effort` string accepted by the
     /// model, downgrading `xhigh`/`max` when the model does not advertise
     /// support. Returns nil for `.off`.
-    private func clampEffort(level: ThinkingLevel, effortSupport: AnthropicEffortSupport) -> String? {
+    private func clampEffort(level: ThinkingLevel, effortSupport: EffortLevelSupport) -> String? {
         guard let raw = level.anthropicEffort else { return nil }
         switch level {
         case .xhigh:

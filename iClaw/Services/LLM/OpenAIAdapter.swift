@@ -25,6 +25,7 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
         thinkingLevel: ThinkingLevel
     ) throws -> URLRequest {
         let modalities: [String]? = capabilities.imageGenerationMode == .chatInline ? ["image", "text"] : nil
+        let (effortValue, thinkingSwitch) = openAIEffortFields(model: model, level: thinkingLevel)
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -34,7 +35,8 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             maxTokens: maxTokens,
             temperature: temperature,
             modalities: modalities,
-            reasoningEffort: thinkingLevel.openAIReasoningEffort
+            reasoningEffort: effortValue,
+            thinking: thinkingSwitch
         )
 
         let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(request)
@@ -45,6 +47,22 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             style: .openAI,
             body: bodyData
         )
+    }
+
+    /// Pick the right `reasoning_effort` value and optional `thinking`
+    /// switch for this model. DeepSeek v4 takes the unclamped `xhigh`/`max`
+    /// levels and an explicit thinking switch (default-on otherwise leaks);
+    /// plain o-series collapses xhigh/max to `"high"` and never sends the
+    /// switch (unknown fields = 400 on most other endpoints).
+    private func openAIEffortFields(model: String, level: ThinkingLevel)
+        -> (effort: String?, thinking: OpenAIThinkingSwitch?)
+    {
+        let support = EffortLevelSupport.forModel(model, apiStyle: .openAI)
+        if support.supportsExplicitThinkingSwitch {
+            let switchField: OpenAIThinkingSwitch = level.isEnabled ? .enabled : .disabled
+            return (level.anthropicEffort, switchField)
+        }
+        return (level.openAIReasoningEffort, nil)
     }
 
     func parseChatResponse(data: Data) throws -> LLMChatResponse {
@@ -63,6 +81,7 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
         thinkingLevel: ThinkingLevel
     ) throws -> URLRequest {
         let modalities: [String]? = capabilities.imageGenerationMode == .chatInline ? ["image", "text"] : nil
+        let (effortValue, thinkingSwitch) = openAIEffortFields(model: model, level: thinkingLevel)
         let request = LLMChatRequest(
             model: model,
             messages: messages,
@@ -73,7 +92,8 @@ final class OpenAIAdapter: LLMAPIAdapter, @unchecked Sendable {
             maxTokens: maxTokens,
             temperature: temperature,
             modalities: modalities,
-            reasoningEffort: thinkingLevel.openAIReasoningEffort
+            reasoningEffort: effortValue,
+            thinking: thinkingSwitch
         )
 
         let bodyData = try APIRequestBuilder.stableJSONEncoder.encode(request)

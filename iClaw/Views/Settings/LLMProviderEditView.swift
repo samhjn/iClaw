@@ -332,9 +332,22 @@ struct LLMProviderEditView: View {
                     }
                 }
                 Picker(L10n.Provider.thinkingLevel, selection: thinkingLevelBinding(for: model)) {
-                    ForEach(ThinkingLevel.allCases, id: \.self) { level in
-                        Text(level.displayName).tag(level)
+                    ForEach(ThinkingLevel.cases(for: model, apiStyle: apiStyle), id: \.self) { level in
+                        if let req = level.modelRequirement(for: apiStyle) {
+                            HStack(spacing: 4) {
+                                Text(level.displayName)
+                                Text(req)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .tag(level)
+                        } else {
+                            Text(level.displayName).tag(level)
+                        }
                     }
+                }
+                .onChange(of: apiStyle) { _, newStyle in
+                    clampThinkingLevelIfUnsupported(for: model, apiStyle: newStyle)
                 }
                 perModelParametersView(for: model)
             case .imageOnly:
@@ -473,6 +486,22 @@ struct LLMProviderEditView: View {
         )
     }
 
+    /// If the persisted thinking level for `model` falls outside the
+    /// allowed set under `apiStyle` (e.g. user flipped a Claude provider
+    /// from Anthropic to OpenAI dialect), clamp to the highest level still
+    /// supported. Mutates state — only call when the user has explicitly
+    /// re-targeted the row's binding to a different `apiStyle`.
+    private func clampThinkingLevelIfUnsupported(for model: String, apiStyle: APIStyle) {
+        let allowed = ThinkingLevel.cases(for: model, apiStyle: apiStyle)
+        let current = (modelCapabilities[model] ?? .default).thinkingLevel
+        guard !allowed.contains(current) else { return }
+        let target = allowed.last ?? .high
+        var caps = modelCapabilities[model] ?? .default
+        caps.thinkingLevel = target
+        caps.supportsReasoning = target.isEnabled
+        modelCapabilities[model] = caps
+    }
+
     @ViewBuilder
     private func capBadge(_ systemName: String, color: Color) -> some View {
         Image(systemName: systemName)
@@ -487,7 +516,10 @@ struct LLMProviderEditView: View {
         HStack(spacing: 1) {
             Image(systemName: "brain")
                 .font(.system(size: 9))
-            Text(level.displayName.prefix(1))
+            // `shortLabel` disambiguates Medium ("Me") from Max ("Mx") and
+            // Extra High ("XH") from High ("H") — `displayName.prefix(1)`
+            // collapsed both pairs to the same letter.
+            Text(level.shortLabel)
                 .font(.system(size: 7, weight: .bold))
         }
         .foregroundStyle(.purple)
@@ -704,6 +736,16 @@ struct LLMProviderEditView: View {
             enableModel("claude-sonnet-4-6")
             modelCapabilities["claude-sonnet-4-6"]?.thinkingLevel = .medium
             modelCapabilities["claude-sonnet-4-6"]?.supportsReasoning = true
+        }
+        presetChip("Claude Opus 4.7") {
+            name = name.isEmpty ? "Anthropic" : name
+            endpoint = "https://api.anthropic.com/v1"
+            modelName = "claude-opus-4-7"
+            apiStyle = .anthropic
+            enableModel("claude-opus-4-7")
+            // .high (not .xhigh) — xhigh is a deliberate cost opt-in.
+            modelCapabilities["claude-opus-4-7"]?.thinkingLevel = .high
+            modelCapabilities["claude-opus-4-7"]?.supportsReasoning = true
         }
         presetChip("DeepSeek") {
             name = name.isEmpty ? "DeepSeek" : name

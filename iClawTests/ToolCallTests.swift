@@ -1094,27 +1094,85 @@ final class ClaudeModelInfoTests: XCTestCase {
 
     func testNonClaudeIsManual() {
         XCTAssertEqual(ClaudeModelInfo.classify("gpt-5.4").thinkingStrategy, .manual)
-        XCTAssertEqual(ClaudeModelInfo.classify("deepseek-chat").thinkingStrategy, .manual)
+    }
+
+    /// `deepseek-chat` is now classified by `DeepSeekModelInfo` and its
+    /// resolved Anthropic strategy is `.effortSwitch` — verify the
+    /// dispatcher gets it right.
+    func testDeepSeekResolvesToEffortSwitch() {
+        XCTAssertEqual(AnthropicThinkingStrategy.resolve(for: "deepseek-chat"), .effortSwitch)
+        XCTAssertEqual(AnthropicThinkingStrategy.resolve(for: "deepseek-v4-pro"), .effortSwitch)
+        // v3 is not v4, so it stays on the Claude-fallback path.
+        XCTAssertEqual(AnthropicThinkingStrategy.resolve(for: "deepseek-v3"), .manual)
     }
 
     func testEffortSupportMatrix() {
-        let opus47 = AnthropicEffortSupport.forModel("claude-opus-4-7")
+        let opus47 = EffortLevelSupport.forModel("claude-opus-4-7", apiStyle: .anthropic)
         XCTAssertTrue(opus47.supportsEffort)
         XCTAssertTrue(opus47.supportsXHigh)
         XCTAssertTrue(opus47.supportsMax)
+        XCTAssertTrue(opus47.supportsExplicitThinkingSwitch)
 
-        let sonnet46 = AnthropicEffortSupport.forModel("claude-sonnet-4-6")
+        let sonnet46 = EffortLevelSupport.forModel("claude-sonnet-4-6", apiStyle: .anthropic)
         XCTAssertTrue(sonnet46.supportsEffort)
         XCTAssertFalse(sonnet46.supportsXHigh, "xhigh is Opus-4.7 only")
         XCTAssertTrue(sonnet46.supportsMax)
 
-        let opus45 = AnthropicEffortSupport.forModel("claude-opus-4-5")
+        let opus45 = EffortLevelSupport.forModel("claude-opus-4-5", apiStyle: .anthropic)
         XCTAssertTrue(opus45.supportsEffort)
         XCTAssertFalse(opus45.supportsXHigh)
         XCTAssertTrue(opus45.supportsMax)
 
-        let legacy = AnthropicEffortSupport.forModel("claude-sonnet-4-5")
+        let legacy = EffortLevelSupport.forModel("claude-sonnet-4-5", apiStyle: .anthropic)
         XCTAssertFalse(legacy.supportsEffort)
+        XCTAssertTrue(legacy.supportsExplicitThinkingSwitch,
+                      "Anthropic-compat fallback still emits the thinking switch")
+    }
+
+    /// DeepSeek v4 supports `xhigh`/`max` on either dialect; plain o-series
+    /// only knows low/medium/high and never sees the explicit thinking
+    /// switch.
+    func testDeepSeekAndOpenAIDialectMatrix() {
+        let dsAnth = EffortLevelSupport.forModel("deepseek-v4-pro", apiStyle: .anthropic)
+        XCTAssertTrue(dsAnth.supportsEffort)
+        XCTAssertTrue(dsAnth.supportsXHigh)
+        XCTAssertTrue(dsAnth.supportsMax)
+        XCTAssertTrue(dsAnth.supportsExplicitThinkingSwitch)
+
+        let dsOAI = EffortLevelSupport.forModel("deepseek-chat", apiStyle: .openAI)
+        XCTAssertTrue(dsOAI.supportsXHigh)
+        XCTAssertTrue(dsOAI.supportsMax)
+        XCTAssertTrue(dsOAI.supportsExplicitThinkingSwitch)
+
+        let oai = EffortLevelSupport.forModel("gpt-5.4", apiStyle: .openAI)
+        XCTAssertTrue(oai.supportsEffort)
+        XCTAssertFalse(oai.supportsXHigh)
+        XCTAssertFalse(oai.supportsMax)
+        XCTAssertFalse(oai.supportsExplicitThinkingSwitch,
+                       "OpenAI o-series 400s on unknown fields like `thinking`")
+    }
+}
+
+// MARK: - DeepSeekModelInfo
+
+final class DeepSeekModelInfoTests: XCTestCase {
+    func testV4Family() {
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-v4-pro"), .v4OrLater)
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-v4-flash"), .v4OrLater)
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-v4.1"), .v4OrLater)
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-chat"), .v4OrLater,
+                       "deepseek-chat alias points at the current (v4) model")
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-reasoner"), .v4OrLater)
+    }
+
+    func testV3IsNotV4() {
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-v3-pro"), .v3)
+        XCTAssertEqual(DeepSeekModelInfo.classify("deepseek-v3"), .v3)
+    }
+
+    func testNonDeepSeek() {
+        XCTAssertEqual(DeepSeekModelInfo.classify("gpt-5.4"), .other)
+        XCTAssertEqual(DeepSeekModelInfo.classify("claude-sonnet-4-6"), .other)
     }
 }
 
@@ -1193,6 +1251,80 @@ final class AnthropicEffortRequestTests: XCTestCase {
         let thinking = try XCTUnwrap(dict["thinking"] as? [String: Any])
         XCTAssertEqual(thinking["type"] as? String, "enabled")
         XCTAssertEqual(thinking["budget_tokens"] as? Int, ThinkingLevel.high.anthropicBudgetTokens)
+    }
+
+    // DeepSeek v4 over Anthropic-compat: explicit thinking switch + effort,
+    // no budget_tokens, no adaptive form (DeepSeek doesn't speak adaptive).
+    func testDeepSeekV4AnthropicMaxShape() throws {
+        let dict = try encodeBody(model: "deepseek-v4-pro", level: .max)
+        let thinking = try XCTUnwrap(dict["thinking"] as? [String: Any])
+        XCTAssertEqual(thinking["type"] as? String, "enabled")
+        XCTAssertNil(thinking["budget_tokens"], "DeepSeek rejects budget_tokens")
+        let cfg = try XCTUnwrap(dict["output_config"] as? [String: Any])
+        XCTAssertEqual(cfg["effort"] as? String, "max")
+    }
+
+    func testDeepSeekV4AnthropicOffShape() throws {
+        let dict = try encodeBody(model: "deepseek-chat", level: .off)
+        let thinking = try XCTUnwrap(dict["thinking"] as? [String: Any])
+        XCTAssertEqual(thinking["type"] as? String, "disabled")
+        let cfg = try XCTUnwrap(dict["output_config"] as? [String: Any])
+        XCTAssertEqual(cfg["effort"] as? String, "low",
+                       "Off must still send effort:low to override DeepSeek's enabled-by-default")
+    }
+}
+
+// MARK: - DeepSeek vs o-series on the OpenAI dialect
+
+final class OpenAIDeepSeekEffortTests: XCTestCase {
+    private func makeAdapter() -> OpenAIAdapter {
+        OpenAIAdapter(context: LLMAdapterContext(baseURL: "https://api.deepseek.com", apiKey: "k"))
+    }
+
+    private func encodeBody(model: String, level: ThinkingLevel) throws -> [String: Any] {
+        let request = try makeAdapter().buildChatRequest(
+            model: model,
+            messages: [.user("Hi")],
+            tools: nil,
+            maxTokens: 1024,
+            temperature: 0.7,
+            capabilities: .default,
+            thinkingLevel: level
+        )
+        let body = try XCTUnwrap(request.httpBody)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+    }
+
+    func testDeepSeekV4SendsThinkingSwitchAndUnclampedEffort() throws {
+        let dict = try encodeBody(model: "deepseek-v4-pro", level: .max)
+        XCTAssertEqual(dict["reasoning_effort"] as? String, "max",
+                       "DeepSeek collapses xhigh→max server-side; we send the unclamped value verbatim")
+        let switchField = try XCTUnwrap(dict["thinking"] as? [String: Any])
+        XCTAssertEqual(switchField["type"] as? String, "enabled")
+    }
+
+    func testDeepSeekV4OffSendsExplicitDisabled() throws {
+        let dict = try encodeBody(model: "deepseek-chat", level: .off)
+        // .off has no reasoning_effort (nil) — but the thinking switch
+        // must be present and disabled, otherwise DeepSeek's default-on
+        // leaks through.
+        XCTAssertNil(dict["reasoning_effort"])
+        let switchField = try XCTUnwrap(dict["thinking"] as? [String: Any])
+        XCTAssertEqual(switchField["type"] as? String, "disabled")
+    }
+
+    func testPlainOpenAIClampsXHighToHigh() throws {
+        let dict = try encodeBody(model: "gpt-5.4", level: .xhigh)
+        XCTAssertEqual(dict["reasoning_effort"] as? String, "high",
+                       "OpenAI o-series doesn't define xhigh; client clamps")
+        XCTAssertNil(dict["thinking"],
+                     "Sending an unknown `thinking` field to OpenAI 400s — must be omitted")
+    }
+
+    func testPlainOpenAIClampsMaxToHigh() throws {
+        let dict = try encodeBody(model: "gpt-5.4", level: .max)
+        XCTAssertEqual(dict["reasoning_effort"] as? String, "high")
+        XCTAssertNil(dict["thinking"])
     }
 }
 

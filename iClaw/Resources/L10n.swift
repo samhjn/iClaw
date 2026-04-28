@@ -508,6 +508,14 @@ enum L10n {
         static var supportsReasoningFooter: String { tr("provider.supportsReasoningFooter") }
         static var thinkingLevel: String { tr("provider.thinkingLevel") }
         static var thinkingLevelFooter: String { tr("provider.thinkingLevelFooter") }
+        /// Suffix shown next to the `Extra High` row on the Anthropic dialect.
+        static var thinkingLevelXHighSuffix: String { tr("provider.thinkingLevelXHighSuffix") }
+        /// Suffix shown next to the `Max` row on the Anthropic dialect.
+        static var thinkingLevelMaxSuffix: String { tr("provider.thinkingLevelMaxSuffix") }
+        /// Suffix shown next to the `Extra High` row on the OpenAI dialect.
+        static var thinkingLevelXHighSuffixOpenAI: String { tr("provider.thinkingLevelXHighSuffixOpenAI") }
+        /// Suffix shown next to the `Max` row on the OpenAI dialect.
+        static var thinkingLevelMaxSuffixOpenAI: String { tr("provider.thinkingLevelMaxSuffixOpenAI") }
         static var perModelMaxTokens: String { tr("provider.perModelMaxTokens") }
         static func temperature(_ value: Double) -> String { tr("provider.temperature", value) }
         static var perModelTemperature: String { tr("provider.perModelTemperature") }
